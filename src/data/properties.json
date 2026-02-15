@@ -1,0 +1,46 @@
+[
+  {
+    "id": 1,
+    "title": "Modern Downtown Apartment",
+    "type": "Apartment",
+    "price": 450000,
+    "address": "321 City Center Blvd, New York, NY 10001",
+    "bedrooms": 2,
+    "bathrooms": 2,
+    "area": 1200,
+    "description": "Luxurious apartment in the heart of downtown with stunning city views"
+  },
+  {
+    "id": 2,
+    "title": "Spacious Family Home",
+    "type": "House",
+    "price": 850000,
+    "address": "555 Suburban Lane, Los Angeles, CA 90210",
+    "bedrooms": 4,
+    "bathrooms": 3,
+    "area": 2800,
+    "description": "Beautiful family home with large backyard and modern amenities"
+  },
+  {
+    "id": 3,
+    "title": "Cozy Studio Loft",
+    "type": "Studio",
+    "price": 280000,
+    "address": "888 Artist District, Chicago, IL 60605",
+    "bedrooms": 1,
+    "bathrooms": 1,
+    "area": 650,
+    "description": "Charming studio loft in trendy neighborhood, perfect for young professionals"
+  },
+  {
+    "id": 4,
+    "title": "Luxury Penthouse",
+    "type": "Penthouse",
+    "price": 1500000,
+    "address": "999 Skyline Tower, Miami, FL 33131",
+    "bedrooms": 3,
+    "bathrooms": 3,
+    "area": 3500,
+    "description": "Exclusive penthouse with panoramic ocean views and premium finishes"
+  }
+]
