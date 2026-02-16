@@ -4,28 +4,20 @@ A modern real estate management application built with React, Next.js, TypeScrip
 
 ## Features
 
-- 👥 **Customer Management**: View and manage customer information
-- 🏘️ **Property Listings**: Display property listings with detailed information
-- 📊 **JSON-based Data**: Uses JSON files for data storage (backend-ready)
-- 🎨 **Modern UI**: Beautiful, responsive design with Tailwind CSS
+- 👥 **Customer Management** - View customer information with contact details
+- 🏘️ **Property Listings** - Browse property listings with detailed information
+- 📊 **Dashboard** - Quick stats showing customers, properties, and total value
+- 📁 **JSON Data Storage** - Simple JSON files for data (backend-ready)
 
 ## Getting Started
 
-First, run the development server:
+Run the development server:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-You can start editing the page by modifying `src/app/page.tsx`. The page auto-updates as you edit the file.
+Open [http://localhost:3000](http://localhost:3000) to view the application.
 
 ## Project Structure
 
@@ -33,7 +25,7 @@ You can start editing the page by modifying `src/app/page.tsx`. The page auto-up
 immonext/
 ├── src/
 │   ├── app/
-│   │   ├── page.tsx          # Main page component
+│   │   ├── page.tsx          # Main page
 │   │   ├── layout.tsx        # Root layout
 │   │   └── globals.css       # Global styles
 │   ├── components/
@@ -43,54 +35,38 @@ immonext/
 │   │   ├── customers.json    # Customer data
 │   │   └── properties.json   # Property data
 │   └── types/
-│       └── index.ts          # TypeScript type definitions
+│       └── index.ts          # TypeScript types
 ├── public/                   # Static assets
-├── package.json
-└── tsconfig.json
+└── package.json
 ```
 
 ## Data Management
 
-### Adding Customers and Properties
-
-To add more customers or properties, simply edit the JSON files:
+Edit the JSON files to add or modify data:
 - `src/data/customers.json` - Customer information
 - `src/data/properties.json` - Property listings
 
-### Data Structure
-
-**Customers:**
+### Customer Data Structure
 - ID, Name, Email, Phone, Address
 
-**Properties:**
+### Property Data Structure
 - ID, Title, Type, Price, Address, Bedrooms, Bathrooms, Area, Description
 
-## Next Steps
+## Technologies
 
-- Add forms to create/edit customers and properties
-- Implement search and filtering functionality
-- Add detail pages for customers and properties
-- Connect to a real backend API
-- Add authentication and user management
-
-## Technologies Used
-
-- **Next.js 16** - React framework
+- **Next.js 16** - React framework with App Router
 - **React 19** - UI library
 - **TypeScript** - Type safety
 - **Tailwind CSS** - Styling
-- **Turbopack** - Fast bundler
 
-## Learn More
+## Scripts
 
-To learn more about Next.js, take a look at the following resources:
+- `npm run dev` - Start development server
+- `npm run build` - Build for production
+- `npm run start` - Start production server
+- `npm run lint` - Run ESLint
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## License
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+MIT
 
