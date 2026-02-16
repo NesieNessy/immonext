@@ -1,5 +1,6 @@
 name: Deploy to GitHub Pages
 
+# Deploys the Next.js app to GitHub Pages on push to main
 on:
   push:
     branches:
