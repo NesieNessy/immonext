@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { ChevronDown, Home, Network, Search, Settings, User } from "lucide-react";
 import { Icons } from "../common";
@@ -64,12 +65,12 @@ export function NavigationBar({ items, logo, actions }: NavigationBarProps) {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-8">
             {logo && (
-              <div className="flex-shrink-0">
+              <Link href={logo.href} className="flex-shrink-0">
                 <div className="flex items-center gap-2">
                   {logo.iconName && React.createElement(iconMap[logo.iconName], { size: 24, className: "text-primary" })}
                   <span className="text-xl font-bold text-foreground">{logo.text}</span>
                 </div>
-              </div>
+              </Link>
             )}
             <div className="flex items-center gap-1">
               {items.map((item, index) => {
@@ -100,13 +101,13 @@ export function NavigationBar({ items, logo, actions }: NavigationBarProps) {
                             : "text-foreground hover:bg-muted"
                         )}
                       >
-                        {Icon && <Icon size={20} className="text-primary" />}
+                        {Icon && <Icon size={20} />}
                         <span>{item.label}</span>
                         {hasSubItems && <ChevronDown size={16} className={cn("transition-transform", isOpen && "rotate-180")} />}
                       </button>
                     ) : (
-                      <a
-                        href={item.href}
+                      <Link
+                        href={item.href || '#'}
                         className={cn(
                           "px-4 py-2 rounded-lg transition-all duration-200 flex items-center gap-2 cursor-pointer",
                           item.active
@@ -114,9 +115,9 @@ export function NavigationBar({ items, logo, actions }: NavigationBarProps) {
                             : "text-foreground hover:bg-muted"
                         )}
                       >
-                        {Icon && <Icon size={20} className="text-primary" />}
+                        {Icon && <Icon size={20} />}
                         <span>{item.label}</span>
-                      </a>
+                      </Link>
                     )}
 
                     {hasSubItems && isOpen && (
@@ -144,14 +145,14 @@ export function NavigationBar({ items, logo, actions }: NavigationBarProps) {
 
                             if (subItem.href) {
                               return (
-                                <a
+                                <Link
                                   key={subIndex}
                                   href={subItem.href}
                                   onClick={() => setOpenDropdown(null)}
                                   className="w-full px-4 py-3 flex items-start gap-3 hover:bg-muted transition-colors text-left cursor-pointer"
                                 >
                                   {SubItemContent}
-                                </a>
+                                </Link>
                               );
                             }
 
