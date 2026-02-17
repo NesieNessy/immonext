@@ -55,6 +55,7 @@ import {
   UserPlus,
   PiggyBank,
   BarChart,
+  BookCheck,
 } from "lucide-react";
 
 export const Icons = {
@@ -121,6 +122,9 @@ export const Icons = {
   // Real Estate Operations
   PropertyValuation: Calculator,
   ExistingProperties: Building2,
+  Documents: FileText,
+  QuickCheck: CheckCircle,
+  DetailCheck: BookCheck,
   FinancingConfirmation: BadgeCheck,
   ApplicationPortfolio: FolderOpen,
   Assignments: ClipboardList,

@@ -9,7 +9,7 @@ export { NumberInput } from "./NumberInput";
 export { Dropdown } from "./Dropdown";
 export { Checkbox } from "./Checkbox";
 export { RadioButton } from "./RadioButton";
-// export { CalendarField } from "./CalendarField"; // Temporarily disabled due to type issues
+export { CalendarField } from "./CalendarField"; 
 export { UploadButton } from "./UploadButton";
 export { Rating } from "./Rating";
 export { Stepper } from "./Stepper";

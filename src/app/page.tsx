@@ -1,7 +1,7 @@
 import { Customer, Property } from '@/types';
 import customersData from '@/data/customers.json';
 import propertiesData from '@/data/properties.json';
-import { Header, Tile, Button, Icons } from '@/components/real-estate';
+import { Header, Tile, Button, Icons, NavigationBar } from '@/components/real-estate';
 
 export default function Home() {
   const customers: Customer[] = customersData;
@@ -12,6 +12,39 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-background">
       <main className="container mx-auto px-4 py-8">
+        {/* Navigation Bar */}
+        <NavigationBar 
+          logo={{
+            iconName: 'home',
+            text: 'Startseite',
+            href: '/'
+          }}
+          items={[
+          { 
+            label: 'Objektbewertung',
+            iconName: 'propertyValuation',
+            subItems: [
+              { label: 'QuickCheck', href: '/objektbewertung/quickcheck', iconName: 'quickCheck' },
+              { label: 'Detailbewertung als Direkteinstieg', href: '/objektbewertung/detailbewertung', iconName: 'detailCheck' },
+            ]
+          },
+          { label: 'Bestandsobjekte', href: '/bestandsobjekte', iconName: 'existingProperties' },
+          { label: 'Dokumente', href: '/dokumente', iconName: 'documents' },
+          { label: 'Netzwerk', href: '/netzwerk', iconName: 'network' },
+          { label: 'Einstellungen', href: '/einstellungen', iconName: 'settings' },
+        ]}
+        actions={[
+          {
+            iconName: 'search', 
+            ariaLabel: 'Search'
+          },
+          {
+            iconName: 'user', 
+            ariaLabel: 'User profile'
+          }
+        ]}
+        />
+
         {/* Page Header */}
         <Header
           title="🏡 ImmoNext"
