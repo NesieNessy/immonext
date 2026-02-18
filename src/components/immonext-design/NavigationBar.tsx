@@ -54,6 +54,7 @@ interface ActionButton {
   iconName: IconName;
   onClick?: () => void;
   ariaLabel?: string;
+  href?: string;
 }
 
 export function NavigationBar({ items, logo, actions }: NavigationBarProps) {
@@ -182,14 +183,25 @@ export function NavigationBar({ items, logo, actions }: NavigationBarProps) {
           {actions && actions.length > 0 && (
             <div className="flex items-center gap-2">
               {actions.map((action, index) => (
-                <button
-                  key={index}
-                  onClick={action.onClick}
-                  aria-label={action.ariaLabel}
-                  className="p-2 rounded-lg hover:bg-muted transition-colors"
-                >
-                  {action.iconName && React.createElement(iconMap[action.iconName], { size: 20, className: "text-primary" })}
-                </button>
+                <div key={index} className="relative">
+                  {action.href ? (
+                    <Link
+                      href={action.href}
+                      aria-label={action.ariaLabel}
+                      className="p-2 rounded-lg hover:bg-muted transition-colors block"
+                    >
+                      {action.iconName && React.createElement(iconMap[action.iconName], { size: 20, className: "text-primary" })}
+                    </Link>
+                  ) : (
+                    <button
+                      onClick={action.onClick}
+                      aria-label={action.ariaLabel}
+                      className="p-2 rounded-lg hover:bg-muted transition-colors"
+                    >
+                      {action.iconName && React.createElement(iconMap[action.iconName], { size: 20, className: "text-primary" })}
+                    </button>
+                  )}
+                </div>
               ))}
             </div>
           )}

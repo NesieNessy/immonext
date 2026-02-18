@@ -11,7 +11,6 @@ export function AppNavigation() {
   const isExistingPropertiesActive = pathname === '/existing-properties';
   const isDocumentsActive = pathname === '/documents';
   const isNetworkActive = pathname === '/network';
-  const isSettingsActive = pathname === '/settings';
 
   return (
     <NavigationBar 
@@ -33,7 +32,6 @@ export function AppNavigation() {
         { label: 'Bestandsobjekte', href: '/existing-properties', iconName: 'existingProperties', active: isExistingPropertiesActive },
         { label: 'Dokumente', href: '/documents', iconName: 'documents', active: isDocumentsActive },
         { label: 'Netzwerk', href: '/network', iconName: 'network', active: isNetworkActive },
-        { label: 'Einstellungen', href: '/settings', iconName: 'settings', active: isSettingsActive },
       ]}
       actions={[
         {
@@ -42,7 +40,8 @@ export function AppNavigation() {
         },
         {
           iconName: 'user', 
-          ariaLabel: 'User profile'
+          ariaLabel: 'User settings',
+          href: '/settings'
         }
       ]}
     />
