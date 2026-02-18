@@ -41,7 +41,7 @@ export function AppNavigation() {
         {
           iconName: 'user', 
           ariaLabel: 'User settings',
-          href: '/settings'
+          href: '/user-settings'
         }
       ]}
     />
