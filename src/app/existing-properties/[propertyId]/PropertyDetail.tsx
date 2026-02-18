@@ -132,30 +132,34 @@ export default function PropertyDetail({ propertyId }: { propertyId: string }) {
                     <div className="flex items-center gap-3">
                         <div className="flex items-center gap-2 mr-4">
                             <Button 
+                                label="Vorheriges"
+                                icon={<ArrowLeft />}
+                                iconPosition="left"
                                 variant="ghost" 
                                 onClick={handlePreviousProperty}
                                 disabled={!hasPrevious}
-                            >
-                                <ArrowLeft size={20} className="mr-2" />
-                                Vorheriges
-                            </Button>
+                            />
                             <Button 
+                                label="Nächstes"
+                                icon={<ArrowRight />}
+                                iconPosition="right"
                                 variant="ghost" 
                                 onClick={handleNextProperty}
                                 disabled={!hasNext}
-                            >
-                                Nächstes
-                                <ArrowRight size={20} className="ml-2" />
-                            </Button>
+                            />
                         </div>
-                        <Button variant="outline" onClick={() => router.push(`/existing-properties/${propertyId}/adjust-rnd`)}>
-                            <Edit size={20} className="mr-2" />
-                            RND anpassen
-                        </Button>
-                        <Button variant="outline" onClick={() => router.push(`/existing-properties/${propertyId}/adjust-distribution`)}>
-                            <Edit size={20} className="mr-2" />
-                            Aufteilung anpassen
-                        </Button>
+                        <Button 
+                            label="RND anpassen"
+                            icon={<Edit />}
+                            variant="outline" 
+                            onClick={goToAdjustRND()}
+                        />
+                        <Button 
+                            label="Aufteilung anpassen"
+                            icon={<Edit />}
+                            variant="outline" 
+                            onClick={goToAdjustDistribution()}
+                        />
                     </div>
                 </div>
 
@@ -234,4 +238,12 @@ export default function PropertyDetail({ propertyId }: { propertyId: string }) {
             />
         </div>
     );
+
+    function goToAdjustRND() {
+        return () => router.push(`/existing-properties/${propertyId}/adjust-rnd`);
+    }
+
+    function goToAdjustDistribution() {
+        return () => router.push(`/existing-properties/${propertyId}/adjust-distribution`);
+    }
 }
