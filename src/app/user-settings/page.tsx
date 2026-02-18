@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from 'react';
-import { Header, TextField, Tile, Button } from '@/components/immonext-design';
+import { Header, TextField, Tile, StickyActionBar } from '@/components/immonext-design';
 import { AppNavigation } from '../shared/AppNavigation';
 import profileData from '@/data/profile.json';
 
@@ -50,7 +50,7 @@ export default function SettingsPage() {
     };
 
     return (
-        <div className="min-h-screen bg-background">
+        <div className="min-h-screen bg-background pb-24">
             {/* Navigation Bar */}
             <AppNavigation />
 
@@ -143,25 +143,16 @@ export default function SettingsPage() {
                         </div>
                     </Tile>
                 </div>
-
-                {/* Action Buttons - Show only when editing */}
-                {isEditing && (
-                    <div className="mt-6 flex justify-end gap-3 max-w-6xl">
-                        <Button
-                            variant="ghost"
-                            onClick={handleCancel}
-                        >
-                            Abbrechen
-                        </Button>
-                        <Button
-                            variant="primary"
-                            onClick={handleSave}
-                        >
-                            Speichern
-                        </Button>
-                    </div>
-                )}
             </main>
+
+            {/* Sticky Action Bar */}
+            <StickyActionBar
+                show={isEditing}
+                onGhost={handleCancel}
+                onPrimary={handleSave}
+                ghostLabel="Abbrechen"
+                primaryLabel="Speichern"
+            />
         </div>
     );
 }

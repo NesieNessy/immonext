@@ -22,6 +22,7 @@ export { TileWithImage } from "./TileWithImage";
 export { Image } from "./Image";
 export { Diagram } from "./Diagram";
 export { Gauge } from "./Gauge";
+export { StickyActionBar } from "./StickyActionBar";
 
 // Re-export common components for convenience
 export { Icons, Typography } from "../common";

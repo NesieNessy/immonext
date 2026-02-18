@@ -11,6 +11,7 @@ export function AppNavigation() {
   const isExistingPropertiesActive = pathname === '/existing-properties';
   const isDocumentsActive = pathname === '/documents';
   const isNetworkActive = pathname === '/network';
+  const isUserSettingsActive = pathname === '/user-settings';
 
   return (
     <NavigationBar 
@@ -41,7 +42,8 @@ export function AppNavigation() {
         {
           iconName: 'user', 
           ariaLabel: 'User settings',
-          href: '/user-settings'
+          href: '/user-settings',
+          active: isUserSettingsActive
         }
       ]}
     />

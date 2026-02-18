@@ -55,6 +55,7 @@ interface ActionButton {
   onClick?: () => void;
   ariaLabel?: string;
   href?: string;
+  active?: boolean;
 }
 
 export function NavigationBar({ items, logo, actions }: NavigationBarProps) {
@@ -188,17 +189,33 @@ export function NavigationBar({ items, logo, actions }: NavigationBarProps) {
                     <Link
                       href={action.href}
                       aria-label={action.ariaLabel}
-                      className="p-2 rounded-lg hover:bg-muted transition-colors block"
+                      className={cn(
+                        "p-2 rounded-lg transition-colors block",
+                        action.active
+                          ? "bg-primary text-primary-foreground"
+                          : "hover:bg-muted"
+                      )}
                     >
-                      {action.iconName && React.createElement(iconMap[action.iconName], { size: 20, className: "text-primary" })}
+                      {action.iconName && React.createElement(iconMap[action.iconName], { 
+                        size: 20, 
+                        className: action.active ? "" : "text-primary" 
+                      })}
                     </Link>
                   ) : (
                     <button
                       onClick={action.onClick}
                       aria-label={action.ariaLabel}
-                      className="p-2 rounded-lg hover:bg-muted transition-colors"
+                      className={cn(
+                        "p-2 rounded-lg transition-colors",
+                        action.active
+                          ? "bg-primary text-primary-foreground"
+                          : "hover:bg-muted"
+                      )}
                     >
-                      {action.iconName && React.createElement(iconMap[action.iconName], { size: 20, className: "text-primary" })}
+                      {action.iconName && React.createElement(iconMap[action.iconName], { 
+                        size: 20, 
+                        className: action.active ? "" : "text-primary" 
+                      })}
                     </button>
                   )}
                 </div>
