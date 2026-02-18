@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from 'react';
+import { X, Save } from 'lucide-react';
 import { Header, TextField, Tile, StickyActionBar } from '@/components/immonext-design';
 import { AppNavigation } from '../shared/AppNavigation';
 import profileData from '@/data/profile.json';
@@ -152,6 +153,8 @@ export default function SettingsPage() {
                 onPrimary={handleSave}
                 ghostLabel="Abbrechen"
                 primaryLabel="Speichern"
+                ghostIcon={<X size={20} />}
+                primaryIcon={<Save size={20} />}
             />
         </div>
     );

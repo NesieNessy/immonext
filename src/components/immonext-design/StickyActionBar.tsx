@@ -1,5 +1,6 @@
 "use client";
 
+import React from 'react';
 import { Button } from '@/components/immonext-design';
 
 interface StickyActionBarProps {
@@ -8,6 +9,8 @@ interface StickyActionBarProps {
     onPrimary: () => void;
     ghostLabel: string;
     primaryLabel: string;
+    ghostIcon?: React.ReactNode;
+    primaryIcon?: React.ReactNode;
 }
 
 export function StickyActionBar({
@@ -15,7 +18,9 @@ export function StickyActionBar({
     onGhost,
     onPrimary,
     ghostLabel,
-    primaryLabel
+    primaryLabel,
+    ghostIcon,
+    primaryIcon
 }: StickyActionBarProps) {
     if (!show) return null;
 
@@ -26,12 +31,14 @@ export function StickyActionBar({
                     variant="ghost"
                     onClick={onGhost}
                 >
+                    {ghostIcon && <span className="mr-2">{ghostIcon}</span>}
                     {ghostLabel}
                 </Button>
                 <Button
                     variant="primary"
                     onClick={onPrimary}
                 >
+                    {primaryIcon && <span className="mr-2">{primaryIcon}</span>}
                     {primaryLabel}
                 </Button>
             </div>

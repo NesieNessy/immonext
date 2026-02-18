@@ -1,11 +1,24 @@
 "use client";
 
-import { Header, TileWithImage } from '@/components/immonext-design';
+import { useRouter } from 'next/navigation';
+import { Plus } from 'lucide-react';
+import { Header, TileWithImage, Button } from '@/components/immonext-design';
 import existingPropertiesData from '@/data/existing_properties.json';
 import { AppNavigation } from '../shared/AppNavigation';
 
 export default function ExistingPropertiesPage() {
   const properties = existingPropertiesData.existing_properties;
+  const router = useRouter();
+
+  const handleCreateProperty = () => {
+    // TODO: Implement create new property functionality
+    console.log('Create new property');
+  };
+
+  const handlePropertyClick = (street: string, houseNumber: string) => {
+    const urlPath = `${street}-${houseNumber}`.toLowerCase().replace(/\s+/g, '-');
+    router.push(`/existing-properties/${urlPath}`);
+  };
 
   return (
     <div className="min-h-screen bg-background pb-12">
@@ -17,6 +30,12 @@ export default function ExistingPropertiesPage() {
         <Header
           title="Bestandsobjekte"
           subtitle="Übersicht aller vorhandenen Immobilien"
+          actions={
+            <Button variant="primary" onClick={handleCreateProperty}>
+              <Plus size={20} className="mr-2" />
+              Neues Objekt
+            </Button>
+          }
         />
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-8">
@@ -28,6 +47,7 @@ export default function ExistingPropertiesPage() {
               title={`${property.street} ${property.house_number}`}
               description={`${property.postcode} ${property.city}`}
               className="h-full"
+              onClick={() => handlePropertyClick(property.street, property.house_number)}
             />
           ))}
         </div>
