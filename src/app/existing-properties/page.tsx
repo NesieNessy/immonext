@@ -15,9 +15,8 @@ export default function ExistingPropertiesPage() {
     console.log('Create new property');
   };
 
-  const handlePropertyClick = (street: string, houseNumber: string) => {
-    const urlPath = `${street}-${houseNumber}`.toLowerCase().replace(/\s+/g, '-');
-    router.push(`/existing-properties/${urlPath}`);
+  const handlePropertyClick = (propertyId: string) => {
+    router.push(`/existing-properties/${propertyId}`);
   };
 
   return (
@@ -47,7 +46,7 @@ export default function ExistingPropertiesPage() {
               title={`${property.street} ${property.house_number}`}
               description={`${property.postcode} ${property.city}`}
               className="h-full"
-              onClick={() => handlePropertyClick(property.street, property.house_number)}
+              onClick={() => handlePropertyClick(property.id)}
             />
           ))}
         </div>
