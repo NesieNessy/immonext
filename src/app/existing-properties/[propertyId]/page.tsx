@@ -26,6 +26,7 @@ export async function generateStaticParams() {
     }));
 }
 
-export default function Page({ params }: { params: { propertyId: string } }) {
-    return <PropertyDetail propertyId={params.propertyId} />;
+export default async function Page({ params }: { params: { propertyId: string } }) {
+    const { propertyId } = await params;
+    return <PropertyDetail propertyId={propertyId} />;
 }
