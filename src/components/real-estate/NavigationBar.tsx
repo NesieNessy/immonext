@@ -101,7 +101,7 @@ export function NavigationBar({ items, logo, actions }: NavigationBarProps) {
                             : "text-foreground hover:bg-muted"
                         )}
                       >
-                        {Icon && <Icon size={20} />}
+                        {Icon && <Icon size={20} className={item.active ? "" : "text-primary"} />}
                         <span>{item.label}</span>
                         {hasSubItems && <ChevronDown size={16} className={cn("transition-transform", isOpen && "rotate-180")} />}
                       </button>
@@ -115,7 +115,7 @@ export function NavigationBar({ items, logo, actions }: NavigationBarProps) {
                             : "text-foreground hover:bg-muted"
                         )}
                       >
-                        {Icon && <Icon size={20} />}
+                        {Icon && <Icon size={20} className={item.active ? "" : "text-primary"} />}
                         <span>{item.label}</span>
                       </Link>
                     )}
