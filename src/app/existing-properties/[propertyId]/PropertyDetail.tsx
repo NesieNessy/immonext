@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, ArrowRight, Save, X, Edit } from 'lucide-react';
-import { TextField, NumberField, Tile, Button, CalendarField, StickyActionBar } from '@/components/immonext-design';
+import { TextField, NumberField, Tile, Button, CalendarField, StickyActionBar, Header } from '@/components/immonext-design';
 import { AppNavigation } from '../../shared/AppNavigation';
 import { ButtonLabels } from '@/constants/ButtonLabels';
 import existingPropertiesData from '@/data/existing_properties.json';
@@ -111,56 +111,51 @@ export default function PropertyDetail({ propertyId }: { propertyId: string }) {
         <div className="min-h-screen bg-background pb-24">
             <AppNavigation />
             <main className="container mx-auto px-4 py-8">
-                <div className="flex items-center justify-between border-b border-border pb-4">
-                    <div className="flex items-center gap-4">
-                        {property.image?.data && (
-                            <img
-                                src={`data:${property.image.format};base64,${property.image.data}`}
-                                alt={`${property.street} ${property.house_number}`}
-                                className="w-16 h-16 object-cover rounded-lg"
-                            />
-                        )}
-                        <div>
-                            <h1 className="text-2xl font-semibold text-foreground">
-                                {property.street} {property.house_number}
-                            </h1>
-                            <p className="text-sm text-muted-foreground mt-1">{ExistingPropertiesUseCases.PropertyData}
-                            </p>
-                        </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                        <div className="flex items-center gap-2 mr-4">
-                            <Button 
-                                label={ButtonLabels.Previous}
-                                icon={<ArrowLeft />}
-                                iconPosition="left"
-                                variant="ghost" 
-                                onClick={handlePreviousProperty}
-                                disabled={!hasPrevious}
-                            />
-                            <Button 
-                                label={ButtonLabels.Next}
-                                icon={<ArrowRight />}
-                                iconPosition="right"
-                                variant="ghost" 
-                                onClick={handleNextProperty}
-                                disabled={!hasNext}
-                            />
-                        </div>
-                        <Button 
-                            label={ButtonLabels.AdjustRND}
-                            icon={<Edit />}
-                            variant="outline" 
-                            onClick={goToAdjustRND()}
+                <Header 
+                    title={`${property.street} ${property.house_number}`}
+                    subtitle={ExistingPropertiesUseCases.PropertyData}
+                    image={property.image?.data && (
+                        <img
+                            src={`data:${property.image.format};base64,${property.image.data}`}
+                            alt={`${property.street} ${property.house_number}`}
+                            className="w-16 h-16 object-cover rounded-lg"
                         />
-                        <Button 
-                            label={ButtonLabels.AdjustDistribution}
-                            icon={<Edit />}
-                            variant="outline" 
-                            onClick={goToAdjustDistribution()}
-                        />
-                    </div>
-                </div>
+                    )}
+                    actions={
+                        <>
+                            <div className="flex items-center gap-2 mr-2">
+                                <Button 
+                                    label={ButtonLabels.Previous}
+                                    icon={<ArrowLeft />}
+                                    iconPosition="left"
+                                    variant="ghost" 
+                                    onClick={handlePreviousProperty}
+                                    disabled={!hasPrevious}
+                                />
+                                <Button 
+                                    label={ButtonLabels.Next}
+                                    icon={<ArrowRight />}
+                                    iconPosition="right"
+                                    variant="ghost" 
+                                    onClick={handleNextProperty}
+                                    disabled={!hasNext}
+                                />
+                            </div>
+                            <Button 
+                                label={ButtonLabels.AdjustRND}
+                                icon={<Edit />}
+                                variant="outline" 
+                                onClick={goToAdjustRND()}
+                            />
+                            <Button 
+                                label={ButtonLabels.AdjustDistribution}
+                                icon={<Edit />}
+                                variant="outline" 
+                                onClick={goToAdjustDistribution()}
+                            />
+                        </>
+                    }
+                />
 
                 <div className="mt-8 grid grid-cols-1 lg:grid-cols-2 gap-6 max-w-6xl">
                     {/* Address Information */}

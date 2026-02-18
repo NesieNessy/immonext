@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { Plus } from 'lucide-react';
 import { Header, TileWithImage, Button } from '@/components/immonext-design';
+import { ButtonLabels } from '@/constants/ButtonLabels';
 import existingPropertiesData from '@/data/existing_properties.json';
 import { AppNavigation } from '../shared/AppNavigation';
 
@@ -30,10 +31,12 @@ export default function ExistingPropertiesPage() {
           title="Bestandsobjekte"
           subtitle="Übersicht aller vorhandenen Immobilien"
           actions={
-            <Button variant="primary" onClick={handleCreateProperty}>
-              <Plus size={20} className="mr-2" />
-              Neues Objekt
-            </Button>
+            <Button 
+              label={ButtonLabels.Create}
+              icon={<Plus />}
+              variant="primary" 
+              onClick={handleCreateProperty}
+            />
           }
         />
 

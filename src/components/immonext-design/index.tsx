@@ -1,6 +1,5 @@
 // Export all Real Estate components
 export { Button } from "./Button";
-export { IconButton } from "./IconButton";
 export { TextField } from "./TextField";
 export { TextFieldWithIcon } from "./TextFieldWithIcon";
 export { TextArea } from "./TextArea";
