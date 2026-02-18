@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname } from 'next/navigation';
-import { NavigationBar } from './real-estate';
+import { NavigationBar } from '@/components/immonext-design';
 
 export function AppNavigation() {
   const pathname = usePathname();

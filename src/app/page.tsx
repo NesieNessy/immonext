@@ -1,8 +1,8 @@
 import { Customer, Property } from '@/types';
 import customersData from '@/data/customers.json';
 import propertiesData from '@/data/properties.json';
-import { Header, Tile, Button, Icons } from '@/components/real-estate';
-import { AppNavigation } from '@/components/AppNavigation';
+import { Header, Tile, Button, Icons } from '@/components/immonext-design';
+import { AppNavigation } from './shared/AppNavigation';
 
 export default function Home() {
   const customers: Customer[] = customersData;
@@ -14,7 +14,7 @@ export default function Home() {
     <div className="min-h-screen bg-background">
       {/* Navigation Bar */}
       <AppNavigation />
-      
+
       <main className="container mx-auto px-4 py-8">
 
         {/* Page Header */}
