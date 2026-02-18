@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft } from 'lucide-react';
-import { Header, TextField, NumberField, Tile, Button, CalendarField } from '@/components/immonext-design';
+import { ArrowLeft, Save, X } from 'lucide-react';
+import { Header, TextField, NumberField, Tile, Button, CalendarField, StickyActionBar } from '@/components/immonext-design';
 import { AppNavigation } from '../../shared/AppNavigation';
 import existingPropertiesData from '@/data/existing_properties.json';
 
@@ -29,6 +29,7 @@ export default function PropertyDetail({ propertyId }: { propertyId: string }) {
     const router = useRouter();
 
     const [property, setProperty] = useState<Property | null>(null);
+    const [isEditing, setIsEditing] = useState(false);
     const [formData, setFormData] = useState<Property | null>(null);
 
     useEffect(() => {
@@ -42,6 +43,32 @@ export default function PropertyDetail({ propertyId }: { propertyId: string }) {
             setFormData(foundProperty as Property);
         }
     }, [propertyId]);
+
+    const handleInputChange = (field: keyof Property, value: string | number | Date) => {
+        if (!formData) return;
+        
+        // Handle Date object conversion for date_of_acquisition
+        if (field === 'date_of_acquisition' && value instanceof Date) {
+            const dateString = value.toISOString().split('T')[0];
+            setFormData({ ...formData, [field]: dateString });
+        } else {
+            setFormData({ ...formData, [field]: value });
+        }
+        
+        if (!isEditing) setIsEditing(true);
+    };
+
+    const handleCancel = () => {
+        setFormData(property);
+        setIsEditing(false);
+    };
+
+    const handleSave = () => {
+        // TODO: Implement save functionality
+        console.log('Saving property data:', formData);
+        setProperty(formData);
+        setIsEditing(false);
+    };
 
     const handleBack = () => {
         router.push('/existing-properties');
@@ -59,7 +86,7 @@ export default function PropertyDetail({ propertyId }: { propertyId: string }) {
     }
 
     return (
-        <div className="min-h-screen bg-background pb-12">
+        <div className="min-h-screen bg-background pb-24">
             <AppNavigation />
             <main className="container mx-auto px-4 py-8">
                 <div className="flex items-center justify-between border-b border-border pb-4">
@@ -91,23 +118,23 @@ export default function PropertyDetail({ propertyId }: { propertyId: string }) {
                             <TextField
                                 label="Straße"
                                 value={formData.street}
-                                readOnly
+                                onChange={(e) => handleInputChange('street', e.target.value)}
                                 className="sm:col-span-2"
                             />
                             <TextField
                                 label="Hausnummer"
                                 value={formData.house_number}
-                                readOnly
+                                onChange={(e) => handleInputChange('house_number', e.target.value)}
                             />
                             <TextField
                                 label="Postleitzahl"
                                 value={formData.postcode}
-                                readOnly
+                                onChange={(e) => handleInputChange('postcode', e.target.value)}
                             />
                             <TextField
                                 label="Stadt"
                                 value={formData.city}
-                                readOnly
+                                onChange={(e) => handleInputChange('city', e.target.value)}
                                 className="sm:col-span-2"
                             />
                         </div>
@@ -119,34 +146,44 @@ export default function PropertyDetail({ propertyId }: { propertyId: string }) {
                             <NumberField
                                 label="Baujahr"
                                 value={formData.year_of_construction}
-                                readOnly
+                                onChange={(e) => handleInputChange('year_of_construction', parseInt(e.target.value) || 0)}
                             />
                             <CalendarField
                                 label="Kaufsdatum"
                                 value={new Date(formData.date_of_acquisition)}
-                                readOnly
+                                onChange={(date) => date && handleInputChange('date_of_acquisition', date)}
                             />
                             <NumberField
                                 label="Anzahl Stellplätze"
                                 value={formData.number_of_parking_spaces}
-                                readOnly
+                                onChange={(e) => handleInputChange('number_of_parking_spaces', parseInt(e.target.value) || 0)}
                             />
                             <TextField
                                 label="Energieeffizienz"
                                 value={formData.energy_rating}
-                                readOnly
+                                onChange={(e) => handleInputChange('energy_rating', e.target.value)}
                             />
                             <TextField
                                 label="Wohnfläche"
-                                value={formData.net_internal_area_sqm.toString()}
+                                value={formData.net_internal_area_sqm}
                                 suffix="m²"
-                                readOnly
-                                className="sm:col-span-2"
+                                onChange={(e) => handleInputChange('net_internal_area_sqm', e.target.value)}
                             />
                         </div>
                     </Tile>
                 </div>
             </main>
+
+            {/* Sticky Action Bar */}
+            <StickyActionBar
+                show={isEditing}
+                onGhost={handleCancel}
+                onPrimary={handleSave}
+                ghostLabel="Abbrechen"
+                primaryLabel="Speichern"
+                ghostIcon={<X size={20} />}
+                primaryIcon={<Save size={20} />}
+            />
         </div>
     );
 }
