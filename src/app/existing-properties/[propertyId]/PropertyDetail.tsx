@@ -2,8 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, ArrowRight, Save, X, Edit } from 'lucide-react';
+import { Save, X, Edit } from 'lucide-react';
 import { TextField, NumberField, Tile, Button, CalendarField, StickyActionBar, Header } from '@/components/immonext-design';
+import type { MenuItem } from '@/components/immonext-design';
 import { AppNavigation } from '../../shared/AppNavigation';
 import { ButtonLabels } from '@/constants/ButtonLabels';
 import existingPropertiesData from '@/data/existing_properties.json';
@@ -72,29 +73,14 @@ export default function PropertyDetail({ propertyId }: { propertyId: string }) {
         setIsEditing(false);
     };
 
-    const handlePreviousProperty = () => {
-        const properties = existingPropertiesData.existing_properties;
-        const currentIndex = properties.findIndex(p => p.id === propertyId);
-        if (currentIndex > 0) {
-            const previousProperty = properties[currentIndex - 1];
-            router.push(`/existing-properties/${previousProperty.id}`);
-        }
-    };
-
-    const handleNextProperty = () => {
-        const properties = existingPropertiesData.existing_properties;
-        const currentIndex = properties.findIndex(p => p.id === propertyId);
-        if (currentIndex < properties.length - 1) {
-            const nextProperty = properties[currentIndex + 1];
-            router.push(`/existing-properties/${nextProperty.id}`);
-        }
-    };
-
-    // Check if navigation is available
-    const properties = existingPropertiesData.existing_properties;
-    const currentIndex = properties.findIndex(p => p.id === propertyId);
-    const hasPrevious = currentIndex > 0;
-    const hasNext = currentIndex < properties.length - 1;
+    // Create menu items for all use cases
+    const useCaseMenuItems: MenuItem[] = Object.values(ExistingPropertiesUseCases).map((useCase) => ({
+        label: useCase,
+        onClick: () => {
+            console.log('Selected use case:', useCase);
+            // TODO: Implement use case navigation/functionality
+        },
+    }));
 
     if (!property || !formData) {
         return (
@@ -123,24 +109,6 @@ export default function PropertyDetail({ propertyId }: { propertyId: string }) {
                     )}
                     actions={
                         <>
-                            <div className="flex items-center gap-2 mr-2">
-                                <Button 
-                                    label={ButtonLabels.Previous}
-                                    icon={<ArrowLeft />}
-                                    iconPosition="left"
-                                    variant="ghost" 
-                                    onClick={handlePreviousProperty}
-                                    disabled={!hasPrevious}
-                                />
-                                <Button 
-                                    label={ButtonLabels.Next}
-                                    icon={<ArrowRight />}
-                                    iconPosition="right"
-                                    variant="ghost" 
-                                    onClick={handleNextProperty}
-                                    disabled={!hasNext}
-                                />
-                            </div>
                             <Button 
                                 label={ButtonLabels.AdjustRND}
                                 icon={<Edit />}
@@ -152,6 +120,11 @@ export default function PropertyDetail({ propertyId }: { propertyId: string }) {
                                 icon={<Edit />}
                                 variant="outline" 
                                 onClick={goToAdjustDistribution()}
+                            />
+                            <Button 
+                                label={ButtonLabels.UseCases}
+                                variant="primary"
+                                menuItems={useCaseMenuItems}
                             />
                         </>
                     }

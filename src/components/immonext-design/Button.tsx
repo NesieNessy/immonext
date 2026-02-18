@@ -1,5 +1,14 @@
 import React from "react";
 import { cn } from "@/lib/utils";
+import { ChevronDown } from "lucide-react";
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
+
+export interface MenuItem {
+  label: string;
+  icon?: React.ReactNode;
+  onClick: () => void;
+  disabled?: boolean;
+}
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: "primary" | "secondary" | "accent" | "outline" | "ghost";
@@ -8,6 +17,7 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   icon?: React.ReactNode;
   iconPosition?: "left" | "right";
   iconOnly?: boolean;
+  menuItems?: MenuItem[];
   children?: React.ReactNode;
 }
 
@@ -18,6 +28,7 @@ export function Button({
   icon,
   iconPosition = "left",
   iconOnly = false,
+  menuItems,
   className,
   children,
   ...props
@@ -66,11 +77,53 @@ export function Button({
         {iconWithSize && iconPosition === "left" && iconWithSize}
         {label}
         {iconWithSize && iconPosition === "right" && iconWithSize}
+        {menuItems && <ChevronDown size={iconSizes[size]} className="ml-1" />}
       </>
     );
   } else {
     // Fallback to children
     content = children;
+  }
+
+  // If menuItems is provided, wrap button in Popover
+  if (menuItems && menuItems.length > 0) {
+    return (
+      <Popover>
+        <PopoverTrigger asChild>
+          <button
+            className={cn(baseStyles, variants[variant], sizes[size], className)}
+            {...props}
+          >
+            {content}
+          </button>
+        </PopoverTrigger>
+        <PopoverContent className="w-56 p-2" align="end">
+          <div className="flex flex-col gap-1">
+            {menuItems.map((item, index) => {
+              const itemIconWithSize = item.icon && React.isValidElement(item.icon)
+                ? React.cloneElement(item.icon as React.ReactElement<any>, { size: 18 })
+                : item.icon;
+              
+              return (
+                <button
+                  key={index}
+                  onClick={item.onClick}
+                  disabled={item.disabled}
+                  className={cn(
+                    "flex items-center gap-3 px-3 py-2 text-sm rounded-md transition-colors text-left",
+                    "hover:bg-muted focus:bg-muted focus:outline-none",
+                    "disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+                  )}
+                >
+                  {itemIconWithSize && <span className="flex-shrink-0">{itemIconWithSize}</span>}
+                  <span>{item.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        </PopoverContent>
+      </Popover>
+    );
   }
 
   return (
