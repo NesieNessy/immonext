@@ -5,7 +5,9 @@ import { useRouter } from 'next/navigation';
 import { ArrowLeft, ArrowRight, Save, X, Edit } from 'lucide-react';
 import { TextField, NumberField, Tile, Button, CalendarField, StickyActionBar } from '@/components/immonext-design';
 import { AppNavigation } from '../../shared/AppNavigation';
+import { ButtonLabels } from '@/constants/ButtonLabels';
 import existingPropertiesData from '@/data/existing_properties.json';
+import { ExistingPropertiesUseCases } from '@/constants/ExistingPropertiesUseCases';
 
 interface Property {
     id: string;
@@ -70,10 +72,6 @@ export default function PropertyDetail({ propertyId }: { propertyId: string }) {
         setIsEditing(false);
     };
 
-    const handleBack = () => {
-        router.push('/existing-properties');
-    };
-
     const handlePreviousProperty = () => {
         const properties = existingPropertiesData.existing_properties;
         const currentIndex = properties.findIndex(p => p.id === propertyId);
@@ -103,7 +101,7 @@ export default function PropertyDetail({ propertyId }: { propertyId: string }) {
             <div className="min-h-screen bg-background">
                 <AppNavigation />
                 <main className="container mx-auto px-4 py-8">
-                    <p className="text-muted-foreground">Immobilie nicht gefunden</p>
+                    <p className="text-muted-foreground">Objekt nicht gefunden</p>
                 </main>
             </div>
         );
@@ -126,13 +124,14 @@ export default function PropertyDetail({ propertyId }: { propertyId: string }) {
                             <h1 className="text-2xl font-semibold text-foreground">
                                 {property.street} {property.house_number}
                             </h1>
-                            <p className="text-sm text-muted-foreground mt-1">Immobiliendetails</p>
+                            <p className="text-sm text-muted-foreground mt-1">{ExistingPropertiesUseCases.PropertyData}
+                            </p>
                         </div>
                     </div>
                     <div className="flex items-center gap-3">
                         <div className="flex items-center gap-2 mr-4">
                             <Button 
-                                label="Vorheriges"
+                                label={ButtonLabels.Previous}
                                 icon={<ArrowLeft />}
                                 iconPosition="left"
                                 variant="ghost" 
@@ -140,7 +139,7 @@ export default function PropertyDetail({ propertyId }: { propertyId: string }) {
                                 disabled={!hasPrevious}
                             />
                             <Button 
-                                label="Nächstes"
+                                label={ButtonLabels.Next}
                                 icon={<ArrowRight />}
                                 iconPosition="right"
                                 variant="ghost" 
@@ -149,13 +148,13 @@ export default function PropertyDetail({ propertyId }: { propertyId: string }) {
                             />
                         </div>
                         <Button 
-                            label="RND anpassen"
+                            label={ButtonLabels.AdjustRND}
                             icon={<Edit />}
                             variant="outline" 
                             onClick={goToAdjustRND()}
                         />
                         <Button 
-                            label="Aufteilung anpassen"
+                            label={ButtonLabels.AdjustDistribution}
                             icon={<Edit />}
                             variant="outline" 
                             onClick={goToAdjustDistribution()}
@@ -231,8 +230,8 @@ export default function PropertyDetail({ propertyId }: { propertyId: string }) {
                 show={isEditing}
                 onGhost={handleCancel}
                 onPrimary={handleSave}
-                ghostLabel="Abbrechen"
-                primaryLabel="Speichern"
+                ghostLabel={ButtonLabels.Cancel}
+                primaryLabel={ButtonLabels.Save}
                 ghostIcon={<X size={20} />}
                 primaryIcon={<Save size={20} />}
             />
