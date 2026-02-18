@@ -8,7 +8,7 @@ export function AppNavigation() {
 
   // Determine which item should be active based on the current path
   const isPropertyValuationActive = pathname?.startsWith('/property-valuation');
-  const isExistingPropertiesActive = pathname === '/existing-properties';
+  const isExistingPropertiesActive = pathname?.startsWith('/existing-properties');
   const isDocumentsActive = pathname === '/documents';
   const isNetworkActive = pathname === '/network';
   const isUserSettingsActive = pathname === '/user-settings';

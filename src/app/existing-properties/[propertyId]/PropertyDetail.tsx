@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Save, X } from 'lucide-react';
-import { Header, TextField, NumberField, Tile, Button, CalendarField, StickyActionBar } from '@/components/immonext-design';
+import { ArrowLeft, ArrowRight, Save, X, Edit } from 'lucide-react';
+import { TextField, NumberField, Tile, Button, CalendarField, StickyActionBar } from '@/components/immonext-design';
 import { AppNavigation } from '../../shared/AppNavigation';
 import existingPropertiesData from '@/data/existing_properties.json';
 
@@ -46,7 +46,7 @@ export default function PropertyDetail({ propertyId }: { propertyId: string }) {
 
     const handleInputChange = (field: keyof Property, value: string | number | Date) => {
         if (!formData) return;
-        
+
         // Handle Date object conversion for date_of_acquisition
         if (field === 'date_of_acquisition' && value instanceof Date) {
             const dateString = value.toISOString().split('T')[0];
@@ -54,7 +54,7 @@ export default function PropertyDetail({ propertyId }: { propertyId: string }) {
         } else {
             setFormData({ ...formData, [field]: value });
         }
-        
+
         if (!isEditing) setIsEditing(true);
     };
 
@@ -73,6 +73,30 @@ export default function PropertyDetail({ propertyId }: { propertyId: string }) {
     const handleBack = () => {
         router.push('/existing-properties');
     };
+
+    const handlePreviousProperty = () => {
+        const properties = existingPropertiesData.existing_properties;
+        const currentIndex = properties.findIndex(p => p.id === propertyId);
+        if (currentIndex > 0) {
+            const previousProperty = properties[currentIndex - 1];
+            router.push(`/existing-properties/${previousProperty.id}`);
+        }
+    };
+
+    const handleNextProperty = () => {
+        const properties = existingPropertiesData.existing_properties;
+        const currentIndex = properties.findIndex(p => p.id === propertyId);
+        if (currentIndex < properties.length - 1) {
+            const nextProperty = properties[currentIndex + 1];
+            router.push(`/existing-properties/${nextProperty.id}`);
+        }
+    };
+
+    // Check if navigation is available
+    const properties = existingPropertiesData.existing_properties;
+    const currentIndex = properties.findIndex(p => p.id === propertyId);
+    const hasPrevious = currentIndex > 0;
+    const hasNext = currentIndex < properties.length - 1;
 
     if (!property || !formData) {
         return (
@@ -105,10 +129,34 @@ export default function PropertyDetail({ propertyId }: { propertyId: string }) {
                             <p className="text-sm text-muted-foreground mt-1">Immobiliendetails</p>
                         </div>
                     </div>
-                    <Button variant="ghost" onClick={handleBack}>
-                        <ArrowLeft size={20} className="mr-2" />
-                        Zurück
-                    </Button>
+                    <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-2 mr-4">
+                            <Button 
+                                variant="ghost" 
+                                onClick={handlePreviousProperty}
+                                disabled={!hasPrevious}
+                            >
+                                <ArrowLeft size={20} className="mr-2" />
+                                Vorheriges
+                            </Button>
+                            <Button 
+                                variant="ghost" 
+                                onClick={handleNextProperty}
+                                disabled={!hasNext}
+                            >
+                                Nächstes
+                                <ArrowRight size={20} className="ml-2" />
+                            </Button>
+                        </div>
+                        <Button variant="outline" onClick={() => router.push(`/existing-properties/${propertyId}/adjust-rnd`)}>
+                            <Edit size={20} className="mr-2" />
+                            RND anpassen
+                        </Button>
+                        <Button variant="outline" onClick={() => router.push(`/existing-properties/${propertyId}/adjust-distribution`)}>
+                            <Edit size={20} className="mr-2" />
+                            Aufteilung anpassen
+                        </Button>
+                    </div>
                 </div>
 
                 <div className="mt-8 grid grid-cols-1 lg:grid-cols-2 gap-6 max-w-6xl">
