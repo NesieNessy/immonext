@@ -1,16 +1,17 @@
 {
   "user_profile": {
-    "first_name": "John",
-    "last_name": "Doe",
+    "first_name": "Hans",
+    "last_name": "Müller",
     "address": {
-      "street": "Main Street 123",
-      "city": "Berlin",
-      "postal_code": "10115",
-      "country": "Germany"
+      "street": "Hauptstraße 42",
+      "city": "München",
+      "state": "Bayern",
+      "postal_code": "80331",
+      "country": "Deutschland"
     },
-    "phone_number": "+49 30 12345678",
-    "email_address": "john.doe@example.com",
+    "phone_number": "+49 89 12345678",
+    "email_address": "hans.mueller@beispiel.de",
     "tax_identification_number": "12 345 678 901",
-    "subscription_model": "premium"
+    "subscription_model": "Premium"
   }
 }
