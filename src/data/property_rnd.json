@@ -1,0 +1,83 @@
+ { "property_rnd": [
+    {
+      "id": "RND001",
+      "property_id": "P001",
+      "rnd_mode": "Standard",
+      "rnd_years": null,
+      "afa_percent": null,
+      "renovation_id": null
+    },
+    {
+      "id": "RND002",
+      "property_id": "P002",
+      "rnd_mode": "Individuell",
+      "rnd_years": 38,
+      "afa_percent": 2.63,
+      "renovation_id": 1
+    },
+    {
+      "id": "RND003",
+      "property_id": "P003",
+      "rnd_mode": "Individuell",
+      "rnd_years": 25,
+      "afa_percent": 4,
+      "renovation_id": 2
+    },
+    {
+      "id": "RND004",
+      "property_id": "P004",
+      "rnd_mode": "Standard",
+      "rnd_years": null,
+      "afa_percent": null,
+      "renovation_id": null
+    },
+    {
+      "id": "RND005",
+      "property_id": "P005",
+      "rnd_mode": "Individuell",
+      "rnd_years": 42,
+      "afa_percent": 2.38,
+      "renovation_id": 3
+    },
+    {
+      "id": "RND006",
+      "property_id": "P006",
+      "rnd_mode": "Standard",
+      "rnd_years": null,
+      "afa_percent": null,
+      "renovation_id": null
+    },
+    {
+      "id": "RND007",
+      "property_id": "P007",
+      "rnd_mode": "Individuell",
+      "rnd_years": 18,
+      "afa_percent": 5.56,
+      "renovation_id": 4
+    },
+    {
+      "id": "RND008",
+      "property_id": "P008",
+      "rnd_mode": "Individuell",
+      "rnd_years": 35,
+      "afa_percent": 2.86,
+      "renovation_id": 5
+    },
+    {
+      "id": "RND009",
+      "property_id": "P009",
+      "rnd_mode": "Standard",
+      "rnd_years": null,
+      "afa_percent": null,
+      "renovation_id": null
+    },
+    {
+      "id": "RND010",
+      "property_id": "P010",
+      "rnd_mode": "Individuell",
+      "rnd_years": 30,
+      "afa_percent": 3.33,
+      "renovation_id": 6
+    }
+  ]
+}

@@ -1,0 +1,63 @@
+{ "rnd_renovation": [
+    {
+      "id": 1,
+      "roof_renewal_incl_insulation": "5–10 Jahre",
+      "windows_and_exterior_doors": "0–5 Jahre",
+      "piping_systems": "10–15 Jahre",
+      "heating_system": "5–10 Jahre",
+      "exterior_wall_insulation": "15–20 Jahre",
+      "bathrooms": "0–5 Jahre",
+      "interior_work_excl_bathrooms": "10–15 Jahre"
+    },
+    {
+      "id": 2,
+      "roof_renewal_incl_insulation": "> 20 Jahre",
+      "windows_and_exterior_doors": "> 20 Jahre",
+      "piping_systems": "> 20 Jahre",
+      "heating_system": "> 20 Jahre",
+      "exterior_wall_insulation": "> 20 Jahre",
+      "bathrooms": "> 20 Jahre",
+      "interior_work_excl_bathrooms": "> 20 Jahre"
+    },
+    {
+      "id": 3,
+      "roof_renewal_incl_insulation": "10–15 Jahre",
+      "windows_and_exterior_doors": "5–10 Jahre",
+      "piping_systems": "15–20 Jahre",
+      "heating_system": "10–15 Jahre",
+      "exterior_wall_insulation": "5–10 Jahre",
+      "bathrooms": "15–20 Jahre",
+      "interior_work_excl_bathrooms": "5–10 Jahre"
+    },
+    {
+      "id": 4,
+      "roof_renewal_incl_insulation": "> 20 Jahre",
+      "windows_and_exterior_doors": "> 20 Jahre",
+      "piping_systems": "> 20 Jahre",
+      "heating_system": "15–20 Jahre",
+      "exterior_wall_insulation": "> 20 Jahre",
+      "bathrooms": "> 20 Jahre",
+      "interior_work_excl_bathrooms": "15–20 Jahre"
+    },
+    {
+      "id": 5,
+      "roof_renewal_incl_insulation": "10–15 Jahre",
+      "windows_and_exterior_doors": "10–15 Jahre",
+      "piping_systems": "5–10 Jahre",
+      "heating_system": "0–5 Jahre",
+      "exterior_wall_insulation": "10–15 Jahre",
+      "bathrooms": "5–10 Jahre",
+      "interior_work_excl_bathrooms": "0–5 Jahre"
+    },
+    {
+      "id": 6,
+      "roof_renewal_incl_insulation": "15–20 Jahre",
+      "windows_and_exterior_doors": "10–15 Jahre",
+      "piping_systems": "15–20 Jahre",
+      "heating_system": "10–15 Jahre",
+      "exterior_wall_insulation": "15–20 Jahre",
+      "bathrooms": "10–15 Jahre",
+      "interior_work_excl_bathrooms": "15–20 Jahre"
+    }
+  ]
+}
