@@ -79,17 +79,29 @@ export default function PropertyData({ propertyId }: { propertyId: string }) {
         const iconName = ExistingPropertiesUseCasesIcons[key as keyof typeof ExistingPropertiesUseCases];
         const IconComponent = (LucideIcons as any)[iconName];
         
+        // Map use case keys to their route paths
+        const routeMap: Record<string, string> = {
+            'PropertyData': 'property-data',
+            'RND': 'adjust-rnd',
+            'SplitPurchasePrice': 'adjust-distribution',
+            'TenantData': 'tenant-data',
+            'TenantHistory': 'tenant-history',
+            'RentalTrends': 'rental-trends',
+            'ServiceChargeSettlement': 'service-charge-settlement',
+            'Contractors': 'contractors',
+            'TaxDocuments': 'tax-documents',
+            'KeyMetrics': 'key-metrics',
+            'Sale': 'sale',
+            'TenantMoveOut': 'tenant-move-out',
+        };
+        
         return {
             label: useCase,
             icon: IconComponent ? <IconComponent /> : undefined,
             onClick: () => {
-                if (key === 'RND') {
-                    router.push(`/existing-properties/${propertyId}/adjust-rnd`);
-                } else if (key === 'SplitPurchasePrice') {
-                    router.push(`/existing-properties/${propertyId}/adjust-distribution`);
-                } else {
-                    console.log('Selected use case:', useCase);
-                    // TODO: Implement use case navigation/functionality
+                const route = routeMap[key];
+                if (route) {
+                    router.push(`/existing-properties/${propertyId}/${route}`);
                 }
             },
         };
