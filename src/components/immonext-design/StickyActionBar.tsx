@@ -30,17 +30,15 @@ export function StickyActionBar({
                 <Button
                     variant="ghost"
                     onClick={onGhost}
-                >
-                    {ghostIcon && <span className="mr-2">{ghostIcon}</span>}
-                    {ghostLabel}
-                </Button>
+                    label={ghostLabel}
+                    icon={ghostIcon}
+                />
                 <Button
                     variant="primary"
                     onClick={onPrimary}
-                >
-                    {primaryIcon && <span className="mr-2">{primaryIcon}</span>}
-                    {primaryLabel}
-                </Button>
+                    label={primaryLabel}
+                    icon={primaryIcon}
+                />
             </div>
         </div>
     );

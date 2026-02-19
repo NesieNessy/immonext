@@ -3,6 +3,7 @@ export enum ButtonLabels {
     Save = 'Speichern',
     Previous = 'Vorheriges',
     Next = 'Nächstes',
+    Back = 'Zurück',
     Create = 'Erstellen',
     Overview = 'Zur Übersicht',
     UseCases = 'Anwendungsfall',

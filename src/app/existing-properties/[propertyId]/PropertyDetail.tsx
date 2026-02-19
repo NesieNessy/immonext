@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Save, X, Edit } from 'lucide-react';
+import { Save, X, Edit, Layers } from 'lucide-react';
 import { TextField, NumberField, Tile, Button, CalendarField, StickyActionBar, Header } from '@/components/immonext-design';
 import type { MenuItem } from '@/components/immonext-design';
 import { AppNavigation } from '../../shared/AppNavigation';
@@ -123,6 +123,7 @@ export default function PropertyDetail({ propertyId }: { propertyId: string }) {
                             />
                             <Button 
                                 label={ButtonLabels.UseCases}
+                                icon={<Layers />}
                                 variant="primary"
                                 menuItems={useCaseMenuItems}
                             />
@@ -200,8 +201,8 @@ export default function PropertyDetail({ propertyId }: { propertyId: string }) {
                 onPrimary={handleSave}
                 ghostLabel={ButtonLabels.Cancel}
                 primaryLabel={ButtonLabels.Save}
-                ghostIcon={<X size={20} />}
-                primaryIcon={<Save size={20} />}
+                ghostIcon={<X />}
+                primaryIcon={<Save />}
             />
         </div>
     );

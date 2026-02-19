@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
 import { Button, Tile } from '@/components/immonext-design';
 import { AppNavigation } from '../../../shared/AppNavigation';
+import { ButtonLabels } from '@/constants/ButtonLabels';
 
 export default function AdjustDistribution({ propertyId }: { propertyId: string }) {
     const router = useRouter();
@@ -25,10 +26,12 @@ export default function AdjustDistribution({ propertyId }: { propertyId: string 
                             Kostenaufteilung und Verteilung anpassen
                         </p>
                     </div>
-                    <Button variant="ghost" onClick={handleBack}>
-                        <ArrowLeft size={20} className="mr-2" />
-                        Zurück
-                    </Button>
+                    <Button 
+                        label={ButtonLabels.Back}
+                        icon={<ArrowLeft />}
+                        variant="ghost" 
+                        onClick={handleBack}
+                    />
                 </div>
 
                 <div className="max-w-4xl">
