@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation';
 import existingPropertiesData from '@/data/existing_properties.json';
-import { Property } from '@/types';
+import type { Property } from '@/types/Property';
 
 async function fetchAllProperties(): Promise<Property[]> {
     return existingPropertiesData.existing_properties as Property[];

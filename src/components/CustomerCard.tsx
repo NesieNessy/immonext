@@ -1,4 +1,4 @@
-import { Customer } from '@/types';
+import type { Customer } from '@/types/Customer';
 
 interface CustomerCardProps {
   customer: Customer;

@@ -1,4 +1,4 @@
-import { Customer } from '@/types';
+import type { Customer } from '@/types/Customer';
 import customersData from '@/data/customers.json';
 import propertiesData from '@/data/properties.json';
 import { Header, Tile, Button, Icons } from '@/components/immonext-design';

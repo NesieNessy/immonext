@@ -8,7 +8,7 @@ import { AppNavigation } from '../../../shared/AppNavigation';
 import { ButtonLabels } from '@/constants/ButtonLabels';
 import existingPropertiesData from '@/data/existing_properties.json';
 import { ExistingPropertiesUseCases } from '@/constants/ExistingPropertiesUseCases';
-import type { Property } from '@/types';
+import type { Property } from '@/types/Property';
 import { createUseCaseMenuItems } from '@/lib/useCaseMenu';
 
 export default function PropertyData({ propertyId }: { propertyId: string }) {

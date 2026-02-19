@@ -7,7 +7,7 @@ import { ButtonLabels } from '@/constants/ButtonLabels';
 import { ExistingPropertiesUseCases } from '@/constants/ExistingPropertiesUseCases';
 import { Layers } from 'lucide-react';
 import existingPropertiesData from '@/data/existing_properties.json';
-import type { Property } from '@/types';
+import type { Property } from '@/types/Property';
 import { createUseCaseMenuItems } from '@/lib/useCaseMenu';
 
 export default function Contractors({ propertyId }: { propertyId: string }) {

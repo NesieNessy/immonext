@@ -7,7 +7,7 @@ import { AppNavigation } from '../../../shared/AppNavigation';
 import { ButtonLabels } from '@/constants/ButtonLabels';
 import { ExistingPropertiesUseCases } from '@/constants/ExistingPropertiesUseCases';
 import existingPropertiesData from '@/data/existing_properties.json';
-import type { Property } from '@/types';
+import type { Property } from '@/types/Property';
 import { createUseCaseMenuItems } from '@/lib/useCaseMenu';
 
 export default function AdjustDistribution({ propertyId }: { propertyId: string }) {
