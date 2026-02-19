@@ -5,17 +5,18 @@ import { Tile, Button, Header } from '@/components/immonext-design';
 import { AppNavigation } from '../../../shared/AppNavigation';
 import { ButtonLabels } from '@/constants/ButtonLabels';
 import { ExistingPropertiesUseCases } from '@/constants/ExistingPropertiesUseCases';
-import { ArrowLeft } from 'lucide-react';
+import { Layers } from 'lucide-react';
 import existingPropertiesData from '@/data/existing_properties.json';
 import type { Property } from '@/types';
+import { createUseCaseMenuItems } from '@/lib/useCaseMenu';
 
 export default function TenantHistory({ propertyId }: { propertyId: string }) {
     const router = useRouter();
     const property = existingPropertiesData.existing_properties.find(p => p.id === propertyId) as Property;
 
-    const handleBack = () => {
-        router.push(`/existing-properties/${propertyId}/property-data`);
-    };
+    const useCaseMenuItems = createUseCaseMenuItems(propertyId, 'TenantHistory', (route) => {
+        router.push(route);
+    });
 
     if (!property) {
         return (
@@ -44,10 +45,10 @@ export default function TenantHistory({ propertyId }: { propertyId: string }) {
                     )}
                     actions={
                         <Button 
-                            label={ButtonLabels.Back}
-                            icon={<ArrowLeft />}
-                            variant="ghost" 
-                            onClick={handleBack}
+                            label={ButtonLabels.UseCases}
+                            icon={<Layers />}
+                            variant="primary"
+                            menuItems={useCaseMenuItems}
                         />
                     }
                 />

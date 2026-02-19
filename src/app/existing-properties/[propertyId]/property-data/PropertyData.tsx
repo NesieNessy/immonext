@@ -3,14 +3,13 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Save, X, Layers } from 'lucide-react';
-import * as LucideIcons from 'lucide-react';
 import { TextField, NumberField, Tile, Button, CalendarField, StickyActionBar, Header } from '@/components/immonext-design';
-import type { MenuItem } from '@/components/immonext-design';
 import { AppNavigation } from '../../../shared/AppNavigation';
 import { ButtonLabels } from '@/constants/ButtonLabels';
 import existingPropertiesData from '@/data/existing_properties.json';
-import { ExistingPropertiesUseCases, ExistingPropertiesUseCasesIcons } from '@/constants/ExistingPropertiesUseCases';
+import { ExistingPropertiesUseCases } from '@/constants/ExistingPropertiesUseCases';
 import type { Property } from '@/types';
+import { createUseCaseMenuItems } from '@/lib/useCaseMenu';
 
 export default function PropertyData({ propertyId }: { propertyId: string }) {
     const router = useRouter();
@@ -58,36 +57,8 @@ export default function PropertyData({ propertyId }: { propertyId: string }) {
     };
 
     // Create menu items for all use cases
-    const useCaseMenuItems: MenuItem[] = Object.entries(ExistingPropertiesUseCases).map(([key, useCase]) => {
-        const iconName = ExistingPropertiesUseCasesIcons[key as keyof typeof ExistingPropertiesUseCases];
-        const IconComponent = (LucideIcons as any)[iconName];
-        
-        // Map use case keys to their route paths
-        const routeMap: Record<string, string> = {
-            'PropertyData': 'property-data',
-            'RND': 'adjust-rnd',
-            'SplitPurchasePrice': 'adjust-distribution',
-            'TenantData': 'tenant-data',
-            'TenantHistory': 'tenant-history',
-            'RentalTrends': 'rental-trends',
-            'ServiceChargeSettlement': 'service-charge-settlement',
-            'Contractors': 'contractors',
-            'TaxDocuments': 'tax-documents',
-            'KeyMetrics': 'key-metrics',
-            'Sale': 'sale',
-            'TenantMoveOut': 'tenant-move-out',
-        };
-        
-        return {
-            label: useCase,
-            icon: IconComponent ? <IconComponent /> : undefined,
-            onClick: () => {
-                const route = routeMap[key];
-                if (route) {
-                    router.push(`/existing-properties/${propertyId}/${route}`);
-                }
-            },
-        };
+    const useCaseMenuItems = createUseCaseMenuItems(propertyId, 'PropertyData', (route) => {
+        router.push(route);
     });
 
     if (!property || !formData) {

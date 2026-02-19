@@ -110,7 +110,7 @@ export function Button({
                   onClick={item.onClick}
                   disabled={item.disabled}
                   className={cn(
-                    "flex items-center gap-3 px-3 py-2 text-sm rounded-md transition-colors text-left",
+                    "flex items-center gap-3 px-3 py-2 text-sm rounded-md transition-colors text-left cursor-pointer",
                     "hover:bg-muted focus:bg-muted focus:outline-none",
                     "disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent"
                   )}
