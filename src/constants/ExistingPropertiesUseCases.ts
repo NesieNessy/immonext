@@ -22,7 +22,7 @@ export const ExistingPropertiesUseCasesIcons: Record<keyof typeof ExistingProper
   RentalTrends: 'TrendingUp',
   ServiceChargeSettlement: 'Receipt',
   Contractors: 'Wrench',
-  TaxDocuments: 'Coins',
+  TaxDocuments: 'Landmark',
   KeyMetrics: 'BarChart3',
   Sale: 'ShoppingCart',
   TenantMoveOut: 'DoorOpen',

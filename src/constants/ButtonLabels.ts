@@ -5,7 +5,6 @@ export enum ButtonLabels {
     Next = 'Nächstes',
     Back = 'Zurück',
     Create = 'Erstellen',
-    Overview = 'Zur Übersicht',
     UseCases = 'Anwendungsfall',
     RequestAppraisal = 'Gutachten anfordern'
 }
