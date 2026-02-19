@@ -1,7 +1,17 @@
-import { Property } from '@/types';
+interface DemoProperty {
+  id: number;
+  title: string;
+  type: string;
+  price: number;
+  address: string;
+  bedrooms: number;
+  bathrooms: number;
+  area: number;
+  description: string;
+}
 
 interface PropertyCardProps {
-  property: Property;
+  property: DemoProperty;
 }
 
 export default function PropertyCard({ property }: PropertyCardProps) {

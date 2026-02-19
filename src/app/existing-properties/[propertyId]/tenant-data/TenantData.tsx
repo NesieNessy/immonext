@@ -7,17 +7,7 @@ import { ButtonLabels } from '@/constants/ButtonLabels';
 import { ExistingPropertiesUseCases } from '@/constants/ExistingPropertiesUseCases';
 import { ArrowLeft } from 'lucide-react';
 import existingPropertiesData from '@/data/existing_properties.json';
-
-interface Property {
-    id: string;
-    street: string;
-    house_number: string;
-    image?: {
-        format: string;
-        encoding: string;
-        data: string;
-    };
-}
+import type { Property } from '@/types';
 
 export default function TenantData({ propertyId }: { propertyId: string }) {
     const router = useRouter();

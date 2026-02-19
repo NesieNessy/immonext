@@ -1,12 +1,24 @@
-import { Customer, Property } from '@/types';
+import { Customer } from '@/types';
 import customersData from '@/data/customers.json';
 import propertiesData from '@/data/properties.json';
 import { Header, Tile, Button, Icons } from '@/components/immonext-design';
 import { AppNavigation } from './shared/AppNavigation';
 
+interface DemoProperty {
+  id: number;
+  title: string;
+  type: string;
+  price: number;
+  address: string;
+  bedrooms: number;
+  bathrooms: number;
+  area: number;
+  description: string;
+}
+
 export default function Home() {
   const customers: Customer[] = customersData;
-  const properties: Property[] = propertiesData;
+  const properties: DemoProperty[] = propertiesData;
 
   const totalValue = properties.reduce((sum, prop) => sum + prop.price, 0);
 
