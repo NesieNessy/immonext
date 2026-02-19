@@ -2,13 +2,14 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Save, X, Edit, Layers } from 'lucide-react';
+import { Save, X, Layers } from 'lucide-react';
+import * as LucideIcons from 'lucide-react';
 import { TextField, NumberField, Tile, Button, CalendarField, StickyActionBar, Header } from '@/components/immonext-design';
 import type { MenuItem } from '@/components/immonext-design';
 import { AppNavigation } from '../../../shared/AppNavigation';
 import { ButtonLabels } from '@/constants/ButtonLabels';
 import existingPropertiesData from '@/data/existing_properties.json';
-import { ExistingPropertiesUseCases } from '@/constants/ExistingPropertiesUseCases';
+import { ExistingPropertiesUseCases, ExistingPropertiesUseCasesIcons } from '@/constants/ExistingPropertiesUseCases';
 
 interface Property {
     id: string;
@@ -74,13 +75,25 @@ export default function PropertyData({ propertyId }: { propertyId: string }) {
     };
 
     // Create menu items for all use cases
-    const useCaseMenuItems: MenuItem[] = Object.values(ExistingPropertiesUseCases).map((useCase) => ({
-        label: useCase,
-        onClick: () => {
-            console.log('Selected use case:', useCase);
-            // TODO: Implement use case navigation/functionality
-        },
-    }));
+    const useCaseMenuItems: MenuItem[] = Object.entries(ExistingPropertiesUseCases).map(([key, useCase]) => {
+        const iconName = ExistingPropertiesUseCasesIcons[key as keyof typeof ExistingPropertiesUseCases];
+        const IconComponent = (LucideIcons as any)[iconName];
+        
+        return {
+            label: useCase,
+            icon: IconComponent ? <IconComponent /> : undefined,
+            onClick: () => {
+                if (key === 'RND') {
+                    router.push(`/existing-properties/${propertyId}/adjust-rnd`);
+                } else if (key === 'SplitPurchasePrice') {
+                    router.push(`/existing-properties/${propertyId}/adjust-distribution`);
+                } else {
+                    console.log('Selected use case:', useCase);
+                    // TODO: Implement use case navigation/functionality
+                }
+            },
+        };
+    });
 
     if (!property || !formData) {
         return (
@@ -108,26 +121,12 @@ export default function PropertyData({ propertyId }: { propertyId: string }) {
                         />
                     )}
                     actions={
-                        <>
-                            <Button 
-                                label={ButtonLabels.AdjustRND}
-                                icon={<Edit />}
-                                variant="outline" 
-                                onClick={goToAdjustRND()}
-                            />
-                            <Button 
-                                label={ButtonLabels.AdjustDistribution}
-                                icon={<Edit />}
-                                variant="outline" 
-                                onClick={goToAdjustDistribution()}
-                            />
-                            <Button 
-                                label={ButtonLabels.UseCases}
-                                icon={<Layers />}
-                                variant="primary"
-                                menuItems={useCaseMenuItems}
-                            />
-                        </>
+                        <Button 
+                            label={ButtonLabels.UseCases}
+                            icon={<Layers />}
+                            variant="primary"
+                            menuItems={useCaseMenuItems}
+                        />
                     }
                 />
 
@@ -206,12 +205,4 @@ export default function PropertyData({ propertyId }: { propertyId: string }) {
             />
         </div>
     );
-
-    function goToAdjustRND() {
-        return () => router.push(`/existing-properties/${propertyId}/adjust-rnd`);
-    }
-
-    function goToAdjustDistribution() {
-        return () => router.push(`/existing-properties/${propertyId}/adjust-distribution`);
-    }
 }

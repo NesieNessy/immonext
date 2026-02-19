@@ -6,7 +6,5 @@ export enum ButtonLabels {
     Back = 'Zurück',
     Create = 'Erstellen',
     Overview = 'Zur Übersicht',
-    UseCases = 'Anwendungsfall',
-    AdjustRND = 'RND anpassen',
-    AdjustDistribution = 'Aufteilung anpassen'
+    UseCases = 'Anwendungsfall'
 }
