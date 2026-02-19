@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { Calculator, FileText, Layers, Save, X } from 'lucide-react';
-import { Button, Header, Tile, RadioButton, NumberField, StickyActionBar } from '@/components/immonext-design';
+import { Calculator, Layers, Save, X } from 'lucide-react';
+import { Button, Header, RadioButton, NumberField, StickyActionBar } from '@/components/immonext-design';
 import { AppNavigation } from '../../../shared/AppNavigation';
 import { createUseCaseMenuItems } from '@/lib/useCaseMenu';
 import existingPropertiesData from '@/data/existing_properties.json';
@@ -15,22 +15,12 @@ import { ExistingPropertiesUseCases } from '@/constants/ExistingPropertiesUseCas
 
 export default function AdjustDistribution({ propertyId }: { propertyId: string }) {
   const router = useRouter();
-  const property = existingPropertiesData.existing_properties.find(p => p.id === propertyId) as Property;
-
-  // Load property purchase price split data
-  const propertyPurchasePriceSplit = PropertyPurchasePriceSplitData.property_purchase_price_split.find(
-    (split: any) => split.property_id === propertyId
-  );
-
-  // State for split mode and values
+  
+  // State for split mode and values - initialize with static defaults
   const [splitMode, setSplitMode] = useState<SplitMode>(SplitMode.STANDARD);
-  const [buildingPercentage, setBuildingPercentage] = useState<number>(
-    getPurchasePriceSplitDefaults(SplitMode.STANDARD).building_percentage
-  );
+  const [buildingPercentage, setBuildingPercentage] = useState<number>(getPurchasePriceSplitDefaults(SplitMode.STANDARD).building_percentage);
   const [buildingValue, setBuildingValue] = useState<number | null>(null);
-  const [landPercentage, setLandPercentage] = useState<number>(
-    getPurchasePriceSplitDefaults(SplitMode.STANDARD).land_percentage
-  );
+  const [landPercentage, setLandPercentage] = useState<number>(getPurchasePriceSplitDefaults(SplitMode.STANDARD).land_percentage);
   const [landValue, setLandValue] = useState<number | null>(null);
   const [plotSizeSquareMeters, setPlotSizeSquareMeters] = useState<number | null>(null);
   const [landValuePerSquareMeter, setLandValuePerSquareMeter] = useState<number | null>(null);
@@ -39,13 +29,9 @@ export default function AdjustDistribution({ propertyId }: { propertyId: string 
 
   // Track original values for change detection
   const [originalSplitMode, setOriginalSplitMode] = useState<SplitMode>(SplitMode.STANDARD);
-  const [originalBuildingPercentage, setOriginalBuildingPercentage] = useState<number>(
-    getPurchasePriceSplitDefaults(SplitMode.STANDARD).building_percentage
-  );
+  const [originalBuildingPercentage, setOriginalBuildingPercentage] = useState<number>(getPurchasePriceSplitDefaults(SplitMode.STANDARD).building_percentage);
   const [originalBuildingValue, setOriginalBuildingValue] = useState<number | null>(null);
-  const [originalLandPercentage, setOriginalLandPercentage] = useState<number>(
-    getPurchasePriceSplitDefaults(SplitMode.STANDARD).land_percentage
-  );
+  const [originalLandPercentage, setOriginalLandPercentage] = useState<number>(getPurchasePriceSplitDefaults(SplitMode.STANDARD).land_percentage);
   const [originalLandValue, setOriginalLandValue] = useState<number | null>(null);
   const [originalPlotSizeSquareMeters, setOriginalPlotSizeSquareMeters] = useState<number | null>(null);
   const [originalLandValuePerSquareMeter, setOriginalLandValuePerSquareMeter] = useState<number | null>(null);
@@ -53,9 +39,19 @@ export default function AdjustDistribution({ propertyId }: { propertyId: string 
   const [originalCoOwnershipDenominator, setOriginalCoOwnershipDenominator] = useState<number | null>(null);
 
   const [isEditing, setIsEditing] = useState(false);
+  const [property, setProperty] = useState<Property | undefined>(undefined);
 
-  // Load data on mount
+  // Load data on mount - client-side only
   useEffect(() => {
+    // Find property data
+    const foundProperty = existingPropertiesData.existing_properties.find(p => p.id === propertyId) as Property;
+    setProperty(foundProperty);
+
+    // Load property purchase price split data
+    const propertyPurchasePriceSplit = PropertyPurchasePriceSplitData.property_purchase_price_split.find(
+      (split: any) => split.property_id === propertyId
+    );
+
     if (propertyPurchasePriceSplit) {
       const mode =
         propertyPurchasePriceSplit.split_mode === 'Individuell' ? SplitMode.INDIVIDUAL : SplitMode.STANDARD;
@@ -63,18 +59,21 @@ export default function AdjustDistribution({ propertyId }: { propertyId: string 
       setOriginalSplitMode(mode);
 
       if (mode === SplitMode.INDIVIDUAL) {
-        setBuildingPercentage(propertyPurchasePriceSplit.building_percentage || 80);
+        const bldgPct = propertyPurchasePriceSplit.building_percentage || 80;
+        const lndPct = propertyPurchasePriceSplit.land_percentage || 20;
+        
+        setBuildingPercentage(bldgPct);
         setBuildingValue(propertyPurchasePriceSplit.building_value);
-        setLandPercentage(propertyPurchasePriceSplit.land_percentage || 20);
+        setLandPercentage(lndPct);
         setLandValue(propertyPurchasePriceSplit.land_value);
         setPlotSizeSquareMeters(propertyPurchasePriceSplit.plot_size_sqm);
         setLandValuePerSquareMeter(propertyPurchasePriceSplit.land_value_per_sqm);
         setCoOwnershipNumerator(propertyPurchasePriceSplit.co_ownership_numerator);
         setCoOwnershipDenominator(propertyPurchasePriceSplit.co_ownership_denominator);
 
-        setOriginalBuildingPercentage(propertyPurchasePriceSplit.building_percentage || 80);
+        setOriginalBuildingPercentage(bldgPct);
         setOriginalBuildingValue(propertyPurchasePriceSplit.building_value);
-        setOriginalLandPercentage(propertyPurchasePriceSplit.land_percentage || 20);
+        setOriginalLandPercentage(lndPct);
         setOriginalLandValue(propertyPurchasePriceSplit.land_value);
         setOriginalPlotSizeSquareMeters(propertyPurchasePriceSplit.plot_size_sqm);
         setOriginalLandValuePerSquareMeter(propertyPurchasePriceSplit.land_value_per_sqm);
@@ -88,7 +87,7 @@ export default function AdjustDistribution({ propertyId }: { propertyId: string 
         setOriginalLandPercentage(defaults.land_percentage);
       }
     }
-  }, [propertyId, propertyPurchasePriceSplit]);
+  }, [propertyId]);
 
   // Check if any changes were made
   useEffect(() => {
@@ -171,9 +170,12 @@ export default function AdjustDistribution({ propertyId }: { propertyId: string 
     console.log('Request appraisal for property:', propertyId);
   };
 
-  const useCaseMenuItems = createUseCaseMenuItems(propertyId, 'SplitPurchasePrice', (route) => {
-    router.push(route);
-  });
+  const useCaseMenuItems = useMemo(() => 
+    createUseCaseMenuItems(propertyId, 'SplitPurchasePrice', (route) => {
+      router.push(route);
+    }), 
+    [propertyId, router]
+  );
 
   if (!property) {
     return (

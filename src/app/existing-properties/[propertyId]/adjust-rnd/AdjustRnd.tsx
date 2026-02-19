@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { Calculator, Layers, Save, X, FileText } from 'lucide-react';
 import { Button, Header, RadioButton, NumberField, Dropdown, StickyActionBar } from '@/components/immonext-design';
@@ -17,14 +17,8 @@ import { createUseCaseMenuItems } from '@/lib/useCaseMenu';
 
 export default function AdjustRnd({ propertyId }: { propertyId: string }) {
     const router = useRouter();
-    const property = existingPropertiesData.existing_properties.find(p => p.id === propertyId) as Property;
-
-    // Load property RND data
-    const propertyRnd = propertyRndData.property_rnd.find(r => r.property_id === propertyId);
-    const renovationData = propertyRnd?.renovation_id 
-        ? rndRenovationData.rnd_renovation.find(r => r.id === propertyRnd.renovation_id)
-        : null;
-
+    
+    // State - initialize with static defaults
     const [rndMode, setRndMode] = useState<RndMode>(RndMode.STANDARD);
     const [rndYears, setRndYears] = useState<number>(getPropertyRndDefaults(RndMode.STANDARD).rnd_years);
     const [afaPercent, setAfaPercent] = useState<number>(getPropertyRndDefaults(RndMode.STANDARD).afa_percent);
@@ -37,9 +31,20 @@ export default function AdjustRnd({ propertyId }: { propertyId: string }) {
     const [originalRenovations, setOriginalRenovations] = useState<Partial<RenovationFields>>({});
     
     const [isEditing, setIsEditing] = useState(false);
+    const [property, setProperty] = useState<Property | undefined>(undefined);
 
-    // Load data on mount
+    // Load data on mount - client-side only
     useEffect(() => {
+        // Find property data
+        const foundProperty = existingPropertiesData.existing_properties.find(p => p.id === propertyId) as Property;
+        setProperty(foundProperty);
+
+        // Load property RND data
+        const propertyRnd = propertyRndData.property_rnd.find(r => r.property_id === propertyId);
+        const renovationData = propertyRnd?.renovation_id 
+            ? rndRenovationData.rnd_renovation.find(r => r.id === propertyRnd.renovation_id)
+            : null;
+
         if (propertyRnd) {
             const mode = propertyRnd.rnd_mode === 'Individuell' ? RndMode.INDIVIDUAL : RndMode.STANDARD;
             setRndMode(mode);
@@ -72,7 +77,7 @@ export default function AdjustRnd({ propertyId }: { propertyId: string }) {
                 setOriginalRenovations(loadedRenovations);
             }
         }
-    }, [propertyId, propertyRnd, renovationData]);
+    }, [propertyId]);
 
     // Check if any changes were made
     useEffect(() => {
@@ -85,18 +90,21 @@ export default function AdjustRnd({ propertyId }: { propertyId: string }) {
         setIsEditing(hasChanges);
     }, [rndMode, rndYears, afaPercent, renovations, originalRndMode, originalRndYears, originalAfaPercent, originalRenovations]);
 
-    const useCaseMenuItems = createUseCaseMenuItems(propertyId, 'RND', (route) => {
-        router.push(route);
-    });
+    const useCaseMenuItems = useMemo(() => 
+        createUseCaseMenuItems(propertyId, 'RND', (route) => {
+            router.push(route);
+        }),
+        [propertyId, router]
+    );
 
-    const renovationTimeOptions = [
+    const renovationTimeOptions = useMemo(() => [
         { value: '', label: 'Zeitraum wählen' },
         { value: RenovationValue.ZERO_TO_FIVE, label: RenovationValue.ZERO_TO_FIVE },
         { value: RenovationValue.FIVE_TO_TEN, label: RenovationValue.FIVE_TO_TEN },
         { value: RenovationValue.TEN_TO_FIFTEEN, label: RenovationValue.TEN_TO_FIFTEEN },
         { value: RenovationValue.FIFTEEN_TO_TWENTY, label: RenovationValue.FIFTEEN_TO_TWENTY },
         { value: RenovationValue.OVER_TWENTY, label: RenovationValue.OVER_TWENTY }
-    ];
+    ], []);
 
     const handleModeChange = (mode: RndMode) => {
         setRndMode(mode);
