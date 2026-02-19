@@ -1,0 +1,42 @@
+{ "property_purchase_price_split": [
+    {
+      "id": "SPLIT001",
+      "property_id": "P001",
+      "split_mode": "Standard",
+      "building_percentage": null,
+      "building_value": null,
+      "land_percentage": null,
+      "land_value": null,
+      "plot_size_sqm": null,
+      "land_value_per_sqm": null,
+      "co_ownership_numerator": null,
+      "co_ownership_denominator": null
+    },
+    {
+      "id": "SPLIT002",
+      "property_id": "P002",
+      "split_mode": "Individuell",
+      "building_percentage": 75,
+      "building_value": 337500,
+      "land_percentage": 25,
+      "land_value": 112500,
+      "plot_size_sqm": 500,
+      "land_value_per_sqm": 225,
+      "co_ownership_numerator": 1,
+      "co_ownership_denominator": 2
+    },
+    {
+      "id": "SPLIT003",
+      "property_id": "P003",
+      "split_mode": "Standard",
+      "building_percentage": null,
+      "building_value": null,
+      "land_percentage": null,
+      "land_value": null,
+      "plot_size_sqm": null,
+      "land_value_per_sqm": null,
+      "co_ownership_numerator": null,
+      "co_ownership_denominator": null
+    }
+  ]
+}

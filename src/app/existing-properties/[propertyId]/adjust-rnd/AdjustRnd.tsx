@@ -152,6 +152,7 @@ export default function AdjustRnd({ propertyId }: { propertyId: string }) {
                                 icon={<FileText />}
                                 variant="outline"
                                 onClick={handleRequestAppraisal}
+                                disabled={rndMode === RndMode.STANDARD}
                             />
                             <Button 
                                 label={ButtonLabels.UseCases}
@@ -177,7 +178,7 @@ export default function AdjustRnd({ propertyId }: { propertyId: string }) {
                             <h3 className="text-sm font-medium text-foreground mb-3">Berechnungsmodus</h3>
                             <div className="space-y-2">
                                 <RadioButton
-                                    label={`${RndMode.STANDARD} (50 Jahre RND, 2% AfA)`}
+                                    label={`${RndMode.STANDARD} (${getPropertyRndDefaults(RndMode.STANDARD).rnd_years} Jahre RND, ${getPropertyRndDefaults(RndMode.STANDARD).afa_percent}% AfA)`}
                                     checked={rndMode === RndMode.STANDARD}
                                     onChange={() => handleModeChange(RndMode.STANDARD)}
                                     name="rnd-mode"
