@@ -1,7 +1,7 @@
-import { redirect } from 'next/navigation';
+import PropertyData from './PropertyData';
 import existingPropertiesData from '@/data/existing_properties.json';
 
-interface PropertyData {
+interface PropertyDataType {
     id: string;
     street: string;
     house_number: string;
@@ -14,19 +14,19 @@ interface PropertyData {
     net_internal_area_sqm: number;
 }
 
-async function fetchAllProperties(): Promise<PropertyData[]> {
-    return existingPropertiesData.existing_properties as PropertyData[];
+async function fetchAllProperties(): Promise<PropertyDataType[]> {
+    return existingPropertiesData.existing_properties as PropertyDataType[];
 }
 
 export async function generateStaticParams() {
     const properties = await fetchAllProperties();
 
-    return properties.map((property: PropertyData) => ({
+    return properties.map((property: PropertyDataType) => ({
         propertyId: property.id,
     }));
 }
 
 export default async function Page({ params }: { params: { propertyId: string } }) {
     const { propertyId } = await params;
-    redirect(`/existing-properties/${propertyId}/property-data`);
+    return <PropertyData propertyId={propertyId} />;
 }

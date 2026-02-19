@@ -17,7 +17,7 @@ export default function ExistingPropertiesPage() {
   };
 
   const handlePropertyClick = (propertyId: string) => {
-    router.push(`/existing-properties/${propertyId}`);
+    router.push(`/existing-properties/${propertyId}/property-data`);
   };
 
   return (

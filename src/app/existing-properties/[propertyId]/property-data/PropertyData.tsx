@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Save, X, Edit, Layers } from 'lucide-react';
 import { TextField, NumberField, Tile, Button, CalendarField, StickyActionBar, Header } from '@/components/immonext-design';
 import type { MenuItem } from '@/components/immonext-design';
-import { AppNavigation } from '../../shared/AppNavigation';
+import { AppNavigation } from '../../../shared/AppNavigation';
 import { ButtonLabels } from '@/constants/ButtonLabels';
 import existingPropertiesData from '@/data/existing_properties.json';
 import { ExistingPropertiesUseCases } from '@/constants/ExistingPropertiesUseCases';
@@ -28,7 +28,7 @@ interface Property {
     };
 }
 
-export default function PropertyDetail({ propertyId }: { propertyId: string }) {
+export default function PropertyData({ propertyId }: { propertyId: string }) {
     const router = useRouter();
 
     const [property, setProperty] = useState<Property | null>(null);

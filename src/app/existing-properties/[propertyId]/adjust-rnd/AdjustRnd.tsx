@@ -10,7 +10,7 @@ export default function AdjustRnd({ propertyId }: { propertyId: string }) {
     const router = useRouter();
 
     const handleBack = () => {
-        router.push(`/existing-properties/${propertyId}`);
+        router.push(`/existing-properties/${propertyId}/property-data`);
     };
 
     return (
