@@ -1,13 +1,9 @@
-import existingPropertiesData from '@/data/existing_properties.json';
 import AdjustDistribution from './AdjustDistribution';
+import { generatePropertyStaticParams as generateStaticParams } from '@/lib/staticParams';
 
-export function generateStaticParams() {
-    return existingPropertiesData.existing_properties.map((property) => ({
-        propertyId: property.id,
-    }));
-}
+export { generateStaticParams };
 
 export default async function AdjustDistributionPage({ params }: { params: { propertyId: string } }) {
-     const { propertyId } = await params;
+    const { propertyId } = await params;
     return <AdjustDistribution propertyId={propertyId} />;
 }

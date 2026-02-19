@@ -1,9 +1,7 @@
 import KeyMetrics from './KeyMetrics';
-import existingPropertiesData from '@/data/existing_properties.json';
+import { generatePropertyStaticParams as generateStaticParams } from '@/lib/staticParams';
 
-export async function generateStaticParams() {
-    return existingPropertiesData.existing_properties.map(property => ({ propertyId: property.id }));
-}
+export { generateStaticParams };
 
 export default async function Page({ params }: { params: { propertyId: string } }) {
     const { propertyId } = await params;
