@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Calculator, Layers, Save, X } from 'lucide-react';
+import { Calculator, Layers, Save, X, FileText } from 'lucide-react';
 import { Button, Header, RadioButton, NumberField, Dropdown, StickyActionBar } from '@/components/immonext-design';
 import { AppNavigation } from '../../../shared/AppNavigation';
 import { ButtonLabels } from '@/constants/ButtonLabels';
@@ -128,6 +128,11 @@ export default function AdjustRnd({ propertyId }: { propertyId: string }) {
         setIsEditing(false);
     };
 
+    const handleRequestAppraisal = () => {
+        // TODO: Implement request appraisal functionality
+        console.log('Requesting appraisal for property:', propertyId);
+    };
+
     if (!property) return (<div className="min-h-screen bg-background"><AppNavigation /><main className="container mx-auto px-4 py-8"><p className="text-muted-foreground">Objekt nicht gefunden</p></main></div>);
 
     return (
@@ -141,12 +146,20 @@ export default function AdjustRnd({ propertyId }: { propertyId: string }) {
                         <img src={`data:${property.image.format};base64,${property.image.data}`} alt={`${property.street} ${property.house_number}`} className="w-16 h-16 object-cover rounded-lg" />
                     )}
                     actions={
-                        <Button 
-                            label={ButtonLabels.UseCases}
-                            icon={<Layers />}
-                            variant="primary"
-                            menuItems={useCaseMenuItems}
-                        />
+                        <div className="flex gap-3">
+                            <Button 
+                                label={ButtonLabels.RequestAppraisal}
+                                icon={<FileText />}
+                                variant="outline"
+                                onClick={handleRequestAppraisal}
+                            />
+                            <Button 
+                                label={ButtonLabels.UseCases}
+                                icon={<Layers />}
+                                variant="primary"
+                                menuItems={useCaseMenuItems}
+                            />
+                        </div>
                     }
                 />
 
