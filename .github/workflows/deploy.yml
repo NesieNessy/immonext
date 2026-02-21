@@ -31,7 +31,6 @@ jobs:
           cache-dependency-path: './package-lock.json'
       
       - name: Install dependencies
-        working-directory: ./apps/web
         run: npm ci
       
       - name: Build with Next.js
