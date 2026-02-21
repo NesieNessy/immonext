@@ -1,34 +1,71 @@
-{
-  "name": "immonext",
-  "version": "0.1.0",
-  "private": true,
-  "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "eslint"
-  },
-  "dependencies": {
-    "@radix-ui/react-popover": "^1.1.15",
-    "@radix-ui/react-slot": "^1.2.4",
-    "class-variance-authority": "^0.7.1",
-    "clsx": "^2.1.1",
-    "date-fns": "^4.1.0",
-    "lucide-react": "^0.564.0",
-    "next": "16.1.6",
-    "react": "19.2.3",
-    "react-day-picker": "^9.13.2",
-    "react-dom": "19.2.3",
-    "tailwind-merge": "^3.4.1"
-  },
-  "devDependencies": {
-    "@tailwindcss/postcss": "^4",
-    "@types/node": "^20",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
-    "eslint": "^9",
-    "eslint-config-next": "16.1.6",
-    "tailwindcss": "^4",
-    "typescript": "^5"
-  }
+{{
+
+  "name": "immonext-monorepo",  "name": "immonext",
+
+  "version": "1.0.0",  "version": "0.1.0",
+
+  "private": true,  "private": true,
+
+  "description": "ImmoNext - Real Estate Management Platform Monorepo",  "scripts": {
+
+  "scripts": {    "dev": "next dev",
+
+    "dev": "pnpm --parallel --filter @immonext/web dev",    "build": "next build",
+
+    "dev:api": "cd apps/api && ./mvnw quarkus:dev",    "start": "next start",
+
+    "dev:all": "pnpm --parallel --filter @immonext/web dev & pnpm dev:api",    "lint": "eslint"
+
+    "build": "pnpm --filter @immonext/types build && pnpm --filter @immonext/web build",  },
+
+    "build:api": "cd apps/api && ./mvnw clean package",  "dependencies": {
+
+    "build:all": "pnpm build && pnpm build:api",    "@radix-ui/react-popover": "^1.1.15",
+
+    "start": "pnpm --filter @immonext/web start",    "@radix-ui/react-slot": "^1.2.4",
+
+    "lint": "pnpm --filter @immonext/web lint",    "class-variance-authority": "^0.7.1",
+
+    "type-check": "pnpm --filter @immonext/web type-check",    "clsx": "^2.1.1",
+
+    "docker:up": "docker-compose up -d",    "date-fns": "^4.1.0",
+
+    "docker:down": "docker-compose down",    "lucide-react": "^0.564.0",
+
+    "docker:logs": "docker-compose logs -f",    "next": "16.1.6",
+
+    "supabase:start": "cd supabase && supabase start",    "react": "19.2.3",
+
+    "supabase:stop": "cd supabase && supabase stop",    "react-day-picker": "^9.13.2",
+
+    "supabase:status": "cd supabase && supabase status"    "react-dom": "19.2.3",
+
+  },    "tailwind-merge": "^3.4.1"
+
+  "keywords": [  },
+
+    "real-estate",  "devDependencies": {
+
+    "property-management",    "@tailwindcss/postcss": "^4",
+
+    "monorepo",    "@types/node": "^20",
+
+    "nextjs",    "@types/react": "^19",
+
+    "quarkus",    "@types/react-dom": "^19",
+
+    "supabase"    "eslint": "^9",
+
+  ],    "eslint-config-next": "16.1.6",
+
+  "author": "",    "tailwindcss": "^4",
+
+  "license": "ISC",    "typescript": "^5"
+
+  "workspaces": [  }
+
+    "apps/*",}
+
+    "packages/*"
+  ]
 }

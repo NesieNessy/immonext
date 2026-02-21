@@ -1,0 +1,101 @@
+#!/bin/bash
+
+echo "================================"
+echo "Immonext Development Setup"
+echo "================================"
+echo ""
+
+echo "Checking prerequisites..."
+echo ""
+
+# Check Node.js
+if ! command -v node &> /dev/null; then
+    echo "[ERROR] Node.js is not installed. Please install Node.js 20+ from https://nodejs.org/"
+    exit 1
+fi
+echo "[OK] Node.js found: $(node --version)"
+
+# Check Java
+if ! command -v java &> /dev/null; then
+    echo "[ERROR] Java is not installed. Please install Java 21+ from https://adoptium.net/"
+    exit 1
+fi
+echo "[OK] Java found: $(java --version | head -n 1)"
+
+# Check Maven
+if ! command -v mvn &> /dev/null; then
+    echo "[ERROR] Maven is not installed. Please install Maven 3.9+ from https://maven.apache.org/"
+    exit 1
+fi
+echo "[OK] Maven found: $(mvn --version | head -n 1)"
+
+# Check Docker
+if ! command -v docker &> /dev/null; then
+    echo "[ERROR] Docker is not installed. Please install Docker Desktop from https://www.docker.com/"
+    exit 1
+fi
+echo "[OK] Docker found: $(docker --version)"
+
+echo ""
+echo "================================"
+echo "All prerequisites satisfied!"
+echo "================================"
+echo ""
+
+echo "Setting up environment..."
+if [ ! -f .env ]; then
+    echo "Creating .env file from template..."
+    cp .env.example .env
+    echo "[OK] .env file created. Please review and update if needed."
+else
+    echo "[INFO] .env file already exists"
+fi
+
+echo ""
+echo "Installing dependencies..."
+echo ""
+
+echo "Installing web app dependencies..."
+cd apps/web
+npm install
+if [ $? -ne 0 ]; then
+    echo "[ERROR] Failed to install web app dependencies"
+    cd ../..
+    exit 1
+fi
+cd ../..
+echo "[OK] Web app dependencies installed"
+
+echo ""
+echo "Installing shared types dependencies..."
+cd packages/types
+npm install
+if [ $? -ne 0 ]; then
+    echo "[ERROR] Failed to install types package dependencies"
+    cd ../..
+    exit 1
+fi
+cd ../..
+echo "[OK] Types package dependencies installed"
+
+echo ""
+echo "================================"
+echo "Setup Complete!"
+echo "================================"
+echo ""
+echo "You can now start the development servers:"
+echo ""
+echo "Option 1: Start all services with Docker Compose"
+echo "  docker-compose up --build"
+echo ""
+echo "Option 2: Start services individually"
+echo "  Terminal 1: docker-compose up supabase-db supabase-kong"
+echo "  Terminal 2: cd apps/api && ./mvnw quarkus:dev"
+echo "  Terminal 3: cd apps/web && npm run dev"
+echo ""
+echo "Access points:"
+echo "  - Web App: http://localhost:3000"
+echo "  - API: http://localhost:8080"
+echo "  - Swagger UI: http://localhost:8080/swagger-ui"
+echo "  - Supabase Studio: http://localhost:54324"
+echo ""
