@@ -26,12 +26,7 @@ export function Gauge({
   // Clamp position between 0 and 100
   const clampedPosition = Math.max(0, Math.min(100, position));
   
-  // Define color zones (green, yellow, red)
-  const getColorAtPosition = (pos: number) => {
-    if (pos < 33) return "#2d7a4f"; // Green - secondary color
-    if (pos < 66) return "#d4a574"; // Yellow/Gold - accent color
-    return "#ef4444"; // Red
-  };
+  // Removed unused getColorAtPosition function
 
   return (
     <div className={cn("p-6 bg-card border border-border rounded-lg", className)}>

@@ -62,7 +62,7 @@ export function Button({
 
   // Clone icon and add size prop if it's a React element
   const iconWithSize = icon && React.isValidElement(icon)
-    ? React.cloneElement(icon as React.ReactElement<any>, { size: iconSizes[size] })
+    ? React.cloneElement(icon as React.ReactElement<{ size?: number }>, { size: iconSizes[size] })
     : icon;
 
   // Determine content based on props
@@ -101,7 +101,7 @@ export function Button({
           <div className="flex flex-col gap-1">
             {menuItems.map((item, index) => {
               const itemIconWithSize = item.icon && React.isValidElement(item.icon)
-                ? React.cloneElement(item.icon as React.ReactElement<any>, { size: 18 })
+                ? React.cloneElement(item.icon as React.ReactElement<{ size?: number }>, { size: 18 })
                 : item.icon;
               
               return (

@@ -13,9 +13,9 @@ interface Column {
 
 interface TableProps {
   columns: Column[];
-  data: Record<string, any>[];
-  onRowClick?: (row: Record<string, any>, index: number) => void;
-  onCellEdit?: (rowIndex: number, columnKey: string, newValue: any) => void;
+  data: Record<string, unknown>[];
+  onRowClick?: (row: Record<string, unknown>, index: number) => void;
+  onCellEdit?: (rowIndex: number, columnKey: string, newValue: string | number) => void;
   editable?: boolean;
   className?: string;
 }
@@ -24,7 +24,7 @@ export function Table({ columns, data, onRowClick, onCellEdit, editable = false,
   const [editingCell, setEditingCell] = React.useState<{ rowIndex: number; columnKey: string } | null>(null);
   const [editValue, setEditValue] = React.useState<string>("");
 
-  const startEditing = (rowIndex: number, columnKey: string, currentValue: any) => {
+  const startEditing = (rowIndex: number, columnKey: string, currentValue: unknown) => {
     setEditingCell({ rowIndex, columnKey });
     setEditValue(String(currentValue || ""));
   };
@@ -37,7 +37,7 @@ export function Table({ columns, data, onRowClick, onCellEdit, editable = false,
   const saveEditing = () => {
     if (editingCell && onCellEdit) {
       const column = columns.find(col => col.key === editingCell.columnKey);
-      let finalValue: any = editValue;
+      let finalValue: string | number = editValue;
       
       if (column?.type === "number") {
         finalValue = parseFloat(editValue) || 0;
@@ -147,7 +147,7 @@ export function Table({ columns, data, onRowClick, onCellEdit, editable = false,
                       </div>
                     ) : (
                       <div className="flex items-center justify-between">
-                        <span>{row[column.key]}</span>
+                        <span>{String(row[column.key] ?? '')}</span>
                         {isColumnEditable && (
                           <button
                             onClick={(e) => {

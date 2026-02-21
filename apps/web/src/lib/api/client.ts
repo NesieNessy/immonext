@@ -23,14 +23,14 @@ export const api = {
   get: <T>(endpoint: string, options?: RequestInit) =>
     apiClient<T>(endpoint, { ...options, method: 'GET' }),
   
-  post: <T>(endpoint: string, data?: any, options?: RequestInit) =>
+  post: <T>(endpoint: string, data?: unknown, options?: RequestInit) =>
     apiClient<T>(endpoint, {
       ...options,
       method: 'POST',
       body: JSON.stringify(data),
     }),
   
-  put: <T>(endpoint: string, data?: any, options?: RequestInit) =>
+  put: <T>(endpoint: string, data?: unknown, options?: RequestInit) =>
     apiClient<T>(endpoint, {
       ...options,
       method: 'PUT',

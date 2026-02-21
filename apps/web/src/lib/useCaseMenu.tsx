@@ -25,7 +25,7 @@ export function createUseCaseMenuItems(
 ): MenuItem[] {
     return Object.entries(ExistingPropertiesUseCases).map(([key, useCase]) => {
         const iconName = ExistingPropertiesUseCasesIcons[key as keyof typeof ExistingPropertiesUseCases];
-        const IconComponent = (LucideIcons as any)[iconName];
+        const IconComponent = (LucideIcons as unknown as Record<string, React.ComponentType>)[iconName];
         const isActive = key === currentUseCase;
         
         return {

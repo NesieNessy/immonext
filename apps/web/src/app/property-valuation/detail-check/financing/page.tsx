@@ -1,6 +1,6 @@
 "use client";
 
-import { Header } from '@/components/ui';
+// Header import removed - not used
 import { PropertyValuationLayout } from '../PropertyValuationLayout';
 
 export default function FinancingPage() {

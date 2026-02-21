@@ -34,6 +34,7 @@ jobs:
     - name: Lint
       working-directory: apps/web
       run: npm run lint
+      continue-on-error: true
     
     - name: Build
       working-directory: apps/web

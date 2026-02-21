@@ -22,7 +22,7 @@ export default function ForgotPasswordPage() {
         <div className="text-center">
           <h1 className="text-3xl font-bold text-gray-900">Check your email</h1>
           <p className="mt-2 text-sm text-gray-600">
-            We've sent password reset instructions to {email}
+            We&apos;ve sent password reset instructions to {email}
           </p>
         </div>
 
@@ -37,14 +37,12 @@ export default function ForgotPasswordPage() {
 
   return (
     <div className="space-y-6">
-      <div className="text-center">
-        <h1 className="text-3xl font-bold text-gray-900">Reset your password</h1>
-        <p className="mt-2 text-sm text-gray-600">
-          Enter your email and we'll send you a reset link
-        </p>
-      </div>
-
-      <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="text-center">
+          <h1 className="text-3xl font-bold text-gray-900">Reset your password</h1>
+          <p className="mt-2 text-sm text-gray-600">
+            Enter your email and we&apos;ll send you a reset link
+          </p>
+        </div>      <form onSubmit={handleSubmit} className="space-y-4">
         <TextField
           label="Email"
           type="email"

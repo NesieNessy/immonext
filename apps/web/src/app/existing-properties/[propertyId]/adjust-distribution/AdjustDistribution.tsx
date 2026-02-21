@@ -48,7 +48,7 @@ export default function AdjustDistribution({ propertyId }: { propertyId: string 
 
     // Load property purchase price split data
     const propertyPurchasePriceSplit = PropertyPurchasePriceSplitData.property_purchase_price_split.find(
-      (split: any) => split.property_id === propertyId
+      (split: { property_id: string }) => split.property_id === propertyId
     );
 
     if (propertyPurchasePriceSplit) {
@@ -165,9 +165,7 @@ export default function AdjustDistribution({ propertyId }: { propertyId: string 
     setIsEditing(false);
   };
 
-  const handleRequestAppraisal = () => {
-    console.log('Request appraisal for property:', propertyId);
-  };
+  // Removed unused handleRequestAppraisal function
 
   const useCaseMenuItems = useMemo(() => 
     createUseCaseMenuItems(propertyId, 'SplitPurchasePrice', (route) => {
