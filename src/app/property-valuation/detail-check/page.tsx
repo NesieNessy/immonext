@@ -2,8 +2,8 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { AppNavigation } from '../../shared/AppNavigation';
-import { RadioButton, Dropdown, Button, StickyActionBar } from '@/components/immonext-design';
+import { AppNavigation } from '../../../components/features/AppNavigation';
+import { RadioButton, Dropdown, StickyActionBar } from '@/components/immonext-design';
 import { DataEntryTypeValues } from '@/constants/DataEntryTypeValues';
 import { PropertyTypesValues } from '@/constants/PropertyTypeValues';
 import { TenancyTypeValues } from '@/constants/TenancyTypeValues';

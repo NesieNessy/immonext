@@ -5,7 +5,7 @@ import { Plus } from 'lucide-react';
 import { Header, TileWithImage, Button } from '@/components/immonext-design';
 import { ButtonLabels } from '@/constants/ButtonLabels';
 import existingPropertiesData from '@/data/existing_properties.json';
-import { AppNavigation } from '../shared/AppNavigation';
+import { AppNavigation } from '../../components/features/AppNavigation';
 
 export default function ExistingPropertiesPage() {
   const properties = existingPropertiesData.existing_properties;

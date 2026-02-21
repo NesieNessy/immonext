@@ -1,7 +1,7 @@
 "use client";
 
 import { Header } from '@/components/immonext-design';
-import { AppNavigation } from '../../shared/AppNavigation';
+import { AppNavigation } from '../../../components/features/AppNavigation';
 
 export default function QuickCheckPage() {
   return (

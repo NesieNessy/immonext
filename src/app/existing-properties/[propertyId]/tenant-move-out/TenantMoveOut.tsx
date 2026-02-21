@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { Tile, Button, Header } from '@/components/immonext-design';
-import { AppNavigation } from '../../../shared/AppNavigation';
+import { AppNavigation } from '../../../../components/features/AppNavigation';
 import { ButtonLabels } from '@/constants/ButtonLabels';
 import { ExistingPropertiesUseCases } from '@/constants/ExistingPropertiesUseCases';
 import { Layers } from 'lucide-react';

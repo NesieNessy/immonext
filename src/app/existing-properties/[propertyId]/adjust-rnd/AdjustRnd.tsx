@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { Calculator, Layers, Save, X, FileText } from 'lucide-react';
 import { Button, Header, RadioButton, NumberField, Dropdown, StickyActionBar } from '@/components/immonext-design';
-import { AppNavigation } from '../../../shared/AppNavigation';
+import { AppNavigation } from '../../../../components/features/AppNavigation';
 import { ButtonLabels } from '@/constants/ButtonLabels';
 import { ExistingPropertiesUseCases } from '@/constants/ExistingPropertiesUseCases';
 import { RenovationAttribute, RenovationValue, RndMode, getPropertyRndDefaults } from '@/constants/RndValues';

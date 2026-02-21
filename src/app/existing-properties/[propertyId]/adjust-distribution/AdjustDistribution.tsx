@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { Calculator, Layers, Save, X } from 'lucide-react';
 import { Button, Header, RadioButton, NumberField, StickyActionBar } from '@/components/immonext-design';
-import { AppNavigation } from '../../../shared/AppNavigation';
+import { AppNavigation } from '../../../../components/features/AppNavigation';
 import { createUseCaseMenuItems } from '@/lib/useCaseMenu';
 import existingPropertiesData from '@/data/existing_properties.json';
 import PropertyPurchasePriceSplitData from '@/data/property_purchase_price_split.json';

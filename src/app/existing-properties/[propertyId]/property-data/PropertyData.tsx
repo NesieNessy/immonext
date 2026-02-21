@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Save, X, Layers } from 'lucide-react';
 import { TextField, NumberField, Tile, Button, CalendarField, StickyActionBar, Header } from '@/components/immonext-design';
-import { AppNavigation } from '../../../shared/AppNavigation';
+import { AppNavigation } from '../../../../components/features/AppNavigation';
 import { ButtonLabels } from '@/constants/ButtonLabels';
 import existingPropertiesData from '@/data/existing_properties.json';
 import { ExistingPropertiesUseCases } from '@/constants/ExistingPropertiesUseCases';

@@ -2,7 +2,7 @@ import type { Customer } from '@/types/Customer';
 import customersData from '@/data/customers.json';
 import propertiesData from '@/data/properties.json';
 import { Header, Tile, Button, Icons } from '@/components/immonext-design';
-import { AppNavigation } from './shared/AppNavigation';
+import { AppNavigation } from '../components/features/AppNavigation';
 
 interface DemoProperty {
   id: number;

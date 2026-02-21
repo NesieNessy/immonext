@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { X, Save } from 'lucide-react';
 import { Header, TextField, Tile, StickyActionBar } from '@/components/immonext-design';
-import { AppNavigation } from '../shared/AppNavigation';
+import { AppNavigation } from '../../components/features/AppNavigation';
 import profileData from '@/data/profile.json';
 
 export default function SettingsPage() {
