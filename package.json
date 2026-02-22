@@ -1,1 +1,37 @@
-﻿{"name":"immonext-monorepo","version":"1.0.0","private":true,"description":"ImmoNext - Real Estate Management Platform Monorepo","scripts":{"dev":"npm run dev --workspace=apps/web","dev:api":"cd apps/api && ./mvnw quarkus:dev","dev:all":"npm run dev & npm run dev:api","build":"npm run build --workspace=apps/web","build:api":"cd apps/api && ./mvnw clean package","build:all":"npm run build && npm run build:api","start":"npm run start --workspace=apps/web","lint":"npm run lint --workspace=apps/web","type-check":"npm run type-check --workspace=apps/web","docker:up":"docker-compose up -d","docker:down":"docker-compose down","docker:logs":"docker-compose logs -f","supabase:start":"cd supabase && supabase start","supabase:stop":"cd supabase && supabase stop","supabase:status":"cd supabase && supabase status"},"workspaces":["apps/*","packages/*"],"keywords":["real-estate","property-management","monorepo","nextjs","quarkus","supabase"],"author":"","license":"ISC"}
+{
+  "name": "immonext-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "ImmoNext - Real Estate Management Platform Monorepo",
+  "scripts": {
+    "dev": "npm run dev --workspace=apps/web",
+    "dev:api": "cd apps/api && ./mvnw quarkus:dev",
+    "dev:all": "npm run dev & npm run dev:api",
+    "build": "npm run build --workspace=apps/web",
+    "build:api": "cd apps/api && ./mvnw clean package",
+    "build:all": "npm run build && npm run build:api",
+    "start": "npm run start --workspace=apps/web",
+    "lint": "npm run lint --workspace=apps/web",
+    "type-check": "npm run type-check --workspace=apps/web",
+    "docker:up": "docker-compose up -d",
+    "docker:down": "docker-compose down",
+    "docker:logs": "docker-compose logs -f",
+    "supabase:start": "cd supabase && supabase start",
+    "supabase:stop": "cd supabase && supabase stop",
+    "supabase:status": "cd supabase && supabase status"
+  },
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "keywords": [
+    "real-estate",
+    "property-management",
+    "monorepo",
+    "nextjs",
+    "quarkus",
+    "supabase"
+  ],
+  "author": "",
+  "license": "ISC"
+}
