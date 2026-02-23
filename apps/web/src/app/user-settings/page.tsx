@@ -1,10 +1,9 @@
 "use client";
 
-import { useEffect, useCallback } from 'react';
-import { useState } from 'react';
+import { useEffect, useCallback, useState } from 'react';
 import { X, Save, Loader2 } from 'lucide-react';
 import { Header, TextField, Tile, StickyActionBar } from '@/components/ui';
-import { useRequireAuth } from '@/hooks/useRequireAuth';
+import { supabase } from '@/lib/supabase/client';
 import { getPersonalData, upsertPersonalData } from '@/lib/supabase/personalData';
 import type { PersonalData } from '@immonext/types';
 
@@ -23,11 +22,11 @@ const emptyForm = {
 type FormData = typeof emptyForm;
 
 export default function SettingsPage() {
-    const { user, isLoading: isAuthLoading } = useRequireAuth();
+    const [user, setUser] = useState<{ id: string } | null>(null);
     const [formData, setFormData] = useState<FormData>(emptyForm);
     const [savedData, setSavedData] = useState<FormData>(emptyForm);
     const [isEditing, setIsEditing] = useState(false);
-    const [isLoading, setIsLoading] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
@@ -56,10 +55,15 @@ export default function SettingsPage() {
     }, []);
 
     useEffect(() => {
-        if (user) {
-            loadData(user.id);
-        }
-    }, [user, loadData]);
+        supabase.auth.getUser().then(({ data }) => {
+            if (data.user) {
+                setUser(data.user);
+                loadData(data.user.id);
+            } else {
+                setIsLoading(false);
+            }
+        });
+    }, [loadData]);
 
     const handleInputChange = (field: keyof FormData, value: string) => {
         setFormData(prev => ({ ...prev, [field]: value }));
@@ -100,7 +104,7 @@ export default function SettingsPage() {
         setIsSaving(false);
     };
 
-    if (isAuthLoading || isLoading) {
+    if (isLoading) {
         return (
             <div className="min-h-screen bg-background flex items-center justify-center">
                 <Loader2 className="animate-spin" size={32} />

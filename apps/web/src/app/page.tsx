@@ -2,6 +2,7 @@ import type { Customer } from '@/types/Customer';
 import customersData from '@/data/customers.json';
 import propertiesData from '@/data/properties.json';
 import { Header, Tile, Button, Icons } from '@/components/ui';
+import { HomeClient } from './HomeClient';
 interface DemoProperty {
   id: number;
   title: string;
@@ -21,6 +22,7 @@ export default function Home() {
   const totalValue = properties.reduce((sum, prop) => sum + prop.price, 0);
 
   return (
+    <HomeClient>
     <div className="min-h-screen bg-background">
       {/* Navigation Bar */}
       <main className="container mx-auto px-4 py-8">
@@ -167,5 +169,6 @@ export default function Home() {
         </section>
       </main>
     </div>
+    </HomeClient>
   );
 }
