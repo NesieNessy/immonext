@@ -33,6 +33,26 @@ export interface Profile {
   updatedAt: string;
 }
 
+export interface PersonalData {
+  userId: string;
+  lastName: string;
+  firstName: string;
+  street: string;
+  houseNumber: string;
+  city: string;
+  postalCode: string;
+  phoneNumber?: string;
+  emailAddress: string;
+  personalMarginalTaxRate: string;
+  profilePicture?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export type PersonalDataInsert = Omit<PersonalData, 'createdAt' | 'updatedAt'>;
+export type PersonalDataUpdate = Partial<Omit<PersonalData, 'userId' | 'createdAt' | 'updatedAt'>>;
+
+
 export enum PropertyTypeValues {
   Condominium = 'Eigentumswohnung',
   SingleFamilyHouse = 'Einfamilienhaus',

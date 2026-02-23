@@ -3,82 +3,106 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { Button, TextField } from '@/components/ui';
+import { supabase } from '@/lib/supabase/client';
 
 export default function SignupPage() {
-  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [confirmed, setConfirmed] = useState(false);
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+    setError(null);
+
     if (password !== confirmPassword) {
-      alert('Passwords do not match');
+      setError('Passwörter stimmen nicht überein.');
       return;
     }
 
-    // TODO: Implement Supabase authentication
-    console.log('Signup:', { name, email, password });
+    setIsLoading(true);
+    const { error } = await supabase.auth.signUp({ email, password });
+
+    if (error) {
+      setError(error.message);
+      setIsLoading(false);
+    } else {
+      setConfirmed(true);
+    }
   };
+
+  if (confirmed) {
+    return (
+      <div className="space-y-6 text-center">
+        <h1 className="text-3xl font-bold text-gray-900">Fast geschafft!</h1>
+        <p className="text-sm text-gray-600">
+          Wir haben eine Bestätigungs-E-Mail an <strong>{email}</strong> gesendet.
+          Bitte bestätigen Sie Ihre E-Mail-Adresse, um sich anmelden zu können.
+        </p>
+        <Link href="/login">
+          <Button className="w-full">Zur Anmeldung</Button>
+        </Link>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
       <div className="text-center">
-        <h1 className="text-3xl font-bold text-gray-900">Create an account</h1>
+        <h1 className="text-3xl font-bold text-gray-900">Konto erstellen</h1>
         <p className="mt-2 text-sm text-gray-600">
-          Start managing your real estate portfolio
+          Verwalten Sie Ihr Immobilienportfolio mit ImmoNext
         </p>
       </div>
 
       <form onSubmit={handleSignup} className="space-y-4">
-        <TextField
-          label="Full Name"
-          type="text"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="Enter your name"
-          required
-        />
+        {error && (
+          <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+            {error}
+          </div>
+        )}
 
         <TextField
-          label="Email"
+          label="E-Mail"
           type="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          placeholder="Enter your email"
+          placeholder="ihre@email.de"
           required
         />
 
         <TextField
-          label="Password"
+          label="Passwort"
           type="password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          placeholder="Create a password"
+          placeholder="Passwort erstellen"
           required
         />
 
         <TextField
-          label="Confirm Password"
+          label="Passwort bestätigen"
           type="password"
           value={confirmPassword}
           onChange={(e) => setConfirmPassword(e.target.value)}
-          placeholder="Confirm your password"
+          placeholder="Passwort wiederholen"
           required
         />
 
-        <Button type="submit" className="w-full">
-          Create account
+        <Button type="submit" className="w-full" disabled={isLoading}>
+          {isLoading ? 'Registrieren...' : 'Registrieren'}
         </Button>
       </form>
 
       <p className="text-center text-sm text-gray-600">
-        Already have an account?{' '}
+        Bereits ein Konto?{' '}
         <Link href="/login" className="text-blue-600 hover:text-blue-800">
-          Sign in
+          Anmelden
         </Link>
       </p>
     </div>
   );
 }
+

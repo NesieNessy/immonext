@@ -1,158 +1,208 @@
 "use client";
 
+import { useEffect, useCallback } from 'react';
 import { useState } from 'react';
-import { X, Save } from 'lucide-react';
+import { X, Save, Loader2 } from 'lucide-react';
 import { Header, TextField, Tile, StickyActionBar } from '@/components/ui';
-import profileData from '@/data/profile.json';
+import { useRequireAuth } from '@/hooks/useRequireAuth';
+import { getPersonalData, upsertPersonalData } from '@/lib/supabase/personalData';
+import type { PersonalData } from '@immonext/types';
+
+const emptyForm = {
+    firstName: '',
+    lastName: '',
+    emailAddress: '',
+    phoneNumber: '',
+    street: '',
+    houseNumber: '',
+    postalCode: '',
+    city: '',
+    personalMarginalTaxRate: '',
+};
+
+type FormData = typeof emptyForm;
 
 export default function SettingsPage() {
-    const profile = profileData.user_profile;
-    
+    const { user, isLoading: isAuthLoading } = useRequireAuth();
+    const [formData, setFormData] = useState<FormData>(emptyForm);
+    const [savedData, setSavedData] = useState<FormData>(emptyForm);
     const [isEditing, setIsEditing] = useState(false);
-    const [formData, setFormData] = useState({
-        first_name: profile.first_name,
-        last_name: profile.last_name,
-        email_address: profile.email_address,
-        phone_number: profile.phone_number,
-        street: profile.address.street,
-        postal_code: profile.address.postal_code,
-        city: profile.address.city,
-        country: profile.address.country,
-        tax_identification_number: profile.tax_identification_number,
-        subscription_model: profile.subscription_model,
+    const [isLoading, setIsLoading] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+
+    const toFormData = (data: PersonalData): FormData => ({
+        firstName: data.firstName,
+        lastName: data.lastName,
+        emailAddress: data.emailAddress,
+        phoneNumber: data.phoneNumber ?? '',
+        street: data.street,
+        houseNumber: data.houseNumber,
+        postalCode: data.postalCode,
+        city: data.city,
+        personalMarginalTaxRate: data.personalMarginalTaxRate,
     });
 
-    const handleInputChange = (field: string, value: string) => {
+    const loadData = useCallback(async (uid: string) => {
+        setIsLoading(true);
+        setError(null);
+        const data = await getPersonalData(uid);
+        if (data) {
+            const form = toFormData(data);
+            setFormData(form);
+            setSavedData(form);
+        }
+        setIsLoading(false);
+    }, []);
+
+    useEffect(() => {
+        if (user) {
+            loadData(user.id);
+        }
+    }, [user, loadData]);
+
+    const handleInputChange = (field: keyof FormData, value: string) => {
         setFormData(prev => ({ ...prev, [field]: value }));
         if (!isEditing) setIsEditing(true);
     };
 
     const handleCancel = () => {
-        setFormData({
-            first_name: profile.first_name,
-            last_name: profile.last_name,
-            email_address: profile.email_address,
-            phone_number: profile.phone_number,
-            street: profile.address.street,
-            postal_code: profile.address.postal_code,
-            city: profile.address.city,
-            country: profile.address.country,
-            tax_identification_number: profile.tax_identification_number,
-            subscription_model: profile.subscription_model,
-        });
+        setFormData(savedData);
         setIsEditing(false);
+        setError(null);
     };
 
-    const handleSave = () => {
-        // TODO: Implement save functionality
-        console.log('Saving data:', formData);
-        setIsEditing(false);
+    const handleSave = async () => {
+        if (!user) return;
+        setIsSaving(true);
+        setError(null);
+        const result = await upsertPersonalData({
+            userId: user.id,
+            firstName: formData.firstName,
+            lastName: formData.lastName,
+            emailAddress: formData.emailAddress,
+            phoneNumber: formData.phoneNumber || undefined,
+            street: formData.street,
+            houseNumber: formData.houseNumber,
+            postalCode: formData.postalCode,
+            city: formData.city,
+            personalMarginalTaxRate: formData.personalMarginalTaxRate,
+        });
+
+        if (result) {
+            const updated = toFormData(result);
+            setSavedData(updated);
+            setFormData(updated);
+            setIsEditing(false);
+        } else {
+            setError('Fehler beim Speichern. Bitte versuchen Sie es erneut.');
+        }
+        setIsSaving(false);
     };
+
+    if (isAuthLoading || isLoading) {
+        return (
+            <div className="min-h-screen bg-background flex items-center justify-center">
+                <Loader2 className="animate-spin" size={32} />
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen bg-background pb-24">
-            {/* Navigation Bar */}
             <main className="container mx-auto px-4 py-8">
-                {/* Page Header */}
                 <Header
                     title="Benutzereinstellungen"
                     subtitle="Ihre persönlichen Daten und Kontoeinstellungen"
                 />
 
+                {error && (
+                    <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm max-w-6xl">
+                        {error}
+                    </div>
+                )}
+
                 <div className="mt-8 grid grid-cols-1 lg:grid-cols-2 gap-6 max-w-6xl">
-                    {/* Personal & Contact Information */}
-                    <Tile
-                        title="Persönliche Informationen"
-                    >
+                    {/* Personal Information */}
+                    <Tile title="Persönliche Informationen">
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4">
                             <TextField
                                 label="Vorname"
-                                value={formData.first_name}
-                                onChange={(e) => handleInputChange('first_name', e.target.value)}
+                                value={formData.firstName}
+                                onChange={(e) => handleInputChange('firstName', e.target.value)}
                             />
                             <TextField
                                 label="Nachname"
-                                value={formData.last_name}
-                                onChange={(e) => handleInputChange('last_name', e.target.value)}
+                                value={formData.lastName}
+                                onChange={(e) => handleInputChange('lastName', e.target.value)}
                             />
                             <TextField
                                 label="E-Mail-Adresse"
-                                value={formData.email_address}
+                                value={formData.emailAddress}
                                 type="email"
-                                onChange={(e) => handleInputChange('email_address', e.target.value)}
+                                onChange={(e) => handleInputChange('emailAddress', e.target.value)}
                                 className="sm:col-span-2"
                             />
                             <TextField
                                 label="Telefonnummer"
-                                value={formData.phone_number}
+                                value={formData.phoneNumber}
                                 type="tel"
-                                onChange={(e) => handleInputChange('phone_number', e.target.value)}
+                                onChange={(e) => handleInputChange('phoneNumber', e.target.value)}
                                 className="sm:col-span-2"
                             />
                         </div>
                     </Tile>
 
-                    {/* Address Section */}
-                    <Tile
-                        title="Adresse"
-                    >
+                    {/* Address */}
+                    <Tile title="Adresse">
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4">
                             <TextField
-                                label="Straße & Hausnummer"
+                                label="Straße"
                                 value={formData.street}
                                 onChange={(e) => handleInputChange('street', e.target.value)}
-                                className="sm:col-span-2"
+                            />
+                            <TextField
+                                label="Hausnummer"
+                                value={formData.houseNumber}
+                                onChange={(e) => handleInputChange('houseNumber', e.target.value)}
                             />
                             <TextField
                                 label="Postleitzahl"
-                                value={formData.postal_code}
-                                onChange={(e) => handleInputChange('postal_code', e.target.value)}
+                                value={formData.postalCode}
+                                onChange={(e) => handleInputChange('postalCode', e.target.value)}
                             />
                             <TextField
                                 label="Stadt"
                                 value={formData.city}
                                 onChange={(e) => handleInputChange('city', e.target.value)}
                             />
-                            <TextField
-                                label="Land"
-                                value={formData.country}
-                                onChange={(e) => handleInputChange('country', e.target.value)}
-                                className="sm:col-span-2"
-                            />
                         </div>
                     </Tile>
 
-                    {/* Tax & Subscription Section */}
-                    <Tile
-                        title="Steuer & Abonnement"
-                        className="lg:col-span-2"
-                    >
+                    {/* Tax */}
+                    <Tile title="Steuer" className="lg:col-span-2">
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 p-4">
                             <TextField
-                                label="Steuer-ID"
-                                value={formData.tax_identification_number}
-                                onChange={(e) => handleInputChange('tax_identification_number', e.target.value)}
-                            />
-                            <TextField
-                                label="Abonnement"
-                                value={formData.subscription_model}
-                                onChange={(e) => handleInputChange('subscription_model', e.target.value)}
+                                label="Persönlicher Grenzsteuersatz"
+                                value={formData.personalMarginalTaxRate}
+                                onChange={(e) => handleInputChange('personalMarginalTaxRate', e.target.value)}
                             />
                         </div>
                     </Tile>
                 </div>
             </main>
 
-            {/* Sticky Action Bar */}
             <StickyActionBar
                 show={isEditing}
                 onGhost={handleCancel}
                 onPrimary={handleSave}
                 ghostLabel="Abbrechen"
-                primaryLabel="Speichern"
+                primaryLabel={isSaving ? 'Speichern...' : 'Speichern'}
                 ghostIcon={<X size={20} />}
-                primaryIcon={<Save size={20} />}
+                primaryIcon={isSaving ? <Loader2 size={20} className="animate-spin" /> : <Save size={20} />}
             />
         </div>
     );
 }
+
+

@@ -3,7 +3,7 @@
 import React from "react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
-import { ChevronDown, Home, Network, Search, Settings, User } from "lucide-react";
+import { ChevronDown, Home, LogOut, Network, Search, Settings, User } from "lucide-react";
 import { Icons } from "../common";
 
 // Icon mapping
@@ -18,6 +18,7 @@ const iconMap = {
   settings: Settings,
   search: Search,
   user: User,
+  logout: LogOut,
 };
 
 type IconName = keyof typeof iconMap;

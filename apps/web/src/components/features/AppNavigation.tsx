@@ -1,10 +1,30 @@
 "use client";
 
-import { usePathname } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
 import { NavigationBar } from '@/components/ui/NavigationBar';
+import { supabase } from '@/lib/supabase/client';
+import type { User } from '@supabase/supabase-js';
 
 export function AppNavigation() {
   const pathname = usePathname();
+  const router = useRouter();
+  const [user, setUser] = useState<User | null>(null);
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => setUser(data.user));
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    router.push('/login');
+  };
 
   // Determine which item should be active based on the current path
   const isPropertyValuationActive = pathname?.startsWith('/property-valuation');
@@ -44,7 +64,12 @@ export function AppNavigation() {
           ariaLabel: 'User settings',
           href: '/user-settings',
           active: isUserSettingsActive
-        }
+        },
+        ...(user ? [{
+          iconName: 'logout' as const,
+          ariaLabel: 'Abmelden',
+          onClick: handleLogout,
+        }] : []),
       ]}
     />
   );
