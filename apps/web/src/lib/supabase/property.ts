@@ -16,7 +16,7 @@ function toProperty(row: Record<string, unknown>): Property {
     numberOfRooms:        row.number_of_rooms as number,
     yearOfConstruction:   row.year_of_construction as number,
     energyEfficient:      row.energy_efficient as Property['energyEfficient'],
-    imageUrl:             row.image_url as string | null,
+    imageUrl:             row.image_base64 as string | null,
     createdAt:            row.created_at as string,
     updatedAt:            row.updated_at as string,
   };

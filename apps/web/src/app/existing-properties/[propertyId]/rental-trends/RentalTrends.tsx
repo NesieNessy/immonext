@@ -9,6 +9,7 @@ import type { Property } from '@immonext/types';
 import { getPropertyById } from '@/lib/supabase/property';
 import { createUseCaseMenuItems } from '@/lib/useCaseMenu';
 import { Button, Header, Tile } from '@/components/ui';
+import { base64ToDataUri } from '@/lib/utils';
 
 export default function RentalTrends({ propertyId }: { propertyId: string }) {
     const router = useRouter();
@@ -38,7 +39,7 @@ export default function RentalTrends({ propertyId }: { propertyId: string }) {
                 <Header 
                     title={`${property.street} ${property.houseNumber}`}
                     subtitle={ExistingPropertiesUseCases.RentalTrends}
-                    image={property.imageUrl ? <img src={property.imageUrl} alt={`${property.street} ${property.houseNumber}`} className="w-16 h-16 object-cover rounded-lg" /> : undefined}
+                    image={property.imageUrl ? <img src={base64ToDataUri(property.imageUrl)!} alt={`${property.street} ${property.houseNumber}`} className="w-16 h-16 object-cover rounded-lg" /> : undefined}
                     actions={
                         <Button 
                             label={ButtonLabels.UseCases}

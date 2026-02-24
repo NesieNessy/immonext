@@ -13,6 +13,7 @@ import type { Property } from '@immonext/types';
 import { getPropertyById } from '@/lib/supabase/property';
 import type { RenovationFields } from '@/types/Rnd';
 import { createUseCaseMenuItems } from '@/lib/useCaseMenu';
+import { base64ToDataUri } from '@/lib/utils';
 
 export default function AdjustRnd({ propertyId }: { propertyId: string }) {
     const router = useRouter();
@@ -148,7 +149,7 @@ export default function AdjustRnd({ propertyId }: { propertyId: string }) {
                 <Header 
                     title={`${property.street} ${property.houseNumber}`}
                     subtitle={ExistingPropertiesUseCases.RND}
-                    image={property.imageUrl ? <img src={property.imageUrl} alt={`${property.street} ${property.houseNumber}`} className="w-16 h-16 object-cover rounded-lg" /> : undefined}
+                    image={property.imageUrl ? <img src={base64ToDataUri(property.imageUrl)!} alt={`${property.street} ${property.houseNumber}`} className="w-16 h-16 object-cover rounded-lg" /> : undefined}
                     actions={
                         <div className="flex gap-3">
                             <Button 

@@ -8,6 +8,7 @@ import { ButtonLabels } from '@/constants/ButtonLabels';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
 import { getProperties } from '@/lib/supabase/property';
 import type { Property } from '@immonext/types';
+import { base64ToDataUri } from '@/lib/utils';
 
 export default function ExistingPropertiesPage() {
   const { user, isLoading } = useRequireAuth();
@@ -52,7 +53,7 @@ export default function ExistingPropertiesPage() {
           {properties.map((property) => (
             <TileWithImage
               key={property.propertyId}
-              image=""
+              image={base64ToDataUri(property.imageUrl) ?? ""}
               imageAlt={`${property.street} ${property.houseNumber}`}
               title={`${property.street} ${property.houseNumber}`}
               description={`${property.postalCode} ${property.city}`}
