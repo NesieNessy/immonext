@@ -43,16 +43,6 @@ export interface Property {
   updatedAt: string;
 }
 
-export interface PropertyWithCity extends Property {
-  cityRel: {
-    cityId: number;
-    cityName: string;
-    metropolitanArea: string;
-    buildingShare: number;
-    landShare: number;
-  };
-}
-
 export type PropertyInsert = Omit<Property, 'propertyId' | 'createdAt' | 'updatedAt'>;
 export type PropertyUpdate = Partial<Omit<Property, 'propertyId' | 'userId' | 'createdAt' | 'updatedAt'>>;
 
@@ -110,6 +100,41 @@ export interface Password {
 
 export type PasswordInsert = Omit<Password, 'passwordId' | 'createdAt' | 'updatedAt'>;
 export type PasswordUpdate = Partial<Omit<Password, 'passwordId' | 'userId' | 'createdAt' | 'updatedAt'>>;
+
+// ----------------------------------------------------------------------------
+// ParkingSpace
+// ----------------------------------------------------------------------------
+
+export type ParkingSpaceType = 'GARAGE' | 'CARPORT' | 'OUTDOOR' | 'UNDERGROUND' | 'OTHER';
+
+export interface ParkingSpace {
+  parkingSpaceId: number;
+  propertyId: number;
+  parkingSpaceType: ParkingSpaceType | null;
+  numberOfParkingSpaces: number | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type ParkingSpaceInsert = Omit<ParkingSpace, 'parkingSpaceId' | 'createdAt' | 'updatedAt'>;
+export type ParkingSpaceUpdate = Partial<Omit<ParkingSpace, 'parkingSpaceId' | 'createdAt' | 'updatedAt'>>;
+
+// ----------------------------------------------------------------------------
+// PropertyAcquisition
+// ----------------------------------------------------------------------------
+
+export interface PropertyAcquisition {
+  propertyAcquisitionId: number;
+  propertyId: number;
+  houseCompletionYear: number;
+  purchaseDate: string | null;
+  transferDate: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type PropertyAcquisitionInsert = Omit<PropertyAcquisition, 'propertyAcquisitionId' | 'createdAt' | 'updatedAt'>;
+export type PropertyAcquisitionUpdate = Partial<Omit<PropertyAcquisition, 'propertyAcquisitionId' | 'createdAt' | 'updatedAt'>>;
 
 // ----------------------------------------------------------------------------
 // Enums
