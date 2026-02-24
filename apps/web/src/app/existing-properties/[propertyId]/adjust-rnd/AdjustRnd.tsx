@@ -7,10 +7,10 @@ import { Button, Header, RadioButton, NumberField, Dropdown, StickyActionBar } f
 import { ButtonLabels } from '@/constants/ButtonLabels';
 import { ExistingPropertiesUseCases } from '@/constants/ExistingPropertiesUseCases';
 import { RenovationAttribute, RenovationValue, RndMode, getPropertyRndDefaults } from '@/constants/RndValues';
-import existingPropertiesData from '@/data/existing_properties.json';
 import propertyRndData from '@/data/property_rnd.json';
 import rndRenovationData from '@/data/rnd_renovation.json';
-import type { ExistingProperty } from '@/types/ExistingProperty';
+import type { Property } from '@immonext/types';
+import { getPropertyById } from '@/lib/supabase/property';
 import type { RenovationFields } from '@/types/Rnd';
 import { createUseCaseMenuItems } from '@/lib/useCaseMenu';
 
@@ -30,13 +30,12 @@ export default function AdjustRnd({ propertyId }: { propertyId: string }) {
     const [originalRenovations, setOriginalRenovations] = useState<Partial<RenovationFields>>({});
     
     const [isEditing, setIsEditing] = useState(false);
-    const [property, setProperty] = useState<ExistingProperty | undefined>(undefined);
+    const [property, setProperty] = useState<Property | undefined>(undefined);
 
     // Load data on mount - client-side only
     useEffect(() => {
         // Find property data
-        const foundProperty = existingPropertiesData.existing_properties.find(p => p.id === propertyId) as ExistingProperty;
-        setProperty(foundProperty);
+        getPropertyById(parseInt(propertyId, 10)).then(p => setProperty(p ?? undefined));
 
         // Load property RND data
         const propertyRnd = propertyRndData.property_rnd.find(r => r.property_id === propertyId);
@@ -147,11 +146,9 @@ export default function AdjustRnd({ propertyId }: { propertyId: string }) {
         <div className="min-h-screen bg-background pb-24">
             <main className="container mx-auto px-4 py-8">
                 <Header 
-                    title={`${property.street} ${property.house_number}`}
+                    title={`${property.street} ${property.houseNumber}`}
                     subtitle={ExistingPropertiesUseCases.RND}
-                    image={property.image?.data && (
-                        <img src={`data:${property.image.format};base64,${property.image.data}`} alt={`${property.street} ${property.house_number}`} className="w-16 h-16 object-cover rounded-lg" />
-                    )}
+                    image={property.imageUrl ? <img src={property.imageUrl} alt={`${property.street} ${property.houseNumber}`} className="w-16 h-16 object-cover rounded-lg" /> : undefined}
                     actions={
                         <div className="flex gap-3">
                             <Button 

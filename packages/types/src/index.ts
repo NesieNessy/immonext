@@ -39,12 +39,23 @@ export interface Property {
   numberOfRooms: number;
   yearOfConstruction: number;
   energyEfficient: 'A+' | 'A' | 'B' | 'C' | 'D' | 'E' | 'F' | 'G' | 'H';
+  imageUrl: string | null;
   createdAt: string;
   updatedAt: string;
 }
 
 export type PropertyInsert = Omit<Property, 'propertyId' | 'createdAt' | 'updatedAt'>;
 export type PropertyUpdate = Partial<Omit<Property, 'propertyId' | 'userId' | 'createdAt' | 'updatedAt'>>;
+
+export interface PropertyWithCity extends Property {
+  cityRel: {
+    cityId: number;
+    cityName: string;
+    metropolitanArea: string;
+    buildingShare: number;
+    landShare: number;
+  };
+}
 
 // ----------------------------------------------------------------------------
 // PersonalData

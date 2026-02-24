@@ -5,9 +5,9 @@ import { useRouter } from 'next/navigation';
 import { Calculator, Layers, Save, X } from 'lucide-react';
 import { Button, Header, RadioButton, NumberField, StickyActionBar } from '@/components/ui';
 import { createUseCaseMenuItems } from '@/lib/useCaseMenu';
-import existingPropertiesData from '@/data/existing_properties.json';
 import PropertyPurchasePriceSplitData from '@/data/property_purchase_price_split.json';
-import type { ExistingProperty } from '@/types/ExistingProperty';
+import type { Property } from '@immonext/types';
+import { getPropertyById } from '@/lib/supabase/property';
 import { SplitMode, getPurchasePriceSplitDefaults } from '@/constants/PurchasePriceSplitValues';
 import { ButtonLabels } from '@/constants/ButtonLabels';
 import { ExistingPropertiesUseCases } from '@/constants/ExistingPropertiesUseCases';
@@ -38,13 +38,12 @@ export default function AdjustDistribution({ propertyId }: { propertyId: string 
   const [originalCoOwnershipDenominator, setOriginalCoOwnershipDenominator] = useState<number | null>(null);
 
   const [isEditing, setIsEditing] = useState(false);
-  const [property, setProperty] = useState<ExistingProperty | undefined>(undefined);
+  const [property, setProperty] = useState<Property | undefined>(undefined);
 
   // Load data on mount - client-side only
   useEffect(() => {
     // Find property data
-    const foundProperty = existingPropertiesData.existing_properties.find(p => p.id === propertyId) as ExistingProperty;
-    setProperty(foundProperty);
+    getPropertyById(parseInt(propertyId, 10)).then(p => setProperty(p ?? undefined));
 
     // Load property purchase price split data
     const propertyPurchasePriceSplit = PropertyPurchasePriceSplitData.property_purchase_price_split.find(
@@ -188,17 +187,9 @@ export default function AdjustDistribution({ propertyId }: { propertyId: string 
     <div className="min-h-screen bg-background pb-24">
       <main className="container mx-auto px-4 py-8">
         <Header
-          title={`${property.street} ${property.house_number}`}
+          title={`${property.street} ${property.houseNumber}`}
           subtitle={ExistingPropertiesUseCases.SplitPurchasePrice}
-          image={
-            property.image?.data && (
-              <img
-                src={`data:${property.image.format};base64,${property.image.data}`}
-                alt={`${property.street} ${property.house_number}`}
-                className="w-16 h-16 object-cover rounded-lg"
-              />
-            )
-          }
+          image={property.imageUrl ? <img src={property.imageUrl} alt={`${property.street} ${property.houseNumber}`} className="w-16 h-16 object-cover rounded-lg" /> : undefined}
           actions={
             <Button
               label={ButtonLabels.UseCases}

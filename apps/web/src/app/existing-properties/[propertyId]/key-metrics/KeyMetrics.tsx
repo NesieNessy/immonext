@@ -1,17 +1,22 @@
 "use client";
+import { useState, useEffect } from 'react';
 
 import { useRouter } from 'next/navigation';
 import { ButtonLabels } from '@/constants/ButtonLabels';
 import { ExistingPropertiesUseCases } from '@/constants/ExistingPropertiesUseCases';
 import { Layers } from 'lucide-react';
-import existingPropertiesData from '@/data/existing_properties.json';
-import type { ExistingProperty } from '@/types/ExistingProperty';
+import type { Property } from '@immonext/types';
+import { getPropertyById } from '@/lib/supabase/property';
 import { createUseCaseMenuItems } from '@/lib/useCaseMenu';
 import { Button, Header, Tile } from '@/components/ui';
 
 export default function KeyMetrics({ propertyId }: { propertyId: string }) {
     const router = useRouter();
-    const property = existingPropertiesData.existing_properties.find(p => p.id === propertyId) as ExistingProperty;
+    const [property, setProperty] = useState<Property | null>(null);
+
+    useEffect(() => {
+        getPropertyById(parseInt(propertyId, 10)).then(setProperty);
+    }, [propertyId]);
 
     const useCaseMenuItems = createUseCaseMenuItems(propertyId, 'KeyMetrics', (route) => {
         router.push(route);
@@ -23,7 +28,11 @@ export default function KeyMetrics({ propertyId }: { propertyId: string }) {
     return (
         <div className="min-h-screen bg-background pb-24">
             <main className="container mx-auto px-4 py-8">
-                <Header title={`${property.street} ${property.house_number}`} subtitle={ExistingPropertiesUseCases.KeyMetrics} image={property.image?.data && (<img src={`data:${property.image.format};base64,${property.image.data}`} alt={`${property.street} ${property.house_number}`} className="w-16 h-16 object-cover rounded-lg" />)} actions={
+                <Header
+                    title={`${property.street} ${property.houseNumber}`}
+                    subtitle={ExistingPropertiesUseCases.KeyMetrics}
+                    image={property.imageUrl ? <img src={property.imageUrl} alt={`${property.street} ${property.houseNumber}`} className="w-16 h-16 object-cover rounded-lg" /> : undefined}
+                    actions={
                     <Button 
                         label={ButtonLabels.UseCases}
                         icon={<Layers />}

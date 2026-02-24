@@ -4,42 +4,31 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Save, X, Layers } from 'lucide-react';
 import { ButtonLabels } from '@/constants/ButtonLabels';
-import existingPropertiesData from '@/data/existing_properties.json';
 import { ExistingPropertiesUseCases } from '@/constants/ExistingPropertiesUseCases';
-import type { ExistingProperty } from '@/types/ExistingProperty';
+import type { Property } from '@immonext/types';
+import { getPropertyById, updateProperty } from '@/lib/supabase/property';
 import { createUseCaseMenuItems } from '@/lib/useCaseMenu';
-import { Header, Tile, TextField, NumberField, CalendarField, StickyActionBar, Button } from '@/components/ui';
+import { Header, Tile, TextField, NumberField, StickyActionBar, Button } from '@/components/ui';
 
 export default function PropertyData({ propertyId }: { propertyId: string }) {
     const router = useRouter();
 
-    const [property, setProperty] = useState<ExistingProperty | null>(null);
+    const [property, setProperty] = useState<Property | null>(null);
     const [isEditing, setIsEditing] = useState(false);
-    const [formData, setFormData] = useState<ExistingProperty | null>(null);
+    const [formData, setFormData] = useState<Property | null>(null);
 
     useEffect(() => {
-        // Find property by ID from URL
-        const foundProperty = existingPropertiesData.existing_properties.find((prop) => {
-            return prop.id === propertyId;
+        getPropertyById(parseInt(propertyId, 10)).then((found) => {
+            if (found) {
+                setProperty(found);
+                setFormData(found);
+            }
         });
-
-        if (foundProperty) {
-            setProperty(foundProperty as ExistingProperty);
-            setFormData(foundProperty as ExistingProperty);
-        }
     }, [propertyId]);
 
-    const handleInputChange = (field: keyof ExistingProperty, value: string | number | Date) => {
+    const handleInputChange = (field: keyof Property, value: string | number) => {
         if (!formData) return;
-
-        // Handle Date object conversion for date_of_acquisition
-        if (field === 'date_of_acquisition' && value instanceof Date) {
-            const dateString = value.toISOString().split('T')[0];
-            setFormData({ ...formData, [field]: dateString });
-        } else {
-            setFormData({ ...formData, [field]: value });
-        }
-
+        setFormData({ ...formData, [field]: value });
         if (!isEditing) setIsEditing(true);
     };
 
@@ -48,10 +37,24 @@ export default function PropertyData({ propertyId }: { propertyId: string }) {
         setIsEditing(false);
     };
 
-    const handleSave = () => {
-        // TODO: Implement save functionality
-        console.log('Saving property data:', formData);
-        setProperty(formData);
+    const handleSave = async () => {
+        if (!formData || !property) return;
+        const updated = await updateProperty(property.propertyId, {
+            street:               formData.street,
+            houseNumber:          formData.houseNumber,
+            city:                 formData.city,
+            postalCode:           formData.postalCode,
+            federalState:         formData.federalState,
+            squareMeters:         formData.squareMeters,
+            numberOfRooms:        formData.numberOfRooms,
+            yearOfConstruction:   formData.yearOfConstruction,
+            energyEfficient:      formData.energyEfficient,
+            propertyAbbreviation: formData.propertyAbbreviation,
+        });
+        if (updated) {
+            setProperty(updated);
+            setFormData(updated);
+        }
         setIsEditing(false);
     };
 
@@ -74,15 +77,9 @@ export default function PropertyData({ propertyId }: { propertyId: string }) {
         <div className="min-h-screen bg-background pb-24">
             <main className="container mx-auto px-4 py-8">
                 <Header 
-                    title={`${property.street} ${property.house_number}`}
+                    title={`${property.street} ${property.houseNumber}`}
                     subtitle={ExistingPropertiesUseCases.PropertyData}
-                    image={property.image?.data && (
-                        <img
-                            src={`data:${property.image.format};base64,${property.image.data}`}
-                            alt={`${property.street} ${property.house_number}`}
-                            className="w-16 h-16 object-cover rounded-lg"
-                        />
-                    )}
+                    image={property.imageUrl ? <img src={property.imageUrl} alt={`${property.street} ${property.houseNumber}`} className="w-16 h-16 object-cover rounded-lg" /> : undefined}
                     actions={
                         <Button 
                             label={ButtonLabels.UseCases}
@@ -105,18 +102,24 @@ export default function PropertyData({ propertyId }: { propertyId: string }) {
                             />
                             <TextField
                                 label="Hausnummer"
-                                value={formData.house_number}
-                                onChange={(e) => handleInputChange('house_number', e.target.value)}
+                                value={formData.houseNumber}
+                                onChange={(e) => handleInputChange('houseNumber', e.target.value)}
                             />
                             <TextField
                                 label="Postleitzahl"
-                                value={formData.postcode}
-                                onChange={(e) => handleInputChange('postcode', e.target.value)}
+                                value={formData.postalCode}
+                                onChange={(e) => handleInputChange('postalCode', e.target.value)}
                             />
                             <TextField
                                 label="Stadt"
                                 value={formData.city}
                                 onChange={(e) => handleInputChange('city', e.target.value)}
+                                className="sm:col-span-2"
+                            />
+                            <TextField
+                                label="Bundesland"
+                                value={formData.federalState}
+                                onChange={(e) => handleInputChange('federalState', e.target.value)}
                                 className="sm:col-span-2"
                             />
                         </div>
@@ -125,31 +128,31 @@ export default function PropertyData({ propertyId }: { propertyId: string }) {
                     {/* Property Details */}
                     <Tile title="Objektdetails">
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4">
+                            <TextField
+                                label="Kürzel"
+                                value={formData.propertyAbbreviation}
+                                onChange={(e) => handleInputChange('propertyAbbreviation', e.target.value)}
+                                className="sm:col-span-2"
+                            />
                             <NumberField
                                 label="Baujahr"
-                                value={formData.year_of_construction}
-                                onChange={(e) => handleInputChange('year_of_construction', parseInt(e.target.value) || 0)}
-                            />
-                            <CalendarField
-                                label="Kaufsdatum"
-                                value={new Date(formData.date_of_acquisition)}
-                                onChange={(date) => date && handleInputChange('date_of_acquisition', date)}
+                                value={formData.yearOfConstruction}
+                                onChange={(e) => handleInputChange('yearOfConstruction', parseInt(e.target.value) || 0)}
                             />
                             <NumberField
-                                label="Anzahl Stellplätze"
-                                value={formData.number_of_parking_spaces}
-                                onChange={(e) => handleInputChange('number_of_parking_spaces', parseInt(e.target.value) || 0)}
+                                label="Anzahl Zimmer"
+                                value={formData.numberOfRooms}
+                                onChange={(e) => handleInputChange('numberOfRooms', parseInt(e.target.value) || 0)}
                             />
                             <TextField
                                 label="Energieeffizienz"
-                                value={formData.energy_rating}
-                                onChange={(e) => handleInputChange('energy_rating', e.target.value)}
+                                value={formData.energyEfficient}
+                                onChange={(e) => handleInputChange('energyEfficient', e.target.value)}
                             />
-                            <TextField
-                                label="Wohnfläche"
-                                value={formData.net_internal_area_sqm}
-                                suffix="m²"
-                                onChange={(e) => handleInputChange('net_internal_area_sqm', e.target.value)}
+                            <NumberField
+                                label="Wohnfläche (m²)"
+                                value={formData.squareMeters}
+                                onChange={(e) => handleInputChange('squareMeters', parseFloat(e.target.value) || 0)}
                             />
                         </div>
                     </Tile>

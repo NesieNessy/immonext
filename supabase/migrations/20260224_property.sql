@@ -35,6 +35,7 @@ CREATE TABLE IF NOT EXISTS property (
     number_of_rooms         INT                         NOT NULL CHECK (number_of_rooms > 0),
     year_of_construction    INT                         NOT NULL CHECK (year_of_construction BETWEEN 1800 AND EXTRACT(YEAR FROM NOW())::INT),
     energy_efficient        energy_efficiency_class     NOT NULL,
+    image_url               TEXT,
 
     created_at              TIMESTAMP WITH TIME ZONE    DEFAULT NOW(),
     updated_at              TIMESTAMP WITH TIME ZONE    DEFAULT NOW(),
