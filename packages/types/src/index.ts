@@ -4,7 +4,6 @@
 // City
 // ----------------------------------------------------------------------------
 
-export type MetropolitanAreaType = 'METROPOLITAN' | 'URBAN' | 'RURAL';
 export type MarketTierType = 'A' | 'B' | 'C' | 'D';
 
 export interface City {
@@ -12,7 +11,6 @@ export interface City {
   cityName: string;
   buildingShare: number;
   landShare: number;
-  metropolitanArea: MetropolitanAreaType;
   population: number;
   marketTier: MarketTierType;
   designation: string;

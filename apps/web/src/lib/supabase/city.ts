@@ -1,5 +1,5 @@
 import { supabase } from '@/lib/supabase/client';
-import type { City, CityInsert, CityUpdate, MetropolitanAreaType, MarketTierType } from '@immonext/types';
+import type { City, CityInsert, CityUpdate, MarketTierType } from '@immonext/types';
 
 function toCity(row: Record<string, unknown>): City {
   return {
@@ -7,7 +7,6 @@ function toCity(row: Record<string, unknown>): City {
     cityName:         row.city_name as string,
     buildingShare:    row.building_share as number,
     landShare:        row.land_share as number,
-    metropolitanArea: row.metropolitan_area as MetropolitanAreaType,
     population:       row.population as number,
     marketTier:       row.market_tier as MarketTierType,
     designation:      row.designation as string,
@@ -48,17 +47,6 @@ export async function getCityByName(cityName: string): Promise<City | null> {
   return toCity(data);
 }
 
-export async function getCitiesByMetropolitanArea(area: MetropolitanAreaType): Promise<City[]> {
-  const { data, error } = await supabase
-    .from('city')
-    .select('*')
-    .eq('metropolitan_area', area)
-    .order('city_name', { ascending: true });
-
-  if (error || !data) return [];
-  return data.map(toCity);
-}
-
 export async function getCitiesByMarketTier(tier: MarketTierType): Promise<City[]> {
   const { data, error } = await supabase
     .from('city')
@@ -93,7 +81,6 @@ export async function createCity(payload: CityInsert): Promise<City | null> {
       city_name:         payload.cityName,
       building_share:    payload.buildingShare,
       land_share:        payload.landShare,
-      metropolitan_area: payload.metropolitanArea,
       population:        payload.population,
       market_tier:       payload.marketTier,
       designation:       payload.designation,
@@ -110,7 +97,6 @@ export async function updateCity(cityId: number, updates: CityUpdate): Promise<C
   if (updates.cityName !== undefined)         dbUpdates.city_name         = updates.cityName;
   if (updates.buildingShare !== undefined)    dbUpdates.building_share    = updates.buildingShare;
   if (updates.landShare !== undefined)        dbUpdates.land_share        = updates.landShare;
-  if (updates.metropolitanArea !== undefined) dbUpdates.metropolitan_area = updates.metropolitanArea;
   if (updates.population !== undefined)       dbUpdates.population        = updates.population;
   if (updates.marketTier !== undefined)       dbUpdates.market_tier       = updates.marketTier;
   if (updates.designation !== undefined)      dbUpdates.designation       = updates.designation;
