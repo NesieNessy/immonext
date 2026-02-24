@@ -1,15 +1,15 @@
 import { redirect } from 'next/navigation';
 import existingPropertiesData from '@/data/existing_properties.json';
-import type { Property } from '@/types/Property';
+import type { ExistingProperty } from '@/types/ExistingProperty';
 
-async function fetchAllProperties(): Promise<Property[]> {
-    return existingPropertiesData.existing_properties as Property[];
+async function fetchAllProperties(): Promise<ExistingProperty[]> {
+    return existingPropertiesData.existing_properties as ExistingProperty[];
 }
 
 export async function generateStaticParams() {
     const properties = await fetchAllProperties();
 
-    return properties.map((property: Property) => ({
+    return properties.map((property: ExistingProperty) => ({
         propertyId: property.id,
     }));
 }

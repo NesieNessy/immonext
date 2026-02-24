@@ -1,37 +1,60 @@
 // Shared TypeScript types for Immonext
 
+// ----------------------------------------------------------------------------
+// City
+// ----------------------------------------------------------------------------
+
+export interface City {
+  cityId: number;
+  cityName: string;
+  metropolitanArea: 'A' | 'B' | 'C' | 'D';
+  buildingShare: number;
+  landShare: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type CityInsert = Omit<City, 'cityId' | 'createdAt' | 'updatedAt'>;
+export type CityUpdate = Partial<CityInsert>;
+
+// ----------------------------------------------------------------------------
+// Property
+// ----------------------------------------------------------------------------
+
 export interface Property {
-  id: string;
-  address: string;
-  propertyType: string;
-  tenancyType: string;
-  purchasePrice?: number;
-  livingSpace?: number;
-  yearBuilt?: number;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface PropertyValuation {
-  id: string;
-  propertyId: string;
+  propertyId: number;
   userId: string;
-  valuationType: 'quick-check' | 'detail-check';
-  estimatedValue?: number;
-  dataEntryType?: string;
-  status: 'draft' | 'in-progress' | 'completed';
+  cityId: number;
+  propertyAbbreviation: string;
+  street: string;
+  houseNumber: string;
+  city: string;
+  postalCode: string;
+  federalState: string;
+  squareMeters: number;
+  numberOfRooms: number;
+  yearOfConstruction: number;
+  energyEfficient: 'A+' | 'A' | 'B' | 'C' | 'D' | 'E' | 'F' | 'G' | 'H';
   createdAt: string;
   updatedAt: string;
 }
 
-export interface Profile {
-  id: string;
-  email: string;
-  fullName?: string;
-  avatarUrl?: string;
-  createdAt: string;
-  updatedAt: string;
+export interface PropertyWithCity extends Property {
+  cityRel: {
+    cityId: number;
+    cityName: string;
+    metropolitanArea: string;
+    buildingShare: number;
+    landShare: number;
+  };
 }
+
+export type PropertyInsert = Omit<Property, 'propertyId' | 'createdAt' | 'updatedAt'>;
+export type PropertyUpdate = Partial<Omit<Property, 'propertyId' | 'userId' | 'createdAt' | 'updatedAt'>>;
+
+// ----------------------------------------------------------------------------
+// PersonalData
+// ----------------------------------------------------------------------------
 
 export interface PersonalData {
   userId: string;
@@ -52,6 +75,41 @@ export interface PersonalData {
 export type PersonalDataInsert = Omit<PersonalData, 'createdAt' | 'updatedAt'>;
 export type PersonalDataUpdate = Partial<Omit<PersonalData, 'userId' | 'createdAt' | 'updatedAt'>>;
 
+// ----------------------------------------------------------------------------
+// Subscription
+// ----------------------------------------------------------------------------
+
+export interface Subscription {
+  subscriptionId: number;
+  userId: string;
+  subscriptionModel: 'Basic' | 'Professional' | 'Enterprise';
+  startDate: string;
+  endDate: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type SubscriptionInsert = Omit<Subscription, 'subscriptionId' | 'createdAt' | 'updatedAt'>;
+export type SubscriptionUpdate = Partial<Omit<Subscription, 'subscriptionId' | 'userId' | 'createdAt' | 'updatedAt'>>;
+
+// ----------------------------------------------------------------------------
+// Password
+// ----------------------------------------------------------------------------
+
+export interface Password {
+  passwordId: number;
+  userId: string;
+  passwordHash: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type PasswordInsert = Omit<Password, 'passwordId' | 'createdAt' | 'updatedAt'>;
+export type PasswordUpdate = Partial<Omit<Password, 'passwordId' | 'userId' | 'createdAt' | 'updatedAt'>>;
+
+// ----------------------------------------------------------------------------
+// Enums
+// ----------------------------------------------------------------------------
 
 export enum PropertyTypeValues {
   Condominium = 'Eigentumswohnung',
@@ -78,7 +136,10 @@ export enum DataEntryTypeValues {
   ExposeScan = 'Exposé einlesen',
 }
 
+// ----------------------------------------------------------------------------
 // API Response types
+// ----------------------------------------------------------------------------
+
 export interface ApiResponse<T> {
   data?: T;
   error?: {

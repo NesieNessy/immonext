@@ -5,13 +5,13 @@ import { ButtonLabels } from '@/constants/ButtonLabels';
 import { ExistingPropertiesUseCases } from '@/constants/ExistingPropertiesUseCases';
 import { Layers } from 'lucide-react';
 import existingPropertiesData from '@/data/existing_properties.json';
-import type { Property } from '@/types/Property';
+import type { ExistingProperty } from '@/types/ExistingProperty';
 import { createUseCaseMenuItems } from '@/lib/useCaseMenu';
 import { Button, Header, Tile } from '@/components/ui';
 
 export default function TenantMoveOut({ propertyId }: { propertyId: string }) {
     const router = useRouter();
-    const property = existingPropertiesData.existing_properties.find(p => p.id === propertyId) as Property;
+    const property = existingPropertiesData.existing_properties.find(p => p.id === propertyId) as ExistingProperty;
 
     const useCaseMenuItems = createUseCaseMenuItems(propertyId, 'TenantMoveOut', (route) => {
         router.push(route);

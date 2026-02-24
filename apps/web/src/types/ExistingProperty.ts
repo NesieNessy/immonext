@@ -1,4 +1,4 @@
-export interface Property {
+export interface ExistingProperty {
   id: string;
   street: string;
   house_number: string;

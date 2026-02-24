@@ -1,2 +1,2 @@
 export type { Customer } from './Customer';
-export type { Property } from './Property';
+export type { ExistingProperty } from './ExistingProperty';

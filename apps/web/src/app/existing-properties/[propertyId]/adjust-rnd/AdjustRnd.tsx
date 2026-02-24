@@ -10,7 +10,7 @@ import { RenovationAttribute, RenovationValue, RndMode, getPropertyRndDefaults }
 import existingPropertiesData from '@/data/existing_properties.json';
 import propertyRndData from '@/data/property_rnd.json';
 import rndRenovationData from '@/data/rnd_renovation.json';
-import type { Property } from '@/types/Property';
+import type { ExistingProperty } from '@/types/ExistingProperty';
 import type { RenovationFields } from '@/types/Rnd';
 import { createUseCaseMenuItems } from '@/lib/useCaseMenu';
 
@@ -30,12 +30,12 @@ export default function AdjustRnd({ propertyId }: { propertyId: string }) {
     const [originalRenovations, setOriginalRenovations] = useState<Partial<RenovationFields>>({});
     
     const [isEditing, setIsEditing] = useState(false);
-    const [property, setProperty] = useState<Property | undefined>(undefined);
+    const [property, setProperty] = useState<ExistingProperty | undefined>(undefined);
 
     // Load data on mount - client-side only
     useEffect(() => {
         // Find property data
-        const foundProperty = existingPropertiesData.existing_properties.find(p => p.id === propertyId) as Property;
+        const foundProperty = existingPropertiesData.existing_properties.find(p => p.id === propertyId) as ExistingProperty;
         setProperty(foundProperty);
 
         // Load property RND data

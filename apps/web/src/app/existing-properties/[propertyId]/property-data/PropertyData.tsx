@@ -6,16 +6,16 @@ import { Save, X, Layers } from 'lucide-react';
 import { ButtonLabels } from '@/constants/ButtonLabels';
 import existingPropertiesData from '@/data/existing_properties.json';
 import { ExistingPropertiesUseCases } from '@/constants/ExistingPropertiesUseCases';
-import type { Property } from '@/types/Property';
+import type { ExistingProperty } from '@/types/ExistingProperty';
 import { createUseCaseMenuItems } from '@/lib/useCaseMenu';
 import { Header, Tile, TextField, NumberField, CalendarField, StickyActionBar, Button } from '@/components/ui';
 
 export default function PropertyData({ propertyId }: { propertyId: string }) {
     const router = useRouter();
 
-    const [property, setProperty] = useState<Property | null>(null);
+    const [property, setProperty] = useState<ExistingProperty | null>(null);
     const [isEditing, setIsEditing] = useState(false);
-    const [formData, setFormData] = useState<Property | null>(null);
+    const [formData, setFormData] = useState<ExistingProperty | null>(null);
 
     useEffect(() => {
         // Find property by ID from URL
@@ -24,12 +24,12 @@ export default function PropertyData({ propertyId }: { propertyId: string }) {
         });
 
         if (foundProperty) {
-            setProperty(foundProperty as Property);
-            setFormData(foundProperty as Property);
+            setProperty(foundProperty as ExistingProperty);
+            setFormData(foundProperty as ExistingProperty);
         }
     }, [propertyId]);
 
-    const handleInputChange = (field: keyof Property, value: string | number | Date) => {
+    const handleInputChange = (field: keyof ExistingProperty, value: string | number | Date) => {
         if (!formData) return;
 
         // Handle Date object conversion for date_of_acquisition
