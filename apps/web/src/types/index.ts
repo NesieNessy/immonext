@@ -1,2 +1,1 @@
-export type { Customer } from './Customer';
-export type { ExistingProperty } from './ExistingProperty';
+export type { RenovationFields } from './Rnd';
