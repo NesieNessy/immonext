@@ -25,6 +25,9 @@
     "paths": {
       "@/*": [
         "./src/*"
+      ],
+      "@immonext/types": [
+        "../../packages/types/src/index.ts"
       ]
     }
   },
