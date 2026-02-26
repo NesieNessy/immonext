@@ -71,7 +71,7 @@ export interface PersonalData {
   postalCode: string;
   phoneNumber?: string;
   emailAddress: string;
-  personalMarginalTaxRate: string;
+  taxIdentificationNumber: string;
   profilePicture?: string | null;
   createdAt?: string;
   updatedAt?: string;

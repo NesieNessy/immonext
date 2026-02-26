@@ -12,7 +12,7 @@ function toPersonalData(row: Record<string, unknown>): PersonalData {
     postalCode: row.postal_code as string,
     phoneNumber: row.phone_number as string | undefined,
     emailAddress: row.email_address as string,
-    personalMarginalTaxRate: row.personal_marginal_tax_rate as string,
+    taxIdentificationNumber: row.tax_identification_number as string,
     profilePicture: row.profile_picture as string | null,
     createdAt: row.created_at as string,
     updatedAt: row.updated_at as string,
@@ -43,7 +43,7 @@ export async function upsertPersonalData(personalData: PersonalDataInsert): Prom
       postal_code: personalData.postalCode,
       phone_number: personalData.phoneNumber,
       email_address: personalData.emailAddress,
-      personal_marginal_tax_rate: personalData.personalMarginalTaxRate,
+      tax_identification_number: personalData.taxIdentificationNumber,
       profile_picture: personalData.profilePicture,
     })
     .select()
@@ -64,7 +64,7 @@ export async function updatePersonalData(userId: string, updates: PersonalDataUp
   if (updates.postalCode !== undefined) dbUpdates.postal_code = updates.postalCode;
   if (updates.phoneNumber !== undefined) dbUpdates.phone_number = updates.phoneNumber;
   if (updates.emailAddress !== undefined) dbUpdates.email_address = updates.emailAddress;
-  if (updates.personalMarginalTaxRate !== undefined) dbUpdates.personal_marginal_tax_rate = updates.personalMarginalTaxRate;
+  if (updates.taxIdentificationNumber !== undefined) dbUpdates.tax_identification_number  = updates.taxIdentificationNumber;
   if (updates.profilePicture !== undefined) dbUpdates.profile_picture = updates.profilePicture;
 
   const { data, error } = await supabase

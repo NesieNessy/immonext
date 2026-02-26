@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS personal_data (
     postal_code VARCHAR(10) NOT NULL,
     phone_number VARCHAR(50),
     email_address VARCHAR(100) NOT NULL,
-    personal_marginal_tax_rate VARCHAR(50) NOT NULL,
+    tax_identification_number VARCHAR(11) NOT NULL,
     profile_picture BYTEA,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()

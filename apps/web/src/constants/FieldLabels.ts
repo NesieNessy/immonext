@@ -27,7 +27,7 @@ export const FieldLabels: Record<string, TableLabels> = {
     PostalCode:              { en: "Postal Code",                  de: "Postleitzahl" },
     PhoneNumber:             { en: "Phone Number",                 de: "Telefonnummer" },
     EmailAddress:            { en: "Email Address",                de: "E-Mail-Adresse" },
-    PersonalMarginalTaxRate: { en: "Personal Marginal Tax Rate",   de: "Persönlicher Grenzsteuersatz" },
+    taxIdentificationNumber: { en: "Tax Identification Number",   de: "Steueridentifikationsnummer" },
     ProfilePicture:          { en: "Profile Picture",              de: "Profilbild" },
   },
 

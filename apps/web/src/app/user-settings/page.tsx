@@ -16,7 +16,7 @@ const emptyForm = {
     houseNumber: '',
     postalCode: '',
     city: '',
-    personalMarginalTaxRate: '',
+    taxIdentificationNumber: '',
 };
 
 type FormData = typeof emptyForm;
@@ -39,7 +39,7 @@ export default function SettingsPage() {
         houseNumber: data.houseNumber,
         postalCode: data.postalCode,
         city: data.city,
-        personalMarginalTaxRate: data.personalMarginalTaxRate,
+        taxIdentificationNumber: data.taxIdentificationNumber,
     });
 
     const loadData = useCallback(async (uid: string) => {
@@ -90,7 +90,7 @@ export default function SettingsPage() {
             houseNumber: formData.houseNumber,
             postalCode: formData.postalCode,
             city: formData.city,
-            personalMarginalTaxRate: formData.personalMarginalTaxRate,
+            taxIdentificationNumber: formData.taxIdentificationNumber,
         });
 
         if (result) {
@@ -187,9 +187,9 @@ export default function SettingsPage() {
                     <Tile title="Steuer" className="lg:col-span-2">
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 p-4">
                             <TextField
-                                label="Persönlicher Grenzsteuersatz"
-                                value={formData.personalMarginalTaxRate}
-                                onChange={(e) => handleInputChange('personalMarginalTaxRate', e.target.value)}
+                                label="Steueridentifikationsnummer"
+                                value={formData.taxIdentificationNumber}
+                                onChange={(e) => handleInputChange('taxIdentificationNumber', e.target.value)}
                             />
                         </div>
                     </Tile>
