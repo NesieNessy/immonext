@@ -23,6 +23,7 @@ export { Image } from "./Image";
 export { Diagram } from "./Diagram";
 export { Gauge } from "./Gauge";
 export { StickyActionBar } from "./StickyActionBar";
+export { RatingScale } from "./RatingScale";
 
 // Re-export common components for convenience
 export { Icons, Typography } from "../common";

@@ -25,6 +25,13 @@ export type CityUpdate = Partial<CityInsert>;
 // Property
 // ----------------------------------------------------------------------------
 
+export enum PropertyCondition {
+  Sanierungsbedürftig = 'Sanierungsbedürftig',
+  Standard            = 'Standard',
+  Gehoben             = 'Gehoben',
+  Luxus               = 'Luxus',
+}
+
 export interface Property {
   propertyId: number;
   userId: string;

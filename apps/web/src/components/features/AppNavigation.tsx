@@ -48,7 +48,7 @@ export function AppNavigation() {
           iconName: 'propertyValuation',
           active: isPropertyValuationActive,
           subItems: [
-            { label: 'QuickCheck', href: '/property-valuation/quick-check', iconName: 'quickCheck' },
+            { label: 'Ersteinschätzung', href: '/property-valuation/quick-check', iconName: 'quickCheck' },
             { label: 'Detailbewertung', href: '/property-valuation/detail-check', iconName: 'detailCheck' },
           ]
         },
