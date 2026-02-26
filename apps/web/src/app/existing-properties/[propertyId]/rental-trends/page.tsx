@@ -1,4 +1,4 @@
-import RentalTrends from './RentalTrends';
+import TenancyTrends from "./RentalTrends";
 
 export const dynamicParams = false;
 
@@ -17,5 +17,5 @@ export async function generateStaticParams() {
 
 export default async function Page({ params }: { params: Promise<{ propertyId: string }> }) {
     const { propertyId } = await params;
-    return <RentalTrends propertyId={propertyId} />;
+    return <TenancyTrends propertyId={propertyId} />;
 }

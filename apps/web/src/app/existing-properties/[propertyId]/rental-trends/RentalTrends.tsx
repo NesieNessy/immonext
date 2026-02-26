@@ -11,7 +11,7 @@ import { createUseCaseMenuItems } from '@/lib/useCaseMenu';
 import { Button, Header, Tile } from '@/components/ui';
 import { base64ToDataUri } from '@/lib/utils';
 
-export default function RentalTrends({ propertyId }: { propertyId: string }) {
+export default function TenancyTrends({ propertyId }: { propertyId: string }) {
     const router = useRouter();
     const [property, setProperty] = useState<Property | null>(null);
 
@@ -19,7 +19,7 @@ export default function RentalTrends({ propertyId }: { propertyId: string }) {
         getPropertyById(parseInt(propertyId, 10)).then(setProperty);
     }, [propertyId]);
 
-    const useCaseMenuItems = createUseCaseMenuItems(propertyId, 'RentalTrends', (route) => {
+    const useCaseMenuItems = createUseCaseMenuItems(propertyId, 'TenancyTrends', (route) => {
         router.push(route);
     });
 
@@ -38,7 +38,7 @@ export default function RentalTrends({ propertyId }: { propertyId: string }) {
             <main className="container mx-auto px-4 py-8">
                 <Header 
                     title={`${property.street} ${property.houseNumber}`}
-                    subtitle={ExistingPropertiesUseCases.RentalTrends}
+                    subtitle={ExistingPropertiesUseCases.TenancyTrends}
                     image={property.imageUrl ? <img src={base64ToDataUri(property.imageUrl)!} alt={`${property.street} ${property.houseNumber}`} className="w-16 h-16 object-cover rounded-lg" /> : undefined}
                     actions={
                         <Button 
@@ -51,7 +51,7 @@ export default function RentalTrends({ propertyId }: { propertyId: string }) {
                 />
 
                 <div className="mt-8 max-w-4xl">
-                    <Tile title={ExistingPropertiesUseCases.RentalTrends}>
+                    <Tile title={ExistingPropertiesUseCases.TenancyTrends}>
                         <div className="p-4">
                             <p className="text-muted-foreground">
                                 Hier können Sie die Mietentwicklung für diese Immobilie analysieren.

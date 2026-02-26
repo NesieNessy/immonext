@@ -118,11 +118,11 @@ export const FieldLabels: Record<string, TableLabels> = {
   // ----------------------------------------------------------------------------
   Tenancy: {
     IsRented:         { en: "Is Rented",          de: "Vermietet" },
-    RentalStartDate:  { en: "Rental Start Date",  de: "Vermietet ab" },
-    RentalEndDate:    { en: "Rental End Date",    de: "Vermietet bis" },
-    RentalType:       { en: "Rental Type",        de: "Vermietungsart" },
-    RentalUnits:      { en: "Rental Units",       de: "Vermietungsanzahl" },
-    RentalUnitsPrice: { en: "Rental Units Price", de: "Vermietungsanzahl Preis" },
+    TenancyStartDate:  { en: "Tenancy Start Date",  de: "Vermietet ab" },
+    TenancyEndDate:    { en: "Tenancy End Date",    de: "Vermietet bis" },
+    TenancyType:       { en: "Tenancy Type",        de: "Vermietungsart" },
+    TenancyUnits:      { en: "Tenancy Units",       de: "Vermietungsanzahl" },
+    TenancyUnitsPrice: { en: "Tenancy Units Price", de: "Vermietungsanzahl Preis" },
     ParkingSpaceRent: { en: "Parking Space Rent", de: "Miete Stellplatz" },
     MiscRent:         { en: "Miscellaneous Rent", de: "Miete Sonstiges" },
     WarmRent:         { en: "Warm Rent",          de: "Miete Warm" },

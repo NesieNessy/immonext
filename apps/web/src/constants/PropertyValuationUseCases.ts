@@ -1,7 +1,7 @@
 export enum PropertyValuationUseCases {
   PropertyData = 'Objektdaten',
   AcquisitionCosts = 'Kaufkosten',
-  LeasingOrRentals = 'Vermietung',
+  LeasingOrTenancys = 'Vermietung',
   Financing = 'Finanzierung',
   Depreciation = 'Abschreibung',
   Renovation = 'Sanierung',
@@ -14,7 +14,7 @@ export enum PropertyValuationUseCases {
 export const PropertyValuationUseCasesIcons: Record<keyof typeof PropertyValuationUseCases, string> = {
   PropertyData: 'Database',
   AcquisitionCosts: 'Euro',
-  LeasingOrRentals: 'UserRoundKey',
+  LeasingOrTenancys: 'UserRoundKey',
   Financing: 'Coins',
   Depreciation: 'TrendingDown',
   Renovation: 'Wrench',
@@ -27,7 +27,7 @@ export const PropertyValuationUseCasesIcons: Record<keyof typeof PropertyValuati
 export const PropertyValuationUseCasesPaths: Record<keyof typeof PropertyValuationUseCases, string> = {
   PropertyData: '/property-valuation/detail-check/property-data',
   AcquisitionCosts: '/property-valuation/detail-check/acquisition-costs',
-  LeasingOrRentals: '/property-valuation/detail-check/leasing-or-rentals',
+  LeasingOrTenancys: '/property-valuation/detail-check/leasing-or-tenancys',
   Financing: '/property-valuation/detail-check/financing',
   Depreciation: '/property-valuation/detail-check/depreciation',
   Renovation: '/property-valuation/detail-check/renovation',

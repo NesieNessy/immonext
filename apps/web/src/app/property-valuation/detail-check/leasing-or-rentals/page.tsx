@@ -3,7 +3,7 @@
 // Header import removed - not used
 import { PropertyValuationLayout } from '../PropertyValuationLayout';
 
-export default function LeasingOrRentalsPage() {
+export default function LeasingOrTenancysPage() {
   return (
     <PropertyValuationLayout currentStep={2}>
       <div className="mt-8">

@@ -9,7 +9,7 @@ const routeMap: Record<string, string> = {
     'SplitPurchasePrice': 'adjust-distribution',
     'TenantData': 'tenant-data',
     'TenantHistory': 'tenant-history',
-    'RentalTrends': 'rental-trends',
+    'TenancyTrends': 'tenancy-trends',
     'ServiceChargeSettlement': 'service-charge-settlement',
     'Contractors': 'contractors',
     'TaxDocuments': 'tax-documents',

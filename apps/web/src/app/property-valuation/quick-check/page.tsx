@@ -31,10 +31,10 @@ const CONDITION_OPTIONS = [
 ];
 
 const CONDITION_MULTIPLIER: Record<PropertyCondition, number> = {
-  [PropertyCondition.Sanierungsbedürftig]: 0.85,
-  [PropertyCondition.Standard]:            1.0,
-  [PropertyCondition.Gehoben]:             1.1,
-  [PropertyCondition.Luxus]:               1.2,
+  [PropertyCondition.InNeedOfRenovation]: 0.85,
+  [PropertyCondition.Standard]: 1.0,
+  [PropertyCondition.Upscale]: 1.1,
+  [PropertyCondition.Luxury]: 1.2,
 };
 
 function calcGrossYield(purchasePrice: number, coldRent: number): number {
@@ -51,9 +51,9 @@ function yieldToScale(grossYield: number): number {
 }
 
 function yieldLabel(grossYield: number): string {
-  if (grossYield >= 7)   return 'Ausgezeichnet';
+  if (grossYield >= 7) return 'Ausgezeichnet';
   if (grossYield >= 5.5) return 'Gut';
-  if (grossYield >= 4)   return 'Befriedigend';
+  if (grossYield >= 4) return 'Befriedigend';
   if (grossYield >= 2.5) return 'Ausreichend';
   return 'Schlecht';
 }
@@ -89,13 +89,13 @@ export default function QuickCheckPage() {
   });
 
   const purchasePrice = parseFloat(form.purchasePrice) || 0;
-  const coldRent      = parseFloat(form.coldRent)      || 0;
-  const condition     = form.condition as PropertyCondition | '';
-  const multiplier    = condition ? CONDITION_MULTIPLIER[condition] : 1;
-  const adjustedRent  = coldRent * multiplier;
-  const grossYield    = calcGrossYield(purchasePrice, adjustedRent);
-  const scaleValue    = yieldToScale(grossYield);
-  const rating        = yieldLabel(grossYield);
+  const coldRent = parseFloat(form.coldRent) || 0;
+  const condition = form.condition as PropertyCondition | '';
+  const multiplier = condition ? CONDITION_MULTIPLIER[condition] : 1;
+  const adjustedRent = coldRent * multiplier;
+  const grossYield = calcGrossYield(purchasePrice, adjustedRent);
+  const scaleValue = yieldToScale(grossYield);
+  const rating = yieldLabel(grossYield);
   const handleFieldChange = (field: keyof FormData, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }));
   };
@@ -300,11 +300,11 @@ export default function QuickCheckPage() {
                 <span
                   className={[
                     'inline-block w-2 h-2 rounded-full mr-2 align-middle',
-                    grossYield >= 7   ? 'bg-green-500'  :
-                    grossYield >= 5.5 ? 'bg-lime-500'   :
-                    grossYield >= 4   ? 'bg-yellow-500' :
-                    grossYield >= 2.5 ? 'bg-orange-500' :
-                                        'bg-red-500',
+                    grossYield >= 7 ? 'bg-green-500' :
+                      grossYield >= 5.5 ? 'bg-lime-500' :
+                        grossYield >= 4 ? 'bg-yellow-500' :
+                          grossYield >= 2.5 ? 'bg-orange-500' :
+                            'bg-red-500',
                   ].join(' ')}
                 />
                 {yieldDescription(grossYield, condition)}

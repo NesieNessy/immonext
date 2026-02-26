@@ -26,10 +26,18 @@ export type CityUpdate = Partial<CityInsert>;
 // ----------------------------------------------------------------------------
 
 export enum PropertyCondition {
-  Sanierungsbedürftig = 'Sanierungsbedürftig',
-  Standard            = 'Standard',
-  Gehoben             = 'Gehoben',
-  Luxus               = 'Luxus',
+  InNeedOfRenovation = 'Sanierungsbedürftig',
+  Standard = 'Standard',
+  Upscale = 'Gehoben',
+  Luxury = 'Luxus',
+}
+
+export enum PropertyTypeValues {
+  Condominium = 'Eigentumswohnung',
+  SingleFamilyHouse = 'Einfamilienhaus',
+  MultiFamilyHouse = 'Mehrfamilienhaus',
+  TimberConstruction = 'Holzbauweise',
+  ListedBuildings = 'Denkmalgeschützte Gebäude',
 }
 
 export interface Property {
@@ -155,16 +163,8 @@ export type PropertyAcquisitionInsert = Omit<PropertyAcquisition, 'propertyAcqui
 export type PropertyAcquisitionUpdate = Partial<Omit<PropertyAcquisition, 'propertyAcquisitionId' | 'createdAt' | 'updatedAt'>>;
 
 // ----------------------------------------------------------------------------
-// Enums
+// Tenancy
 // ----------------------------------------------------------------------------
-
-export enum PropertyTypeValues {
-  Condominium = 'Eigentumswohnung',
-  SingleFamilyHouse = 'Einfamilienhaus',
-  MultiFamilyHouse = 'Mehrfamilienhaus',
-  TimberConstruction = 'Holzbauweise',
-  ListedBuildings = 'Denkmalgeschützte Gebäude',
-}
 
 export enum TenancyTypeValues {
   Standard = 'Standard',
@@ -176,6 +176,31 @@ export enum TenancyTypeValues {
   NursingHome = 'Altenheim',
   ForeclosureSale = 'Zwangsversteigerung',
 }
+
+export interface Tenancy {
+  tenancyId: number,
+  maintenanceCostsId: number,
+  parkingSpaceId: number,
+  propertyId: number,
+  isRented: boolean | null,
+  tenancyStartDate: string | null,
+  tenancyEndDate: string | null,
+  tenancyType: TenancyTypeValues | null,
+  tenancyUnits: number | null,
+  tenancyUnitsPrice: number | null,
+  parkingSpaceRent: number | null,
+  miscRent: number | null,
+  warmRent: number | null,
+  coldRent: number | null,
+  tenantFirstName: string,
+  tenantLastName: string,
+  deposit: number | null,
+  createdAt: string,
+  updatedAt: string
+}
+
+export type TenancyInsert = Omit<Tenancy, 'tenancyId' | 'createdAt' | 'updatedAt'>;
+export type TenancyUpdate = Partial<Omit<Tenancy, 'tenancyId' | 'propertyId' | 'createdAt' | 'updatedAt'>>;
 
 export enum DataEntryTypeValues {
   ImportFromRealEstatePortal = 'Aus Immobilienportal importieren',
