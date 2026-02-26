@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { NavigationBar } from '@/components/ui/NavigationBar';
 import { supabase } from '@/lib/supabase/client';
+import { clearLoginTime } from '@/lib/sessionTimeout';
 import type { User } from '@supabase/supabase-js';
 
 export function AppNavigation() {
@@ -22,6 +23,7 @@ export function AppNavigation() {
   }, []);
 
   const handleLogout = async () => {
+    clearLoginTime();
     await supabase.auth.signOut();
     router.push('/login');
   };

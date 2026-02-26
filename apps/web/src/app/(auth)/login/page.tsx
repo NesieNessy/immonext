@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Button, TextField } from '@/components/ui';
 import { supabase } from '@/lib/supabase/client';
+import { recordLoginTime } from '@/lib/sessionTimeout';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -24,6 +25,7 @@ export default function LoginPage() {
       setError(error.message);
       setIsLoading(false);
     } else {
+      recordLoginTime();
       router.push('/');
       router.refresh();
     }
