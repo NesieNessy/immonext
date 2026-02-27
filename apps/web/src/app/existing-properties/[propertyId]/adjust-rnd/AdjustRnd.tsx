@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { Calculator, Layers, Save, X, FileText } from 'lucide-react';
 import { Button, Header, RadioButton, NumberField, Dropdown, StickyActionBar } from '@/components/ui';
-import { ButtonLabels } from '@/constants/ButtonLabels';
+import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { ExistingPropertiesUseCases } from '@/constants/ExistingPropertiesUseCases';
 import { RenovationAttribute, RenovationValue, RndMode, getPropertyRndDefaults } from '@/constants/RndValues';
 import propertyRndData from '@/data/property_rnd.json';
@@ -153,15 +153,15 @@ export default function AdjustRnd({ propertyId }: { propertyId: string }) {
                     actions={
                         <div className="flex gap-3">
                             <Button 
-                                label={ButtonLabels.RequestAppraisal}
-                                icon={<FileText />}
+                                label={BUTTON_DETAILS.RequestAppraisal.label}
+                                icon={<BUTTON_DETAILS.RequestAppraisal.icon />}
                                 variant="outline"
                                 onClick={handleRequestAppraisal}
                                 disabled={rndMode === RndMode.STANDARD}
                             />
                             <Button 
-                                label={ButtonLabels.UseCases}
-                                icon={<Layers />}
+                                label={BUTTON_DETAILS.UseCases.label}
+                                icon={<BUTTON_DETAILS.UseCases.icon />}
                                 variant="primary"
                                 menuItems={useCaseMenuItems}
                             />
@@ -256,10 +256,10 @@ export default function AdjustRnd({ propertyId }: { propertyId: string }) {
                 show={isEditing}
                 onGhost={handleCancel}
                 onPrimary={handleSave}
-                ghostLabel={ButtonLabels.Cancel}
-                primaryLabel={ButtonLabels.Save}
-                ghostIcon={<X />}
-                primaryIcon={<Save />}
+                ghostLabel={BUTTON_DETAILS.Cancel.label}
+                primaryLabel={BUTTON_DETAILS.Save.label}
+                ghostIcon={<BUTTON_DETAILS.Cancel.icon />}
+                primaryIcon={<BUTTON_DETAILS.Save.icon />}
             />
         </div>
     );

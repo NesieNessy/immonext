@@ -9,7 +9,7 @@ import PropertyPurchasePriceSplitData from '@/data/property_purchase_price_split
 import type { Property } from '@immonext/types';
 import { getPropertyById } from '@/lib/supabase/property';
 import { SplitMode, getPurchasePriceSplitDefaults } from '@/constants/PurchasePriceSplitValues';
-import { ButtonLabels } from '@/constants/ButtonLabels';
+import { BUTTON_DETAILS, ButtonType } from '@/constants/ButtonLabels';
 import { ExistingPropertiesUseCases } from '@/constants/ExistingPropertiesUseCases';
 import { base64ToDataUri } from '@/lib/utils';
 
@@ -193,8 +193,8 @@ export default function AdjustDistribution({ propertyId }: { propertyId: string 
           image={property.imageUrl ? <img src={base64ToDataUri(property.imageUrl)!} alt={`${property.street} ${property.houseNumber}`} className="w-16 h-16 object-cover rounded-lg" /> : undefined}
           actions={
             <Button
-              label={ButtonLabels.UseCases}
-              icon={<Layers />}
+              label={BUTTON_DETAILS.UseCases.label}
+              icon={<BUTTON_DETAILS.UseCases.icon />}
               variant="primary"
               menuItems={useCaseMenuItems}
             />
@@ -326,10 +326,10 @@ export default function AdjustDistribution({ propertyId }: { propertyId: string 
         show={isEditing}
         onGhost={handleCancel}
         onPrimary={handleSave}
-        ghostLabel={ButtonLabels.Cancel}
-        primaryLabel={ButtonLabels.Save}
-        ghostIcon={< X />}
-        primaryIcon={< Save />}
+        ghostLabel={BUTTON_DETAILS.Cancel.label}
+        primaryLabel={BUTTON_DETAILS.Save.label}
+        ghostIcon={<BUTTON_DETAILS.Cancel.icon />}
+        primaryIcon={<BUTTON_DETAILS.Save.icon />}
       />
     </div >
   );

@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Link2, PenLine, ArrowLeft, ArrowRight, Upload, CheckCircle, XCircle } from 'lucide-react';
 import { Header, Tile, TextField, NumberField, Dropdown, Button, RatingScale } from '@/components/ui';
 import { PropertyCondition } from '@immonext/types';
+import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -135,8 +136,8 @@ export default function QuickCheckPage() {
                   onChange={(e) => setPortalUrl(e.target.value)}
                 />
                 <Button
-                  label="Daten importieren"
-                  icon={<Upload className="w-4 h-4" />}
+                  label={BUTTON_DETAILS.ImportData.label}
+                  icon={<BUTTON_DETAILS.ImportData.icon />}
                   variant="primary"
                   className="w-full"
                   disabled
@@ -153,7 +154,8 @@ export default function QuickCheckPage() {
             >
               <div className="mt-4">
                 <Button
-                  label="Manuell eingeben"
+                   label={BUTTON_DETAILS.EnterManually.label}
+                  icon={<BUTTON_DETAILS.EnterManually.icon />}
                   variant="outline"
                   className="w-full"
                   onClick={() => setStep('manual-form')}

@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Plus } from 'lucide-react';
 import { Header, TileWithImage, Button } from '@/components/ui';
-import { ButtonLabels } from '@/constants/ButtonLabels';
+import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
 import { getProperties } from '@/lib/supabase/property';
 import type { Property } from '@immonext/types';
@@ -41,8 +41,8 @@ export default function ExistingPropertiesPage() {
           subtitle="Übersicht aller vorhandenen Immobilien"
           actions={
             <Button 
-              label={ButtonLabels.Create}
-              icon={<Plus />}
+              label={BUTTON_DETAILS.Create.label}
+              icon={<BUTTON_DETAILS.Create.icon />}
               variant="primary" 
               onClick={handleCreateProperty}
             />

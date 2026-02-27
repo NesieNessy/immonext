@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 
 import { useRouter } from 'next/navigation';
-import { ButtonLabels } from '@/constants/ButtonLabels';
+import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { ExistingPropertiesUseCases } from '@/constants/ExistingPropertiesUseCases';
 import { Layers } from 'lucide-react';
 import type { Property } from '@immonext/types';
@@ -35,8 +35,8 @@ export default function Sale({ propertyId }: { propertyId: string }) {
                     image={property.imageUrl ? <img src={base64ToDataUri(property.imageUrl)!} alt={`${property.street} ${property.houseNumber}`} className="w-16 h-16 object-cover rounded-lg" /> : undefined}
                     actions={
                     <Button 
-                        label={ButtonLabels.UseCases}
-                        icon={<Layers />}
+                        label={BUTTON_DETAILS.UseCases.label}
+                        icon={<BUTTON_DETAILS.UseCases.icon />}
                         variant="primary"
                         menuItems={useCaseMenuItems}
                     />
