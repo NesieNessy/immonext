@@ -1,15 +1,15 @@
 import { supabase } from '@/lib/supabase/client';
 import type {
-  PropertyAcquisition,
-  PropertyAcquisitionInsert,
-  PropertyAcquisitionUpdate,
+    PropertyAcquisition,
+    PropertyAcquisitionInsert,
+    PropertyAcquisitionUpdate,
 } from '@immonext/types';
 
 function toPropertyAcquisition(row: Record<string, unknown>): PropertyAcquisition {
   return {
     propertyAcquisitionId: row.property_acquisition_id as number,
     propertyId:            row.property_id as number,
-    houseCompletionYear:   row.house_completion_year as number,
+    houseCompletionYear:   row.house_completion_year as number | null,
     purchaseDate:          row.purchase_date as string | null,
     transferDate:          row.transfer_date as string | null,
     createdAt:             row.created_at as string,
