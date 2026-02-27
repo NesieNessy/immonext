@@ -1,19 +1,19 @@
 "use client";
 
-import { useState, useEffect, useMemo } from 'react';
-import { useRouter } from 'next/navigation';
-import { Calculator, Layers, Save, X, FileText } from 'lucide-react';
-import { Button, Header, RadioButton, NumberField, Dropdown, StickyActionBar } from '@/components/ui';
+import { Button, Dropdown, Header, NumberField, RadioButton, StickyActionBar } from '@/components/ui';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { ExistingPropertiesUseCases } from '@/constants/ExistingPropertiesUseCases';
 import { RenovationAttribute, RenovationValue, RndMode, getPropertyRndDefaults } from '@/constants/RndValues';
 import propertyRndData from '@/data/property_rnd.json';
 import rndRenovationData from '@/data/rnd_renovation.json';
-import type { Property } from '@immonext/types';
 import { getPropertyById } from '@/lib/supabase/property';
-import type { RenovationFields } from '@/types/Rnd';
 import { createUseCaseMenuItems } from '@/lib/useCaseMenu';
 import { base64ToDataUri } from '@/lib/utils';
+import type { RenovationFields } from '@/types/Rnd';
+import type { Property } from '@immonext/types';
+import { Calculator } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { useEffect, useMemo, useState } from 'react';
 
 export default function AdjustRnd({ propertyId }: { propertyId: string }) {
     const router = useRouter();

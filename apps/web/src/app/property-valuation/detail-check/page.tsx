@@ -1,13 +1,12 @@
 "use client";
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { RadioButton, Dropdown, StickyActionBar } from '@/components/ui';
+import { Dropdown, RadioButton, StickyActionBar } from '@/components/ui';
+import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { DataEntryTypeValues } from '@/constants/DataEntryTypeValues';
-import { PropertyTypesValues } from '@/constants/PropertyTypeValues';
+import { PropertyTypeValues } from '@/constants/PropertyTypeValues';
 import { TenancyTypeValues } from '@/constants/TenancyTypeValues';
-import { ButtonLabels } from '@/constants/ButtonLabels';
-import { X, Play } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 
 export default function DetailCheckPage() {
   const router = useRouter();
@@ -16,14 +15,14 @@ export default function DetailCheckPage() {
   const [selectedTenancyType, setSelectedTenancyType] = useState<string>('');
 
   // Convert enum values to dropdown options
-  const propertyTypeOptions = Object.entries(PropertyTypesValues).map(([key, value]) => ({
+  const propertyTypeOptions = Object.entries(PropertyTypeValues).map(([key, value]) => ({
     value: key,
-    label: value,
+    label: value as string,
   }));
 
   const tenancyTypeOptions = Object.entries(TenancyTypeValues).map(([key, value]) => ({
     value: key,
-    label: value,
+    label: value as string,
   }));
 
   const handleStart = () => {
@@ -115,10 +114,10 @@ export default function DetailCheckPage() {
           show={true}
           onGhost={handleCancel}
           onPrimary={handleStart}
-          ghostLabel={ButtonLabels.Cancel}
-          primaryLabel={ButtonLabels.Start}
-          ghostIcon={<X />}
-          primaryIcon={<Play />}
+          ghostLabel={BUTTON_DETAILS.Cancel.label}
+          primaryLabel={BUTTON_DETAILS.Start.label}
+          ghostIcon={<BUTTON_DETAILS.Cancel.icon />}
+          primaryIcon={<BUTTON_DETAILS.Start.icon />}
         />
       </main>
     </div>

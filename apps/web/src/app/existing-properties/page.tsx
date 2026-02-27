@@ -1,14 +1,13 @@
 "use client";
 
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { Plus } from 'lucide-react';
-import { Header, TileWithImage, Button } from '@/components/ui';
+import { Button, Header, TileWithImage } from '@/components/ui';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
 import { getProperties } from '@/lib/supabase/property';
-import type { Property } from '@immonext/types';
 import { base64ToDataUri } from '@/lib/utils';
+import type { Property } from '@immonext/types';
+import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
 
 export default function ExistingPropertiesPage() {
   const { user, isLoading } = useRequireAuth();

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from 'react';
-import { Link2, PenLine, ArrowLeft, ArrowRight, Upload, CheckCircle, XCircle } from 'lucide-react';
+import { Link2, PenLine } from 'lucide-react';
 import { Header, Tile, TextField, NumberField, Dropdown, Button, RatingScale } from '@/components/ui';
 import { PropertyCondition } from '@immonext/types';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
@@ -255,19 +255,17 @@ export default function QuickCheckPage() {
           </div>
 
           {/* Navigation buttons */}
-          <div className="mt-10 flex gap-3">
+          <div className="mt-10 flex gap-3 float-right">
             <Button
-              label="Zurück"
-              icon={<ArrowLeft className="w-4 h-4" />}
+              label={BUTTON_DETAILS.Back.label}
+              icon={<BUTTON_DETAILS.Back.icon />}
               variant="outline"
               onClick={() => setStep('input-method')}
             />
             <Button
-              label="Berechnung durchführen"
-              icon={<ArrowRight className="w-4 h-4" />}
-              iconPosition="right"
+              label={BUTTON_DETAILS.Calculate.label}
+              icon={<BUTTON_DETAILS.Calculate.icon />}
               variant="primary"
-              className="flex-1"
               disabled={!isFormValid}
               onClick={() => setStep('result')}
             />
@@ -316,13 +314,13 @@ export default function QuickCheckPage() {
               {/* Key figures */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-4 border-t border-border">
                 <div>
-                  <p className="text-xs text-muted-foreground">Kaufpreis</p>
+                  <p className="text-xs text-muted-foreground">{FieldLabels.AcquisitionCosts.PurchasePrice.de}</p>
                   <p className="text-sm font-semibold text-foreground">
                     {purchasePrice.toLocaleString('de-DE')} €
                   </p>
                 </div>
                 <div>
-                  <p className="text-xs text-muted-foreground">Kaltmiete</p>
+                  <p className="text-xs text-muted-foreground">{FieldLabels.Tenancy.ColdRent.de}</p>
                   <p className="text-sm font-semibold text-foreground">
                     {coldRent.toLocaleString('de-DE')} €
                   </p>
@@ -334,7 +332,7 @@ export default function QuickCheckPage() {
                   </p>
                 </div>
                 <div>
-                  <p className="text-xs text-muted-foreground">Baujahr</p>
+                  <p className="text-xs text-muted-foreground">{FieldLabels.Property.YearOfConstruction.de}</p>
                   <p className="text-sm font-semibold text-foreground">
                     {form.yearOfConstruction || '—'}
                   </p>
@@ -347,8 +345,8 @@ export default function QuickCheckPage() {
         {/* Action buttons */}
         <div className="mt-10 flex gap-3">
           <Button
-            label="Verwerfen"
-            icon={<XCircle className="w-4 h-4" />}
+            label={BUTTON_DETAILS.Discard.label}
+            icon={<BUTTON_DETAILS.Discard.icon/>}
             variant="outline"
             className="flex-1"
             onClick={() => {
@@ -357,8 +355,8 @@ export default function QuickCheckPage() {
             }}
           />
           <Button
-            label="Übernehmen"
-            icon={<CheckCircle className="w-4 h-4" />}
+            label={BUTTON_DETAILS.TakeOver.label}
+            icon={<BUTTON_DETAILS.TakeOver.icon/>}
             variant="primary"
             className="flex-1"
             onClick={() => {

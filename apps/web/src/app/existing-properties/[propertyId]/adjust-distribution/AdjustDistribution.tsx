@@ -1,17 +1,17 @@
 "use client";
 
-import { useState, useEffect, useMemo } from 'react';
-import { useRouter } from 'next/navigation';
-import { Calculator, Layers, Save, X } from 'lucide-react';
-import { Button, Header, RadioButton, NumberField, StickyActionBar } from '@/components/ui';
-import { createUseCaseMenuItems } from '@/lib/useCaseMenu';
-import PropertyPurchasePriceSplitData from '@/data/property_purchase_price_split.json';
-import type { Property } from '@immonext/types';
-import { getPropertyById } from '@/lib/supabase/property';
-import { SplitMode, getPurchasePriceSplitDefaults } from '@/constants/PurchasePriceSplitValues';
-import { BUTTON_DETAILS, ButtonType } from '@/constants/ButtonLabels';
+import { Button, Header, NumberField, RadioButton, StickyActionBar } from '@/components/ui';
+import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { ExistingPropertiesUseCases } from '@/constants/ExistingPropertiesUseCases';
+import { SplitMode, getPurchasePriceSplitDefaults } from '@/constants/PurchasePriceSplitValues';
+import PropertyPurchasePriceSplitData from '@/data/property_purchase_price_split.json';
+import { getPropertyById } from '@/lib/supabase/property';
+import { createUseCaseMenuItems } from '@/lib/useCaseMenu';
 import { base64ToDataUri } from '@/lib/utils';
+import type { Property } from '@immonext/types';
+import { Calculator } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { useEffect, useMemo, useState } from 'react';
 
 export default function AdjustDistribution({ propertyId }: { propertyId: string }) {
   const router = useRouter();

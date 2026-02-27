@@ -1,15 +1,14 @@
 "use client";
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { Save, X, Layers } from 'lucide-react';
+import { Button, Header, NumberField, StickyActionBar, TextField, Tile } from '@/components/ui';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { ExistingPropertiesUseCases } from '@/constants/ExistingPropertiesUseCases';
-import type { Property } from '@immonext/types';
 import { getPropertyById, updateProperty } from '@/lib/supabase/property';
 import { createUseCaseMenuItems } from '@/lib/useCaseMenu';
-import { Header, Tile, TextField, NumberField, StickyActionBar, Button } from '@/components/ui';
 import { base64ToDataUri } from '@/lib/utils';
+import type { Property } from '@immonext/types';
+import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
 
 export default function PropertyData({ propertyId }: { propertyId: string }) {
     const router = useRouter();

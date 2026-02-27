@@ -1,8 +1,10 @@
 // Import your icons (example using lucide-react)
 import { 
-  X, Save, ArrowLeft, ArrowRight, CornerUpLeft, 
-  Plus, Briefcase, FileText, Play, Download, 
-  Edit3, Calculator 
+  X, Save, ArrowLeft, ArrowRight, 
+  Plus, Briefcase, FileText, Play, 
+  Edit3, Calculator, 
+  Upload,
+  Check
 } from 'lucide-react';
 
 // 1. Define the button types (keys) as an Enum
@@ -18,7 +20,9 @@ export enum ButtonType {
   Start = 'Start',
   ImportData = 'ImportData',
   EnterManually = 'EnterManually',
-  Calculate = 'Calculate'
+  Calculate = 'Calculate',
+  TakeOver = 'TakeOver',
+  Discard = 'Discard'  
 }
 
 // 2. Define the structure for your button properties
@@ -33,12 +37,14 @@ export const BUTTON_DETAILS: Record<ButtonType, ButtonConfig> = {
   [ButtonType.Save]:             { label: 'Speichern',           icon: Save },
   [ButtonType.Previous]:         { label: 'Vorheriges',          icon: ArrowLeft },
   [ButtonType.Next]:             { label: 'Nächstes',            icon: ArrowRight },
-  [ButtonType.Back]:             { label: 'Zurück',              icon: CornerUpLeft },
+  [ButtonType.Back]:             { label: 'Zurück',              icon: ArrowLeft },
   [ButtonType.Create]:           { label: 'Erstellen',           icon: Plus },
   [ButtonType.UseCases]:         { label: 'Anwendungsfall',      icon: Briefcase },
   [ButtonType.RequestAppraisal]: { label: 'Gutachten anfordern', icon: FileText },
   [ButtonType.Start]:            { label: 'Starten',             icon: Play },
-  [ButtonType.ImportData]:       { label: 'Daten importieren',   icon: Download },
+  [ButtonType.ImportData]:       { label: 'Daten importieren',   icon: Upload },
   [ButtonType.EnterManually]:    { label: 'Manuell eingeben',    icon: Edit3 },
-  [ButtonType.Calculate]:        { label: 'Berechne',            icon: Calculator }
+  [ButtonType.Calculate]:        { label: 'Berechnen',           icon: Calculator },
+  [ButtonType.TakeOver]:         { label: 'Übernehmen',          icon: Check },
+  [ButtonType.Discard]:          { label: 'Verwerfen',           icon: X }
 };
