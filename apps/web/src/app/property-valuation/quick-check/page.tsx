@@ -5,6 +5,7 @@ import { Link2, PenLine, ArrowLeft, ArrowRight, Upload, CheckCircle, XCircle } f
 import { Header, Tile, TextField, NumberField, Dropdown, Button, RatingScale } from '@/components/ui';
 import { PropertyCondition } from '@immonext/types';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
+import { FieldLabels } from '@/constants/FieldLabels';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -186,20 +187,20 @@ export default function QuickCheckPage() {
               <h2 className="text-base font-semibold text-foreground mb-4">Adresse</h2>
               <div className="space-y-4">
                 <TextField
-                  label="Straße"
+                  label={FieldLabels.Property.Street.de + ' & ' + FieldLabels.Property.HouseNumber.de}
                   placeholder="z.B. Hauptstraße 123"
                   value={form.street}
                   onChange={(e) => handleFieldChange('street', e.target.value)}
                 />
                 <div className="grid grid-cols-2 gap-4">
                   <TextField
-                    label="Postleitzahl"
+                    label={FieldLabels.Property.PostalCode.de}
                     placeholder="z.B. 10115"
                     value={form.postalCode}
                     onChange={(e) => handleFieldChange('postalCode', e.target.value)}
                   />
                   <TextField
-                    label="Stadt"
+                    label={FieldLabels.Property.City.de}
                     placeholder="z.B. Berlin"
                     value={form.city}
                     onChange={(e) => handleFieldChange('city', e.target.value)}
@@ -213,7 +214,7 @@ export default function QuickCheckPage() {
               <h2 className="text-base font-semibold text-foreground mb-4">Finanzielle Daten</h2>
               <div className="grid grid-cols-2 gap-4">
                 <NumberField
-                  label="Kaufpreis"
+                  label={FieldLabels.AcquisitionCosts.PurchasePrice.de}
                   placeholder="450000"
                   unit="€"
                   value={form.purchasePrice}
@@ -221,7 +222,7 @@ export default function QuickCheckPage() {
                   min={0}
                 />
                 <NumberField
-                  label="Kaltmiete"
+                  label={FieldLabels.Tenancy.ColdRent.de}
                   placeholder="1800"
                   unit="€"
                   value={form.coldRent}
@@ -242,7 +243,7 @@ export default function QuickCheckPage() {
                   onChange={(e) => handleFieldChange('condition', e.target.value)}
                 />
                 <NumberField
-                  label="Baujahr"
+                  label={FieldLabels.Property.YearOfConstruction.de}
                   placeholder="z.B. 1995"
                   value={form.yearOfConstruction}
                   onChange={(e) => handleFieldChange('yearOfConstruction', e.target.value)}

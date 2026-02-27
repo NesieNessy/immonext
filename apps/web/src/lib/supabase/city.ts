@@ -1,5 +1,5 @@
 import { supabase } from '@/lib/supabase/client';
-import type { City, CityInsert, CityUpdate, MarketTierType } from '@immonext/types';
+import type { City, CityInsert, CityUpdate, Designation, MarketTierType } from '@immonext/types';
 
 function toCity(row: Record<string, unknown>): City {
   return {
@@ -9,7 +9,7 @@ function toCity(row: Record<string, unknown>): City {
     landShare:        row.land_share as number,
     population:       row.population as number,
     marketTier:       row.market_tier as MarketTierType,
-    designation:      row.designation as string,
+    designation:      row.designation as Designation,
     createdAt:        row.created_at as string,
     updatedAt:        row.updated_at as string,
   };
