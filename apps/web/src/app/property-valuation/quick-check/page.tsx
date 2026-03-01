@@ -99,18 +99,57 @@ export default function QuickCheckPage() {
   const grossYield = calcGrossYield(purchasePrice, adjustedRent);
   const scaleValue = yieldToScale(grossYield);
   const rating = yieldLabel(grossYield);
+
+  const currentYear = new Date().getFullYear();
+
+  // Per-field validation — only shown when the field has been touched (non-empty)
+  const fieldErrors = {
+    street:
+      form.street.length > 0 && form.street.trim().length > 120
+        ? 'Maximal 120 Zeichen'
+        : '',
+    postalCode:
+      form.postalCode.length > 0 && !/^\d{5}$/.test(form.postalCode)
+        ? 'Genau 5 Ziffern erforderlich'
+        : '',
+    city:
+      form.city.length > 0 && form.city.trim().length > 120
+        ? 'Maximal 120 Zeichen'
+        : '',
+    purchasePrice:
+      form.purchasePrice !== '' && purchasePrice <= 0
+        ? 'Muss größer als 0 sein'
+        : '',
+    coldRent:
+      form.coldRent !== '' && coldRent <= 0
+        ? 'Muss größer als 0 sein'
+        : '',
+    yearOfConstruction: (() => {
+      const y = parseInt(form.yearOfConstruction, 10);
+      if (form.yearOfConstruction === '') return '';
+      if (isNaN(y) || y < 1850 || y > currentYear)
+        return `Zwischen 1850 und ${currentYear}`;
+      return '';
+    })(),
+  };
+
   const handleFieldChange = (field: keyof FormData, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }));
   };
 
   const isFormValid =
     form.street.trim() !== '' &&
-    form.postalCode.trim() !== '' &&
+    form.street.trim().length <= 120 &&
+    /^\d{5}$/.test(form.postalCode) &&
     form.city.trim() !== '' &&
-    form.purchasePrice !== '' &&
-    form.coldRent !== '' &&
+    form.city.trim().length <= 120 &&
+    purchasePrice > 0 &&
+    coldRent > 0 &&
     form.condition !== '' &&
-    form.yearOfConstruction !== '';
+    (() => {
+      const y = parseInt(form.yearOfConstruction, 10);
+      return !isNaN(y) && y >= 1850 && y <= currentYear;
+    })();
 
   // -------------------------------------------------------------------------
   // Step 1 – Input method selection
@@ -189,7 +228,7 @@ export default function QuickCheckPage() {
 
                 {/* Address */}
                 <section>
-                  <h2 className="text-sm font-semibold text-foreground mb-2">Adresse</h2>
+                  <h2 className="text-md font-semibold text-foreground mb-2">Informationen zur Berechnung</h2>
                   <div className="flex flex-col gap-2">
                     <TextField
                       label={FieldLabels.Property.Street.de + ' & ' + FieldLabels.Property.HouseNumber.de}
@@ -197,6 +236,7 @@ export default function QuickCheckPage() {
                       required
                       value={form.street}
                       onChange={(e) => handleFieldChange('street', e.target.value)}
+                      error={fieldErrors.street}
                     />
                     <div className="grid grid-cols-2 gap-2">
                       <TextField
@@ -205,6 +245,7 @@ export default function QuickCheckPage() {
                         required
                         value={form.postalCode}
                         onChange={(e) => handleFieldChange('postalCode', e.target.value)}
+                        error={fieldErrors.postalCode}
                       />
                       <TextField
                         label={FieldLabels.Property.City.de}
@@ -212,6 +253,7 @@ export default function QuickCheckPage() {
                         required
                         value={form.city}
                         onChange={(e) => handleFieldChange('city', e.target.value)}
+                        error={fieldErrors.city}
                       />
                     </div>
                   </div>
@@ -219,7 +261,6 @@ export default function QuickCheckPage() {
 
                 {/* Financial */}
                 <section>
-                  <h2 className="text-sm font-semibold text-foreground mb-2">Finanzielle Daten</h2>
                   <div className="grid grid-cols-2 gap-2">
                     <NumberField
                       label={FieldLabels.AcquisitionCosts.PurchasePrice.de}
@@ -229,6 +270,7 @@ export default function QuickCheckPage() {
                       value={form.purchasePrice}
                       onChange={(e) => handleFieldChange('purchasePrice', e.target.value)}
                       min={0}
+                      error={fieldErrors.purchasePrice}
                     />
                     <NumberField
                       label={FieldLabels.Tenancy.ColdRent.de}
@@ -238,13 +280,13 @@ export default function QuickCheckPage() {
                       value={form.coldRent}
                       onChange={(e) => handleFieldChange('coldRent', e.target.value)}
                       min={0}
+                      error={fieldErrors.coldRent}
                     />
                   </div>
                 </section>
 
                 {/* Property details */}
                 <section>
-                  <h2 className="text-sm font-semibold text-foreground mb-2">Objektdaten</h2>
                   <div className="grid grid-cols-2 gap-2">
                     <Dropdown
                       label="Zustand"
@@ -259,8 +301,9 @@ export default function QuickCheckPage() {
                       required
                       value={form.yearOfConstruction}
                       onChange={(e) => handleFieldChange('yearOfConstruction', e.target.value)}
-                      min={1800}
+                      min={1850}
                       max={new Date().getFullYear()}
+                      error={fieldErrors.yearOfConstruction}
                     />
                   </div>
                 </section>
