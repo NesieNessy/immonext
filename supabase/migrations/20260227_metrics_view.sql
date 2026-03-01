@@ -26,7 +26,7 @@ SELECT
     dt.development_tomorrow_id              AS development_id
 FROM personal_data pd
 JOIN property p              ON p.user_id = pd.user_id
-LEFT JOIN tenancy t           ON t.property_id = p.property_id AND t.rental_end_date IS NULL
+LEFT JOIN tenancy t           ON t.property_id = p.property_id AND t.tenancy_end_date IS NULL
 LEFT JOIN maintenance_costs mc ON mc.property_id = p.property_id
 LEFT JOIN financing f          ON f.property_id = p.property_id
 LEFT JOIN depreciation d       ON d.property_id = p.property_id

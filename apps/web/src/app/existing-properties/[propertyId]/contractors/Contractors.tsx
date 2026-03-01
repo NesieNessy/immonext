@@ -1,15 +1,15 @@
 "use client";
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
-import { useRouter } from 'next/navigation';
+import { Button, Header, Tile } from '@/components/ui';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { ExistingPropertiesUseCases } from '@/constants/ExistingPropertiesUseCases';
-import { Layers } from 'lucide-react';
-import type { Property } from '@immonext/types';
-import { getPropertyById } from '@/lib/supabase/property';
+import { getPropertyById } from '@/lib/supabase/property.supabase';
 import { createUseCaseMenuItems } from '@/lib/useCaseMenu';
-import { Button, Header, Tile } from '@/components/ui';
 import { base64ToDataUri } from '@/lib/utils';
+import type { Property } from '@immonext/types';
+import { Layers } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 export default function Contractors({ propertyId }: { propertyId: string }) {
     const router = useRouter();

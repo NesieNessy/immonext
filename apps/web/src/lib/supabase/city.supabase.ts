@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabase/client';
+import { supabase } from '@/lib/supabase/client.supabase';
 import type { City, CityInsert, CityUpdate, Designation, MarketTierType } from '@immonext/types';
 
 function toCity(row: Record<string, unknown>): City {

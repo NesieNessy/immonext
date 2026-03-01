@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabase/client';
+import { supabase } from '@/lib/supabase/client.supabase';
 import type { Property, PropertyInsert, PropertyUpdate, PropertyWithCity } from '@immonext/types';
 
 function toProperty(row: Record<string, unknown>): Property {

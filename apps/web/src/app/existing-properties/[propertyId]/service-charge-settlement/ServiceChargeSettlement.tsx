@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { Button, Header, Tile } from '@/components/ui';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { ExistingPropertiesUseCases } from '@/constants/ExistingPropertiesUseCases';
-import { getPropertyById } from '@/lib/supabase/property';
+import { getPropertyById } from '@/lib/supabase/property.supabase';
 import { createUseCaseMenuItems } from '@/lib/useCaseMenu';
 import { base64ToDataUri } from '@/lib/utils';
 import type { Property } from '@immonext/types';

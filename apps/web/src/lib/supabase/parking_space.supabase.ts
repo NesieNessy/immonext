@@ -1,9 +1,9 @@
-import { supabase } from '@/lib/supabase/client';
+import { supabase } from '@/lib/supabase/client.supabase';
 import type {
-  ParkingSpace,
-  ParkingSpaceInsert,
-  ParkingSpaceUpdate,
-  ParkingSpaceType,
+    ParkingSpace,
+    ParkingSpaceInsert,
+    ParkingSpaceType,
+    ParkingSpaceUpdate,
 } from '@immonext/types';
 
 function toParkingSpace(row: Record<string, unknown>): ParkingSpace {

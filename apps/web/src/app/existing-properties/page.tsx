@@ -3,7 +3,7 @@
 import { Button, Header, TileWithImage } from '@/components/ui';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
-import { getProperties } from '@/lib/supabase/property';
+import { getProperties } from '@/lib/supabase/property.supabase';
 import { base64ToDataUri } from '@/lib/utils';
 import type { Property } from '@immonext/types';
 import { useRouter } from 'next/navigation';

@@ -405,7 +405,7 @@ export interface RentIndex {
   cityId: number;
   validFrom: string;
   validUntil: string | null;
-  methodology: 'QUALITATIVE' | 'SIMPLE' | 'TABLE' | null;
+  methodology: 'QUALIFIED' | 'SIMPLE' | 'EMPIRICAL';
   referenceRents: number;
   createdAt: string;
   updatedAt: string;

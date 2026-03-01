@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useState } from 'react';
-import { usePathname, useRouter } from 'next/navigation';
 import { NavigationBar } from '@/components/ui/NavigationBar';
-import { supabase } from '@/lib/supabase/client';
 import { clearLoginTime } from '@/lib/sessionTimeout';
+import { supabase } from '@/lib/supabase/client.supabase';
 import type { User } from '@supabase/supabase-js';
+import { usePathname, useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
 
 export function AppNavigation() {
   const pathname = usePathname();

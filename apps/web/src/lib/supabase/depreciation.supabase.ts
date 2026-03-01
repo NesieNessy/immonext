@@ -1,12 +1,12 @@
 // ==============================================================================
 // ImmoNext – Supabase Client: rent_index
 // ==============================================================================
-import { supabase } from '@/lib/supabase/client';
+import { supabase } from '@/lib/supabase/client.supabase';
 import type {
-  RentIndex, RentIndexInsert, RentIndexUpdate,
   BuildingProportion, BuildingProportionInsert, BuildingProportionUpdate,
   Depreciation, DepreciationInsert, DepreciationUpdate,
   MetricsToday,
+  RentIndex, RentIndexInsert, RentIndexUpdate,
 } from '@immonext/types';
 
 // ─── Mappers ──────────────────────────────────────────────────────────────────

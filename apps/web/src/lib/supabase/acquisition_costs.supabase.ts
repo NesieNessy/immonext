@@ -1,7 +1,7 @@
 // ==============================================================================
 // ImmoNext – Supabase Client: acquisition_costs
 // ==============================================================================
-import { supabase } from '@/lib/supabase/client';
+import { supabase } from '@/lib/supabase/client.supabase';
 import type { AcquisitionCosts, AcquisitionCostsInsert, AcquisitionCostsUpdate } from '@immonext/types';
 
 function toAcquisitionCosts(row: Record<string, unknown>): AcquisitionCosts {

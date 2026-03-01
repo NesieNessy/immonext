@@ -1,10 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabase/client';
-import { isSessionExpired, clearLoginTime, msUntilExpiry } from '@/lib/sessionTimeout';
+import { clearLoginTime, isSessionExpired, msUntilExpiry } from '@/lib/sessionTimeout';
+import { supabase } from '@/lib/supabase/client.supabase';
 import type { User } from '@supabase/supabase-js';
+import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
 
 /**
  * Redirects to /login if no authenticated user is found.

@@ -5,7 +5,7 @@ import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { ExistingPropertiesUseCases } from '@/constants/ExistingPropertiesUseCases';
 import { SplitMode, getPurchasePriceSplitDefaults } from '@/constants/PurchasePriceSplitValues';
 import PropertyPurchasePriceSplitData from '@/data/property_purchase_price_split.json';
-import { getPropertyById } from '@/lib/supabase/property';
+import { getPropertyById } from '@/lib/supabase/property.supabase';
 import { createUseCaseMenuItems } from '@/lib/useCaseMenu';
 import { base64ToDataUri } from '@/lib/utils';
 import type { Property } from '@immonext/types';

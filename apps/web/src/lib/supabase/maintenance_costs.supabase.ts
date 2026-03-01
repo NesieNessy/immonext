@@ -1,7 +1,7 @@
 // ==============================================================================
 // ImmoNext – Supabase Client: maintenance_costs
 // ==============================================================================
-import { supabase } from '@/lib/supabase/client';
+import { supabase } from '@/lib/supabase/client.supabase';
 import type { MaintenanceCosts, MaintenanceCostsInsert, MaintenanceCostsUpdate } from '@immonext/types';
 
 function toMaintenanceCosts(row: Record<string, unknown>): MaintenanceCosts {

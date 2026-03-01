@@ -1,11 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { Button, TextField } from '@/components/ui';
+import { recordLoginTime } from '@/lib/sessionTimeout';
+import { supabase } from '@/lib/supabase/client.supabase';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Button, TextField } from '@/components/ui';
-import { supabase } from '@/lib/supabase/client';
-import { recordLoginTime } from '@/lib/sessionTimeout';
+import { useState } from 'react';
 
 export default function LoginPage() {
   const router = useRouter();

@@ -1,10 +1,11 @@
 // ==============================================================================
 // ImmoNext – Supabase Client: financing
 // ==============================================================================
-import { supabase } from '@/lib/supabase/client';
+import { supabase } from '@/lib/supabase/client.supabase';
 import type {
-  Financing, FinancingInsert, FinancingUpdate,
+  Financing,
   FinancingCalculation, FinancingCalculationInsert,
+  FinancingInsert, FinancingUpdate,
   InterestCalculation, InterestCalculationInsert, InterestCalculationUpdate,
 } from '@immonext/types';
 

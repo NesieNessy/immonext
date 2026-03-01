@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabase/client';
+import { supabase } from '@/lib/supabase/client.supabase';
 import type { Subscription, SubscriptionInsert, SubscriptionUpdate } from '@immonext/types';
 
 function toSubscription(row: Record<string, unknown>): Subscription {

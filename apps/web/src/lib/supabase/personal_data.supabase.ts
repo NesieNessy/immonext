@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabase/client';
+import { supabase } from '@/lib/supabase/client.supabase';
 import type { PersonalData, PersonalDataInsert, PersonalDataUpdate } from '@immonext/types';
 
 function toPersonalData(row: Record<string, unknown>): PersonalData {

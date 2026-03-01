@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useCallback, useState } from 'react';
-import { X, Save, Loader2 } from 'lucide-react';
-import { Header, TextField, Tile, StickyActionBar } from '@/components/ui';
-import { supabase } from '@/lib/supabase/client';
-import { getPersonalData, upsertPersonalData } from '@/lib/supabase/personalData';
+import { Header, StickyActionBar, TextField, Tile } from '@/components/ui';
+import { supabase } from '@/lib/supabase/client.supabase';
+import { getPersonalData, upsertPersonalData } from '@/lib/supabase/personal_data.supabase';
 import type { PersonalData } from '@immonext/types';
+import { Loader2, Save, X } from 'lucide-react';
+import { useCallback, useEffect, useState } from 'react';
 
 const emptyForm = {
     firstName: '',

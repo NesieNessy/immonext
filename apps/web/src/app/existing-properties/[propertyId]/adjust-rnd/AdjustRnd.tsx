@@ -6,7 +6,7 @@ import { ExistingPropertiesUseCases } from '@/constants/ExistingPropertiesUseCas
 import { RenovationAttribute, RenovationValue, RndMode, getPropertyRndDefaults } from '@/constants/RndValues';
 import propertyRndData from '@/data/property_rnd.json';
 import rndRenovationData from '@/data/rnd_renovation.json';
-import { getPropertyById } from '@/lib/supabase/property';
+import { getPropertyById } from '@/lib/supabase/property.supabase';
 import { createUseCaseMenuItems } from '@/lib/useCaseMenu';
 import { base64ToDataUri } from '@/lib/utils';
 import type { RenovationFields } from '@/types/Rnd';

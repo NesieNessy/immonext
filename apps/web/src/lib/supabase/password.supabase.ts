@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabase/client';
+import { supabase } from '@/lib/supabase/client.supabase';
 import type { Password, PasswordInsert, PasswordUpdate } from '@immonext/types';
 
 function toPassword(row: Record<string, unknown>): Password {
