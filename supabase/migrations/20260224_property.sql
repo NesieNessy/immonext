@@ -15,6 +15,13 @@ CREATE TYPE energy_efficiency_class AS ENUM (
     'H'
 );
 
+CREATE TYPE property_condition AS ENUM (
+    'Sanierungsbedürftig',
+    'Standard',
+    'Gehoben',
+    'Luxus'
+);
+
 CREATE TABLE IF NOT EXISTS property (
     property_id             SERIAL                      PRIMARY KEY,
     user_id                 UUID                        NOT NULL REFERENCES personal_data(user_id) ON DELETE CASCADE,

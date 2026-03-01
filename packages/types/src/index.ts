@@ -414,6 +414,30 @@ export interface RentIndex {
 export type RentIndexInsert = Omit<RentIndex, 'rentIndexId' | 'createdAt' | 'updatedAt'>;
 export type RentIndexUpdate = Partial<Omit<RentIndex, 'rentIndexId' | 'cityId' | 'createdAt' | 'updatedAt'>>;
 
+export type KpfConstructionYearBucket =
+  | '<1918'
+  | '1918-1949'
+  | '1950-1959'
+  | '1960-1969'
+  | '1970-1979'
+  | '1980-1989'
+  | '1990-1999'
+  | '2000-2009'
+  | '2010-2014'
+  | '2015+';
+
+export interface KpfRange {
+  postalCode:              string;
+  condition:               PropertyCondition;
+  constructionYearBucket:  KpfConstructionYearBucket;
+  minValue:                number;
+  maxValue:                number;
+  sampleSize:              number;
+}
+
+export type KpfRangeInsert = KpfRange;
+export type KpfRangeFilters = Partial<Pick<KpfRange, 'postalCode' | 'condition' | 'constructionYearBucket'>>;
+
 export interface BuildingProportion {
   buildingProportionId: number;
   propertyId: number;
