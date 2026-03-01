@@ -1,17 +1,18 @@
 "use client";
 
-import { useState } from 'react';
-import { Link2, PenLine } from 'lucide-react';
-import { Header, Tile, TextField, NumberField, Dropdown, Button, RatingScale } from '@/components/ui';
-import { PropertyCondition } from '@immonext/types';
+import { NoResult } from '@/components/common';
+import { Button, Dropdown, Header, NumberField, RatingScale, StickyActionBar, TextField, Tile } from '@/components/ui';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { FieldLabels } from '@/constants/FieldLabels';
+import { PropertyCondition } from '@immonext/types';
+import { Link2, PenLine } from 'lucide-react';
+import { useState } from 'react';
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
-type Step = 'input-method' | 'manual-form' | 'result';
+type Step = 'input-method' | 'manual-form';
 
 interface FormData {
   street: string;
@@ -108,7 +109,8 @@ export default function QuickCheckPage() {
     form.city.trim() !== '' &&
     form.purchasePrice !== '' &&
     form.coldRent !== '' &&
-    form.condition !== '';
+    form.condition !== '' &&
+    form.yearOfConstruction !== '';
 
   // -------------------------------------------------------------------------
   // Step 1 – Input method selection
@@ -170,202 +172,185 @@ export default function QuickCheckPage() {
   }
 
   // -------------------------------------------------------------------------
-  // Step 2 – Manual form
+  // Step 2 – Manual form  (auto-calculates when all fields are filled)
   // -------------------------------------------------------------------------
   if (step === 'manual-form') {
     return (
-      <div className="min-h-screen bg-background pb-24">
-        <main className="container mx-auto px-4 py-8 max-w-2xl">
-          <Header
-            title="Immobiliendaten"
-            subtitle="Bitte geben Sie alle erforderlichen Informationen ein"
-          />
+      <div className="min-h-screen bg-background pb-20">
+        <main className="container mx-auto px-4 py-3 max-w-5xl">
 
-          <div className="mt-8 space-y-8">
-            {/* Address */}
-            <section>
-              <h2 className="text-base font-semibold text-foreground mb-4">Adresse</h2>
-              <div className="space-y-4">
-                <TextField
-                  label={FieldLabels.Property.Street.de + ' & ' + FieldLabels.Property.HouseNumber.de}
-                  placeholder="z.B. Hauptstraße 123"
-                  value={form.street}
-                  onChange={(e) => handleFieldChange('street', e.target.value)}
-                />
-                <div className="grid grid-cols-2 gap-4">
-                  <TextField
-                    label={FieldLabels.Property.PostalCode.de}
-                    placeholder="z.B. 10115"
-                    value={form.postalCode}
-                    onChange={(e) => handleFieldChange('postalCode', e.target.value)}
-                  />
-                  <TextField
-                    label={FieldLabels.Property.City.de}
-                    placeholder="z.B. Berlin"
-                    value={form.city}
-                    onChange={(e) => handleFieldChange('city', e.target.value)}
-                  />
-                </div>
+          <div className="mt-3 flex flex-col gap-4">
+
+            {/* ── Two columns: form (left) + result (right) ─────────────── */}
+            <div className="flex flex-col lg:flex-row gap-8 items-stretch">
+
+              {/* Left: form — fills full column height */}
+              <div className="flex flex-col gap-3 flex-1 p-5">
+
+                {/* Address */}
+                <section>
+                  <h2 className="text-sm font-semibold text-foreground mb-2">Adresse</h2>
+                  <div className="flex flex-col gap-2">
+                    <TextField
+                      label={FieldLabels.Property.Street.de + ' & ' + FieldLabels.Property.HouseNumber.de}
+                      placeholder="z.B. Hauptstraße 123"
+                      required
+                      value={form.street}
+                      onChange={(e) => handleFieldChange('street', e.target.value)}
+                    />
+                    <div className="grid grid-cols-2 gap-2">
+                      <TextField
+                        label={FieldLabels.Property.PostalCode.de}
+                        placeholder="z.B. 10115"
+                        required
+                        value={form.postalCode}
+                        onChange={(e) => handleFieldChange('postalCode', e.target.value)}
+                      />
+                      <TextField
+                        label={FieldLabels.Property.City.de}
+                        placeholder="z.B. Berlin"
+                        required
+                        value={form.city}
+                        onChange={(e) => handleFieldChange('city', e.target.value)}
+                      />
+                    </div>
+                  </div>
+                </section>
+
+                {/* Financial */}
+                <section>
+                  <h2 className="text-sm font-semibold text-foreground mb-2">Finanzielle Daten</h2>
+                  <div className="grid grid-cols-2 gap-2">
+                    <NumberField
+                      label={FieldLabels.AcquisitionCosts.PurchasePrice.de}
+                      placeholder="z.B. 450000"
+                      unit="€"
+                      required
+                      value={form.purchasePrice}
+                      onChange={(e) => handleFieldChange('purchasePrice', e.target.value)}
+                      min={0}
+                    />
+                    <NumberField
+                      label={FieldLabels.Tenancy.ColdRent.de}
+                      placeholder="z.B. 1800"
+                      unit="€"
+                      required
+                      value={form.coldRent}
+                      onChange={(e) => handleFieldChange('coldRent', e.target.value)}
+                      min={0}
+                    />
+                  </div>
+                </section>
+
+                {/* Property details */}
+                <section>
+                  <h2 className="text-sm font-semibold text-foreground mb-2">Objektdaten</h2>
+                  <div className="grid grid-cols-2 gap-2">
+                    <Dropdown
+                      label="Zustand"
+                      options={CONDITION_OPTIONS}
+                      required
+                      value={form.condition}
+                      onChange={(e) => handleFieldChange('condition', e.target.value)}
+                    />
+                    <NumberField
+                      label={FieldLabels.Property.YearOfConstruction.de}
+                      placeholder="z.B. 1995"
+                      required
+                      value={form.yearOfConstruction}
+                      onChange={(e) => handleFieldChange('yearOfConstruction', e.target.value)}
+                      min={1800}
+                      max={new Date().getFullYear()}
+                    />
+                  </div>
+                </section>
+
+                {/* Push bottom of form to fill column height */}
+                <div className="flex-1" />
+
               </div>
-            </section>
 
-            {/* Financial */}
-            <section>
-              <h2 className="text-base font-semibold text-foreground mb-4">Finanzielle Daten</h2>
-              <div className="grid grid-cols-2 gap-4">
-                <NumberField
-                  label={FieldLabels.AcquisitionCosts.PurchasePrice.de}
-                  placeholder="450000"
-                  unit="€"
-                  value={form.purchasePrice}
-                  onChange={(e) => handleFieldChange('purchasePrice', e.target.value)}
-                  min={0}
-                />
-                <NumberField
-                  label={FieldLabels.Tenancy.ColdRent.de}
-                  placeholder="1800"
-                  unit="€"
-                  value={form.coldRent}
-                  onChange={(e) => handleFieldChange('coldRent', e.target.value)}
-                  min={0}
-                />
+              {/* Right: result — fills full column height */}
+              <div className="flex flex-col flex-1 gap-4 p-5">
+                {!isFormValid ? (
+                  <NoResult className="flex-1" />
+                ) : (
+                  <div className="flex flex-col gap-4 flex-1">
+                    <Header
+                      subtitle={`${form.street}, ${form.postalCode} ${form.city}`}
+                    />
+
+                    <section>
+                      <h2 className="text-sm font-semibold text-foreground mb-3">Bewertung</h2>
+                      <RatingScale value={scaleValue} label={rating} />
+                    </section>
+
+                    <Tile title="">
+                      <div className="flex flex-col gap-3">
+                        <p className="text-sm text-foreground leading-relaxed">
+                          <span
+                            className={[
+                              'inline-block w-2 h-2 mr-2 align-middle',
+                              grossYield >= 7 ? 'bg-green-500' :
+                                grossYield >= 5.5 ? 'bg-lime-500' :
+                                  grossYield >= 4 ? 'bg-yellow-500' :
+                                    grossYield >= 2.5 ? 'bg-orange-500' :
+                                      'bg-red-500',
+                            ].join(' ')}
+                          />
+                          {yieldDescription(grossYield, condition)}
+                        </p>
+
+                        <div className="grid grid-cols-2 gap-3 pt-3">
+                          <div>
+                            <p className="text-xs text-muted-foreground">{FieldLabels.AcquisitionCosts.PurchasePrice.de}</p>
+                            <p className="text-sm font-semibold text-foreground">{purchasePrice.toLocaleString('de-DE')} €</p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-muted-foreground">{FieldLabels.Tenancy.ColdRent.de}</p>
+                            <p className="text-sm font-semibold text-foreground">{coldRent.toLocaleString('de-DE')} €</p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-muted-foreground">Zustand</p>
+                            <p className="text-sm font-semibold text-foreground">{condition || '—'}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-muted-foreground">{FieldLabels.Property.YearOfConstruction.de}</p>
+                            <p className="text-sm font-semibold text-foreground">{form.yearOfConstruction || '—'}</p>
+                          </div>
+                        </div>
+                      </div>
+                    </Tile>
+
+                    {/* Spacer fills remaining height to match left column bottom */}
+                    <div className="flex-1" />
+                  </div>
+                )}
               </div>
-            </section>
 
-            {/* Property details */}
-            <section>
-              <h2 className="text-base font-semibold text-foreground mb-4">Objektdaten</h2>
-              <div className="grid grid-cols-2 gap-4">
-                <Dropdown
-                  label="Zustand"
-                  options={CONDITION_OPTIONS}
-                  value={form.condition}
-                  onChange={(e) => handleFieldChange('condition', e.target.value)}
-                />
-                <NumberField
-                  label={FieldLabels.Property.YearOfConstruction.de}
-                  placeholder="z.B. 1995"
-                  value={form.yearOfConstruction}
-                  onChange={(e) => handleFieldChange('yearOfConstruction', e.target.value)}
-                  min={1800}
-                  max={new Date().getFullYear()}
-                />
-              </div>
-            </section>
-          </div>
+            </div>
 
-          {/* Navigation buttons */}
-          <div className="mt-10 flex gap-3 float-right">
-            <Button
-              label={BUTTON_DETAILS.Back.label}
-              icon={<BUTTON_DETAILS.Back.icon />}
-              variant="outline"
-              onClick={() => setStep('input-method')}
-            />
-            <Button
-              label={BUTTON_DETAILS.Calculate.label}
-              icon={<BUTTON_DETAILS.Calculate.icon />}
-              variant="primary"
-              disabled={!isFormValid}
-              onClick={() => setStep('result')}
-            />
+            {/* ── Action buttons — sticky bar at the bottom of the viewport ── */}
           </div>
         </main>
+
+        <StickyActionBar
+          show={true}
+          ghostLabel={BUTTON_DETAILS.Discard.label}
+          ghostIcon={<BUTTON_DETAILS.Discard.icon />}
+          onGhost={() => {
+            setForm({ street: '', postalCode: '', city: '', purchasePrice: '', coldRent: '', condition: '', yearOfConstruction: '' });
+            setStep('input-method');
+          }}
+          primaryLabel={BUTTON_DETAILS.TakeOver.label}
+          primaryIcon={<BUTTON_DETAILS.TakeOver.icon />}
+          primaryDisabled={!isFormValid}
+          onPrimary={() => {
+            // TODO: persist to Property table via createProperty
+          }}
+        />
       </div>
     );
   }
-
-  // -------------------------------------------------------------------------
-  // Step 3 – Result
-  // -------------------------------------------------------------------------
-  return (
-    <div className="min-h-screen bg-background pb-24">
-      <main className="container mx-auto px-4 py-8 max-w-2xl">
-        <Header
-          title="Ersteinschätzung Ergebnis"
-          subtitle={`${form.street}, ${form.postalCode} ${form.city}`}
-        />
-
-        <div className="mt-10 space-y-8">
-          {/* Rating scale */}
-          <section>
-            <h2 className="text-base font-semibold text-foreground mb-6">Bewertung</h2>
-            <RatingScale value={scaleValue} label={rating} />
-          </section>
-
-          {/* Summary card */}
-          <Tile title="">
-            <div className="space-y-4">
-              {/* Verdict */}
-              <p className="text-sm text-foreground leading-relaxed">
-                <span
-                  className={[
-                    'inline-block w-2 h-2 rounded-full mr-2 align-middle',
-                    grossYield >= 7 ? 'bg-green-500' :
-                      grossYield >= 5.5 ? 'bg-lime-500' :
-                        grossYield >= 4 ? 'bg-yellow-500' :
-                          grossYield >= 2.5 ? 'bg-orange-500' :
-                            'bg-red-500',
-                  ].join(' ')}
-                />
-                {yieldDescription(grossYield, condition)}
-              </p>
-
-              {/* Key figures */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-4 border-t border-border">
-                <div>
-                  <p className="text-xs text-muted-foreground">{FieldLabels.AcquisitionCosts.PurchasePrice.de}</p>
-                  <p className="text-sm font-semibold text-foreground">
-                    {purchasePrice.toLocaleString('de-DE')} €
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">{FieldLabels.Tenancy.ColdRent.de}</p>
-                  <p className="text-sm font-semibold text-foreground">
-                    {coldRent.toLocaleString('de-DE')} €
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Zustand</p>
-                  <p className="text-sm font-semibold text-foreground">
-                    {condition || '—'}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">{FieldLabels.Property.YearOfConstruction.de}</p>
-                  <p className="text-sm font-semibold text-foreground">
-                    {form.yearOfConstruction || '—'}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </Tile>
-        </div>
-
-        {/* Action buttons */}
-        <div className="mt-10 flex gap-3">
-          <Button
-            label={BUTTON_DETAILS.Discard.label}
-            icon={<BUTTON_DETAILS.Discard.icon/>}
-            variant="outline"
-            className="flex-1"
-            onClick={() => {
-              setForm({ street: '', postalCode: '', city: '', purchasePrice: '', coldRent: '', condition: '', yearOfConstruction: '' });
-              setStep('input-method');
-            }}
-          />
-          <Button
-            label={BUTTON_DETAILS.TakeOver.label}
-            icon={<BUTTON_DETAILS.TakeOver.icon/>}
-            variant="primary"
-            className="flex-1"
-            onClick={() => {
-              // TODO: persist to Property table via createProperty
-            }}
-          />
-        </div>
-      </main>
-    </div>
-  );
 }
 

@@ -1,8 +1,8 @@
-import React from "react";
 import { cn } from "@/lib/utils";
+import React from "react";
 
 interface HeaderProps {
-  title: string;
+  title?: string;
   subtitle?: string;
   actions?: React.ReactNode;
   image?: React.ReactNode;
