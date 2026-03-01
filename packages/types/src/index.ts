@@ -225,7 +225,7 @@ export type ParkingSpaceUpdate = Partial<Omit<ParkingSpace, 'parkingSpaceId' | '
 export interface PropertyAcquisition {
   propertyAcquisitionId: number;
   propertyId: number;
-  houseCompletionYear: number;
+  houseCompletionYear: number | null;
   purchaseDate: string | null;
   transferDate: string | null;
   createdAt: string;
@@ -280,6 +280,325 @@ export enum DataEntryTypeValues {
   ManualEntry = 'Manuell erfassen',
   ExposeScan = 'Exposé einlesen',
 }
+
+// ----------------------------------------------------------------------------
+// AcquisitionCosts
+// ----------------------------------------------------------------------------
+
+export interface AcquisitionCosts {
+  acquisitionCostsId: number;
+  propertyId: number;
+  parkingSpaceId: number | null;
+  propertyPurchasePrice: number;
+  pricePerSqm: number | null;
+  broker: number | null;
+  brokerValue: number | null;
+  notary: number | null;
+  notaryValue: number | null;
+  landRegistry: number | null;
+  landRegistryValue: number | null;
+  realEstateTax: number | null;
+  realEstateTaxValue: number | null;
+  adjustmentVariable: number | null;
+  adjustmentVariableValue: number | null;
+  totalAncillaryCostsValue: number | null;
+  totalAncillaryCosts: number | null;
+  parkingSpacePurchasePrice: number | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type AcquisitionCostsInsert = Omit<AcquisitionCosts, 'acquisitionCostsId' | 'createdAt' | 'updatedAt'>;
+export type AcquisitionCostsUpdate = Partial<Omit<AcquisitionCosts, 'acquisitionCostsId' | 'propertyId' | 'createdAt' | 'updatedAt'>>;
+
+// ----------------------------------------------------------------------------
+// MaintenanceCosts
+// ----------------------------------------------------------------------------
+
+export interface MaintenanceCosts {
+  maintenanceCostsId: number;
+  propertyId: number;
+  costBreakdown: boolean;
+  allocableCosts: number | null;
+  nonAllocableCosts: number | null;
+  totalCosts: number | null;
+  houseMoney: number | null;
+  allocableCostsProjection: boolean;
+  nonAllocableCostsProjection: boolean;
+  totalCostsProjection: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type MaintenanceCostsInsert = Omit<MaintenanceCosts, 'maintenanceCostsId' | 'createdAt' | 'updatedAt'>;
+export type MaintenanceCostsUpdate = Partial<Omit<MaintenanceCosts, 'maintenanceCostsId' | 'propertyId' | 'createdAt' | 'updatedAt'>>;
+
+// ----------------------------------------------------------------------------
+// Financing
+// ----------------------------------------------------------------------------
+
+export interface Financing {
+  financingId: number;
+  propertyId: number;
+  numberOfLoans: number;
+  weightedLoanAmount: number | null;
+  weightedEquity: number | null;
+  weightedInterestRate: number | null;
+  weightedRepaymentRate: number | null;
+  weightedMonthlyDebtService: number | null;
+  singleLoanAmount: number | null;
+  singleEquity: number | null;
+  singleInterestRate: number | null;
+  singleRepaymentRate: number | null;
+  singleMonthlyDebtService: number | null;
+  singleRepaymentStartDate: string | null;
+  fixedInterestPeriod: number | null;
+  interestRate: number | null;
+  regularInterestRate: number | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type FinancingInsert = Omit<Financing, 'financingId' | 'createdAt' | 'updatedAt'>;
+export type FinancingUpdate = Partial<Omit<Financing, 'financingId' | 'propertyId' | 'createdAt' | 'updatedAt'>>;
+
+export interface FinancingCalculation {
+  financingCalculationId: number;
+  financingId: number;
+  month: number;
+  monthlyDebtService: number | null;
+  singleMonthlyDebtService: number | null;
+  interestPortion: number | null;
+  repaymentPortion: number | null;
+  remainingDebt: number | null;
+  repaymentYear: number | null;
+  repaymentMonth: number | null;
+  createdAt: string;
+}
+
+export type FinancingCalculationInsert = Omit<FinancingCalculation, 'financingCalculationId' | 'createdAt'>;
+
+export interface InterestCalculation {
+  interestCalculationId: number;
+  financingId: number;
+  modificationVariable: number | null;
+  fixedInterestPeriod: number | null;
+  fixedInterestPeriodPercent: number | null;
+  estimatedInterestRate: number | null;
+  loanToValueEquityShare: number | null;
+  equityThresholds: number | null;
+  equityThresholdsCorridor: number | null;
+  equityThresholdsPercent: number | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type InterestCalculationInsert = Omit<InterestCalculation, 'interestCalculationId' | 'createdAt' | 'updatedAt'>;
+export type InterestCalculationUpdate = Partial<Omit<InterestCalculation, 'interestCalculationId' | 'financingId' | 'createdAt' | 'updatedAt'>>;
+
+// ----------------------------------------------------------------------------
+// RentIndex / BuildingProportion / Depreciation / MetricsToday
+// ----------------------------------------------------------------------------
+
+export interface RentIndex {
+  rentIndexId: number;
+  cityId: number;
+  validFrom: string;
+  validUntil: string | null;
+  methodology: 'QUALITATIVE' | 'SIMPLE' | 'TABLE' | null;
+  referenceRents: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type RentIndexInsert = Omit<RentIndex, 'rentIndexId' | 'createdAt' | 'updatedAt'>;
+export type RentIndexUpdate = Partial<Omit<RentIndex, 'rentIndexId' | 'cityId' | 'createdAt' | 'updatedAt'>>;
+
+export interface BuildingProportion {
+  buildingProportionId: number;
+  propertyId: number;
+  acquisitionCostsId: number | null;
+  totalArea: number | null;
+  totalAreaShare: number | null;
+  landValue: number | null;
+  landAndSoil: number | null;
+  buildingFactor: number | null;
+  buildingValue: number | null;
+  numerator: number | null;
+  denominator: number | null;
+  ancillaryCostShare: number | null;
+  buildingDepreciation: number | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type BuildingProportionInsert = Omit<BuildingProportion, 'buildingProportionId' | 'createdAt' | 'updatedAt'>;
+export type BuildingProportionUpdate = Partial<Omit<BuildingProportion, 'buildingProportionId' | 'propertyId' | 'createdAt' | 'updatedAt'>>;
+
+export interface Depreciation {
+  depreciationId: number;
+  propertyId: number;
+  configId: number | null;
+  depreciationType: string | null;
+  depreciationCalculation: number | null;
+  depreciationYear: number | null;
+  residentialType: 'RESIDENTIAL' | 'COMMERCIAL' | 'MIXED' | null;
+  roofRenewal: number | null;
+  windowsExteriorDoors: number | null;
+  pipingSystems: number | null;
+  heatingSystem: number | null;
+  exteriorWallInsulation: number | null;
+  bathrooms: number | null;
+  interiorFitting: number | null;
+  floorplanImprovement: number | null;
+  modernisationPoints: number | null;
+  age: number | null;
+  totalUsefulLife: number | null;
+  remainingUsefulLifeYears: number | null;
+  depreciationRatePercent: number | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type DepreciationInsert = Omit<Depreciation, 'depreciationId' | 'createdAt' | 'updatedAt'>;
+export type DepreciationUpdate = Partial<Omit<Depreciation, 'depreciationId' | 'propertyId' | 'createdAt' | 'updatedAt'>>;
+
+export interface MetricsToday {
+  userId: string;
+  propertyId: number;
+  tenancyId: number | null;
+  coldRent: number | null;
+  warmRent: number | null;
+  isRented: boolean | null;
+  maintenanceCostsId: number | null;
+  maintenanceTotalCosts: number | null;
+  allocableCosts: number | null;
+  nonAllocableCosts: number | null;
+  financingId: number | null;
+  monthlyDebtService: number | null;
+  interestRate: number | null;
+  depreciationId: number | null;
+  depreciationRatePercent: number | null;
+  remainingUsefulLifeYears: number | null;
+  developmentId: number | null;
+}
+
+// ----------------------------------------------------------------------------
+// DevelopmentTomorrow / Renovation / LegalRequirements / SystemConfig / Notification
+// ----------------------------------------------------------------------------
+
+export interface DevelopmentTomorrow {
+  developmentTomorrowId: number;
+  propertyId: number;
+  tenancyId: number | null;
+  cityId: number | null;
+  legalRequirementsId: number | null;
+  rentIndexId: number | null;
+  financingId: number | null;
+  developmentYear: number | null;
+  yearStart: number | null;
+  dateStart: number | null;
+  metropolitanArea: boolean | null;
+  coldRentIncrease: number | null;
+  coldRentIncreaseEligible: boolean | null;
+  coldRentIncreaseLockPeriod: number | null;
+  coldRentIncreaseReminder: boolean | null;
+  coldRentIncreasePercent: number | null;
+  coldRentIncrease3YearAveragePercent: number | null;
+  lastRentIncrease: number | null;
+  lastRentIncreaseRelevance: boolean | null;
+  lastRentIncreaseValue: number | null;
+  lastRentIncreasePercent: number | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type DevelopmentTomorrowInsert = Omit<DevelopmentTomorrow, 'developmentTomorrowId' | 'createdAt' | 'updatedAt'>;
+export type DevelopmentTomorrowUpdate = Partial<Omit<DevelopmentTomorrow, 'developmentTomorrowId' | 'propertyId' | 'createdAt' | 'updatedAt'>>;
+
+export interface DevelopmentTomorrowMetrics {
+  metricsId: number;
+  developmentTomorrowId: number;
+  sqmPriceWithRi: number | null;
+  sqmPriceWithoutRi: number | null;
+  totalRentWithRi: number | null;
+  totalRentWithoutRi: number | null;
+  debtServiceDiffWithRi: number | null;
+  debtServiceDiffWithoutRi: number | null;
+  netRentYieldPreTaxWithRi: number | null;
+  netRentYieldPreTaxWithoutRi: number | null;
+  netRentYieldAfterTaxWithRi: number | null;
+  netRentYieldAfterTaxWithoutRi: number | null;
+  operativeCashflowWithRi: number | null;
+  operativeCashflowWithoutRi: number | null;
+  afterTaxCashflowWithRi: number | null;
+  afterTaxCashflowWithoutRi: number | null;
+  computedAt: string;
+}
+
+export type DevelopmentTomorrowMetricsInsert = Omit<DevelopmentTomorrowMetrics, 'metricsId'>;
+
+export interface Renovation {
+  renovationId: number;
+  propertyId: number;
+  legalRequirementsId: number | null;
+  modernisationProperty: string | null;
+  modernisationDate: string | null;
+  modernisationValue: number | null;
+  limit15Percent: number | null;
+  threeYearValue: number | null;
+  lastModernisation: string | null;
+  lastModernisationRelevance: string | null;
+  lastModernisationValue: number | null;
+  lastModernisationPercent: number | null;
+  purchaseDepreciation: number | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type RenovationInsert = Omit<Renovation, 'renovationId' | 'createdAt' | 'updatedAt'>;
+export type RenovationUpdate = Partial<Omit<Renovation, 'renovationId' | 'propertyId' | 'createdAt' | 'updatedAt'>>;
+
+export interface LegalRequirements {
+  legalRequirementsId: number;
+  cityId: number;
+  rentCapLimit: number | null;
+  sqmIncreaseLow: number | null;
+  sqmIncreaseHigh: number | null;
+  renovationLimitPercent: number | null;
+  validFrom: string;
+  validUntil: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type LegalRequirementsInsert = Omit<LegalRequirements, 'legalRequirementsId' | 'createdAt' | 'updatedAt'>;
+export type LegalRequirementsUpdate = Partial<Omit<LegalRequirements, 'legalRequirementsId' | 'cityId' | 'createdAt' | 'updatedAt'>>;
+
+export interface SystemConfig {
+  configId: number;
+  configKey: string;
+  configValue: string;
+  description: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type SystemConfigUpdate = Partial<Pick<SystemConfig, 'configValue' | 'description'>>;
+
+export interface Notification {
+  notificationId: number;
+  userId: string;
+  propertyId: number | null;
+  type: 'INFO' | 'WARNING' | 'ACTION';
+  message: string;
+  tradesperson: string | null;
+  financialBroker: string | null;
+  readAt: string | null;
+  createdAt: string;
+}
+
+export type NotificationInsert = Omit<Notification, 'notificationId' | 'createdAt'>;
 
 // ----------------------------------------------------------------------------
 // API Response types

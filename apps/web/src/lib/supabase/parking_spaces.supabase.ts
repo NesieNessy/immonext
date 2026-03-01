@@ -2,20 +2,20 @@
 // ImmoNext – Supabase Client: parking_spaces
 // ==============================================================================
 import { supabase } from '@/lib/supabase/client';
-import type { ParkingSpaces, ParkingSpacesInsert, ParkingSpacesUpdate } from '@immonext/types';
+import type { ParkingSpace, ParkingSpaceInsert, ParkingSpaceUpdate } from '@immonext/types';
 
-function toParkingSpaces(row: Record<string, unknown>): ParkingSpaces {
+function toParkingSpaces(row: Record<string, unknown>): ParkingSpace {
   return {
     parkingSpaceId:         row.parking_space_id as number,
     propertyId:             row.property_id as number,
-    parkingSpaceType:       row.parking_space_type as ParkingSpaces['parkingSpaceType'],
-    numberOfParkingSpaces:  row.number_of_parking_spaces as number,
+    parkingSpaceType:       row.parking_space_type as ParkingSpace['parkingSpaceType'],
+    numberOfParkingSpaces:  row.number_of_parking_spaces as number | null,
     createdAt:              row.created_at as string,
     updatedAt:              row.updated_at as string,
   };
 }
 
-export async function getParkingSpaces(propertyId: number): Promise<ParkingSpaces[]> {
+export async function getParkingSpaces(propertyId: number): Promise<ParkingSpace[]> {
   const { data, error } = await supabase
     .from('parking_spaces')
     .select('*')
@@ -24,7 +24,7 @@ export async function getParkingSpaces(propertyId: number): Promise<ParkingSpace
   return data.map(toParkingSpaces);
 }
 
-export async function getParkingSpacesById(parkingSpaceId: number): Promise<ParkingSpaces | null> {
+export async function getParkingSpacesById(parkingSpaceId: number): Promise<ParkingSpace | null> {
   const { data, error } = await supabase
     .from('parking_spaces')
     .select('*')
@@ -34,7 +34,7 @@ export async function getParkingSpacesById(parkingSpaceId: number): Promise<Park
   return toParkingSpaces(data);
 }
 
-export async function createParkingSpaces(payload: ParkingSpacesInsert): Promise<ParkingSpaces | null> {
+export async function createParkingSpaces(payload: ParkingSpaceInsert): Promise<ParkingSpace | null> {
   const { data, error } = await supabase
     .from('parking_spaces')
     .insert({
@@ -48,7 +48,7 @@ export async function createParkingSpaces(payload: ParkingSpacesInsert): Promise
   return toParkingSpaces(data);
 }
 
-export async function updateParkingSpaces(parkingSpaceId: number, updates: ParkingSpacesUpdate): Promise<ParkingSpaces | null> {
+export async function updateParkingSpaces(parkingSpaceId: number, updates: ParkingSpaceUpdate): Promise<ParkingSpace | null> {
   const dbUpdates: Record<string, unknown> = {};
   if (updates.parkingSpaceType !== undefined)       dbUpdates.parking_space_type        = updates.parkingSpaceType;
   if (updates.numberOfParkingSpaces !== undefined)  dbUpdates.number_of_parking_spaces  = updates.numberOfParkingSpaces;
