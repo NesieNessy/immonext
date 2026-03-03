@@ -1,21 +1,25 @@
 "use client";
 
+import { NoResult } from '@/components/common';
 import type { SortDirection, TableColumn, TagVariant } from '@/components/ui';
 import { Button, Header, Icons, Table, Tag } from '@/components/ui';
 import { BUTTON_DETAILS, ButtonType } from '@/constants/ButtonLabels';
 import { FieldLabels } from '@/constants/FieldLabels';
+import { useQuickChecks } from '@/hooks/useQuickChecks';
+import { useRequireAuth } from '@/hooks/useRequireAuth';
+import type { QuickCheckOverview } from '@/lib/supabase/quick_check.supabase';
 import { PropertyCondition } from '@immonext/types';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useMemo, useState } from 'react';
 
 // ---------------------------------------------------------------------------
-// Types
+// Types — display-layer view model (mapped from QuickCheckOverview)
 // ---------------------------------------------------------------------------
 
 interface QuickCheckEntry extends Record<string, unknown> {
   id: number;
-  ingestDate: string;
+  ingestDate: string;          // formatted dd.MM.yy
   portalId: string;
   kpfMultiplier: number | null;
   purchasePrice: number;
@@ -24,6 +28,33 @@ interface QuickCheckEntry extends Record<string, unknown> {
   condition: PropertyCondition;
   detailCheck: boolean;
   status: 'aktiv' | 'inaktiv';
+}
+
+// ---------------------------------------------------------------------------
+// Mapper — QuickCheckOverview (DB) → QuickCheckEntry (display)
+// ---------------------------------------------------------------------------
+
+function formatDate(iso: string): string {
+  const d = new Date(iso);
+  const dd = String(d.getDate()).padStart(2, '0');
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const yy = String(d.getFullYear()).slice(-2);
+  return `${dd}.${mm}.${yy}`;
+}
+
+function toEntry(row: QuickCheckOverview): QuickCheckEntry {
+  return {
+    id:               row.quickCheckId,
+    ingestDate:       formatDate(row.ingestDate),
+    portalId:         row.portalId ?? '—',
+    kpfMultiplier:    row.kpfMultiplier,
+    purchasePrice:    row.purchasePrice,
+    postalCode:       row.postalCode,
+    constructionYear: row.yearOfConstruction,
+    condition:        row.condition,
+    detailCheck:      row.detailCheck,
+    status:           row.status === 'ACTIVE' ? 'aktiv' : 'inaktiv',
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -59,28 +90,10 @@ function KpfBadge({ value }: { value: number | null }) {
 }
 
 // ---------------------------------------------------------------------------
-// Mock data
-// ---------------------------------------------------------------------------
-
-const MOCK_DATA: QuickCheckEntry[] = [
-  { id: 1, ingestDate: '01.08.25', portalId: 'ImmoScout 123', kpfMultiplier: 30,   purchasePrice: 1_000_000, postalCode: '12345', constructionYear: 2010, condition: PropertyCondition.Upscale,            detailCheck: true,  status: 'aktiv'   },
-  { id: 2, ingestDate: '09.08.25', portalId: 'ImmoWelt',      kpfMultiplier: 35.6, purchasePrice: 1_000_000, postalCode: '12345', constructionYear: 2008, condition: PropertyCondition.Standard,           detailCheck: false, status: 'inaktiv' },
-  { id: 3, ingestDate: '15.08.25', portalId: 'Kleinanzeigen', kpfMultiplier: 28.1, purchasePrice:   800_000, postalCode: '45678', constructionYear: 1986, condition: PropertyCondition.Luxury,             detailCheck: true,  status: 'aktiv'   },
-  { id: 4, ingestDate: '01.09.25', portalId: 'ImmoScout 428', kpfMultiplier: 43,   purchasePrice:   500_000, postalCode: '75312', constructionYear: 2015, condition: PropertyCondition.InNeedOfRenovation, detailCheck: false, status: 'aktiv'   },
-  { id: 5, ingestDate: '02.09.25', portalId: 'Kleinanzeigen', kpfMultiplier: 27,   purchasePrice:   450_000, postalCode: '75342', constructionYear: 2019, condition: PropertyCondition.Standard,           detailCheck: false, status: 'inaktiv' },
-];
-
-// ---------------------------------------------------------------------------
 // Column definitions
 // ---------------------------------------------------------------------------
 
 const COLUMNS: TableColumn<QuickCheckEntry>[] = [
-  {
-    key: 'ingestDate',
-    label: FieldLabels.QuickCheck.IngestDate.de,
-    sortable: true,
-    width: '150px',
-  },
   {
     key: 'portalId',
     label: FieldLabels.QuickCheck.PortalId.de,
@@ -152,11 +165,18 @@ const COLUMNS: TableColumn<QuickCheckEntry>[] = [
 
 export default function QuickCheckOverviewPage() {
   const router = useRouter();
+  const { isLoading: authLoading } = useRequireAuth();
+  const { data: rawData, isLoading, error, deleteSelected } = useQuickChecks();
+
   const [search, setSearch] = useState('');
   const [sortKey, setSortKey] = useState<string>('ingestDate');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [selectedIds, setSelectedIds] = useState<Set<string | number>>(new Set());
   const [columnFilters, setColumnFilters] = useState<Record<string, string>>({});
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  // Map DB rows → display entries once per fetch
+  const allEntries = useMemo(() => rawData.map(toEntry), [rawData]);
 
   const hasSelection = selectedIds.size > 0;
 
@@ -166,9 +186,15 @@ export default function QuickCheckOverviewPage() {
   };
 
   // ── Delete handler ──────────────────────────────────────────────────────
-  const handleDelete = () => {
-    // TODO: call deleteQuickChecks(selectedIds) then refetch
-    setSelectedIds(new Set());
+  const handleDelete = async () => {
+    const ids = [...selectedIds] as number[];
+    setIsDeleting(true);
+    try {
+      await deleteSelected(ids);
+      setSelectedIds(new Set());
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   // ── Sort handler ────────────────────────────────────────────────────────
@@ -181,19 +207,17 @@ export default function QuickCheckOverviewPage() {
     }
   };
 
-  // ── Filter + sort ───────────────────────────────────────────────────────
-  const MAX_ROWS = 100;
-
+  // ── Filter + sort (client-side, data already capped at 100 by the hook) ─
   const { displayedData, totalCount } = useMemo(() => {
     const q = search.toLowerCase();
     let filtered = q
-      ? MOCK_DATA.filter(
+      ? allEntries.filter(
           (row) =>
             row.portalId.toLowerCase().includes(q) ||
             row.postalCode.includes(q) ||
             row.condition.toLowerCase().includes(q)
         )
-      : MOCK_DATA;
+      : allEntries;
 
     // Apply per-column filters
     for (const [key, val] of Object.entries(columnFilters)) {
@@ -213,11 +237,13 @@ export default function QuickCheckOverviewPage() {
       return sortDirection === 'asc' ? cmp : -cmp;
     });
 
+    // Data is already limited to 100 by the hook/Supabase query;
+    // client-side filtering may reduce it further.
     return {
-      displayedData: sorted.slice(0, MAX_ROWS),
+      displayedData: sorted,
       totalCount: sorted.length,
     };
-  }, [search, columnFilters, sortKey, sortDirection]);
+  }, [allEntries, search, columnFilters, sortKey, sortDirection]);
 
   // ── Selected row (only meaningful when exactly 1 row is selected) ───────
   const selectedRow = useMemo(
@@ -276,6 +302,7 @@ export default function QuickCheckOverviewPage() {
               iconPosition="left"
               variant="outline"
               size="sm"
+              disabled={isDeleting}
               onClick={handleDelete}
               className="text-destructive border-destructive/40 hover:bg-destructive hover:text-destructive-foreground"
             />
@@ -306,31 +333,63 @@ export default function QuickCheckOverviewPage() {
           </div>
         )}
 
-        {/* ── Table ───────────────────────────────────────────────────── */}
-        <div className="mt-4">
-          <Table<QuickCheckEntry>
-            columns={COLUMNS}
-            data={displayedData}
-            selectable
-            selectedIds={selectedIds}
-            getRowId={(row) => row.id}
-            onSelectionChange={setSelectedIds}
-            sortKey={sortKey}
-            sortDirection={sortDirection}
-            onSort={handleSort}
-            columnFilters={columnFilters}
-            onColumnFilterChange={handleColumnFilterChange}
-            getRowClassName={(row) =>
-              row.status === 'inaktiv' ? 'opacity-40 grayscale' : undefined
-            }
-            footerLeft={
-              totalCount > MAX_ROWS
-                ? `${displayedData.length} von ${totalCount} Einträgen (max. ${MAX_ROWS} angezeigt)`
-                : `${totalCount} Einträge`
-            }
-            footerRight={hasSelection ? `${selectedIds.size} ausgewählt` : undefined}
-          />
-        </div>
+        {/* ── Loading / error states ───────────────────────────────────── */}
+        {(authLoading || isLoading) && (
+          <div className="mt-8 text-center text-sm text-muted-foreground">
+            Daten werden geladen…
+          </div>
+        )}
+
+        {error && !isLoading && (
+          <div className="mt-4 px-4 py-3 bg-destructive/10 border border-destructive/30 rounded-lg text-sm text-destructive">
+            Fehler beim Laden: {error}
+          </div>
+        )}
+
+        {/* ── Table / empty states ────────────────────────────────────── */}
+        {!authLoading && !isLoading && !error && (
+          <div className="mt-4">
+            {/* No data at all — user hasn't added any quick-checks yet */}
+            {allEntries.length === 0 && (
+              <NoResult
+                title="Noch keine Ersteinschätzungen vorhanden"
+                message="Fügen Sie Ihr erstes Objekt hinzu, um die Übersicht zu befüllen."
+                className="py-24"
+              />
+            )}
+
+            {/* Data exists but filters match nothing */}
+            {allEntries.length > 0 && displayedData.length === 0 && (
+              <NoResult
+                title="Keine Treffer"
+                message="Kein Eintrag entspricht den aktuellen Suchbegriffen oder Filtern."
+                className="py-24"
+              />
+            )}
+
+            {/* Normal table */}
+            {displayedData.length > 0 && (
+              <Table<QuickCheckEntry>
+                columns={COLUMNS}
+                data={displayedData}
+                selectable
+                selectedIds={selectedIds}
+                getRowId={(row) => row.id}
+                onSelectionChange={setSelectedIds}
+                sortKey={sortKey}
+                sortDirection={sortDirection}
+                onSort={handleSort}
+                columnFilters={columnFilters}
+                onColumnFilterChange={handleColumnFilterChange}
+                getRowClassName={(row) =>
+                  row.status === 'inaktiv' ? 'opacity-40 grayscale' : undefined
+                }
+                footerLeft={`${totalCount} Einträge`}
+                footerRight={hasSelection ? `${selectedIds.size} ausgewählt` : undefined}
+              />
+            )}
+          </div>
+        )}
 
       </main>
     </div>

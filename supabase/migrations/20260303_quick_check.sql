@@ -20,7 +20,7 @@
 -- Field mapping:
 --   Erfassungsdatum  -> created_at                         (auto)
 --   Portal ID        -> portal_id                          (own)
---   KPF Faktor       -> kpf_factor                         (own, frontend computed)
+--   KPF Faktor       -> kpf_multiplier                         (own, frontend computed)
 --   Kaufpreis        -> purchase_price            (own)
 --   PLZ              -> postal_code               (own)
 --   Baujahr          -> year_of_construction      (own)
@@ -60,8 +60,8 @@ CREATE TABLE IF NOT EXISTS quick_check (
 
     -- KPF = purchase_price / (cold_rent * 12), 1 decimal.
     -- Computed in frontend, stored at check time. Not persisted anywhere else.
-    kpf_factor                      NUMERIC(5, 1)               NOT NULL
-                                        CHECK (kpf_factor > 0),
+    kpf_multiplier                     NUMERIC(5, 1)               NOT NULL
+                                        CHECK (kpf_multiplier > 0),
 
     status                          quick_check_status          NOT NULL DEFAULT 'ACTIVE',
 
@@ -75,10 +75,6 @@ CREATE TABLE IF NOT EXISTS quick_check (
     created_at                      TIMESTAMP WITH TIME ZONE    NOT NULL DEFAULT NOW(),
     updated_at                      TIMESTAMP WITH TIME ZONE    NOT NULL DEFAULT NOW(),
 
-    -- Every INACTIVE row must record which action caused it
-    CONSTRAINT chk_inactive_has_action CHECK (
-        status = 'ACTIVE' OR portal_id IS NULL
-    )
 );
 
 -- Indexes
@@ -95,7 +91,7 @@ COMMENT ON COLUMN quick_check.purchase_price IS 'Kaufpreis at check time. Input 
 COMMENT ON COLUMN quick_check.cold_rent IS 'Kaltmiete at check time. Required for KPF = price / (rent * 12).';
 COMMENT ON COLUMN quick_check.postal_code IS 'PLZ at check time. Key for kpf_ranges upsert on finalisation.';
 COMMENT ON COLUMN quick_check.year_of_construction IS 'Baujahr at check time. Mapped to kpf_construction_year_bucket on finalisation.';
-COMMENT ON COLUMN quick_check.kpf_factor IS 'Kaufpreisfaktor = Kaufpreis / (Kaltmiete * 12), 1 decimal. Stored at check time.';
+COMMENT ON COLUMN quick_check.kpf_multiplier IS 'Kaufpreisfaktor = Kaufpreis / (Kaltmiete * 12), 1 decimal. Stored at check time.';
 COMMENT ON COLUMN quick_check.status IS 'ACTIVE = Portal ID valid. INACTIVE = Portal ID invalid.';
 COMMENT ON COLUMN quick_check.finalised_action IS 'ACCEPT = taken over into Portfolio. DISCARD = dismissed. NULL while ACTIVE.';
 COMMENT ON COLUMN quick_check.property_id IS 'Set only when finalised_action = ACCEPT. NULL for DISCARD.';
@@ -127,13 +123,13 @@ CREATE OR REPLACE VIEW quick_check_overview AS
 SELECT
     qc.quick_check_id,
     qc.user_id,
-    qc.created_at           AS Erfassungsdatum,
+    qc.created_at           AS ingest_date,
     qc.portal_id,
-    qc.kpf_factor,
-    qc.purchase_price       AS Kaufpreis,
-    qc.cold_rent            AS Kaltmiete,
-    qc.postal_code          AS PLZ,
-    qc.year_of_construction AS Baujahr,
+    qc.kpf_multiplier,
+    qc.purchase_price,
+    qc.cold_rent,
+    qc.postal_code,
+    qc.year_of_construction,
     qc.condition,
     qc.status,
     qc.finalised_action,
@@ -151,7 +147,7 @@ COMMENT ON VIEW quick_check_overview IS 'Read view for the Quick-Check overview 
 -- p_action: 'ACCEPT' | 'DISCARD'
 --
 -- Step 1 (both):   UPSERT kpf_ranges — every checked object is a data point.
---                  First entry:      min = max = kpf_factor, sample_size = 1
+--                  First entry:      min = max = kpf_multiplier, sample_size = 1
 --                  Subsequent entry: expands range, sample_size + 1
 -- Step 2 (both):   status = 'INACTIVE', finalised_action = p_action.
 -- Step 3 (ACCEPT): INSERT INTO property -> object appears in Portfolio.
@@ -225,7 +221,7 @@ BEGIN
     END::kpf_construction_year_bucket;
 
     INSERT INTO kpf_ranges (postal_code, condition, construction_year_bucket, min_value, max_value, sample_size)
-    VALUES (v_qc.postal_code, v_qc.condition, v_bucket, v_qc.kpf_factor, v_qc.kpf_factor, 1)
+    VALUES (v_qc.postal_code, v_qc.condition, v_bucket, v_qc.kpf_multiplier, v_qc.kpf_multiplier, 1)
     ON CONFLICT (postal_code, condition, construction_year_bucket) DO UPDATE
         SET min_value   = LEAST   (kpf_ranges.min_value,  EXCLUDED.min_value),
             max_value   = GREATEST(kpf_ranges.max_value,  EXCLUDED.max_value),
