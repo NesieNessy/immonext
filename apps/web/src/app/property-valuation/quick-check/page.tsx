@@ -6,7 +6,6 @@ import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { FieldLabels } from '@/constants/FieldLabels';
 import { useKpfResult } from '@/hooks/useKpfRanges';
 import { PropertyCondition } from '@immonext/types';
-import { Link2 } from 'lucide-react';
 import { useState } from 'react';
 
 // ---------------------------------------------------------------------------
@@ -122,13 +121,14 @@ export default function QuickCheckPage() {
       <Modal
         open={urlModalOpen}
         onClose={() => setUrlModalOpen(false)}
-        title="URL importieren"
+        title={BUTTON_DETAILS.ImportData.label}
         subtitle="Immobiliendaten aus einem Portal laden"
-        icon={<Link2 className="w-5 h-5" />}
+        icon={<BUTTON_DETAILS.ImportData.icon />}
         footer={
           <>
             <Button
               label={BUTTON_DETAILS.Cancel.label}
+              icon={<BUTTON_DETAILS.Cancel.icon />}
               variant="outline"
               onClick={() => setUrlModalOpen(false)}
             />
@@ -160,8 +160,8 @@ export default function QuickCheckPage() {
             subtitle="Bewertung von Investitionsobjekten"
             actions={
               <Button
-                label="URL importieren"
-                icon={<Link2 className="w-4 h-4" />}
+                label={BUTTON_DETAILS.ImportData.label}
+                icon={<BUTTON_DETAILS.ImportData.icon />}
                 variant="primary"
                 onClick={() => setUrlModalOpen(true)}
               />
@@ -177,7 +177,7 @@ export default function QuickCheckPage() {
 
                 {/* Address */}
                 <section>
-                  <h1 className="text-md font-semibold text-foreground mb-2">Informationen zur Berechnung</h1>
+                  <h2 className="text-md font-semibold text-foreground mb-2">Informationen zur Berechnung</h2>
                   <div className="flex flex-col gap-2">
                     <TextField
                       label={FieldLabels.Property.Street.de + ' & ' + FieldLabels.Property.HouseNumber.de}
@@ -268,10 +268,8 @@ export default function QuickCheckPage() {
                   <NoResult className="flex-1" />
                 ) : (
                   <div className="flex flex-col gap-4 flex-1">
-                    <Header
-                      title='Ersteinschätzung'
-                      subtitle={`${form.street}, ${form.postalCode} ${form.city}`}
-                    />
+                    <h2>Ersteinschätzung</h2>
+                    <h5>{`${form.street}, ${form.postalCode} ${form.city}`}</h5>
                     <Tile title="">
                       <div className="flex flex-col gap-3">
                         <div className="grid grid-cols-2 gap-3">

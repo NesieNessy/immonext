@@ -1,10 +1,15 @@
 // Import your icons (example using lucide-react)
-import { 
-  X, Save, ArrowLeft, ArrowRight, 
-  Plus, Briefcase, FileText, Play, 
-  Edit3, Calculator, 
+import {
+  ArrowLeft, ArrowRight,
+  Briefcase,
+  Calculator,
+  Check,
+  Edit3,
+  FileText, Play,
+  Plus,
+  Save,
   Upload,
-  Check
+  X
 } from 'lucide-react';
 
 // 1. Define the button types (keys) as an Enum
@@ -22,7 +27,7 @@ export enum ButtonType {
   EnterManually = 'EnterManually',
   Calculate = 'Calculate',
   TakeOver = 'TakeOver',
-  Discard = 'Discard'  
+  Discard = 'Discard' 
 }
 
 // 2. Define the structure for your button properties
