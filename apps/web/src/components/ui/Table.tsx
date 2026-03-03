@@ -1,7 +1,7 @@
-"use client";
+﻿"use client";
 
 import { cn } from "@/lib/utils";
-import { ChevronDown, ChevronsUpDown, ChevronUp } from "lucide-react";
+import { ChevronDown, ChevronsUpDown, ChevronUp, X } from "lucide-react";
 import React from "react";
 
 // ---------------------------------------------------------------------------
@@ -15,6 +15,8 @@ export interface TableColumn<T = Record<string, unknown>> {
   label: string;
   width?: string;
   sortable?: boolean;
+  /** Show a filter input below this column header */
+  filterable?: boolean;
   /** Custom cell renderer. Receives the raw value and the full row object. */
   renderCell?: (value: unknown, row: T) => React.ReactNode;
   /** Alignment for header + cells */
@@ -45,12 +47,17 @@ export interface TableProps<T extends Record<string, unknown> = Record<string, u
   sortKey?: string;
   sortDirection?: SortDirection;
   onSort?: (key: string) => void;
+  /** Per-column filter values: { [columnKey]: filterString } */
+  columnFilters?: Record<string, string>;
+  onColumnFilterChange?: (key: string, value: string) => void;
   /** Footer left text, e.g. "5 Einträge" */
   footerLeft?: React.ReactNode;
   /** Footer right text */
   footerRight?: React.ReactNode;
   /** Show footer bar — defaults to true */
   showFooter?: boolean;
+  /** Optional extra class names per row — receives the row object and index */
+  getRowClassName?: (row: T, index: number) => string | undefined;
   className?: string;
   emptyMessage?: string;
 }
@@ -93,12 +100,17 @@ export function Table<T extends Record<string, unknown> = Record<string, unknown
   sortKey,
   sortDirection,
   onSort,
+  columnFilters = {},
+  onColumnFilterChange,
   footerLeft,
   footerRight,
   showFooter = true,
   className,
   emptyMessage = "Keine Einträge vorhanden.",
+  getRowClassName,
 }: TableProps<T>) {
+
+  const hasFilterRow = columns.some((c) => c.filterable);
 
   // ── Checkbox helpers ──────────────────────────────────────────────────
   const allSelected =
@@ -147,8 +159,8 @@ export function Table<T extends Record<string, unknown> = Record<string, unknown
       {/* ── Scrollable table area ────────────────────────────────────── */}
       <div className="w-full overflow-x-auto">
         <table className="w-full border-collapse">
-          {/* ── Head ──────────────────────────────────────────────── */}
           <thead>
+            {/* ── Sort / label row ──────────────────────────────────── */}
             <tr className="bg-[hsl(var(--foreground))] text-[hsl(var(--background))]">
               {selectable && (
                 <th className="w-12 px-4 py-3">
@@ -189,6 +201,50 @@ export function Table<T extends Record<string, unknown> = Record<string, unknown
                 </th>
               ))}
             </tr>
+
+            {/* ── Filter row — only rendered if at least one column has filterable ── */}
+            {hasFilterRow && (
+              <tr className="bg-muted/60 border-b border-border">
+                {selectable && <th className="w-12 px-4 py-2" />}
+                {columns.map((col) => (
+                  <th
+                    key={col.key}
+                    className={cn("px-2 py-2", alignClass(col.align))}
+                  >
+                    {col.filterable ? (
+                      <div className="relative">
+                        <input
+                          type="text"
+                          value={columnFilters[col.key] ?? ""}
+                          onChange={(e) =>
+                            onColumnFilterChange?.(col.key, e.target.value)
+                          }
+                          placeholder="Filter…"
+                          className={cn(
+                            "w-full px-2 py-1 pr-6 text-xs bg-background border border-border rounded-md",
+                            "focus:outline-none focus:ring-1 focus:ring-primary/50 focus:border-primary",
+                            "text-foreground placeholder:text-muted-foreground transition-colors"
+                          )}
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                        {columnFilters[col.key] && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onColumnFilterChange?.(col.key, "");
+                            }}
+                            className="absolute right-1.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                            aria-label="Filter leeren"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        )}
+                      </div>
+                    ) : null}
+                  </th>
+                ))}
+              </tr>
+            )}
           </thead>
 
           {/* ── Body ──────────────────────────────────────────────── */}
@@ -209,7 +265,8 @@ export function Table<T extends Record<string, unknown> = Record<string, unknown
                   className={cn(
                     "transition-colors",
                     isSelected(row) && "bg-primary/5",
-                    onRowClick && "cursor-pointer hover:bg-muted/50"
+                    onRowClick && "cursor-pointer hover:bg-muted/50",
+                    getRowClassName?.(row, rowIndex)
                   )}
                   onClick={() => onRowClick?.(row, rowIndex)}
                 >
