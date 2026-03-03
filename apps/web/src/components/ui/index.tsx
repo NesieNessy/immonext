@@ -1,30 +1,34 @@
 // Export all Real Estate components
 export { Button } from "./Button";
 export type { MenuItem } from "./Button";
-export { TextField } from "./TextField";
-export { TextFieldWithIcon } from "./TextFieldWithIcon";
-export { TextArea } from "./TextArea";
+export { CalendarField } from "./CalendarField";
+export { Checkbox } from "./Checkbox";
+export { Diagram } from "./Diagram";
+export { Dropdown } from "./Dropdown";
+export { Gauge } from "./Gauge";
+export { Header } from "./Header";
+export { Image } from "./Image";
+export { List } from "./List";
+export { Modal } from "./Modal";
+export { NavigationBar } from "./NavigationBar";
 export { NumberField } from "./NumberField";
 export { NumberInput } from "./NumberInput";
-export { Dropdown } from "./Dropdown";
-export { Checkbox } from "./Checkbox";
 export { RadioButton } from "./RadioButton";
-export { CalendarField } from "./CalendarField"; 
-export { UploadButton } from "./UploadButton";
 export { Rating } from "./Rating";
+export { RatingScale } from "./RatingScale";
 export { Stepper } from "./Stepper";
-export { Header } from "./Header";
-export { NavigationBar } from "./NavigationBar";
+export { StickyActionBar } from "./StickyActionBar";
 export { Table } from "./Table";
-export { List } from "./List";
+export type { SortDirection, TableColumn, TableProps } from "./Table";
+export { Tag } from "./Tag";
+export type { TagSize, TagVariant } from "./Tag";
+export { TextArea } from "./TextArea";
+export { TextField } from "./TextField";
+export { TextFieldWithIcon } from "./TextFieldWithIcon";
 export { Tile } from "./Tile";
 export { TileWithImage } from "./TileWithImage";
-export { Image } from "./Image";
-export { Diagram } from "./Diagram";
-export { Gauge } from "./Gauge";
-export { StickyActionBar } from "./StickyActionBar";
-export { RatingScale } from "./RatingScale";
-export { Modal } from "./Modal";
+export { UploadButton } from "./UploadButton";
 
 // Re-export common components for convenience
 export { Icons, Typography } from "../common";
+

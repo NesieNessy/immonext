@@ -1,7 +1,27 @@
-import React from "react";
-import { cn } from "@/lib/utils";
-import { Check, X, Edit2 } from "lucide-react";
+"use client";
 
+import { cn } from "@/lib/utils";
+import { ChevronDown, ChevronsUpDown, ChevronUp } from "lucide-react";
+import React from "react";
+
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
+
+export type SortDirection = "asc" | "desc" | null;
+
+export interface TableColumn<T = Record<string, unknown>> {
+  key: string;
+  label: string;
+  width?: string;
+  sortable?: boolean;
+  /** Custom cell renderer. Receives the raw value and the full row object. */
+  renderCell?: (value: unknown, row: T) => React.ReactNode;
+  /** Alignment for header + cells */
+  align?: "left" | "center" | "right";
+}
+
+/** @deprecated Use TableColumn instead */
 interface Column {
   key: string;
   label: string;
@@ -11,163 +31,233 @@ interface Column {
   options?: { value: string; label: string }[];
 }
 
-interface TableProps {
-  columns: Column[];
-  data: Record<string, unknown>[];
-  onRowClick?: (row: Record<string, unknown>, index: number) => void;
-  onCellEdit?: (rowIndex: number, columnKey: string, newValue: string | number) => void;
-  editable?: boolean;
+export interface TableProps<T extends Record<string, unknown> = Record<string, unknown>> {
+  columns: TableColumn<T>[];
+  data: T[];
+  /** Enables checkbox column */
+  selectable?: boolean;
+  selectedIds?: Set<string | number>;
+  getRowId?: (row: T) => string | number;
+  onSelectionChange?: (ids: Set<string | number>) => void;
+  /** Row click handler */
+  onRowClick?: (row: T, index: number) => void;
+  /** Sort state */
+  sortKey?: string;
+  sortDirection?: SortDirection;
+  onSort?: (key: string) => void;
+  /** Footer left text, e.g. "5 Einträge" */
+  footerLeft?: React.ReactNode;
+  /** Footer right text */
+  footerRight?: React.ReactNode;
+  /** Show footer bar — defaults to true */
+  showFooter?: boolean;
   className?: string;
+  emptyMessage?: string;
 }
 
-export function Table({ columns, data, onRowClick, onCellEdit, editable = false, className }: TableProps) {
-  const [editingCell, setEditingCell] = React.useState<{ rowIndex: number; columnKey: string } | null>(null);
-  const [editValue, setEditValue] = React.useState<string>("");
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
 
-  const startEditing = (rowIndex: number, columnKey: string, currentValue: unknown) => {
-    setEditingCell({ rowIndex, columnKey });
-    setEditValue(String(currentValue || ""));
-  };
+function SortIcon({
+  columnKey,
+  sortKey,
+  sortDirection,
+}: {
+  columnKey: string;
+  sortKey?: string;
+  sortDirection?: SortDirection;
+}) {
+  if (sortKey !== columnKey || !sortDirection) {
+    return <ChevronsUpDown className="w-3.5 h-3.5 text-muted-foreground/60 shrink-0" />;
+  }
+  return sortDirection === "asc" ? (
+    <ChevronUp className="w-3.5 h-3.5 shrink-0" />
+  ) : (
+    <ChevronDown className="w-3.5 h-3.5 shrink-0" />
+  );
+}
 
-  const cancelEditing = () => {
-    setEditingCell(null);
-    setEditValue("");
-  };
+// ---------------------------------------------------------------------------
+// Component
+// ---------------------------------------------------------------------------
 
-  const saveEditing = () => {
-    if (editingCell && onCellEdit) {
-      const column = columns.find(col => col.key === editingCell.columnKey);
-      let finalValue: string | number = editValue;
-      
-      if (column?.type === "number") {
-        finalValue = parseFloat(editValue) || 0;
-      }
-      
-      onCellEdit(editingCell.rowIndex, editingCell.columnKey, finalValue);
+export function Table<T extends Record<string, unknown> = Record<string, unknown>>({
+  columns,
+  data,
+  selectable = false,
+  selectedIds,
+  getRowId,
+  onSelectionChange,
+  onRowClick,
+  sortKey,
+  sortDirection,
+  onSort,
+  footerLeft,
+  footerRight,
+  showFooter = true,
+  className,
+  emptyMessage = "Keine Einträge vorhanden.",
+}: TableProps<T>) {
+
+  // ── Checkbox helpers ──────────────────────────────────────────────────
+  const allSelected =
+    data.length > 0 && selectedIds && getRowId
+      ? data.every((row) => selectedIds.has(getRowId(row)))
+      : false;
+
+  const someSelected =
+    !allSelected && selectedIds && getRowId
+      ? data.some((row) => selectedIds.has(getRowId(row)))
+      : false;
+
+  const toggleAll = () => {
+    if (!onSelectionChange || !getRowId) return;
+    if (allSelected) {
+      onSelectionChange(new Set());
+    } else {
+      onSelectionChange(new Set(data.map((row) => getRowId(row))));
     }
-    setEditingCell(null);
-    setEditValue("");
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") {
-      saveEditing();
-    } else if (e.key === "Escape") {
-      cancelEditing();
+  const toggleRow = (row: T) => {
+    if (!onSelectionChange || !getRowId || !selectedIds) return;
+    const id = getRowId(row);
+    const next = new Set(selectedIds);
+    if (next.has(id)) {
+      next.delete(id);
+    } else {
+      next.add(id);
     }
+    onSelectionChange(next);
   };
 
-  const isEditing = (rowIndex: number, columnKey: string) => {
-    return editingCell?.rowIndex === rowIndex && editingCell?.columnKey === columnKey;
+  const isSelected = (row: T) =>
+    selectable && selectedIds && getRowId ? selectedIds.has(getRowId(row)) : false;
+
+  // ── Alignment helper ──────────────────────────────────────────────────
+  const alignClass = (align?: "left" | "center" | "right") => {
+    if (align === "center") return "text-center";
+    if (align === "right") return "text-right";
+    return "text-left";
   };
 
   return (
-    <div className={cn("w-full overflow-x-auto border border-border rounded-lg", className)}>
-      <table className="w-full">
-        <thead className="bg-muted">
-          <tr>
-            {columns.map((column) => (
-              <th
-                key={column.key}
-                style={{ width: column.width }}
-                className="px-6 py-3 text-left text-sm font-medium text-foreground"
-              >
-                {column.label}
-                {editable && column.editable && (
-                  <Edit2 size={12} className="inline-block ml-2 text-muted-foreground" />
-                )}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody className="bg-card divide-y divide-border">
-          {data.map((row, rowIndex) => (
-            <tr
-              key={rowIndex}
-              className={cn(
-                "transition-colors",
-                onRowClick && !editable && "cursor-pointer hover:bg-muted/50"
-              )}
-            >
-              {columns.map((column) => {
-                const isCurrentlyEditing = isEditing(rowIndex, column.key);
-                const isColumnEditable = editable && column.editable;
-
-                return (
-                  <td
-                    key={column.key}
-                    className={cn(
-                      "px-6 py-4 text-sm text-foreground",
-                      isColumnEditable && "group relative"
-                    )}
-                    onClick={() => {
-                      if (!isColumnEditable) {
-                        onRowClick?.(row, rowIndex);
-                      }
+    <div className={cn("w-full flex flex-col border border-border rounded-xl overflow-hidden", className)}>
+      {/* ── Scrollable table area ────────────────────────────────────── */}
+      <div className="w-full overflow-x-auto">
+        <table className="w-full border-collapse">
+          {/* ── Head ──────────────────────────────────────────────── */}
+          <thead>
+            <tr className="bg-[hsl(var(--foreground))] text-[hsl(var(--background))]">
+              {selectable && (
+                <th className="w-12 px-4 py-3">
+                  <input
+                    type="checkbox"
+                    checked={allSelected}
+                    ref={(el) => {
+                      if (el) el.indeterminate = someSelected;
                     }}
-                  >
-                    {isCurrentlyEditing ? (
-                      <div className="flex items-center gap-2">
-                        {column.type === "select" && column.options ? (
-                          <select
-                            value={editValue}
-                            onChange={(e) => setEditValue(e.target.value)}
-                            onKeyDown={handleKeyDown}
-                            autoFocus
-                            className="flex-1 px-2 py-1 border border-primary rounded focus:outline-none focus:ring-2 focus:ring-primary bg-background"
-                          >
-                            {column.options.map((opt) => (
-                              <option key={opt.value} value={opt.value}>
-                                {opt.label}
-                              </option>
-                            ))}
-                          </select>
-                        ) : (
-                          <input
-                            type={column.type === "number" ? "number" : "text"}
-                            value={editValue}
-                            onChange={(e) => setEditValue(e.target.value)}
-                            onKeyDown={handleKeyDown}
-                            autoFocus
-                            className="flex-1 px-2 py-1 border border-primary rounded focus:outline-none focus:ring-2 focus:ring-primary bg-background"
-                          />
-                        )}
-                        <button
-                          onClick={saveEditing}
-                          className="p-1 rounded hover:bg-secondary/20 text-secondary transition-colors cursor-pointer"
-                        >
-                          <Check size={16} />
-                        </button>
-                        <button
-                          onClick={cancelEditing}
-                          className="p-1 rounded hover:bg-destructive/20 text-destructive transition-colors cursor-pointer"
-                        >
-                          <X size={16} />
-                        </button>
-                      </div>
-                    ) : (
-                      <div className="flex items-center justify-between">
-                        <span>{String(row[column.key] ?? '')}</span>
-                        {isColumnEditable && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              startEditing(rowIndex, column.key, row[column.key]);
-                            }}
-                            className="opacity-0 group-hover:opacity-100 ml-2 p-1 rounded hover:bg-primary/20 text-primary transition-all cursor-pointer"
-                          >
-                            <Edit2 size={14} />
-                          </button>
-                        )}
-                      </div>
+                    onChange={toggleAll}
+                    aria-label="Alle auswählen"
+                    className="w-4 h-4 rounded border-white/40 accent-white cursor-pointer"
+                  />
+                </th>
+              )}
+              {columns.map((col) => (
+                <th
+                  key={col.key}
+                  style={{ width: col.width }}
+                  className={cn(
+                    "px-4 py-3 text-sm font-semibold whitespace-nowrap",
+                    alignClass(col.align),
+                    col.sortable &&
+                      "cursor-pointer select-none hover:opacity-80 transition-opacity"
+                  )}
+                  onClick={() => col.sortable && onSort?.(col.key)}
+                >
+                  <span className="inline-flex items-center gap-1.5">
+                    {col.label}
+                    {col.sortable && (
+                      <SortIcon
+                        columnKey={col.key}
+                        sortKey={sortKey}
+                        sortDirection={sortDirection}
+                      />
                     )}
-                  </td>
-                );
-              })}
+                  </span>
+                </th>
+              ))}
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+
+          {/* ── Body ──────────────────────────────────────────────── */}
+          <tbody className="bg-card divide-y divide-border">
+            {data.length === 0 ? (
+              <tr>
+                <td
+                  colSpan={columns.length + (selectable ? 1 : 0)}
+                  className="px-4 py-10 text-center text-sm text-muted-foreground"
+                >
+                  {emptyMessage}
+                </td>
+              </tr>
+            ) : (
+              data.map((row, rowIndex) => (
+                <tr
+                  key={rowIndex}
+                  className={cn(
+                    "transition-colors",
+                    isSelected(row) && "bg-primary/5",
+                    onRowClick && "cursor-pointer hover:bg-muted/50"
+                  )}
+                  onClick={() => onRowClick?.(row, rowIndex)}
+                >
+                  {selectable && (
+                    <td
+                      className="w-12 px-4 py-4"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleRow(row);
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={isSelected(row)}
+                        onChange={() => toggleRow(row)}
+                        aria-label="Zeile auswählen"
+                        className="w-4 h-4 rounded border-border accent-primary cursor-pointer"
+                      />
+                    </td>
+                  )}
+                  {columns.map((col) => {
+                    const raw = row[col.key];
+                    return (
+                      <td
+                        key={col.key}
+                        className={cn(
+                          "px-4 py-4 text-sm text-foreground whitespace-nowrap",
+                          alignClass(col.align)
+                        )}
+                      >
+                        {col.renderCell ? col.renderCell(raw, row) : String(raw ?? "—")}
+                      </td>
+                    );
+                  })}
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {/* ── Footer ────────────────────────────────────────────────────── */}
+      {showFooter && (
+        <div className="flex items-center justify-between px-4 py-3 border-t border-border bg-card text-xs text-muted-foreground">
+          <span>{footerLeft}</span>
+          <span>{footerRight}</span>
+        </div>
+      )}
     </div>
   );
 }
