@@ -24,6 +24,7 @@ export { Diagram } from "./Diagram";
 export { Gauge } from "./Gauge";
 export { StickyActionBar } from "./StickyActionBar";
 export { RatingScale } from "./RatingScale";
+export { Modal } from "./Modal";
 
 // Re-export common components for convenience
 export { Icons, Typography } from "../common";

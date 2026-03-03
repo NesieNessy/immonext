@@ -1,19 +1,17 @@
 "use client";
 
 import { KpfRangeBar, NoResult } from '@/components/common';
-import { Button, Dropdown, Header, NumberField, StickyActionBar, TextField, Tile } from '@/components/ui';
+import { Button, Dropdown, Header, Modal, NumberField, StickyActionBar, TextField, Tile } from '@/components/ui';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { FieldLabels } from '@/constants/FieldLabels';
 import { useKpfResult } from '@/hooks/useKpfRanges';
 import { PropertyCondition } from '@immonext/types';
-import { Link2, PenLine } from 'lucide-react';
+import { Link2 } from 'lucide-react';
 import { useState } from 'react';
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
-
-type Step = 'input-method' | 'manual-form';
 
 interface FormData {
   street: string;
@@ -39,7 +37,7 @@ const CONDITION_OPTIONS = [
 // ---------------------------------------------------------------------------
 
 export default function QuickCheckPage() {
-  const [step, setStep] = useState<Step>('input-method');
+  const [urlModalOpen, setUrlModalOpen] = useState(false);
   const [portalUrl, setPortalUrl] = useState('');
   const [form, setForm] = useState<FormData>({
     street: '',
@@ -54,7 +52,7 @@ export default function QuickCheckPage() {
   const purchasePrice = parseFloat(form.purchasePrice) || 0;
   const coldRent = parseFloat(form.coldRent) || 0;
   const condition = form.condition as PropertyCondition | '';
-  
+
   const yearOfConstructionNum = parseInt(form.yearOfConstruction, 10) || null;
   const { kpf, range, positionPct, isLoading, noData } = useKpfResult(
     purchasePrice,
@@ -116,75 +114,62 @@ export default function QuickCheckPage() {
     })();
 
   // -------------------------------------------------------------------------
-  // Step 1 – Input method selection
+  // Render
   // -------------------------------------------------------------------------
-  if (step === 'input-method') {
-    return (
-      <div className="min-h-screen bg-background">
-        <main className="container mx-auto px-4 py-8 max-w-3xl">
-          <Header
-            title="Ersteinschätzung"
-            subtitle="Wählen Sie aus, wie Sie Ihre Immobiliendaten eingeben möchten"
-          />
+  return (
+    <>
+      {/* ── URL Import Modal ──────────────────────────────────────────────── */}
+      <Modal
+        open={urlModalOpen}
+        onClose={() => setUrlModalOpen(false)}
+        title="URL importieren"
+        subtitle="Immobiliendaten aus einem Portal laden"
+        icon={<Link2 className="w-5 h-5" />}
+        footer={
+          <>
+            <Button
+              label={BUTTON_DETAILS.Cancel.label}
+              variant="outline"
+              onClick={() => setUrlModalOpen(false)}
+            />
+            <Button
+              label={BUTTON_DETAILS.ImportData.label}
+              icon={<BUTTON_DETAILS.ImportData.icon />}
+              variant="primary"
+              disabled
+              title="URL-Import ist noch nicht verfügbar"
+            />
+          </>
+        }
+      >
+        <TextField
+          label="Portal-URL"
+          placeholder="https://immobilienscout24.de/expose/..."
+          helperText="Unterstützte Portale: ImmobilienScout24, Immowelt, Immonet"
+          value={portalUrl}
+          onChange={(e) => setPortalUrl(e.target.value)}
+        />
+      </Modal>
 
-          <div className="mt-10 grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* URL Import */}
-            <Tile
-              title="URL Import"
-              icon={<Link2 className="w-6 h-6" />}
-              description="Importieren Sie die Daten direkt aus einem Immobilienportal"
-            >
-              <div className="mt-4 space-y-4">
-                <TextField
-                  label="Portal-URL"
-                  placeholder="https://"
-                  value={portalUrl}
-                  onChange={(e) => setPortalUrl(e.target.value)}
-                />
-                <Button
-                  label={BUTTON_DETAILS.ImportData.label}
-                  icon={<BUTTON_DETAILS.ImportData.icon />}
-                  variant="primary"
-                  className="w-full"
-                  disabled
-                  title="URL-Import ist noch nicht verfügbar"
-                />
-              </div>
-            </Tile>
-
-            {/* Manual entry */}
-            <Tile
-              title="Manuelle Eingabe"
-              icon={<PenLine className="w-6 h-6" />}
-              description="Geben Sie alle Immobiliendaten manuell ein"
-            >
-              <div className="mt-4">
-                <Button
-                   label={BUTTON_DETAILS.EnterManually.label}
-                  icon={<BUTTON_DETAILS.EnterManually.icon />}
-                  variant="outline"
-                  className="w-full"
-                  onClick={() => setStep('manual-form')}
-                />
-              </div>
-            </Tile>
-          </div>
-        </main>
-      </div>
-    );
-  }
-
-  // -------------------------------------------------------------------------
-  // Step 2 – Manual form  (auto-calculates when all fields are filled)
-  // -------------------------------------------------------------------------
-  if (step === 'manual-form') {
-    return (
+      {/* ── Main page ─────────────────────────────────────────────────────── */}
       <div className="min-h-screen bg-background pb-20">
-        <main className="container mx-auto px-4 py-3 max-w-5xl">
 
+        <main className="container mx-auto px-4 py-3">
+          <Header
+            title="Immobilien-Ersteinschätzung"
+            subtitle="Bewertung von Investitionsobjekten"
+            actions={
+              <Button
+                label="URL importieren"
+                icon={<Link2 className="w-4 h-4" />}
+                variant="primary"
+                onClick={() => setUrlModalOpen(true)}
+              />
+            }
+          />
           <div className="mt-3 flex flex-col gap-4">
 
-            {/* ── Two columns: form (left) + result (right) ─────────────── */}
+
             <div className="flex flex-col lg:flex-row gap-8 items-stretch">
 
               {/* Left: form — fills full column height */}
@@ -192,7 +177,7 @@ export default function QuickCheckPage() {
 
                 {/* Address */}
                 <section>
-                  <h2 className="text-md font-semibold text-foreground mb-2">Informationen zur Berechnung</h2>
+                  <h1 className="text-md font-semibold text-foreground mb-2">Informationen zur Berechnung</h1>
                   <div className="flex flex-col gap-2">
                     <TextField
                       label={FieldLabels.Property.Street.de + ' & ' + FieldLabels.Property.HouseNumber.de}
@@ -284,6 +269,7 @@ export default function QuickCheckPage() {
                 ) : (
                   <div className="flex flex-col gap-4 flex-1">
                     <Header
+                      title='Ersteinschätzung'
                       subtitle={`${form.street}, ${form.postalCode} ${form.city}`}
                     />
                     <Tile title="">
@@ -338,7 +324,6 @@ export default function QuickCheckPage() {
           ghostIcon={<BUTTON_DETAILS.Discard.icon />}
           onGhost={() => {
             setForm({ street: '', postalCode: '', city: '', purchasePrice: '', coldRent: '', condition: '', yearOfConstruction: '' });
-            setStep('input-method');
           }}
           primaryLabel={BUTTON_DETAILS.TakeOver.label}
           primaryIcon={<BUTTON_DETAILS.TakeOver.icon />}
@@ -348,7 +333,6 @@ export default function QuickCheckPage() {
           }}
         />
       </div>
-    );
-  }
+    </>
+  );
 }
-
