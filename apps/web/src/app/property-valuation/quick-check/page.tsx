@@ -178,7 +178,7 @@ export default function QuickCheckPage() {
                 {/* Address */}
                 <section>
                   <h2 className="text-md font-semibold text-foreground mb-2">Informationen zur Berechnung</h2>
-                  <div className="flex flex-col gap-2">
+                  <div className="flex flex-col gap-2 pt-1.5">
                     <TextField
                       label={FieldLabels.Property.Street.de + ' & ' + FieldLabels.Property.HouseNumber.de}
                       placeholder="z.B. Hauptstraße 123"
