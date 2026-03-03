@@ -4,7 +4,7 @@
 // Read-only for app users — data is maintained by admin / service role.
 // ==============================================================================
 import { supabase } from '@/lib/supabase/client.supabase';
-import type { KpfRange, KpfRangeFilters, KpfRangeInsert, PropertyCondition } from '@immonext/types';
+import type { KpfConstructionYearBucket, KpfRange, KpfRangeFilters, KpfRangeInsert, PropertyCondition } from '@immonext/types';
 
 function toKpfRange(row: Record<string, unknown>): KpfRange {
   return {
@@ -17,7 +17,50 @@ function toKpfRange(row: Record<string, unknown>): KpfRange {
   };
 }
 
-// ─── Read ──────────────────────────────────────────────────────────────────────
+// ─── RPC-based range lookup (with geographic fallback) ────────────────────────
+
+/**
+ * Result returned by the `get_kpf_range` RPC.
+ * `fallbackLevel`: 1=exact postal code, 2=postal prefix, 3=city, 4=state, 0=no data
+ */
+export interface KpfRangeResult {
+  minValue:      number;
+  maxValue:      number;
+  sampleSize:    number;
+  fallbackLevel: number;
+  fallbackHint:  string | null;
+}
+
+/**
+ * Calls the `get_kpf_range` RPC which automatically falls back to wider
+ * geographic areas when no exact postal-code match exists.
+ */
+export async function getKpfRange(
+  postalCode: string,
+  condition: PropertyCondition,
+  bucket: KpfConstructionYearBucket,
+): Promise<KpfRangeResult | null> {
+  const { data, error } = await supabase.rpc('get_kpf_range', {
+    p_postal_code: postalCode,
+    p_condition:   condition,
+    p_bucket:      bucket,
+  });
+
+  if (error || !data?.[0]) return null;
+
+  const row = data[0];
+  if (row.fallback_level === 0) return null;
+
+  return {
+    minValue:      row.min_value,
+    maxValue:      row.max_value,
+    sampleSize:    row.sample_size,
+    fallbackLevel: row.fallback_level,
+    fallbackHint:  row.fallback_hint ?? null,
+  };
+}
+
+// ─── Direct table queries ──────────────────────────────────────────────────────
 
 /** Fetch all KPF ranges matching any combination of filters. */
 export async function getKpfRanges(filters: KpfRangeFilters = {}): Promise<KpfRange[]> {
@@ -34,8 +77,11 @@ export async function getKpfRanges(filters: KpfRangeFilters = {}): Promise<KpfRa
   return data.map(toKpfRange);
 }
 
-/** Fetch the single KPF range for an exact postal code + condition + construction year bucket. */
-export async function getKpfRange(
+/**
+ * Fetch the single KPF range for an exact postal code + condition + bucket.
+ * Use `getKpfRange` instead when geographic fallback is desired.
+ */
+export async function getKpfRangeExact(
   postalCode: string,
   condition: PropertyCondition,
   constructionYearBucket: KpfRange['constructionYearBucket'],

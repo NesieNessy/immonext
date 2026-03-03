@@ -1,9 +1,10 @@
 "use client";
 
-import { NoResult } from '@/components/common';
-import { Button, Dropdown, Header, NumberField, RatingScale, StickyActionBar, TextField, Tile } from '@/components/ui';
+import { KpfRangeBar, NoResult } from '@/components/common';
+import { Button, Dropdown, Header, NumberField, StickyActionBar, TextField, Tile } from '@/components/ui';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { FieldLabels } from '@/constants/FieldLabels';
+import { useKpfResult } from '@/hooks/useKpfRanges';
 import { PropertyCondition } from '@immonext/types';
 import { Link2, PenLine } from 'lucide-react';
 import { useState } from 'react';
@@ -33,47 +34,6 @@ const CONDITION_OPTIONS = [
   ...Object.values(PropertyCondition).map((v) => ({ value: v, label: v })),
 ];
 
-const CONDITION_MULTIPLIER: Record<PropertyCondition, number> = {
-  [PropertyCondition.InNeedOfRenovation]: 0.85,
-  [PropertyCondition.Standard]: 1.0,
-  [PropertyCondition.Upscale]: 1.1,
-  [PropertyCondition.Luxury]: 1.2,
-};
-
-function calcGrossYield(purchasePrice: number, coldRent: number): number {
-  if (purchasePrice <= 0) return 0;
-  return (coldRent * 12 / purchasePrice) * 100;
-}
-
-/** Maps gross yield → scale position 0 (best) to 1 (worst). ≥8% excellent, ≤2% bad. */
-function yieldToScale(grossYield: number): number {
-  const max = 8;
-  const min = 2;
-  const clamped = Math.min(max, Math.max(min, grossYield));
-  return 1 - (clamped - min) / (max - min);
-}
-
-function yieldLabel(grossYield: number): string {
-  if (grossYield >= 7) return 'Ausgezeichnet';
-  if (grossYield >= 5.5) return 'Gut';
-  if (grossYield >= 4) return 'Befriedigend';
-  if (grossYield >= 2.5) return 'Ausreichend';
-  return 'Schlecht';
-}
-
-function yieldDescription(grossYield: number, condition: PropertyCondition | ''): string {
-  const conditionText = condition || 'Standard';
-  if (grossYield >= 7)
-    return `Sehr gute Investitionsmöglichkeit. Die Bruttomietrendite liegt bei ca. ${grossYield.toFixed(2)}%. Objekt im Zustand "${conditionText}" mit hoher Renditequalität.`;
-  if (grossYield >= 5.5)
-    return `Gute Investitionsmöglichkeit. Die Bruttomietrendite liegt bei ca. ${grossYield.toFixed(2)}%. Ein solides Investment mit Zustand "${conditionText}".`;
-  if (grossYield >= 4)
-    return `Durchschnittliche Investitionsmöglichkeit. Die Bruttomietrendite liegt bei ca. ${grossYield.toFixed(2)}%. Es handelt sich um eine akzeptable Investition, die jedoch genauer geprüft werden sollte.`;
-  if (grossYield >= 2.5)
-    return `Unterdurchschnittliche Rendite von ca. ${grossYield.toFixed(2)}%. Objekt im Zustand "${conditionText}" — eine detaillierte Prüfung ist empfehlenswert.`;
-  return `Schwache Rendite von ca. ${grossYield.toFixed(2)}%. Bei Zustand "${conditionText}" ist diese Investition kritisch zu hinterfragen.`;
-}
-
 // ---------------------------------------------------------------------------
 // Page
 // ---------------------------------------------------------------------------
@@ -94,11 +54,15 @@ export default function QuickCheckPage() {
   const purchasePrice = parseFloat(form.purchasePrice) || 0;
   const coldRent = parseFloat(form.coldRent) || 0;
   const condition = form.condition as PropertyCondition | '';
-  const multiplier = condition ? CONDITION_MULTIPLIER[condition] : 1;
-  const adjustedRent = coldRent * multiplier;
-  const grossYield = calcGrossYield(purchasePrice, adjustedRent);
-  const scaleValue = yieldToScale(grossYield);
-  const rating = yieldLabel(grossYield);
+  
+  const yearOfConstructionNum = parseInt(form.yearOfConstruction, 10) || null;
+  const { kpf, range, positionPct, isLoading, noData } = useKpfResult(
+    purchasePrice,
+    coldRent,
+    form.postalCode,
+    condition,
+    yearOfConstructionNum,
+  );
 
   const currentYear = new Date().getFullYear();
 
@@ -322,29 +286,9 @@ export default function QuickCheckPage() {
                     <Header
                       subtitle={`${form.street}, ${form.postalCode} ${form.city}`}
                     />
-
-                    <section>
-                      <h2 className="text-sm font-semibold text-foreground mb-3">Bewertung</h2>
-                      <RatingScale value={scaleValue} label={rating} />
-                    </section>
-
                     <Tile title="">
                       <div className="flex flex-col gap-3">
-                        <p className="text-sm text-foreground leading-relaxed">
-                          <span
-                            className={[
-                              'inline-block w-2 h-2 mr-2 align-middle',
-                              grossYield >= 7 ? 'bg-green-500' :
-                                grossYield >= 5.5 ? 'bg-lime-500' :
-                                  grossYield >= 4 ? 'bg-yellow-500' :
-                                    grossYield >= 2.5 ? 'bg-orange-500' :
-                                      'bg-red-500',
-                            ].join(' ')}
-                          />
-                          {yieldDescription(grossYield, condition)}
-                        </p>
-
-                        <div className="grid grid-cols-2 gap-3 pt-3">
+                        <div className="grid grid-cols-2 gap-3">
                           <div>
                             <p className="text-xs text-muted-foreground">{FieldLabels.AcquisitionCosts.PurchasePrice.de}</p>
                             <p className="text-sm font-semibold text-foreground">{purchasePrice.toLocaleString('de-DE')} €</p>
@@ -361,6 +305,17 @@ export default function QuickCheckPage() {
                             <p className="text-xs text-muted-foreground">{FieldLabels.Property.YearOfConstruction.de}</p>
                             <p className="text-sm font-semibold text-foreground">{form.yearOfConstruction || '—'}</p>
                           </div>
+                        </div>
+
+                        {/* KPF corridor bar */}
+                        <div className="pt-3 border-t border-border">
+                          <KpfRangeBar
+                            kpf={kpf}
+                            range={range}
+                            positionPct={positionPct}
+                            isLoading={isLoading}
+                            noData={noData}
+                          />
                         </div>
                       </div>
                     </Tile>
