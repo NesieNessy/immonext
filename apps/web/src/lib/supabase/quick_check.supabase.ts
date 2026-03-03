@@ -166,6 +166,29 @@ export async function createQuickCheck(input: CreateQuickCheckInput): Promise<Qu
     return mapQuickCheck(data);
 }
 
+/** Updates the snapshot fields of an ACTIVE quick-check. Recalculates kpf_multiplier. */
+export async function updateQuickCheck(
+    quickCheckId: number,
+    input: CreateQuickCheckInput,
+): Promise<QuickCheck> {
+    const { data, error } = await supabase
+        .from('quick_check')
+        .update({
+            portal_id: input.portalId ?? null,
+            purchase_price: input.purchasePrice,
+            cold_rent: input.coldRent,
+            postal_code: input.postalCode,
+            year_of_construction: input.yearOfConstruction,
+            condition: input.condition,
+            kpf_multiplier: input.kpfMultiplier,
+        })
+        .eq('quick_check_id', quickCheckId)
+        .select()
+        .single();
+    if (error) throw error;
+    return mapQuickCheck(data);
+}
+
 // ── Finalise ──────────────────────────────────────────────────────────────────
 
 /**
