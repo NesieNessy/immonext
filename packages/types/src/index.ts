@@ -113,21 +113,32 @@ export enum PropertyTypeValues {
   ListedBuildings = 'Denkmalgeschützte Gebäude',
 }
 
+export enum EnergyEfficient {
+  APlus = 'A+',
+  A = 'A',
+  B = 'B',
+  C = 'C',
+  D = 'D',
+  E = 'E',
+  F = 'F',
+  G = 'G',
+  H = 'H',
+}
+
 export interface Property {
+  street: any;
+  houseNumber: any;
   propertyId: number;
   userId: string;
   cityId: number;
-  propertyAbbreviation: string;
-  street: string;
-  houseNumber: string;
+  yearOfConstruction: number;
+  energyEfficient: EnergyEfficient | null;
+  imageUrl: string | null;
   city: string;
   postalCode: string;
   federalState: string;
   squareMeters: number;
   numberOfRooms: number;
-  yearOfConstruction: number;
-  energyEfficient: 'A+' | 'A' | 'B' | 'C' | 'D' | 'E' | 'F' | 'G' | 'H';
-  imageUrl: string | null;
   createdAt: string;
   updatedAt: string;
 }

@@ -3,7 +3,7 @@
 import { NoResult } from '@/components/common';
 import type { SortDirection, TableColumn, TagVariant } from '@/components/ui';
 import { Button, Header, Icons, Table, Tag } from '@/components/ui';
-import { BUTTON_DETAILS, ButtonType } from '@/constants/ButtonLabels';
+import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { FieldLabels } from '@/constants/FieldLabels';
 import { useQuickChecks } from '@/hooks/useQuickChecks';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
@@ -320,8 +320,8 @@ export default function QuickCheckOverviewPage() {
 
             {/* Open result — enabled only when exactly 1 row selected */}
             <Button
-              label={BUTTON_DETAILS[ButtonType.OpenResult].label}
-              icon={<Icons.OpenResult className="w-4 h-4" />}
+              label={BUTTON_DETAILS.OpenResult.label}
+              icon={<BUTTON_DETAILS.OpenResult.icon />}
               iconPosition="left"
               variant="outline"
               size="sm"

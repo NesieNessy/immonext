@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 
 // 1. Define the button types (keys) as an Enum
-export enum ButtonType {
+enum ButtonType {
   Cancel = 'Cancel',
   Save = 'Save',
   Previous = 'Previous',

@@ -195,12 +195,12 @@ export async function updateQuickCheck(
  * "Verwerfen" button.
  * DB steps (atomic):
  *   1. UPSERT kpf_ranges  ← benchmark updated even on discard
- *   2. finalised_action = 'DISCARD'
  */
-export async function discardQuickCheck(quickCheckId: number): Promise<void> {
+export async function discardQuickCheck(quickCheckId: number, userId: string): Promise<void> {
     const { error } = await supabase.rpc('finalize_quick_check', {
         p_quick_check_id: quickCheckId,
-        p_action: 'DISCARD',
+        p_user_id:        userId,
+        p_action:         'DISCARD',
     });
     if (error) throw error;
 }
@@ -216,20 +216,22 @@ export async function discardQuickCheck(quickCheckId: number): Promise<void> {
  */
 export async function acceptQuickCheck(
     quickCheckId: number,
+    userId: string,
     propertyInput: AcceptPropertyInput,
 ): Promise<number> {
     const { data, error } = await supabase.rpc('finalize_quick_check', {
-        p_quick_check_id: quickCheckId,
-        p_action: 'ACCEPT',
-        p_street: propertyInput.street,
-        p_house_number: propertyInput.houseNumber,
-        p_city_name: propertyInput.cityName,
-        p_federal_state: propertyInput.federalState,
-        p_city_id: propertyInput.cityId,
+        p_quick_check_id:        quickCheckId,
+        p_user_id:               userId,
+        p_action:                'ACCEPT',
+        p_street:                propertyInput.street,
+        p_house_number:          propertyInput.houseNumber,
+        p_city_name:             propertyInput.cityName,
+        p_federal_state:         propertyInput.federalState,
+        p_city_id:               propertyInput.cityId,
         p_property_abbreviation: propertyInput.propertyAbbreviation,
-        p_square_meters: propertyInput.squareMeters,
-        p_number_of_rooms: propertyInput.numberOfRooms,
-        p_energy_efficient: propertyInput.energyEfficient,
+        p_square_meters:         propertyInput.squareMeters,
+        p_number_of_rooms:       propertyInput.numberOfRooms,
+        p_energy_efficient:      propertyInput.energyEfficient,
     });
     if (error) throw error;
     return data as number;
