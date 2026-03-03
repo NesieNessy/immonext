@@ -1,13 +1,16 @@
 // Import your icons (example using lucide-react)
 import {
   ArrowLeft, ArrowRight,
+  BookCheck,
   Briefcase,
   Calculator,
   Check,
   Edit3,
+  ExternalLink,
   FileText, Play,
   Plus,
   Save,
+  Trash2,
   Upload,
   X
 } from 'lucide-react';
@@ -27,7 +30,12 @@ export enum ButtonType {
   EnterManually = 'EnterManually',
   Calculate = 'Calculate',
   TakeOver = 'TakeOver',
-  Discard = 'Discard' 
+  Discard = 'Discard',
+  AddProperty = 'AddProperty',
+  AddQuickCheck = 'AddQuickCheck',
+  Delete = 'Delete',
+  OpenResult = 'OpenResult',
+  StartDetailCheck = 'StartDetailCheck',
 }
 
 // 2. Define the structure for your button properties
@@ -38,18 +46,23 @@ export interface ButtonConfig {
 
 // 3. Create the mapping object that combines the label and the icon
 export const BUTTON_DETAILS: Record<ButtonType, ButtonConfig> = {
-  [ButtonType.Cancel]:           { label: 'Abbrechen',           icon: X },
-  [ButtonType.Save]:             { label: 'Speichern',           icon: Save },
-  [ButtonType.Previous]:         { label: 'Vorheriges',          icon: ArrowLeft },
-  [ButtonType.Next]:             { label: 'Nächstes',            icon: ArrowRight },
-  [ButtonType.Back]:             { label: 'Zurück',              icon: ArrowLeft },
-  [ButtonType.Create]:           { label: 'Erstellen',           icon: Plus },
-  [ButtonType.UseCases]:         { label: 'Anwendungsfall',      icon: Briefcase },
-  [ButtonType.RequestAppraisal]: { label: 'Gutachten anfordern', icon: FileText },
-  [ButtonType.Start]:            { label: 'Starten',             icon: Play },
-  [ButtonType.ImportData]:       { label: 'Daten importieren',   icon: Upload },
-  [ButtonType.EnterManually]:    { label: 'Manuell eingeben',    icon: Edit3 },
-  [ButtonType.Calculate]:        { label: 'Berechnen',           icon: Calculator },
-  [ButtonType.TakeOver]:         { label: 'Übernehmen',          icon: Check },
-  [ButtonType.Discard]:          { label: 'Verwerfen',           icon: X }
+  [ButtonType.Cancel]:           { label: 'Abbrechen',               icon: X },
+  [ButtonType.Save]:             { label: 'Speichern',               icon: Save },
+  [ButtonType.Previous]:         { label: 'Vorheriges',              icon: ArrowLeft },
+  [ButtonType.Next]:             { label: 'Nächstes',                icon: ArrowRight },
+  [ButtonType.Back]:             { label: 'Zurück',                  icon: ArrowLeft },
+  [ButtonType.Create]:           { label: 'Erstellen',               icon: Plus },
+  [ButtonType.UseCases]:         { label: 'Anwendungsfall',          icon: Briefcase },
+  [ButtonType.RequestAppraisal]: { label: 'Gutachten anfordern',     icon: FileText },
+  [ButtonType.Start]:            { label: 'Starten',                 icon: Play },
+  [ButtonType.ImportData]:       { label: 'Daten importieren',       icon: Upload },
+  [ButtonType.EnterManually]:    { label: 'Manuell eingeben',        icon: Edit3 },
+  [ButtonType.Calculate]:        { label: 'Berechnen',               icon: Calculator },
+  [ButtonType.TakeOver]:         { label: 'Übernehmen',              icon: Check },
+  [ButtonType.Discard]:          { label: 'Verwerfen',               icon: X },
+  [ButtonType.AddProperty]:      { label: 'Objekt hinzufügen',       icon: Plus },
+  [ButtonType.AddQuickCheck]:    { label: 'Neue Ersteinschätzung',   icon: Plus },
+  [ButtonType.Delete]:           { label: 'Löschen',                 icon: Trash2 },
+  [ButtonType.OpenResult]:       { label: 'Ergebnis öffnen',         icon: ExternalLink },
+  [ButtonType.StartDetailCheck]: { label: 'Detailbewertung starten', icon: BookCheck },
 };

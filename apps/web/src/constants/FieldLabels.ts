@@ -326,6 +326,21 @@ export const FieldLabels: Record<string, TableLabels> = {
     FinancialBroker: { en: "Financial Broker", de: "Finanzvermittler" },
   },
 
+  // ----------------------------------------------------------------------------
+  // 24. QuickCheck (Ersteinschätzung)
+  // ----------------------------------------------------------------------------
+  QuickCheck: {
+    IngestDate:          { en: "Capture Date",    de: "Erfassungsdatum" },
+    PortalId:            { en: "Portal ID",       de: "Portal ID" },
+    KpfMultiplier:       { en: "KPF Multiplier",      de: "KPF Faktor" },
+    PurchasePrice:       { en: "Purchase Price",  de: "Kaufpreis" },
+    PostalCode:          { en: "Postal Code",     de: "PLZ" },
+    ConstructionYear:    { en: "Year of Const.",  de: "Baujahr" },
+    Condition:           { en: "Condition",       de: "Zustand" },
+    Status:              { en: "Status",          de: "Status" },
+    SearchPlaceholder:   { en: "Search by portal, postal code, condition…", de: "Suche nach Portal, PLZ, Zustand…" },
+  },
+
 } as const;
 
 // ----------------------------------------------------------------------------

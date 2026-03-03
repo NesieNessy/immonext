@@ -2,8 +2,9 @@
 
 import type { SortDirection, TableColumn, TagVariant } from '@/components/ui';
 import { Button, Header, Icons, Table, Tag } from '@/components/ui';
+import { BUTTON_DETAILS, ButtonType } from '@/constants/ButtonLabels';
+import { FieldLabels } from '@/constants/FieldLabels';
 import { PropertyCondition } from '@immonext/types';
-import { ExternalLink, Plus, Search, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useMemo, useState } from 'react';
@@ -76,19 +77,19 @@ const MOCK_DATA: QuickCheckEntry[] = [
 const COLUMNS: TableColumn<QuickCheckEntry>[] = [
   {
     key: 'ingestDate',
-    label: 'Erfassungsdatum',
+    label: FieldLabels.QuickCheck.IngestDate.de,
     sortable: true,
     width: '150px',
   },
   {
     key: 'portalId',
-    label: 'Portal ID',
+    label: FieldLabels.QuickCheck.PortalId.de,
     sortable: true,
     filterable: true,
   },
   {
     key: 'kpfMultiplier',
-    label: 'KPF Faktor',
+    label: FieldLabels.QuickCheck.KpfMultiplier.de,
     sortable: true,
     filterable: true,
     align: 'center',
@@ -97,7 +98,7 @@ const COLUMNS: TableColumn<QuickCheckEntry>[] = [
   },
   {
     key: 'purchasePrice',
-    label: 'Kaufpreis',
+    label: FieldLabels.QuickCheck.PurchasePrice.de,
     sortable: true,
     align: 'right',
     width: '140px',
@@ -107,21 +108,21 @@ const COLUMNS: TableColumn<QuickCheckEntry>[] = [
   },
   {
     key: 'postalCode',
-    label: 'PLZ',
+    label: FieldLabels.QuickCheck.PostalCode.de,
     sortable: true,
     filterable: true,
     width: '110px',
   },
   {
     key: 'constructionYear',
-    label: 'Baujahr',
+    label: FieldLabels.QuickCheck.ConstructionYear.de,
     sortable: true,
     filterable: true,
     width: '100px',
   },
   {
     key: 'condition',
-    label: 'Zustand',
+    label: FieldLabels.QuickCheck.Condition.de,
     sortable: true,
     filterable: true,
     width: '170px',
@@ -132,7 +133,7 @@ const COLUMNS: TableColumn<QuickCheckEntry>[] = [
   },
   {
     key: 'status',
-    label: 'Status',
+    label: FieldLabels.QuickCheck.Status.de,
     sortable: true,
     filterable: true,
     width: '110px',
@@ -235,8 +236,8 @@ export default function QuickCheckOverviewPage() {
           actions={
             <Link href="/property-valuation/quick-check/new">
               <Button
-                label="Neue Ersteinschätzung"
-                icon={<Plus className="w-4 h-4" />}
+                label={BUTTON_DETAILS.AddQuickCheck.label}
+                icon={<BUTTON_DETAILS.AddQuickCheck.icon />}
                 variant="primary"
               />
             </Link>
@@ -246,10 +247,10 @@ export default function QuickCheckOverviewPage() {
         {/* ── Search bar ──────────────────────────────────────────────── */}
         <div className="mt-6 flex items-center gap-3">
           <div className="relative flex-1 max-w-sm">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+            <Icons.Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
             <input
               type="search"
-              placeholder="Suche nach Portal, PLZ, Zustand…"
+              placeholder={FieldLabels.QuickCheck.SearchPlaceholder.de}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="w-full pl-9 pr-4 py-2 bg-input-background border border-border rounded-lg text-sm
@@ -270,8 +271,8 @@ export default function QuickCheckOverviewPage() {
 
             {/* Delete — always shown when any selection */}
             <Button
-              label={`Löschen (${selectedIds.size})`}
-              icon={<Trash2 className="w-4 h-4" />}
+              label={`${BUTTON_DETAILS.Delete.label} (${selectedIds.size})`}
+              icon={<BUTTON_DETAILS.Delete.icon />}
               iconPosition="left"
               variant="outline"
               size="sm"
@@ -281,8 +282,8 @@ export default function QuickCheckOverviewPage() {
 
             {/* Start detail check — enabled only when 1 selected + status is aktiv */}
             <Button
-              label="Detailbewertung starten"
-              icon={<Icons.DetailCheck />}
+              label={BUTTON_DETAILS.StartDetailCheck.label}
+              icon={<BUTTON_DETAILS.StartDetailCheck.icon />}
               iconPosition="left"
               variant="outline"
               size="sm"
@@ -292,8 +293,8 @@ export default function QuickCheckOverviewPage() {
 
             {/* Open result — enabled only when exactly 1 row selected */}
             <Button
-              label="Ergebnis öffnen"
-              icon={<ExternalLink className="w-4 h-4" />}
+              label={BUTTON_DETAILS[ButtonType.OpenResult].label}
+              icon={<Icons.OpenResult className="w-4 h-4" />}
               iconPosition="left"
               variant="outline"
               size="sm"

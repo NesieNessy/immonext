@@ -1,7 +1,7 @@
 ﻿"use client";
 
+import { Icons } from "@/components/common";
 import { cn } from "@/lib/utils";
-import { ChevronDown, ChevronsUpDown, ChevronUp, X } from "lucide-react";
 import React from "react";
 
 // ---------------------------------------------------------------------------
@@ -76,12 +76,12 @@ function SortIcon({
   sortDirection?: SortDirection;
 }) {
   if (sortKey !== columnKey || !sortDirection) {
-    return <ChevronsUpDown className="w-3.5 h-3.5 text-muted-foreground/60 shrink-0" />;
+    return <Icons.ChevronsUpDown className="w-3.5 h-3.5 text-muted-foreground/60 shrink-0" />;
   }
   return sortDirection === "asc" ? (
-    <ChevronUp className="w-3.5 h-3.5 shrink-0" />
+    <Icons.ChevronUp className="w-3.5 h-3.5 shrink-0" />
   ) : (
-    <ChevronDown className="w-3.5 h-3.5 shrink-0" />
+    <Icons.ChevronDown className="w-3.5 h-3.5 shrink-0" />
   );
 }
 
@@ -236,7 +236,7 @@ export function Table<T extends Record<string, unknown> = Record<string, unknown
                             className="absolute right-1.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                             aria-label="Filter leeren"
                           >
-                            <X className="w-3 h-3" />
+                            <Icons.Close className="w-3 h-3" />
                           </button>
                         )}
                       </div>
