@@ -1,6 +1,7 @@
 "use client";
 
 import { NavigationBar } from '@/components/ui/NavigationBar';
+import { authBypassUser, isAuthBypassEnabled } from '@/lib/authBypass';
 import { clearLoginTime } from '@/lib/sessionTimeout';
 import { supabase } from '@/lib/supabase/client.supabase';
 import type { User } from '@supabase/supabase-js';
@@ -13,6 +14,11 @@ export function AppNavigation() {
   const [user, setUser] = useState<User | null>(null);
 
   useEffect(() => {
+    if (isAuthBypassEnabled()) {
+      setUser(authBypassUser);
+      return;
+    }
+
     supabase.auth.getUser().then(({ data }) => setUser(data.user));
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -24,6 +30,10 @@ export function AppNavigation() {
 
   const handleLogout = async () => {
     clearLoginTime();
+    if (isAuthBypassEnabled()) {
+      router.push('/');
+      return;
+    }
     await supabase.auth.signOut();
     router.push('/login');
   };

@@ -1,16 +1,427 @@
 "use client";
 
-// Header import removed - not used
+import { Button, Modal, StickyActionBar, TextField } from '@/components/ui';
+import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
+import { parseDecimalInput } from '@/lib/detailCheck/acquisitionCosts';
+import {
+  applyServiceChargeSuggestion,
+  currentMonthDate,
+  monthFromDate,
+  normalizeMonthInput,
+  serviceChargesMismatch,
+  type RentalField,
+} from '@/lib/detailCheck/rental';
+import { Info } from 'lucide-react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { Suspense, useEffect, useMemo, useState } from 'react';
 import { PropertyValuationLayout } from '../PropertyValuationLayout';
+
+type RentalForm = {
+  valuationMonth: string;
+  isRented: boolean;
+  coldRent: string;
+  parkingRent: string;
+  serviceChargesAllocable: string;
+  serviceChargesNonAllocable: string;
+  serviceChargesTotal: string;
+};
+
+type RentalResponse = {
+  valuationDate: string;
+  isRented: boolean;
+  coldRent: number;
+  parkingRent: number;
+  serviceChargesAllocable: number;
+  serviceChargesNonAllocable: number;
+  serviceChargesTotal: number;
+};
+
+const currencyFormatter = new Intl.NumberFormat('de-DE', {
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+});
+
+function valueString(value: number | string | null | undefined): string {
+  if (value == null) return '';
+  const num = Number(value);
+  if (!Number.isFinite(num) || num === 0) return value === 0 ? '' : String(value);
+  return String(value).replace('.', ',');
+}
+
+function MoneyField({
+  label,
+  value,
+  onChange,
+  error,
+  disabled,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  error?: string;
+  disabled?: boolean;
+}) {
+  return (
+    <TextField
+      label={label}
+      value={value}
+      onChange={(event) => onChange(event.target.value)}
+      inputMode="decimal"
+      suffix="€"
+      error={error}
+      disabled={disabled}
+    />
+  );
+}
+
+function RentalContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const quickCheckId = searchParams.get('quickCheckId');
+  const suffix = quickCheckId ? `?quickCheckId=${quickCheckId}` : '';
+
+  const [form, setForm] = useState<RentalForm>({
+    valuationMonth: monthFromDate(currentMonthDate()),
+    isRented: true,
+    coldRent: '',
+    parkingRent: '',
+    serviceChargesAllocable: '',
+    serviceChargesNonAllocable: '',
+    serviceChargesTotal: '',
+  });
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [topError, setTopError] = useState<string | null>(null);
+  const [infoOpen, setInfoOpen] = useState(false);
+  const [warningOpen, setWarningOpen] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function load() {
+      setIsLoading(true);
+      setTopError(null);
+      try {
+        const res = await fetch(`/api/detail-check/rental${suffix}`, { cache: 'no-store' });
+        if (!res.ok) throw new Error(await res.text());
+        const data = await res.json() as RentalResponse;
+        if (cancelled) return;
+        setForm({
+          valuationMonth: monthFromDate(data.valuationDate),
+          isRented: data.isRented,
+          coldRent: valueString(data.coldRent),
+          parkingRent: valueString(data.parkingRent),
+          serviceChargesAllocable: valueString(data.serviceChargesAllocable),
+          serviceChargesNonAllocable: valueString(data.serviceChargesNonAllocable),
+          serviceChargesTotal: valueString(data.serviceChargesTotal),
+        });
+      } catch (error) {
+        if (!cancelled) {
+          setTopError(error instanceof Error ? error.message : 'Vermietungsdaten konnten nicht geladen werden.');
+        }
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
+    }
+
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, [suffix]);
+
+  const values = useMemo(() => ({
+    coldRent: parseDecimalInput(form.coldRent),
+    parkingRent: parseDecimalInput(form.parkingRent),
+    serviceChargesAllocable: parseDecimalInput(form.serviceChargesAllocable),
+    serviceChargesNonAllocable: parseDecimalInput(form.serviceChargesNonAllocable),
+    serviceChargesTotal: parseDecimalInput(form.serviceChargesTotal),
+  }), [form]);
+
+  const amountErrors = {
+    coldRent: values.coldRent < 0 || values.coldRent > 1_000_000_000 ? 'Bitte einen Betrag >= 0 eingeben.' : '',
+    parkingRent: values.parkingRent < 0 || values.parkingRent > 1_000_000_000 ? 'Bitte einen Betrag >= 0 eingeben.' : '',
+    serviceChargesAllocable: values.serviceChargesAllocable < 0 || values.serviceChargesAllocable > 1_000_000_000 ? 'Bitte einen Betrag >= 0 eingeben.' : '',
+    serviceChargesNonAllocable: values.serviceChargesNonAllocable < 0 || values.serviceChargesNonAllocable > 1_000_000_000 ? 'Bitte einen Betrag >= 0 eingeben.' : '',
+    serviceChargesTotal: values.serviceChargesTotal < 0 || values.serviceChargesTotal > 1_000_000_000 ? 'Bitte einen Betrag >= 0 eingeben.' : '',
+  };
+
+  const hasAmountError = Object.values(amountErrors).some(Boolean);
+  const nkMismatch = serviceChargesMismatch(
+    values.serviceChargesAllocable,
+    values.serviceChargesNonAllocable,
+    values.serviceChargesTotal,
+  );
+
+  const updateMoney = (field: keyof RentalForm, value: string) => {
+    setForm((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const updateServiceCharge = (field: RentalField, value: string) => {
+    setForm((prev) => {
+      const mapped = {
+        allocable: prev.serviceChargesAllocable,
+        nonAllocable: prev.serviceChargesNonAllocable,
+        total: prev.serviceChargesTotal,
+        [field]: value,
+      };
+      const next = applyServiceChargeSuggestion(mapped, field, parseDecimalInput);
+      return {
+        ...prev,
+        serviceChargesAllocable: next.allocable,
+        serviceChargesNonAllocable: next.nonAllocable,
+        serviceChargesTotal: next.total,
+      };
+    });
+  };
+
+  const persist = async (ignoreMismatch: boolean) => {
+    if (hasAmountError || isSaving) return;
+    if (!ignoreMismatch && nkMismatch) {
+      setWarningOpen(true);
+      return;
+    }
+
+    setIsSaving(true);
+    setTopError(null);
+    try {
+      const res = await fetch('/api/detail-check/rental', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          quickCheckId,
+          valuationDate: normalizeMonthInput(form.valuationMonth),
+          isRented: form.isRented,
+          source: 'MANUELL',
+          coldRent: values.coldRent,
+          parkingRent: values.parkingRent,
+          serviceChargesAllocable: values.serviceChargesAllocable,
+          serviceChargesNonAllocable: values.serviceChargesNonAllocable,
+          serviceChargesTotal: values.serviceChargesTotal,
+        }),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      router.push(`/property-valuation/detail-check/financing${suffix}`);
+    } catch (error) {
+      setTopError(error instanceof Error ? error.message : 'Vermietungsdaten konnten nicht gespeichert werden.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  return (
+    <PropertyValuationLayout currentStep={2}>
+      <Modal
+        open={infoOpen}
+        onClose={() => setInfoOpen(false)}
+        title="Nebenkosten"
+        subtitle="Umlagefähige und nicht umlagefähige Positionen"
+        icon={<Info />}
+        maxWidth="max-w-3xl"
+      >
+        <div className="max-h-[65vh] overflow-y-auto text-sm leading-6 text-foreground">
+          <h3 className="font-semibold">Umlagefähige Nebenkosten nach §2 BetrKV</h3>
+          <p className="text-muted-foreground">
+            Typische Positionen sind Grundsteuer, Wasserversorgung, Entwässerung, Heizung, Warmwasser,
+            Aufzug, Straßenreinigung, Müllabfuhr, Gebäudeversicherung, Hausmeisteranteile für Reinigung
+            und Pflege, Gebäudereinigung, Gartenpflege, Allgemeinstrom, Schornsteinreinigung, Wartung von
+            Gemeinschaftsanlagen, Kabel/Breitband sowie ausdrücklich vereinbarte sonstige Betriebskosten.
+          </p>
+          <h3 className="mt-4 font-semibold">Nicht umlagefähige Nebenkosten</h3>
+          <p className="text-muted-foreground">
+            Dazu zählen Instandhaltung und Reparaturen, Verwaltungskosten, Rechts- und Gerichtskosten,
+            Abschreibungen, Finanzierungskosten, nicht gebäudebezogene Versicherungen, Hausmeisteranteile
+            für Verwaltung oder Reparatur sowie Kosten für leerstehende Wohnungen.
+          </p>
+          <p className="mt-4 text-muted-foreground">Die Auflistung ist beispielhaft und nicht abschließend.</p>
+        </div>
+      </Modal>
+
+      <Modal
+        open={warningOpen}
+        onClose={() => setWarningOpen(false)}
+        title="Nebenkosten prüfen"
+        subtitle="Die eingetragenen Werte wirken nicht plausibel."
+        footer={
+          <>
+            <Button
+              label="Zurück & prüfen"
+              variant="outline"
+              onClick={() => setWarningOpen(false)}
+            />
+            <Button
+              label="Weiter trotz Abweichung"
+              onClick={() => {
+                setWarningOpen(false);
+                persist(true);
+              }}
+            />
+          </>
+        }
+      >
+        <p className="text-sm text-muted-foreground">
+          Ihre eingetragenen Werte unter Nebenkosten sind nicht plausibel. Möchten Sie dennoch damit weiter bewerten?
+        </p>
+      </Modal>
+
+      <div className="pb-24">
+        <div className="mb-6">
+          <h1 className="text-2xl font-semibold text-foreground">Vermietung</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Alle Beträge werden monatlich in Euro erfasst.
+          </p>
+        </div>
+
+        {topError && (
+          <div className="mb-4 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+            {topError}
+          </div>
+        )}
+
+        {isLoading ? (
+          <p className="text-sm text-muted-foreground">Vermietungsdaten werden geladen...</p>
+        ) : (
+          <div className="max-w-5xl space-y-7">
+            <section className="grid gap-4 md:grid-cols-[minmax(0,220px)_minmax(0,1fr)] md:items-end">
+              <TextField
+                label="Bewertungs-Stichtag"
+                type="month"
+                value={form.valuationMonth}
+                onChange={(event) => setForm((prev) => ({ ...prev, valuationMonth: event.target.value }))}
+              />
+              <div className="inline-flex w-fit rounded-lg bg-primary/10 px-3 py-2 text-sm text-primary">
+                Alle Angaben pro Monat in €
+              </div>
+            </section>
+
+            <section>
+              <div className="flex flex-wrap gap-3">
+                <button
+                  type="button"
+                  aria-pressed={form.isRented}
+                  onClick={() => setForm((prev) => ({ ...prev, isRented: true }))}
+                  className={`rounded-lg border px-4 py-2 text-sm transition-colors ${
+                    form.isRented ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-card text-foreground'
+                  }`}
+                >
+                  Vermietet
+                </button>
+                <button
+                  type="button"
+                  aria-pressed={!form.isRented}
+                  onClick={() => setForm((prev) => ({ ...prev, isRented: false }))}
+                  className={`rounded-lg border px-4 py-2 text-sm transition-colors ${
+                    !form.isRented ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-card text-foreground'
+                  }`}
+                >
+                  Unvermietet
+                </button>
+              </div>
+            </section>
+
+            {form.isRented && (
+              <section>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <MoneyField
+                    label="Kaltmiete"
+                    value={form.coldRent}
+                    error={amountErrors.coldRent}
+                    onChange={(value) => updateMoney('coldRent', value)}
+                  />
+                  <MoneyField
+                    label="Stellplatz"
+                    value={form.parkingRent}
+                    error={amountErrors.parkingRent}
+                    onChange={(value) => updateMoney('parkingRent', value)}
+                  />
+                </div>
+              </section>
+            )}
+
+            {!form.isRented && (
+              <div className="rounded-lg border border-border bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
+                Bei unvermieteten Objekten werden Kaltmiete und Stellplatzmiete mit 0 € gespeichert.
+              </div>
+            )}
+
+            <section>
+              <div className="mb-3 flex items-center gap-2">
+                <h2 className="text-lg font-medium text-foreground">Nebenkosten</h2>
+                <button
+                  type="button"
+                  onClick={() => setInfoOpen(true)}
+                  aria-label="Informationen zu Nebenkosten"
+                  className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-primary text-primary-foreground"
+                >
+                  <Info size={16} />
+                </button>
+              </div>
+
+              {nkMismatch && (
+                <div className="mb-4 rounded-lg border border-yellow-300 bg-yellow-50 px-4 py-3 text-sm text-yellow-800">
+                  Ihre eingetragenen Werte unter Nebenkosten sind nicht plausibel. Sie können trotzdem weiter bewerten.
+                </div>
+              )}
+
+              <div className="grid gap-4 md:grid-cols-3">
+                <MoneyField
+                  label="NK umlagefähig"
+                  value={form.serviceChargesAllocable}
+                  error={amountErrors.serviceChargesAllocable}
+                  onChange={(value) => updateServiceCharge('allocable', value)}
+                />
+                <MoneyField
+                  label="NK nicht umlagefähig"
+                  value={form.serviceChargesNonAllocable}
+                  error={amountErrors.serviceChargesNonAllocable}
+                  onChange={(value) => updateServiceCharge('nonAllocable', value)}
+                />
+                <MoneyField
+                  label="NK gesamt"
+                  value={form.serviceChargesTotal}
+                  error={amountErrors.serviceChargesTotal}
+                  onChange={(value) => updateServiceCharge('total', value)}
+                />
+              </div>
+            </section>
+
+            <section className="grid gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,260px)] md:items-center">
+              <p className="text-sm font-medium text-muted-foreground">
+                Falls vorhanden, können Sie hier die letzte Nebenkostenabrechnung zur ersten Schätzung uploaden.
+              </p>
+              <Button
+                label="Upload"
+                variant="outline"
+                disabled
+                title="Upload und Auslesung sind im MVP optional und noch nicht angebunden."
+              />
+            </section>
+
+            <p className="text-xs text-muted-foreground">
+              Aktuelle Nebenkosten-Summe: {currencyFormatter.format(values.serviceChargesAllocable + values.serviceChargesNonAllocable)} €
+            </p>
+          </div>
+        )}
+      </div>
+
+      <StickyActionBar
+        show
+        ghostLabel={BUTTON_DETAILS.Back.label}
+        ghostIcon={<BUTTON_DETAILS.Back.icon />}
+        onGhost={() => router.push(`/property-valuation/detail-check/acquisition-costs${suffix}`)}
+        primaryLabel="Weiter"
+        primaryIcon={<BUTTON_DETAILS.Next.icon />}
+        primaryDisabled={isLoading || isSaving || hasAmountError}
+        onPrimary={() => persist(false)}
+      />
+    </PropertyValuationLayout>
+  );
+}
 
 export default function LeasingOrTenancysPage() {
   return (
-    <PropertyValuationLayout currentStep={2}>
-      <div className="mt-8">
-        <p className="text-muted-foreground">
-          Vermietungs-Inhalt wird hier angezeigt.
-        </p>
-      </div>
-    </PropertyValuationLayout>
+    <Suspense fallback={null}>
+      <RentalContent />
+    </Suspense>
   );
 }

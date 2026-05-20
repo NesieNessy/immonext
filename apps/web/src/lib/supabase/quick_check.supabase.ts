@@ -15,6 +15,7 @@
 // ==============================================================================
 
 import type { PropertyCondition } from '@immonext/types';
+import { isAuthBypassEnabled } from '../authBypass';
 import { supabase } from './client.supabase';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -29,7 +30,9 @@ export interface QuickCheck {
     portalId: string | null;
     purchasePrice: number;
     coldRent: number;
+    street: string;
     postalCode: string;
+    city: string;
     yearOfConstruction: number;
     condition: PropertyCondition;
     kpfMultiplier: number;
@@ -48,7 +51,9 @@ export interface QuickCheckOverview {
     kpfMultiplier: number;
     purchasePrice: number;
     coldRent: number;
+    street: string;
     postalCode: string;
+    city: string;
     yearOfConstruction: number;
     condition: PropertyCondition;
     status: QuickCheckStatus;
@@ -61,7 +66,9 @@ export interface CreateQuickCheckInput {
     portalId?: string;
     purchasePrice: number;
     coldRent: number;
+    street: string;
     postalCode: string;
+    city: string;
     yearOfConstruction: number;
     condition: PropertyCondition;
     kpfMultiplier: number;
@@ -89,7 +96,9 @@ function mapQuickCheck(row: Record<string, unknown>): QuickCheck {
         portalId: row.portal_id as string | null,
         purchasePrice: row.purchase_price as number,
         coldRent: row.cold_rent as number,
+        street: row.street as string,
         postalCode: row.postal_code as string,
+        city: row.city as string,
         yearOfConstruction: row.year_of_construction as number,
         condition: row.condition as PropertyCondition,
         kpfMultiplier: row.kpf_multiplier as number,
@@ -112,7 +121,9 @@ function mapOverview(row: Record<string, unknown>): QuickCheckOverview {
         // View column is kpf_multiplier (matches the table column)
         purchasePrice:     row.purchase_price as number,
         coldRent:          row.cold_rent as number,
+        street:            row.street as string,
         postalCode:        row.postal_code as string,
+        city:              row.city as string,
         yearOfConstruction: row.year_of_construction as number,
         condition:         row.condition as PropertyCondition,
         status:            row.status as QuickCheckStatus,
@@ -126,6 +137,13 @@ function mapOverview(row: Record<string, unknown>): QuickCheckOverview {
 
 /** Get the latest 100 QuickChecks for the current user */
 export async function getAllQuickChecks(): Promise<QuickCheckOverview[]> {
+    if (isAuthBypassEnabled()) {
+        const res = await fetch('/api/quick-checks', { cache: 'no-store' });
+        if (!res.ok) throw new Error(await res.text());
+        const data = await res.json();
+        return (data ?? []).map(mapOverview);
+    }
+
     const { data, error } = await supabase
         .from('quick_check_overview')
         .select('*')
@@ -149,13 +167,25 @@ export async function getQuickCheckById(quickCheckId: number): Promise<QuickChec
 
 /** Saves the QuickCheckPage form. Status = ACTIVE. No kpf_ranges write yet. */
 export async function createQuickCheck(input: CreateQuickCheckInput): Promise<QuickCheck> {
+    if (isAuthBypassEnabled()) {
+        const res = await fetch('/api/quick-checks', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(input),
+        });
+        if (!res.ok) throw new Error(await res.text());
+        return mapQuickCheck(await res.json());
+    }
+
     const { data, error } = await supabase
         .from('quick_check')
         .insert({
             portal_id: input.portalId ?? null,
             purchase_price: input.purchasePrice,
             cold_rent: input.coldRent,
+            street: input.street,
             postal_code: input.postalCode,
+            city: input.city,
             year_of_construction: input.yearOfConstruction,
             condition: input.condition,
             kpf_multiplier: input.kpfMultiplier,
@@ -177,7 +207,9 @@ export async function updateQuickCheck(
             portal_id: input.portalId ?? null,
             purchase_price: input.purchasePrice,
             cold_rent: input.coldRent,
+            street: input.street,
             postal_code: input.postalCode,
+            city: input.city,
             year_of_construction: input.yearOfConstruction,
             condition: input.condition,
             kpf_multiplier: input.kpfMultiplier,
@@ -266,6 +298,16 @@ export async function deleteQuickCheck(quickCheckId: number): Promise<void> {
  */
 export async function deleteQuickChecks(quickCheckIds: number[]): Promise<void> {
     if (quickCheckIds.length === 0) return;
+    if (isAuthBypassEnabled()) {
+        const res = await fetch('/api/quick-checks', {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ids: quickCheckIds }),
+        });
+        if (!res.ok) throw new Error(await res.text());
+        return;
+    }
+
     const { error } = await supabase
         .from('quick_check')
         .delete()

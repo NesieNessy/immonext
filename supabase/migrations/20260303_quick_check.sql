@@ -22,7 +22,9 @@
 --   Portal ID        -> portal_id                          (own)
 --   KPF Faktor       -> kpf_multiplier                         (own, frontend computed)
 --   Kaufpreis        -> purchase_price            (own)
+--   Straße           -> street                    (own)
 --   PLZ              -> postal_code               (own)
+--   Stadt            -> city                      (own)
 --   Baujahr          -> year_of_construction      (own)
 --   Zustand          -> condition                          (reuses property_condition enum)
 --   Status           -> status                             (quick_check_status enum)
@@ -45,12 +47,15 @@ CREATE TABLE IF NOT EXISTS quick_check (
 
     -- External listing reference (e.g. ImmoScout24 expose ID or URL)
     portal_id                       VARCHAR(255),
+    data_entry_source               TEXT                        NOT NULL DEFAULT 'MANUELL',
 
     -- Snapshot fields: entered by user in QuickCheckPage. Immutable after INSERT.
     -- Source of truth for kpf_ranges upsert and (on ACCEPT) property creation.
     purchase_price         NUMERIC(14, 2)              NOT NULL,
     cold_rent              NUMERIC(10, 2)              NOT NULL,
+    street                 VARCHAR(120)                NOT NULL,
     postal_code            VARCHAR(10)                 NOT NULL,
+    city                   VARCHAR(120)                NOT NULL,
     year_of_construction   INT                         NOT NULL
                                         CHECK (year_of_construction BETWEEN 1800 AND 2100),
 
@@ -73,7 +78,7 @@ CREATE TABLE IF NOT EXISTS quick_check (
     detail_check               BOOLEAN                     NOT NULL DEFAULT FALSE,
 
     created_at                      TIMESTAMP WITH TIME ZONE    NOT NULL DEFAULT NOW(),
-    updated_at                      TIMESTAMP WITH TIME ZONE    NOT NULL DEFAULT NOW(),
+    updated_at                      TIMESTAMP WITH TIME ZONE    NOT NULL DEFAULT NOW()
 
 );
 
@@ -89,7 +94,9 @@ COMMENT ON TABLE  quick_check IS 'Quick-check records. All display columns are s
 COMMENT ON COLUMN quick_check.portal_id IS 'External listing reference, e.g. ImmoScout24 expose ID or URL.';
 COMMENT ON COLUMN quick_check.purchase_price IS 'Kaufpreis at check time. Input to KPF and kpf_ranges upsert.';
 COMMENT ON COLUMN quick_check.cold_rent IS 'Kaltmiete at check time. Required for KPF = price / (rent * 12).';
+COMMENT ON COLUMN quick_check.street IS 'Street and house number snapshot entered during quick-check.';
 COMMENT ON COLUMN quick_check.postal_code IS 'PLZ at check time. Key for kpf_ranges upsert on finalisation.';
+COMMENT ON COLUMN quick_check.city IS 'City snapshot entered during quick-check.';
 COMMENT ON COLUMN quick_check.year_of_construction IS 'Baujahr at check time. Mapped to kpf_construction_year_bucket on finalisation.';
 COMMENT ON COLUMN quick_check.kpf_multiplier IS 'Kaufpreisfaktor = Kaufpreis / (Kaltmiete * 12), 1 decimal. Stored at check time.';
 COMMENT ON COLUMN quick_check.status IS 'ACTIVE = Portal ID valid. INACTIVE = Portal ID invalid.';
@@ -125,10 +132,13 @@ SELECT
     qc.user_id,
     qc.created_at           AS ingest_date,
     qc.portal_id,
+    qc.data_entry_source,
     qc.kpf_multiplier,
     qc.purchase_price,
     qc.cold_rent,
+    qc.street,
     qc.postal_code,
+    qc.city,
     qc.year_of_construction,
     qc.condition,
     qc.status,

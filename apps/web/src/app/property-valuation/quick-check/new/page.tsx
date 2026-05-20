@@ -5,6 +5,8 @@ import { Button, Dropdown, Header, Modal, NumberField, StickyActionBar, TextFiel
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { FieldLabels } from '@/constants/FieldLabels';
 import { useKpfResult } from '@/hooks/useKpfRanges';
+import { createQuickCheck } from '@/lib/supabase/quick_check.supabase';
+import { calcKpf } from '@/utils/kpf';
 import { PropertyCondition } from '@immonext/types';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
@@ -40,6 +42,8 @@ export default function QuickCheckPage() {
   const router = useRouter();
   const [urlModalOpen, setUrlModalOpen] = useState(false);
   const [portalUrl, setPortalUrl] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [form, setForm] = useState<FormData>({
     street: '',
     postalCode: '',
@@ -114,6 +118,34 @@ export default function QuickCheckPage() {
       return !isNaN(y) && y >= 1850 && y <= currentYear;
     })();
 
+  const handleTakeOver = async () => {
+    if (!isFormValid || isSaving) return;
+
+    const computedKpf = calcKpf(purchasePrice, coldRent);
+    if (computedKpf === null) return;
+
+    setIsSaving(true);
+    setSaveError(null);
+    try {
+      await createQuickCheck({
+        portalId: portalUrl || undefined,
+        purchasePrice,
+        coldRent,
+        street: form.street.trim(),
+        postalCode: form.postalCode,
+        city: form.city.trim(),
+        yearOfConstruction: parseInt(form.yearOfConstruction, 10),
+        condition: condition as PropertyCondition,
+        kpfMultiplier: computedKpf,
+      });
+      router.push('/property-valuation/quick-check');
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : 'Speichern fehlgeschlagen');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   // -------------------------------------------------------------------------
   // Render
   // -------------------------------------------------------------------------
@@ -170,6 +202,11 @@ export default function QuickCheckPage() {
             }
           />
           <div className="mt-3 flex flex-col gap-4">
+            {saveError && (
+              <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+                {saveError}
+              </div>
+            )}
 
 
             <div className="flex flex-col lg:flex-row gap-8 items-stretch">
@@ -328,10 +365,8 @@ export default function QuickCheckPage() {
           }}
           primaryLabel={BUTTON_DETAILS.TakeOver.label}
           primaryIcon={<BUTTON_DETAILS.TakeOver.icon />}
-          primaryDisabled={!isFormValid}
-          onPrimary={() => {
-            // TODO: persist to Property table via createProperty
-          }}
+          primaryDisabled={!isFormValid || isSaving}
+          onPrimary={handleTakeOver}
         />
       </div>
     </>

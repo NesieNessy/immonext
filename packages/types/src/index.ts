@@ -126,11 +126,12 @@ export enum EnergyEfficient {
 }
 
 export interface Property {
-  street: any;
-  houseNumber: any;
   propertyId: number;
   userId: string;
   cityId: number;
+  propertyAbbreviation: string;
+  street: string;
+  houseNumber: string;
   yearOfConstruction: number;
   energyEfficient: EnergyEfficient | null;
   imageUrl: string | null;

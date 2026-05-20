@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 interface DropdownProps extends React.SelectHTMLAttributes<HTMLSelectElement> {
   label?: string;
   error?: string;
-  options: { value: string; label: string }[];
+  options: { value: string; label: string; disabled?: boolean }[];
 }
 
 export function Dropdown({
@@ -34,7 +34,7 @@ export function Dropdown({
         {...props}
       >
         {options.map((option) => (
-          <option key={option.value} value={option.value}>
+          <option key={option.value} value={option.value} disabled={option.disabled}>
             {option.label}
           </option>
         ))}

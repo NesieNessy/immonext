@@ -146,7 +146,7 @@ export default function PropertyData({ propertyId }: { propertyId: string }) {
                             />
                             <TextField
                                 label="Energieeffizienz"
-                                value={formData.energyEfficient}
+                                value={formData.energyEfficient ?? ''}
                                 onChange={(e) => handleInputChange('energyEfficient', e.target.value)}
                             />
                             <NumberField

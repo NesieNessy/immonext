@@ -23,7 +23,9 @@ import { useEffect, useState } from 'react';
 // ---------------------------------------------------------------------------
 
 interface EditForm {
+  street: string;
   postalCode: string;
+  city: string;
   purchasePrice: string;
   coldRent: string;
   condition: PropertyCondition | '';
@@ -78,7 +80,7 @@ export function QuickCheckResultView({ id }: Props) {
 
   // Edit form (ACTIVE state) 
   const [editForm, setEditForm] = useState<EditForm>({
-    postalCode: '', purchasePrice: '', coldRent: '', condition: '', yearOfConstruction: '',
+    street: '', postalCode: '', city: '', purchasePrice: '', coldRent: '', condition: '', yearOfConstruction: '',
   });
   const [portalUrl, setPortalUrl] = useState('');
 
@@ -93,7 +95,9 @@ export function QuickCheckResultView({ id }: Props) {
   useEffect(() => {
     if (!data) return;
     setEditForm({
+      street:             data.street,
       postalCode:         data.postalCode,
+      city:               data.city,
       purchasePrice:      String(data.purchasePrice),
       coldRent:           String(data.coldRent),
       condition:          data.condition,
@@ -115,8 +119,12 @@ export function QuickCheckResultView({ id }: Props) {
 
   // Validation 
   const editErrors = {
+    street: editForm.street.length > 0 && editForm.street.trim().length > 120
+      ? 'Maximal 120 Zeichen' : '',
     postalCode: editForm.postalCode.length > 0 && !/^\d{5}$/.test(editForm.postalCode)
       ? 'Genau 5 Ziffern erforderlich' : '',
+    city: editForm.city.length > 0 && editForm.city.trim().length > 120
+      ? 'Maximal 120 Zeichen' : '',
     purchasePrice: editForm.purchasePrice !== '' && purchasePrice <= 0
       ? 'Muss größer als 0 sein' : '',
     coldRent: editForm.coldRent !== '' && coldRent <= 0
@@ -129,7 +137,11 @@ export function QuickCheckResultView({ id }: Props) {
   };
 
   const isEditValid =
+    editForm.street.trim() !== '' &&
+    editForm.street.trim().length <= 120 &&
     /^\d{5}$/.test(editForm.postalCode) &&
+    editForm.city.trim() !== '' &&
+    editForm.city.trim().length <= 120 &&
     purchasePrice > 0 && coldRent > 0 && condition !== '' &&
     (() => { const y = parseInt(editForm.yearOfConstruction, 10); return !isNaN(y) && y >= 1850 && y <= currentYear; })();
 
@@ -158,7 +170,9 @@ export function QuickCheckResultView({ id }: Props) {
       await updateQuickCheck(id, {
         portalId: portalUrl || undefined,
         purchasePrice, coldRent,
+        street:             editForm.street.trim(),
         postalCode:         editForm.postalCode,
+        city:               editForm.city.trim(),
         yearOfConstruction: parseInt(editForm.yearOfConstruction, 10),
         condition:          condition as PropertyCondition,
         kpfMultiplier:      calcKpf(purchasePrice, coldRent) ?? 0,
@@ -354,6 +368,15 @@ export function QuickCheckResultView({ id }: Props) {
                   </h2>
                   <div className="flex flex-col gap-2 pt-1.5">
                     <TextField
+                      label={FieldLabels.Property.Street.de + ' & ' + FieldLabels.Property.HouseNumber.de}
+                      placeholder="z.B. Hauptstraße 123"
+                      required
+                      value={editForm.street}
+                      onChange={(e) => handleEditField('street', e.target.value)}
+                      error={editErrors.street}
+                    />
+                    <div className="grid grid-cols-2 gap-2">
+                    <TextField
                       label={FieldLabels.Property.PostalCode.de}
                       placeholder="z.B. 10115"
                       required
@@ -361,6 +384,15 @@ export function QuickCheckResultView({ id }: Props) {
                       onChange={(e) => handleEditField('postalCode', e.target.value)}
                       error={editErrors.postalCode}
                     />
+                    <TextField
+                      label={FieldLabels.Property.City.de}
+                      placeholder="z.B. Berlin"
+                      required
+                      value={editForm.city}
+                      onChange={(e) => handleEditField('city', e.target.value)}
+                      error={editErrors.city}
+                    />
+                    </div>
                   </div>
                 </section>
                 <section>
@@ -418,7 +450,7 @@ export function QuickCheckResultView({ id }: Props) {
                 ) : (
                   <div className="flex flex-col gap-4 flex-1">
                     <h2>Ersteinschätzung</h2>
-                    <h5>{editForm.postalCode}</h5>
+                    <h5>{`${editForm.street}, ${editForm.postalCode} ${editForm.city}`}</h5>
                     <Tile title="">
                       <div className="flex flex-col gap-3">
                         <div className="grid grid-cols-2 gap-3">

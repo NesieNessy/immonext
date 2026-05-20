@@ -25,6 +25,7 @@ export function Stepper({ steps, currentStep, className }: StepperProps) {
             <div key={index} className="flex items-center flex-1 last:flex-none">
               <div className="flex flex-col items-center gap-2">
                 <div
+                  aria-current={isCurrent ? 'step' : undefined}
                   className={cn(
                     "w-10 h-10 rounded-full flex items-center justify-center transition-all duration-200",
                     isCompleted && "bg-secondary text-secondary-foreground",

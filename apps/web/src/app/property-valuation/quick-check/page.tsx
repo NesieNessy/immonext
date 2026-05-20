@@ -315,7 +315,7 @@ export default function QuickCheckOverviewPage() {
               variant="outline"
               size="sm"
               disabled={selectedIds.size !== 1 || selectedRow?.status !== 'aktiv'}
-              onClick={() => router.push('/property-valuation/detail-check')}
+              onClick={() => router.push(`/property-valuation/detail-check/property-data?quickCheckId=${selectedRow!.id}`)}
             />
 
             {/* Open result — enabled only when exactly 1 row selected */}
