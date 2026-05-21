@@ -60,6 +60,8 @@ export interface QuickCheckOverview {
     finalisedAction: QuickCheckAction | null;
     detailCheck: boolean;
     propertyId: number | null;
+    recommendationScore: number | null;
+    recommendationLevel: string | null;
 }
 
 export interface CreateQuickCheckInput {
@@ -130,6 +132,8 @@ function mapOverview(row: Record<string, unknown>): QuickCheckOverview {
         finalisedAction:   row.finalised_action as QuickCheckAction | null,
         detailCheck:  row.detail_check as boolean,
         propertyId:        row.property_id as number | null,
+        recommendationScore: row.recommendation_score == null ? null : Number(row.recommendation_score),
+        recommendationLevel: row.recommendation_level as string | null,
     };
 }
 

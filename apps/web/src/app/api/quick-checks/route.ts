@@ -22,10 +22,13 @@ type QuickCheckRow = {
   finalised_action: 'ACCEPT' | 'DISCARD' | null;
   detail_check: boolean;
   property_id: number | null;
+  recommendation_score: string | number | null;
+  recommendation_level: string | null;
   updated_at?: string;
 };
 
-function toNumber(value: string | number): number {
+function toNumber(value: string | number | null): number {
+  if (value == null) return 0;
   return typeof value === 'number' ? value : Number(value);
 }
 
@@ -48,6 +51,8 @@ function mapQuickCheck(row: QuickCheckRow) {
     finalised_action: row.finalised_action,
     detail_check: row.detail_check,
     property_id: row.property_id,
+    recommendation_score: row.recommendation_score == null ? null : toNumber(row.recommendation_score),
+    recommendation_level: row.recommendation_level,
     created_at: row.created_at,
     updated_at: row.updated_at,
   };

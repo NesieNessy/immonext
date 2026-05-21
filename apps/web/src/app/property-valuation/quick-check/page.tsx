@@ -28,6 +28,8 @@ interface QuickCheckEntry extends Record<string, unknown> {
   condition: PropertyCondition;
   detailCheck: boolean;
   status: 'aktiv' | 'inaktiv';
+  recommendationScore: number | null;
+  recommendationLevel: string | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -54,6 +56,8 @@ function toEntry(row: QuickCheckOverview): QuickCheckEntry {
     condition:        row.condition,
     detailCheck:      row.detailCheck,
     status:           row.status === 'ACTIVE' ? 'aktiv' : 'inaktiv',
+    recommendationScore: row.recommendationScore,
+    recommendationLevel: row.recommendationLevel,
   };
 }
 
@@ -87,6 +91,32 @@ function KpfBadge({ value }: { value: number | null }) {
       {value.toFixed(1).replace(/\.0$/, '')}
     </span>
   );
+}
+
+function recommendationLabel(level: string | null): string {
+  if (level === 'BUY') return 'Kaufen';
+  if (level === 'CHECK') return 'Prüfen';
+  if (level === 'CRITICAL') return 'Kritisch';
+  if (level === 'NO_BUY') return 'Nicht kaufen';
+  return 'offen';
+}
+
+function RecommendationBadge({ level, score }: { level: string | null; score: number | null }) {
+  const variant: TagVariant =
+    level === 'BUY'
+      ? 'success'
+      : level === 'CHECK'
+      ? 'info'
+      : level === 'CRITICAL'
+      ? 'warning'
+      : level === 'NO_BUY'
+      ? 'danger'
+      : 'muted';
+  const label = score == null
+    ? recommendationLabel(level)
+    : `${recommendationLabel(level)} · ${score.toFixed(0)}`;
+
+  return <Tag label={label} variant={variant} />;
 }
 
 // ---------------------------------------------------------------------------
@@ -157,6 +187,19 @@ const COLUMNS: TableColumn<QuickCheckEntry>[] = [
       />
     ),
   },
+  {
+    key: 'recommendationLevel',
+    label: 'Empfehlung',
+    sortable: true,
+    filterable: true,
+    width: '150px',
+    renderCell: (_value, row) => (
+      <RecommendationBadge
+        level={row.recommendationLevel}
+        score={row.recommendationScore}
+      />
+    ),
+  },
 ];
 
 // ---------------------------------------------------------------------------
@@ -215,7 +258,8 @@ export default function QuickCheckOverviewPage() {
           (row) =>
             row.portalId.toLowerCase().includes(q) ||
             row.postalCode.includes(q) ||
-            row.condition.toLowerCase().includes(q)
+            row.condition.toLowerCase().includes(q) ||
+            recommendationLabel(row.recommendationLevel).toLowerCase().includes(q)
         )
       : allEntries;
 
@@ -327,7 +371,7 @@ export default function QuickCheckOverviewPage() {
               size="sm"
               disabled={selectedIds.size !== 1}
               onClick={() =>
-                router.push(`/property-valuation/quick-check/${selectedRow!.id}`)
+                router.push(`/property-valuation/detail-check/result?quickCheckId=${selectedRow!.id}`)
               }
             />
           </div>
