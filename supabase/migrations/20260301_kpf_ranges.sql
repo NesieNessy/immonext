@@ -158,14 +158,15 @@ BEGIN
       AND k.construction_year_bucket = p_bucket;
     IF FOUND THEN RETURN; END IF;
 
-    -- Level 4: Federal state + any condition + any bucket
+    -- Level 4: Federal state + condition, any bucket
     RETURN QUERY
     SELECT AVG(k.min_value)::DECIMAL(5,1), AVG(k.max_value)::DECIMAL(5,1),
            SUM(k.sample_size), 4,
            'Breiter Korridor mangels lokaler Daten – Bundeslanddurchschnitt'
     FROM kpf_ranges k
     JOIN postal_code_to_state pts ON pts.postal_code = k.postal_code
-    WHERE pts.state_code = v_state;
+    WHERE pts.state_code = v_state
+      AND k.condition    = p_condition;
     IF FOUND THEN RETURN; END IF;
 
     -- Level 0: No data at all
