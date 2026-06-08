@@ -2,36 +2,43 @@
 -- ImmoNext - CREATE TABLE: quick_check
 --
 -- Flow:
---   INSERT   -> user fills QuickCheckPage. Inputs stored in * fields.
+--   INSERT   -> user fills QuickCheckPage. Inputs stored in snapshot fields.
 --              No property record exists yet.
 --
 --   ACCEPT   -> finalize_quick_check(p_action := 'ACCEPT'):
 --              Step 1 (both): UPSERT kpf_ranges - every check is a data point
---              Step 2 (both): status = 'INACTIVE', finalised_action = 'ACCEPT'
+--              Step 2 (both): finalised_action = 'ACCEPT'
 --              Step 3 (ACCEPT only): INSERT property -> appears in Portfolio
 --
 --   DISCARD  -> finalize_quick_check(p_action := 'DISCARD'):
 --              Step 1 (both): UPSERT kpf_ranges - every check is a data point
---              Step 2 (both): status = 'INACTIVE', finalised_action = 'DISCARD'
+--              Step 2 (both): finalised_action = 'DISCARD'
 --              (no property record created)
 --
 -- Key invariant: kpf_ranges updated on EVERY finalisation, accept or discard.
 --
+-- Status semantics (independent of finalisation):
+--   ACTIVE   = listing is still available on the Immo portal
+--   INACTIVE = listing has been taken offline / no longer available
+--   Status is set by the user (or external sync) and is NOT changed by
+--   finalize_quick_check. A listing can be discarded while still ACTIVE,
+--   or accepted while already INACTIVE.
+--
 -- Field mapping:
 --   Erfassungsdatum  -> created_at                         (auto)
---   Portal ID        -> portal_id                          (own)
---   KPF Faktor       -> kpf_multiplier                         (own, frontend computed)
---   Kaufpreis        -> purchase_price            (own)
---   PLZ              -> postal_code               (own)
---   Baujahr          -> year_of_construction      (own)
+--   Portal ID        -> portal_id                          (optional; empty for manual entries)
+--   KPF Faktor       -> kpf_multiplier                     (computed, frontend)
+--   Kaufpreis        -> purchase_price
+--   PLZ              -> postal_code
+--   Baujahr          -> year_of_construction
 --   Zustand          -> condition                          (reuses property_condition enum)
 --   Status           -> status                             (quick_check_status enum)
---   Detailbewertung  -> detail_check                  (boolean)
+--   Detailbewertung  -> detail_check                       (boolean)
 -- ==============================================================================
 
 CREATE TYPE quick_check_status AS ENUM (
-    'ACTIVE',   -- on immo portal online
-    'INACTIVE'  -- on immo portal not online anymore
+    'ACTIVE',   -- listing is still available on the Immo portal
+    'INACTIVE'  -- listing has been taken offline / is no longer available
 );
 
 CREATE TABLE IF NOT EXISTS quick_check (
@@ -65,7 +72,7 @@ CREATE TABLE IF NOT EXISTS quick_check (
 
     status                          quick_check_status          NOT NULL DEFAULT 'ACTIVE',
 
-    -- Which button the user clicked. NULL while ACTIVE.
+    -- Which button the user clicked. NULL while not yet finalised.
     finalised_action                VARCHAR(10)
                                         CHECK (finalised_action IN ('ACCEPT', 'DISCARD')),
 
@@ -92,8 +99,8 @@ COMMENT ON COLUMN quick_check.cold_rent IS 'Kaltmiete at check time. Required fo
 COMMENT ON COLUMN quick_check.postal_code IS 'PLZ at check time. Key for kpf_ranges upsert on finalisation.';
 COMMENT ON COLUMN quick_check.year_of_construction IS 'Baujahr at check time. Mapped to kpf_construction_year_bucket on finalisation.';
 COMMENT ON COLUMN quick_check.kpf_multiplier IS 'Kaufpreisfaktor = Kaufpreis / (Kaltmiete * 12), 1 decimal. Stored at check time.';
-COMMENT ON COLUMN quick_check.status IS 'ACTIVE = Portal ID valid. INACTIVE = Portal ID invalid.';
-COMMENT ON COLUMN quick_check.finalised_action IS 'ACCEPT = taken over into Portfolio. DISCARD = dismissed. NULL while ACTIVE.';
+COMMENT ON COLUMN quick_check.status IS 'ACTIVE = listing is still available on the Immo portal. INACTIVE = listing no longer available. Tracks portal state, not finalization state.';
+COMMENT ON COLUMN quick_check.finalised_action IS 'ACCEPT = taken over into Portfolio. DISCARD = dismissed. NULL while not yet finalised. Independent of status.';
 COMMENT ON COLUMN quick_check.property_id IS 'Set only when finalised_action = ACCEPT. NULL for DISCARD.';
 COMMENT ON COLUMN quick_check.created_at IS 'Erfassungsdatum: when the quick-check was first accepted.';
 
@@ -115,8 +122,8 @@ CREATE TRIGGER quick_check_updated_at
 -- ==============================================================================
 -- VIEW: quick_check_overview
 -- All display columns from snapshot fields — no joins required.
--- Frontend: WHERE status = 'ACTIVE'   -> live overview list
---           WHERE status = 'INACTIVE' -> history / audit view
+-- Frontend: WHERE status = 'ACTIVE'   -> available on Immoportal
+--           WHERE status = 'INACTIVE' -> not available on Immoportal
 -- ==============================================================================
 
 CREATE OR REPLACE VIEW quick_check_overview AS
@@ -146,10 +153,20 @@ COMMENT ON VIEW quick_check_overview IS 'Read view for the Quick-Check overview 
 -- Single entry point for BOTH the "Übernehmen" and "Verwerfen" buttons.
 -- p_action: 'ACCEPT' | 'DISCARD'
 --
--- Step 1 (both):   UPSERT kpf_ranges — every checked object is a data point.
---                  First entry:      min = max = kpf_multiplier, sample_size = 1
---                  Subsequent entry: expands range, sample_size + 1
--- Step 2 (both):   status = 'INACTIVE', finalised_action = p_action.
+-- p_kpf_multiplier: the live KPF value from the UI at the moment the user
+--   clicks Verwerfen / Übernehmen. This may differ from v_qc.kpf_multiplier
+--   when the user has edited purchase price or cold rent without saving first.
+--   Always used for the kpf_ranges upsert (the comparison data point) and
+--   written back to quick_check.kpf_multiplier so the row stays consistent.
+--
+-- NOTE: status (ACTIVE/INACTIVE) is NOT changed here — it tracks portal
+--   listing availability, not finalization state.
+--
+-- Step 1 (both):   UPSERT kpf_ranges — only when p_kpf_multiplier is not null.
+--                  First entry:      min = max = p_kpf_multiplier, sample_size = 1
+--                  Subsequent entry: expands min/max range, sample_size + 1
+-- Step 2 (both):   kpf_multiplier = p_kpf_multiplier (when provided),
+--                  finalised_action = p_action.
 -- Step 3 (ACCEPT): INSERT INTO property -> object appears in Portfolio.
 --
 -- Returns: new property_id for ACCEPT, NULL for DISCARD.
@@ -159,6 +176,7 @@ CREATE OR REPLACE FUNCTION finalize_quick_check(
     p_quick_check_id        INT,
     p_user_id               UUID,
     p_action                VARCHAR(10),            -- 'ACCEPT' | 'DISCARD'
+    p_kpf_multiplier        DECIMAL(5, 1)           DEFAULT NULL,  -- live KPF from UI; NULL = skip kpf_ranges upsert
     -- Required only when p_action = 'ACCEPT'
     p_street                VARCHAR(100)            DEFAULT NULL,
     p_house_number          VARCHAR(10)             DEFAULT NULL,
@@ -206,28 +224,39 @@ BEGIN
         RAISE EXCEPTION 'quick_check % not found, not owned by user, or already finalised.', p_quick_check_id;
     END IF;
 
-    -- ── Step 1 (both): UPSERT kpf_ranges ─────────────────────────────────────
-    v_bucket := CASE
-        WHEN v_qc.year_of_construction < 1918 THEN '<1918'
-        WHEN v_qc.year_of_construction < 1950 THEN '1918-1949'
-        WHEN v_qc.year_of_construction < 1960 THEN '1950-1959'
-        WHEN v_qc.year_of_construction < 1970 THEN '1960-1969'
-        WHEN v_qc.year_of_construction < 1980 THEN '1970-1979'
-        WHEN v_qc.year_of_construction < 1990 THEN '1980-1989'
-        WHEN v_qc.year_of_construction < 2000 THEN '1990-1999'
-        WHEN v_qc.year_of_construction < 2010 THEN '2000-2009'
-        WHEN v_qc.year_of_construction < 2015 THEN '2010-2014'
-        ELSE '2015+'
-    END::kpf_construction_year_bucket;
+    -- ── Step 1 (both): UPSERT kpf_ranges with the live KPF value ─────────────
+    IF p_kpf_multiplier IS NOT NULL THEN
+        v_bucket := CASE
+            WHEN v_qc.year_of_construction < 1918 THEN '<1918'
+            WHEN v_qc.year_of_construction < 1950 THEN '1918-1949'
+            WHEN v_qc.year_of_construction < 1960 THEN '1950-1959'
+            WHEN v_qc.year_of_construction < 1970 THEN '1960-1969'
+            WHEN v_qc.year_of_construction < 1980 THEN '1970-1979'
+            WHEN v_qc.year_of_construction < 1990 THEN '1980-1989'
+            WHEN v_qc.year_of_construction < 2000 THEN '1990-1999'
+            WHEN v_qc.year_of_construction < 2010 THEN '2000-2009'
+            WHEN v_qc.year_of_construction < 2015 THEN '2010-2014'
+            ELSE '2015+'
+        END::kpf_construction_year_bucket;
 
-    INSERT INTO kpf_ranges (postal_code, condition, construction_year_bucket, min_value, max_value, sample_size)
-    VALUES (v_qc.postal_code, v_qc.condition, v_bucket, v_qc.kpf_multiplier, v_qc.kpf_multiplier, 1)
-    ON CONFLICT (postal_code, condition, construction_year_bucket) DO UPDATE
-        SET min_value   = LEAST   (kpf_ranges.min_value,  EXCLUDED.min_value),
-            max_value   = GREATEST(kpf_ranges.max_value,  EXCLUDED.max_value),
-            sample_size = kpf_ranges.sample_size + 1;
+        INSERT INTO kpf_ranges (postal_code, condition, construction_year_bucket, min_value, max_value, sample_size)
+        VALUES (v_qc.postal_code, v_qc.condition, v_bucket, p_kpf_multiplier, p_kpf_multiplier, 1)
+        ON CONFLICT (postal_code, condition, construction_year_bucket) DO UPDATE
+            SET min_value   = LEAST   (kpf_ranges.min_value,  EXCLUDED.min_value),
+                max_value   = GREATEST(kpf_ranges.max_value,  EXCLUDED.max_value),
+                sample_size = kpf_ranges.sample_size + 1
+            WHERE EXCLUDED.min_value < kpf_ranges.min_value
+               OR EXCLUDED.max_value > kpf_ranges.max_value;
+    END IF;
 
-    -- ── Step 2 (ACCEPT only): create property record ──────────────────────────
+    -- ── Step 2 (both): finalise the quick_check row ───────────────────────────
+    UPDATE quick_check
+       SET kpf_multiplier    = COALESCE(p_kpf_multiplier, kpf_multiplier),
+           finalised_action  = p_action,
+           updated_at        = NOW()
+     WHERE quick_check_id = p_quick_check_id;
+
+    -- ── Step 3 (ACCEPT only): create property record ──────────────────────────
     IF p_action = 'ACCEPT' THEN
         INSERT INTO property (
             user_id, city_id, property_abbreviation,
@@ -253,8 +282,65 @@ END;
 $$;
 
 GRANT EXECUTE ON FUNCTION finalize_quick_check(
-    INT, UUID, VARCHAR,
+    INT, UUID, VARCHAR, DECIMAL,
     VARCHAR, VARCHAR, VARCHAR, VARCHAR,
     INT, VARCHAR, NUMERIC, NUMERIC,
     energy_efficiency_class
+) TO authenticated;
+
+
+-- ==============================================================================
+-- RPC: upsert_kpf_range
+--
+-- Called when the user clicks "Verwerfen" on the NEW quick-check page.
+-- In that flow the check result is intentionally NOT saved to quick_check —
+-- only the market data point (kpf_ranges) is recorded.
+--
+-- Takes the raw inputs (postal_code, condition, year_of_construction,
+-- kpf_multiplier) and performs the same kpf_ranges upsert as finalize_quick_check
+-- Step 1, but completely independent of any quick_check row.
+--
+-- SECURITY DEFINER so the function can write to kpf_ranges (which has no
+-- direct RLS write policy for authenticated users).
+-- ==============================================================================
+
+CREATE OR REPLACE FUNCTION upsert_kpf_range(
+    p_postal_code           VARCHAR(10),
+    p_condition             property_condition,
+    p_year_of_construction  INT,
+    p_kpf_multiplier        DECIMAL(5, 1)
+)
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+    v_bucket kpf_construction_year_bucket;
+BEGIN
+    v_bucket := CASE
+        WHEN p_year_of_construction < 1918 THEN '<1918'
+        WHEN p_year_of_construction < 1950 THEN '1918-1949'
+        WHEN p_year_of_construction < 1960 THEN '1950-1959'
+        WHEN p_year_of_construction < 1970 THEN '1960-1969'
+        WHEN p_year_of_construction < 1980 THEN '1970-1979'
+        WHEN p_year_of_construction < 1990 THEN '1980-1989'
+        WHEN p_year_of_construction < 2000 THEN '1990-1999'
+        WHEN p_year_of_construction < 2010 THEN '2000-2009'
+        WHEN p_year_of_construction < 2015 THEN '2010-2014'
+        ELSE '2015+'
+    END::kpf_construction_year_bucket;
+
+    INSERT INTO kpf_ranges (postal_code, condition, construction_year_bucket, min_value, max_value, sample_size)
+    VALUES (p_postal_code, p_condition, v_bucket, p_kpf_multiplier, p_kpf_multiplier, 1)
+    ON CONFLICT (postal_code, condition, construction_year_bucket) DO UPDATE
+        SET min_value   = LEAST   (kpf_ranges.min_value,  EXCLUDED.min_value),
+            max_value   = GREATEST(kpf_ranges.max_value,  EXCLUDED.max_value),
+            sample_size = kpf_ranges.sample_size + 1
+        WHERE EXCLUDED.min_value < kpf_ranges.min_value
+           OR EXCLUDED.max_value > kpf_ranges.max_value;
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION upsert_kpf_range(
+    VARCHAR, property_condition, INT, DECIMAL
 ) TO authenticated;

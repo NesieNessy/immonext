@@ -49,8 +49,7 @@ export default function PropertyData({ propertyId }: { propertyId: string }) {
             numberOfRooms:        formData.numberOfRooms,
             yearOfConstruction:   formData.yearOfConstruction,
             energyEfficient:      formData.energyEfficient,
-            propertyAbbreviation: formData.propertyAbbreviation,
-        });
+       });
         if (updated) {
             setProperty(updated);
             setFormData(updated);
@@ -128,12 +127,6 @@ export default function PropertyData({ propertyId }: { propertyId: string }) {
                     {/* Property Details */}
                     <Tile title="Objektdetails">
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4">
-                            <TextField
-                                label="Kürzel"
-                                value={formData.propertyAbbreviation}
-                                onChange={(e) => handleInputChange('propertyAbbreviation', e.target.value)}
-                                className="sm:col-span-2"
-                            />
                             <NumberField
                                 label="Baujahr"
                                 value={formData.yearOfConstruction}
@@ -143,11 +136,6 @@ export default function PropertyData({ propertyId }: { propertyId: string }) {
                                 label="Anzahl Zimmer"
                                 value={formData.numberOfRooms}
                                 onChange={(e) => handleInputChange('numberOfRooms', parseInt(e.target.value) || 0)}
-                            />
-                            <TextField
-                                label="Energieeffizienz"
-                                value={formData.energyEfficient}
-                                onChange={(e) => handleInputChange('energyEfficient', e.target.value)}
                             />
                             <NumberField
                                 label="Wohnfläche (m²)"

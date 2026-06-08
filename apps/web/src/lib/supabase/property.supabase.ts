@@ -6,7 +6,6 @@ function toProperty(row: Record<string, unknown>): Property {
     propertyId:           row.property_id as number,
     userId:               row.user_id as string,
     cityId:               row.city_id as number,
-    propertyAbbreviation: row.property_abbreviation as string,
     street:               row.street as string,
     houseNumber:          row.house_number as string,
     city:                 row.city as string,
@@ -104,7 +103,6 @@ export async function createProperty(payload: PropertyInsert): Promise<Property 
     .insert({
       user_id:              payload.userId,
       city_id:              payload.cityId,
-      property_abbreviation:payload.propertyAbbreviation,
       street:               payload.street,
       house_number:         payload.houseNumber,
       city:                 payload.city,
@@ -125,7 +123,6 @@ export async function createProperty(payload: PropertyInsert): Promise<Property 
 export async function updateProperty(propertyId: number, updates: PropertyUpdate): Promise<Property | null> {
   const dbUpdates: Record<string, unknown> = {};
   if (updates.cityId !== undefined)               dbUpdates.city_id               = updates.cityId;
-  if (updates.propertyAbbreviation !== undefined) dbUpdates.property_abbreviation = updates.propertyAbbreviation;
   if (updates.street !== undefined)               dbUpdates.street                = updates.street;
   if (updates.houseNumber !== undefined)          dbUpdates.house_number          = updates.houseNumber;
   if (updates.city !== undefined)                 dbUpdates.city                  = updates.city;
