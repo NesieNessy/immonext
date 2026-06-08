@@ -27,7 +27,7 @@ export const PropertyValuationUseCasesIcons: Record<keyof typeof PropertyValuati
 export const PropertyValuationUseCasesPaths: Record<keyof typeof PropertyValuationUseCases, string> = {
   PropertyData: '/property-valuation/detail-check/property-data',
   AcquisitionCosts: '/property-valuation/detail-check/acquisition-costs',
-  LeasingOrTenancys: '/property-valuation/detail-check/leasing-or-tenancys',
+  LeasingOrTenancys: '/property-valuation/detail-check/leasing-or-rentals',
   Financing: '/property-valuation/detail-check/financing',
   Depreciation: '/property-valuation/detail-check/depreciation',
   Renovation: '/property-valuation/detail-check/renovation',
