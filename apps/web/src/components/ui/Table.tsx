@@ -23,16 +23,6 @@ export interface TableColumn<T = Record<string, unknown>> {
   align?: "left" | "center" | "right";
 }
 
-/** @deprecated Use TableColumn instead */
-interface Column {
-  key: string;
-  label: string;
-  width?: string;
-  editable?: boolean;
-  type?: "text" | "number" | "select";
-  options?: { value: string; label: string }[];
-}
-
 export interface TableProps<T extends Record<string, unknown> = Record<string, unknown>> {
   columns: TableColumn<T>[];
   data: T[];

@@ -56,7 +56,7 @@ export function useKpfResult(
     }, 400);
 
     return () => clearTimeout(timer);
-  }, [postalCode, condition, yearOfConstruction]);
+  }, [postalCode, condition, yearOfConstruction, rangeInputsValid]);
 
   const positionPct =
     kpf !== null && range !== null

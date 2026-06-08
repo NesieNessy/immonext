@@ -33,5 +33,8 @@
     "supabase"
   ],
   "author": "",
-  "license": "ISC"
+  "license": "ISC",
+  "devDependencies": {
+    "eslint-config-next": "^16.2.7"
+  }
 }

@@ -3,21 +3,22 @@ import type { Property, PropertyInsert, PropertyUpdate, PropertyWithCity } from 
 
 function toProperty(row: Record<string, unknown>): Property {
   return {
-    propertyId:           row.property_id as number,
-    userId:               row.user_id as string,
-    cityId:               row.city_id as number,
-    street:               row.street as string,
-    houseNumber:          row.house_number as string,
-    city:                 row.city as string,
-    postalCode:           row.postal_code as string,
-    federalState:         row.federal_state as string,
-    squareMeters:         row.square_meters as number,
-    numberOfRooms:        row.number_of_rooms as number,
-    yearOfConstruction:   row.year_of_construction as number,
-    energyEfficient:      row.energy_efficient as Property['energyEfficient'],
-    imageUrl:             row.image_base64 as string | null,
-    createdAt:            row.created_at as string,
-    updatedAt:            row.updated_at as string,
+    propertyId: row.property_id as number,
+    userId: row.user_id as string,
+    cityId: row.city_id as number,
+    street: row.street as string,
+    houseNumber: row.house_number as string,
+    city: row.city as string,
+    postalCode: row.postal_code as string,
+    federalState: row.federal_state as string,
+    squareMeters: row.square_meters as number,
+    numberOfRooms: row.number_of_rooms as number,
+    yearOfConstruction: row.year_of_construction as number,
+    energyEfficient: row.energy_efficient as Property['energyEfficient'],
+    propertyAbbreviation: row.property_abbreviation as string,
+    imageUrl: row.image_base64 as string | null,
+    createdAt: row.created_at as string,
+    updatedAt: row.updated_at as string,
   };
 }
 
@@ -26,11 +27,11 @@ function toPropertyWithCity(row: Record<string, unknown>): PropertyWithCity {
   return {
     ...toProperty(row),
     cityRel: {
-      cityId:           cityRel.city_id as number,
-      cityName:         cityRel.city_name as string,
+      cityId: cityRel.city_id as number,
+      cityName: cityRel.city_name as string,
       metropolitanArea: cityRel.metropolitan_area as string,
-      buildingShare:    cityRel.building_share as number,
-      landShare:        cityRel.land_share as number,
+      buildingShare: cityRel.building_share as number,
+      landShare: cityRel.land_share as number,
     },
   };
 }
@@ -101,17 +102,18 @@ export async function createProperty(payload: PropertyInsert): Promise<Property 
   const { data, error } = await supabase
     .from('property')
     .insert({
-      user_id:              payload.userId,
-      city_id:              payload.cityId,
-      street:               payload.street,
-      house_number:         payload.houseNumber,
-      city:                 payload.city,
-      postal_code:          payload.postalCode,
-      federal_state:        payload.federalState,
-      square_meters:        payload.squareMeters,
-      number_of_rooms:      payload.numberOfRooms,
+      user_id: payload.userId,
+      city_id: payload.cityId,
+      street: payload.street,
+      house_number: payload.houseNumber,
+      city: payload.city,
+      postal_code: payload.postalCode,
+      federal_state: payload.federalState,
+      square_meters: payload.squareMeters,
+      number_of_rooms: payload.numberOfRooms,
       year_of_construction: payload.yearOfConstruction,
-      energy_efficient:     payload.energyEfficient,
+      energy_efficient: payload.energyEfficient,
+      property_abbreviation: payload.propertyAbbreviation,
     })
     .select()
     .single();
@@ -122,16 +124,17 @@ export async function createProperty(payload: PropertyInsert): Promise<Property 
 
 export async function updateProperty(propertyId: number, updates: PropertyUpdate): Promise<Property | null> {
   const dbUpdates: Record<string, unknown> = {};
-  if (updates.cityId !== undefined)               dbUpdates.city_id               = updates.cityId;
-  if (updates.street !== undefined)               dbUpdates.street                = updates.street;
-  if (updates.houseNumber !== undefined)          dbUpdates.house_number          = updates.houseNumber;
-  if (updates.city !== undefined)                 dbUpdates.city                  = updates.city;
-  if (updates.postalCode !== undefined)           dbUpdates.postal_code           = updates.postalCode;
-  if (updates.federalState !== undefined)         dbUpdates.federal_state         = updates.federalState;
-  if (updates.squareMeters !== undefined)         dbUpdates.square_meters         = updates.squareMeters;
-  if (updates.numberOfRooms !== undefined)        dbUpdates.number_of_rooms       = updates.numberOfRooms;
-  if (updates.yearOfConstruction !== undefined)   dbUpdates.year_of_construction  = updates.yearOfConstruction;
-  if (updates.energyEfficient !== undefined)      dbUpdates.energy_efficient      = updates.energyEfficient;
+  if (updates.cityId !== undefined) dbUpdates.city_id = updates.cityId;
+  if (updates.street !== undefined) dbUpdates.street = updates.street;
+  if (updates.houseNumber !== undefined) dbUpdates.house_number = updates.houseNumber;
+  if (updates.city !== undefined) dbUpdates.city = updates.city;
+  if (updates.postalCode !== undefined) dbUpdates.postal_code = updates.postalCode;
+  if (updates.federalState !== undefined) dbUpdates.federal_state = updates.federalState;
+  if (updates.squareMeters !== undefined) dbUpdates.square_meters = updates.squareMeters;
+  if (updates.numberOfRooms !== undefined) dbUpdates.number_of_rooms = updates.numberOfRooms;
+  if (updates.yearOfConstruction !== undefined) dbUpdates.year_of_construction = updates.yearOfConstruction;
+  if (updates.energyEfficient !== undefined) dbUpdates.energy_efficient = updates.energyEfficient;
+  if (updates.propertyAbbreviation !== undefined) dbUpdates.property_abbreviation = updates.propertyAbbreviation;
 
   const { data, error } = await supabase
     .from('property')

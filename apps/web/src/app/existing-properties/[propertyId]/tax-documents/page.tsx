@@ -1,7 +1,7 @@
 import { getPropertyStaticParamsFromRest } from '@/lib/staticParams';
 import TaxDocuments from './TaxDocuments';
 
-export const dynamicParams = false;
+export const dynamicParams = true;
 
 export async function generateStaticParams() {
     return getPropertyStaticParamsFromRest();

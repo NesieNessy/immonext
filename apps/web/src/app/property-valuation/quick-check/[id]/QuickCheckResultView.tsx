@@ -240,10 +240,6 @@ export function QuickCheckResultView({ id }: Props) {
     );
   }
 
-  const TakeOverIcon    = BUTTON_DETAILS.TakeOver.icon;
-  const CancelIcon      = BUTTON_DETAILS.Cancel.icon;
-  const DiscardIcon     = BUTTON_DETAILS.Discard.icon;
-
   // Editable form (ACTIVE) 
   return (
     <>
