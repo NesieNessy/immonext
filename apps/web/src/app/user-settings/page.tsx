@@ -1,6 +1,7 @@
 "use client";
 
 import { Header, StickyActionBar, TextField, Tile } from '@/components/ui';
+import { authBypassUser, isAuthBypassEnabled } from '@/lib/authBypass';
 import { supabase } from '@/lib/supabase/client.supabase';
 import { getPersonalData, upsertPersonalData } from '@/lib/supabase/personal_data.supabase';
 import type { PersonalData } from '@immonext/types';
@@ -55,6 +56,24 @@ export default function SettingsPage() {
     }, []);
 
     useEffect(() => {
+        if (isAuthBypassEnabled()) {
+            setUser(authBypassUser);
+            setFormData({
+                ...emptyForm,
+                firstName: 'ImmoNext',
+                lastName: 'Dev User',
+                emailAddress: authBypassUser.email ?? 'dev@immonext.local',
+            });
+            setSavedData({
+                ...emptyForm,
+                firstName: 'ImmoNext',
+                lastName: 'Dev User',
+                emailAddress: authBypassUser.email ?? 'dev@immonext.local',
+            });
+            setIsLoading(false);
+            return;
+        }
+
         supabase.auth.getUser().then(({ data }) => {
             if (data.user) {
                 setUser(data.user);
@@ -208,5 +227,4 @@ export default function SettingsPage() {
         </div>
     );
 }
-
 

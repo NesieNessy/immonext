@@ -1,6 +1,7 @@
 'use client';
 
 import { clearLoginTime, isSessionExpired, msUntilExpiry } from '@/lib/sessionTimeout';
+import { authBypassUser, isAuthBypassEnabled } from '@/lib/authBypass';
 import { supabase } from '@/lib/supabase/client.supabase';
 import type { User } from '@supabase/supabase-js';
 import { useRouter } from 'next/navigation';
@@ -17,6 +18,12 @@ export function useRequireAuth() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    if (isAuthBypassEnabled()) {
+      setUser(authBypassUser);
+      setIsLoading(false);
+      return;
+    }
+
     async function signOutAndRedirect() {
       clearLoginTime();
       await supabase.auth.signOut();

@@ -137,6 +137,11 @@ export default function PropertyData({ propertyId }: { propertyId: string }) {
                                 value={formData.numberOfRooms}
                                 onChange={(e) => handleInputChange('numberOfRooms', parseInt(e.target.value) || 0)}
                             />
+                            <TextField
+                                label="Energieeffizienz"
+                                value={formData.energyEfficient ?? ''}
+                                onChange={(e) => handleInputChange('energyEfficient', e.target.value)}
+                            />
                             <NumberField
                                 label="Wohnfläche (m²)"
                                 value={formData.squareMeters}

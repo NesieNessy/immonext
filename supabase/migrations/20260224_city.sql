@@ -13,9 +13,9 @@ CREATE TABLE IF NOT EXISTS city (
     city_name           VARCHAR(100)                NOT NULL,
     building_share      NUMERIC(3, 2)               NOT NULL CHECK (building_share BETWEEN 0 AND 1),
     land_share          NUMERIC(3, 2)               NOT NULL CHECK (land_share BETWEEN 0 AND 1),
-    population          INTEGER,                    NOT NULL,
-    market_tier         market_tier_type,           NOT NULL,
-    designation         VARCHAR(150);               NOT NULL,
+    population          INTEGER                     NOT NULL,
+    market_tier         market_tier_type            NOT NULL,
+    designation         VARCHAR(150)                NOT NULL,
 
     created_at          TIMESTAMP WITH TIME ZONE    DEFAULT NOW(),
     updated_at          TIMESTAMP WITH TIME ZONE    DEFAULT NOW(),
@@ -23,7 +23,7 @@ CREATE TABLE IF NOT EXISTS city (
     -- building_share + land_share must equal 1
     CONSTRAINT chk_city_shares CHECK (
     ROUND(building_share + land_share, 2) = 1.00
-    ),
+    )
 );
 
 -- Indexes
