@@ -34,7 +34,7 @@ jobs:
         run: npm ci --include=optional
       
       - name: Fix LightningCSS for Linux
-        run: 'npm install lightningcss-linux-x64-gnu --save-optional'
+        run: npm rebuild lightningcss
       
       - name: Build with Next.js
         working-directory: ./apps/web
