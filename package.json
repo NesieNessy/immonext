@@ -35,6 +35,6 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
-    "eslint-config-next": "^16.2.7"
+    "eslint-config-next": "^16.2.9"
   }
 }
