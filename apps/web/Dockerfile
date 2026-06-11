@@ -4,7 +4,7 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 COPY apps/web/package.json apps/web/package.json
 COPY packages/types/package.json packages/types/package.json
-RUN npm ci
+RUN npm ci --include=optional
 
 FROM node:20-alpine AS builder
 WORKDIR /app
@@ -47,4 +47,4 @@ EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
 
-CMD ["node", "apps/web/server.js"]
+CMD ["node", "server.js"]
