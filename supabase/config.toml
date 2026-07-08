@@ -21,13 +21,12 @@ max_client_conn = 100
 
 [realtime]
 enabled = true
-port = 54323
 
 [studio]
 enabled = true
 port = 54324
 
-[inbucket]
+[local_smtp]
 enabled = true
 port = 54325
 smtp_port = 54326
