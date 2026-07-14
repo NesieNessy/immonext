@@ -4,14 +4,15 @@
 // Journey:
 //   createQuickCheck()   → INSERT — saves form data, status = ACTIVE
 //   discardQuickCheck()  → RPC finalize_quick_check(DISCARD)
-//                          1. UPSERT kpf_ranges  ← always
-//                          2. status = INACTIVE
+//                          sets finalised_action = 'DISCARD'
 //   acceptQuickCheck()   → RPC finalize_quick_check(ACCEPT)
-//                          1. UPSERT kpf_ranges  ← always
-//                          2. status = INACTIVE
-//                          3. INSERT property    ← appears in Portfolio
+//                          sets finalised_action = 'ACCEPT'
+//                          + INSERT property ← appears in Portfolio
 //
-// Key invariant: kpf_ranges updated on EVERY finalisation (accept OR discard).
+// Note: finalize_quick_check also accepts a p_kpf_multiplier param that, if
+// given, upserts a comparison range into kpf_ranges — but neither call below
+// passes it, and the KPF gauge no longer reads from kpf_ranges (it now uses
+// the fixed classifyKpf() scale in utils/kpf.ts), so that param is unused.
 // ==============================================================================
 
 import type { PropertyCondition } from '@immonext/types';
@@ -216,11 +217,7 @@ export async function updateQuickCheck(
 
 // ── Finalise ──────────────────────────────────────────────────────────────────
 
-/**
- * "Verwerfen" button.
- * DB steps (atomic):
- *   1. UPSERT kpf_ranges  ← benchmark updated even on discard
- */
+/** "Verwerfen" button — sets finalised_action = 'DISCARD'. */
 export async function discardQuickCheck(quickCheckId: number, userId: string): Promise<void> {
     const { error } = await supabase.rpc('finalize_quick_check', {
         p_quick_check_id: quickCheckId,
@@ -233,12 +230,11 @@ export async function discardQuickCheck(quickCheckId: number, userId: string): P
 /**
  * "Übernehmen" button.
  * DB steps (atomic):
- *   1. UPSERT kpf_ranges  ← benchmark updated
- *   2. finalised_action = 'ACCEPT'
- *   3. INSERT property    ← object appears in Portfolio, using the
- *      street/city/postal_code/year already saved on the quick_check row.
- *      Everything else (city_id, square meters, rooms, energy class, ...)
- *      is left empty for the user to fill in later on the property itself.
+ *   1. finalised_action = 'ACCEPT'
+ *   2. INSERT property — using the street/city/postal_code/year already
+ *      saved on the quick_check row. Everything else (city_id, square
+ *      meters, rooms, energy class, ...) is left empty for the user to
+ *      fill in later on the property itself.
  *
  * Returns the new property_id for immediate navigation.
  */

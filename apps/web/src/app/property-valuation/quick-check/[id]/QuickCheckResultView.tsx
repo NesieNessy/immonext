@@ -4,7 +4,7 @@ import { NoResult } from '@/components/common';
 import { KpfAssessmentCard } from '@/components/features/KpfAssessmentCard';
 import { MobileResultBanner } from '@/components/features/MobileResultBanner';
 import { QuickCheckImportSection } from '@/components/features/QuickCheckImportSection';
-import { Dropdown, Header, NumberField, StickyActionBar, TextField } from '@/components/ui';
+import { Button, Dropdown, Header, NumberField, StickyActionBar, TextField } from '@/components/ui';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { FieldLabels } from '@/constants/FieldLabels';
 import { useQuickCheckById } from '@/hooks/useQuickCheckById';
@@ -126,13 +126,6 @@ export function QuickCheckResultView({ id }: Props) {
     editForm.city.trim() !== '' &&
     editForm.city.trim().length <= 120;
 
-  // Verwerfen/Übernehmen only make sense while the record is still pending
-  // a decision — finalize_quick_check itself rejects DISCARD/ACCEPT once
-  // status is no longer ACTIVE or a decision was already recorded.
-  // (data is still possibly null here — the loading/error/not-found guards
-  // that narrow it run later; this value is unused during those states.)
-  const isActionable = data?.status === 'ACTIVE' && data?.finalisedAction === null;
-
   // Verwerfen/Übernehmen also require the user to have actually changed
   // something compared to the loaded record.
   const hasChanges =
@@ -171,7 +164,7 @@ export function QuickCheckResultView({ id }: Props) {
   // Portfolio (creates a property from the street/city/postal_code/year
   // already on the quick_check row) and returns to the overview.
   const handleTakeOver = async () => {
-    if (!user || !isEditValid || !isActionable || !hasChanges) return;
+    if (!user || !isEditValid || !hasChanges) return;
     setIsBusy(true);
     try {
       await updateQuickCheck(id, {
@@ -197,7 +190,7 @@ export function QuickCheckResultView({ id }: Props) {
   // DISCARD write only happens when there's something meaningful to record
   // (record still pending a decision, and the user actually changed something).
   const handleDiscard = async () => {
-    if (user && isActionable && hasChanges) {
+    if (user && hasChanges) {
       setIsBusy(true);
       try {
         await discardQuickCheck(id, user.id);
@@ -242,15 +235,17 @@ export function QuickCheckResultView({ id }: Props) {
           <Header
             title="Immobilien-Ersteinschätzung"
             subtitle="Bewertung von Investitionsobjekten"
+            actions={
+              <Button
+                label={BUTTON_DETAILS.StartDetailCheck.label}
+                icon={<BUTTON_DETAILS.StartDetailCheck.icon />}
+                variant="outline"
+                onClick={() => router.push(`/property-valuation/detail-check/property-data?quickCheckId=${id}`)}
+              />
+            }
           />
 
           <div className="mt-3 flex flex-col gap-4">
-            {!isActionable && (
-              <div className="rounded-lg border border-border bg-muted/50 px-4 py-3 text-sm text-muted-foreground">
-                Diese Ersteinschätzung wurde bereits abgeschlossen und kann nicht mehr übernommen werden.
-              </div>
-            )}
-
             <MobileResultBanner show={canShowResult} resultId="qc-result" formTopId="qc-form-top" />
 
             <div className="flex flex-col lg:flex-row gap-8 items-stretch">
@@ -374,7 +369,7 @@ export function QuickCheckResultView({ id }: Props) {
           onGhost={handleDiscard}
           primaryLabel={BUTTON_DETAILS.TakeOver.label}
           primaryIcon={<BUTTON_DETAILS.TakeOver.icon />}
-          primaryDisabled={!isEditValid || isBusy || !isActionable || !hasChanges}
+          primaryDisabled={!isEditValid || isBusy || !hasChanges}
           onPrimary={() => void handleTakeOver()}
         />
       </div>

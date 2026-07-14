@@ -4,7 +4,7 @@ import { NoResult } from '@/components/common';
 import { KpfAssessmentCard } from '@/components/features/KpfAssessmentCard';
 import { MobileResultBanner } from '@/components/features/MobileResultBanner';
 import { QuickCheckImportSection } from '@/components/features/QuickCheckImportSection';
-import { Dropdown, Header, NumberField, StickyActionBar, TextField } from '@/components/ui';
+import { Button, Dropdown, Header, NumberField, StickyActionBar, TextField } from '@/components/ui';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { FieldLabels } from '@/constants/FieldLabels';
 import { createQuickCheck } from '@/lib/supabase/quick_check.supabase';
@@ -106,15 +106,16 @@ export default function QuickCheckPage() {
     form.condition !== '' &&
     isValidConstructionYear(parseInt(form.yearOfConstruction, 10), currentYear);
 
-  const handleTakeOver = async () => {
-    if (!isFormValid || isSaving) return;
-
+  // Shared by "Übernehmen" and "Detailbewertung starten" — both need the
+  // quick-check saved first; they just navigate somewhere different after.
+  const saveQuickCheck = async () => {
+    if (!isFormValid || isSaving) return null;
     const computedKpf = calcKpf(purchasePrice, coldRent);
-    if (computedKpf === null) return;
+    if (computedKpf === null) return null;
 
     setIsSaving(true);
     try {
-      await createQuickCheck({
+      return await createQuickCheck({
         portalId: portalUrl || undefined,
         purchasePrice,
         coldRent,
@@ -125,11 +126,28 @@ export default function QuickCheckPage() {
         condition: condition as PropertyCondition,
         kpfMultiplier: computedKpf,
       });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleTakeOver = async () => {
+    try {
+      const created = await saveQuickCheck();
+      if (!created) return;
       router.push('/property-valuation/quick-check');
     } catch (error) {
       console.error('Speichern fehlgeschlagen', error);
-    } finally {
-      setIsSaving(false);
+    }
+  };
+
+  const handleStartDetailCheck = async () => {
+    try {
+      const created = await saveQuickCheck();
+      if (!created) return;
+      router.push(`/property-valuation/detail-check/property-data?quickCheckId=${created.quickCheckId}`);
+    } catch (error) {
+      console.error('Detailbewertung starten fehlgeschlagen', error);
     }
   };
 
@@ -145,6 +163,15 @@ export default function QuickCheckPage() {
           <Header
             title="Immobilien-Ersteinschätzung"
             subtitle="Bewertung von Investitionsobjekten"
+            actions={
+              <Button
+                label={BUTTON_DETAILS.StartDetailCheck.label}
+                icon={<BUTTON_DETAILS.StartDetailCheck.icon />}
+                variant="outline"
+                disabled={!isFormValid || isSaving}
+                onClick={() => void handleStartDetailCheck()}
+              />
+            }
           />
           <div className="mt-3 flex flex-col gap-4">
             <MobileResultBanner show={isFormValid} resultId="qc-result" formTopId="qc-form-top" />
