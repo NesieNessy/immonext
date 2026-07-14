@@ -3,7 +3,7 @@
 import { NoResult } from '@/components/common';
 import { KpfAssessmentCard } from '@/components/features/KpfAssessmentCard';
 import { QuickCheckImportSection } from '@/components/features/QuickCheckImportSection';
-import { Button, Dropdown, Header, Modal, NumberField, StickyActionBar, TextField } from '@/components/ui';
+import { Dropdown, Header, NumberField, StickyActionBar, TextField } from '@/components/ui';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { FieldLabels } from '@/constants/FieldLabels';
 import { useKpfResult } from '@/hooks/useKpfRanges';
@@ -13,11 +13,10 @@ import {
   acceptQuickCheck,
   discardQuickCheck,
   updateQuickCheck,
-  type AcceptPropertyInput,
 } from '@/lib/supabase/quick_check.supabase';
 import { calcKpf } from '@/utils/kpf';
 import { isValidConstructionYear } from '@/utils/validation';
-import { EnergyEfficient, PropertyCondition } from '@immonext/types';
+import { PropertyCondition } from '@immonext/types';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
@@ -35,18 +34,6 @@ interface EditForm {
   yearOfConstruction: string;
 }
 
-interface AcceptForm {
-  street: string;
-  houseNumber: string;
-  cityName: string;
-  federalState: string;
-  cityId: string;
-  propertyAbbreviation: string;
-  squareMeters: string;
-  numberOfRooms: string;
-  energyEfficient: EnergyEfficient | '';
-}
-
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -55,20 +42,6 @@ const CONDITION_OPTIONS = [
   { value: '', label: 'Bitte auswählen' },
   ...Object.values(PropertyCondition).map((v) => ({ value: v, label: v })),
 ];
-
-const ENERGY_OPTIONS: { value: string; label: string }[] = [
-  { value: '', label: 'Bitte auswählen' },
-  ...Object.values(EnergyEfficient).map((v) => ({
-    value: v,
-    label: v,
-  })),
-];
-
-const EMPTY_ACCEPT_FORM: AcceptForm = {
-  street: '', houseNumber: '', cityName: '', federalState: '',
-  cityId: '', propertyAbbreviation: '', squareMeters: '',
-  numberOfRooms: '', energyEfficient: '',
-};
 
 // ---------------------------------------------------------------------------
 // Component
@@ -87,9 +60,10 @@ export function QuickCheckResultView({ id }: Props) {
   });
   const [portalUrl, setPortalUrl] = useState('');
 
-  // Accept modal (ACTIVE → ACCEPT)
-  const [acceptModalOpen, setAcceptModalOpen] = useState(false);
-  const [acceptForm, setAcceptForm] = useState<AcceptForm>(EMPTY_ACCEPT_FORM);
+  // Snapshot of the loaded values, to detect whether the user has changed
+  // anything since the record was fetched.
+  const [initialForm, setInitialForm] = useState<EditForm | null>(null);
+  const [initialPortalUrl, setInitialPortalUrl] = useState('');
 
   // UI state
   const [isBusy, setIsBusy] = useState(false);
@@ -97,7 +71,7 @@ export function QuickCheckResultView({ id }: Props) {
   // Pre-fill edit form when record loads
   useEffect(() => {
     if (!data) return;
-    setEditForm({
+    const loadedForm: EditForm = {
       street:             data.street,
       postalCode:         data.postalCode,
       city:               data.city,
@@ -105,8 +79,11 @@ export function QuickCheckResultView({ id }: Props) {
       coldRent:           String(data.coldRent),
       condition:          data.condition,
       yearOfConstruction: String(data.yearOfConstruction),
-    });
+    };
+    setEditForm(loadedForm);
+    setInitialForm(loadedForm);
     setPortalUrl(data.portalId ?? '');
+    setInitialPortalUrl(data.portalId ?? '');
   }, [data]);
 
   // Derived edit-form values 
@@ -152,31 +129,40 @@ export function QuickCheckResultView({ id }: Props) {
     editForm.city.trim() !== '' &&
     editForm.city.trim().length <= 120;
 
+  // Verwerfen/Übernehmen only make sense while the record is still pending
+  // a decision — finalize_quick_check itself rejects DISCARD/ACCEPT once
+  // status is no longer ACTIVE or a decision was already recorded.
+  // (data is still possibly null here — the loading/error/not-found guards
+  // that narrow it run later; this value is unused during those states.)
+  const isActionable = data?.status === 'ACTIVE' && data?.finalisedAction === null;
+
+  // Verwerfen/Übernehmen also require the user to have actually changed
+  // something compared to the loaded record.
+  const hasChanges =
+    initialForm !== null &&
+    (editForm.street !== initialForm.street ||
+      editForm.postalCode !== initialForm.postalCode ||
+      editForm.city !== initialForm.city ||
+      editForm.purchasePrice !== initialForm.purchasePrice ||
+      editForm.coldRent !== initialForm.coldRent ||
+      editForm.condition !== initialForm.condition ||
+      editForm.yearOfConstruction !== initialForm.yearOfConstruction ||
+      portalUrl !== initialPortalUrl);
+
   // Whether the KPF result panel can be shown — independent of street/city,
   // since the calculation itself only needs price, rent, postal code,
   // condition and year. Legacy records can have a missing address.
   const canShowResult = financialsValid;
 
-  const isAcceptValid =
-    acceptForm.street.trim() !== '' &&
-    acceptForm.houseNumber.trim() !== '' &&
-    acceptForm.cityName.trim() !== '' &&
-    acceptForm.federalState.trim() !== '' &&
-    parseInt(acceptForm.cityId, 10) > 0 &&
-    acceptForm.propertyAbbreviation.trim() !== '' &&
-    parseFloat(acceptForm.squareMeters) > 0 &&
-    parseFloat(acceptForm.numberOfRooms) > 0 &&
-    acceptForm.energyEfficient !== '';
-
   // Handlers
   const handleEditField = (f: keyof EditForm, v: string) =>
     setEditForm((p) => ({ ...p, [f]: v }));
 
-  const handleAcceptField = (f: keyof AcceptForm, v: string) =>
-    setAcceptForm((p) => ({ ...p, [f]: v }));
-
-  const handleSave = async () => {
-    if (!isEditValid) return;
+  // Saves any pending edits, then accepts the quick-check into the
+  // Portfolio (creates a property from the street/city/postal_code/year
+  // already on the quick_check row) and returns to the overview.
+  const handleTakeOver = async () => {
+    if (!user || !isEditValid || !isActionable || !hasChanges) return;
     setIsBusy(true);
     try {
       await updateQuickCheck(id, {
@@ -189,47 +175,33 @@ export function QuickCheckResultView({ id }: Props) {
         condition:          condition as PropertyCondition,
         kpfMultiplier:      calcKpf(purchasePrice, coldRent) ?? 0,
       });
+      await acceptQuickCheck(id, user.id);
       router.push('/property-valuation/quick-check');
+    } catch (err) {
+      console.error('Übernehmen fehlgeschlagen', err);
     } finally {
       setIsBusy(false);
     }
   };
 
+  // Always leaves back to the overview — that's its main job. The actual
+  // DISCARD write only happens when there's something meaningful to record
+  // (record still pending a decision, and the user actually changed something).
   const handleDiscard = async () => {
-    if (!user) return;
-    setIsBusy(true);
-    try {
-      await discardQuickCheck(id, user.id);
-      router.push('/property-valuation/quick-check');
-    } finally {
-      setIsBusy(false);
+    if (user && isActionable && hasChanges) {
+      setIsBusy(true);
+      try {
+        await discardQuickCheck(id, user.id);
+      } catch (err) {
+        console.error('Verwerfen fehlgeschlagen', err);
+      } finally {
+        setIsBusy(false);
+      }
     }
+    router.push('/property-valuation/quick-check');
   };
 
-  const handleAccept = async () => {
-    if (!user || !isAcceptValid) return;
-    setIsBusy(true);
-    try {
-      const propertyInput: AcceptPropertyInput = {
-        street:               acceptForm.street.trim(),
-        houseNumber:          acceptForm.houseNumber.trim(),
-        cityName:             acceptForm.cityName.trim(),
-        federalState:         acceptForm.federalState.trim(),
-        cityId:               parseInt(acceptForm.cityId, 10),
-        propertyAbbreviation: acceptForm.propertyAbbreviation.trim(),
-        squareMeters:         parseFloat(acceptForm.squareMeters),
-        numberOfRooms:        parseFloat(acceptForm.numberOfRooms),
-        energyEfficient:      acceptForm.energyEfficient as EnergyEfficient,
-      };
-      const newPropertyId = await acceptQuickCheck(id, user.id, propertyInput);
-      router.push(`/existing-properties/${newPropertyId}/property-data`);
-    } finally {
-      setIsBusy(false);
-      setAcceptModalOpen(false);
-    }
-  };
-
-  // Guards 
+  // Guards
   if (authLoading || isLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -255,108 +227,6 @@ export function QuickCheckResultView({ id }: Props) {
   // Editable form (ACTIVE)
   return (
     <>
-      {/* Accept modal */}
-      <Modal
-        open={acceptModalOpen}
-        onClose={() => setAcceptModalOpen(false)}
-        title={BUTTON_DETAILS.TakeOver.label}
-        subtitle="Objektdaten für die Portfolio-Aufnahme"
-        icon={<BUTTON_DETAILS.TakeOver.icon />}
-        footer={
-          <>
-            <Button
-              label={BUTTON_DETAILS.Cancel.label}
-              icon={<BUTTON_DETAILS.Cancel.icon />}
-              variant="outline"
-              onClick={() => setAcceptModalOpen(false)}
-            />
-            <Button
-              label={BUTTON_DETAILS.TakeOver.label}
-              icon={<BUTTON_DETAILS.TakeOver.icon />}
-              variant="primary"
-              disabled={!isAcceptValid || isBusy}
-              onClick={handleAccept}
-            />
-          </>
-        }
-      >
-        <div className="flex flex-col gap-3">
-          <div className="grid grid-cols-2 gap-2">
-            <TextField
-              label={FieldLabels.Property.Street.de}
-              placeholder="z.B. Hauptstraße"
-              required
-              value={acceptForm.street}
-              onChange={(e) => handleAcceptField('street', e.target.value)}
-            />
-            <TextField
-              label={FieldLabels.Property.HouseNumber.de}
-              placeholder="z.B. 12a"
-              required
-              value={acceptForm.houseNumber}
-              onChange={(e) => handleAcceptField('houseNumber', e.target.value)}
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-2">
-            <TextField
-              label={FieldLabels.Property.City.de}
-              placeholder="z.B. Berlin"
-              required
-              value={acceptForm.cityName}
-              onChange={(e) => handleAcceptField('cityName', e.target.value)}
-            />
-            <TextField
-              label={FieldLabels.Property.FederalState.de}
-              placeholder="z.B. Bayern"
-              required
-              value={acceptForm.federalState}
-              onChange={(e) => handleAcceptField('federalState', e.target.value)}
-            />
-          </div>
-          <NumberField
-            label="Stadt-ID"
-            placeholder="z.B. 1"
-            required
-            value={acceptForm.cityId}
-            onChange={(e) => handleAcceptField('cityId', e.target.value)}
-            min={1}
-          />
-          <TextField
-            label={FieldLabels.Property.PropertyAbbreviation.de}
-            placeholder="z.B. BER-01"
-            required
-            value={acceptForm.propertyAbbreviation}
-            onChange={(e) => handleAcceptField('propertyAbbreviation', e.target.value)}
-          />
-          <div className="grid grid-cols-2 gap-2">
-            <NumberField
-              label={FieldLabels.Property.SquareMeters.de}
-              placeholder="z.B. 75"
-              unit="€"
-              required
-              value={acceptForm.squareMeters}
-              onChange={(e) => handleAcceptField('squareMeters', e.target.value)}
-              min={1}
-            />
-            <NumberField
-              label={FieldLabels.Property.NumberOfRooms.de}
-              placeholder="z.B. 3"
-              required
-              value={acceptForm.numberOfRooms}
-              onChange={(e) => handleAcceptField('numberOfRooms', e.target.value)}
-              min={0.5}
-            />
-          </div>
-          <Dropdown
-            label={FieldLabels.Property.EnergyEfficient.de}
-            options={ENERGY_OPTIONS}
-            required
-            value={acceptForm.energyEfficient}
-            onChange={(e) => handleAcceptField('energyEfficient', e.target.value)}
-          />
-        </div>
-      </Modal>
-
       {/* Main page */}
       <div className="min-h-screen bg-background pb-20">
         <main className="container mx-auto px-4 py-3">
@@ -366,6 +236,12 @@ export function QuickCheckResultView({ id }: Props) {
           />
 
           <div className="mt-3 flex flex-col gap-4">
+            {!isActionable && (
+              <div className="rounded-lg border border-border bg-muted/50 px-4 py-3 text-sm text-muted-foreground">
+                Diese Ersteinschätzung wurde bereits abgeschlossen und kann nicht mehr übernommen werden.
+              </div>
+            )}
+
             <div className="flex flex-col lg:flex-row gap-8 items-stretch">
 
               {/* Left: editable form */}
@@ -487,15 +363,12 @@ export function QuickCheckResultView({ id }: Props) {
           show={true}
           ghostLabel={BUTTON_DETAILS.Discard.label}
           ghostIcon={<BUTTON_DETAILS.Discard.icon />}
+          ghostDisabled={isBusy}
           onGhost={handleDiscard}
           primaryLabel={BUTTON_DETAILS.TakeOver.label}
           primaryIcon={<BUTTON_DETAILS.TakeOver.icon />}
-          primaryDisabled={!isEditValid || isBusy}
-          onPrimary={() => {
-            // Save any edits first, then open property details modal
-            handleSave().then(() => {}).catch(() => {});
-            setAcceptModalOpen(true);
-          }}
+          primaryDisabled={!isEditValid || isBusy || !isActionable || !hasChanges}
+          onPrimary={() => void handleTakeOver()}
         />
       </div>
     </>

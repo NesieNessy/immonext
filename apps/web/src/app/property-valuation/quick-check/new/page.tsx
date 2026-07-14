@@ -45,7 +45,6 @@ export default function QuickCheckPage() {
   const router = useRouter();
   const [portalUrl, setPortalUrl] = useState('');
   const [isSaving, setIsSaving] = useState(false);
-  const [saveError, setSaveError] = useState<string | null>(null);
   const [form, setForm] = useState<FormData>({
     street: '',
     postalCode: '',
@@ -121,7 +120,6 @@ export default function QuickCheckPage() {
     if (computedKpf === null) return;
 
     setIsSaving(true);
-    setSaveError(null);
     try {
       await createQuickCheck({
         portalId: portalUrl || undefined,
@@ -136,7 +134,7 @@ export default function QuickCheckPage() {
       });
       router.push('/property-valuation/quick-check');
     } catch (error) {
-      setSaveError(error instanceof Error ? error.message : 'Speichern fehlgeschlagen');
+      console.error('Speichern fehlgeschlagen', error);
     } finally {
       setIsSaving(false);
     }
@@ -156,13 +154,6 @@ export default function QuickCheckPage() {
             subtitle="Bewertung von Investitionsobjekten"
           />
           <div className="mt-3 flex flex-col gap-4">
-            {saveError && (
-              <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-                {saveError}
-              </div>
-            )}
-
-
             <div className="flex flex-col lg:flex-row gap-8 items-stretch">
 
               {/* Left: form — fills full column height */}

@@ -76,17 +76,6 @@ export interface CreateQuickCheckInput {
     kpfMultiplier: number;
 }
 
-export interface AcceptPropertyInput {
-    street: string;
-    houseNumber: string;
-    cityName: string;
-    federalState: string;
-    cityId: number;
-    propertyAbbreviation: string;
-    squareMeters: number;
-    numberOfRooms: number;
-    energyEfficient: string;
-}
 
 // ── Mappers ───────────────────────────────────────────────────────────────────
 
@@ -246,28 +235,21 @@ export async function discardQuickCheck(quickCheckId: number, userId: string): P
  * DB steps (atomic):
  *   1. UPSERT kpf_ranges  ← benchmark updated
  *   2. finalised_action = 'ACCEPT'
- *   3. INSERT property    ← object appears in Portfolio
+ *   3. INSERT property    ← object appears in Portfolio, using the
+ *      street/city/postal_code/year already saved on the quick_check row.
+ *      Everything else (city_id, square meters, rooms, energy class, ...)
+ *      is left empty for the user to fill in later on the property itself.
  *
  * Returns the new property_id for immediate navigation.
  */
 export async function acceptQuickCheck(
     quickCheckId: number,
     userId: string,
-    propertyInput: AcceptPropertyInput,
 ): Promise<number> {
     const { data, error } = await supabase.rpc('finalize_quick_check', {
-        p_quick_check_id:        quickCheckId,
-        p_user_id:               userId,
-        p_action:                'ACCEPT',
-        p_street:                propertyInput.street,
-        p_house_number:          propertyInput.houseNumber,
-        p_city_name:             propertyInput.cityName,
-        p_federal_state:         propertyInput.federalState,
-        p_city_id:               propertyInput.cityId,
-        p_property_abbreviation: propertyInput.propertyAbbreviation,
-        p_square_meters:         propertyInput.squareMeters,
-        p_number_of_rooms:       propertyInput.numberOfRooms,
-        p_energy_efficient:      propertyInput.energyEfficient,
+        p_quick_check_id: quickCheckId,
+        p_user_id:        userId,
+        p_action:         'ACCEPT',
     });
     if (error) throw error;
     return data as number;

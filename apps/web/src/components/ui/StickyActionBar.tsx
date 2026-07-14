@@ -11,6 +11,7 @@ interface StickyActionBarProps {
     primaryLabel: string;
     ghostIcon?: React.ReactNode;
     primaryIcon?: React.ReactNode;
+    ghostDisabled?: boolean;
     primaryDisabled?: boolean;
 }
 
@@ -22,6 +23,7 @@ export function StickyActionBar({
     primaryLabel,
     ghostIcon,
     primaryIcon,
+    ghostDisabled = false,
     primaryDisabled = false,
 }: StickyActionBarProps) {
     if (!show) return null;
@@ -34,6 +36,7 @@ export function StickyActionBar({
                     onClick={onGhost}
                     label={ghostLabel}
                     icon={ghostIcon}
+                    disabled={ghostDisabled}
                 />
                 <Button
                     variant="primary"
