@@ -1,12 +1,15 @@
 "use client";
 
-import { KpfRangeBar, NoResult } from '@/components/common';
-import { Button, Dropdown, Header, Modal, NumberField, StickyActionBar, TextField, Tile } from '@/components/ui';
+import { NoResult } from '@/components/common';
+import { KpfAssessmentCard } from '@/components/features/KpfAssessmentCard';
+import { QuickCheckImportSection } from '@/components/features/QuickCheckImportSection';
+import { Dropdown, Header, NumberField, StickyActionBar, TextField } from '@/components/ui';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { FieldLabels } from '@/constants/FieldLabels';
 import { useKpfResult } from '@/hooks/useKpfRanges';
 import { createQuickCheck } from '@/lib/supabase/quick_check.supabase';
 import { calcKpf } from '@/utils/kpf';
+import { isValidConstructionYear } from '@/utils/validation';
 import { PropertyCondition } from '@immonext/types';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
@@ -40,7 +43,6 @@ const CONDITION_OPTIONS = [
 
 export default function QuickCheckPage() {
   const router = useRouter();
-  const [urlModalOpen, setUrlModalOpen] = useState(false);
   const [portalUrl, setPortalUrl] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -91,13 +93,10 @@ export default function QuickCheckPage() {
       form.coldRent !== '' && coldRent <= 0
         ? 'Muss größer als 0 sein'
         : '',
-    yearOfConstruction: (() => {
-      const y = parseInt(form.yearOfConstruction, 10);
-      if (form.yearOfConstruction === '') return '';
-      if (isNaN(y) || y < 1850 || y > currentYear)
-        return `Zwischen 1850 und ${currentYear}`;
-      return '';
-    })(),
+    yearOfConstruction:
+      form.yearOfConstruction !== '' && !isValidConstructionYear(parseInt(form.yearOfConstruction, 10), currentYear)
+        ? `Zwischen 1850 und ${currentYear}`
+        : '',
   };
 
   const handleFieldChange = (field: keyof FormData, value: string) => {
@@ -113,10 +112,7 @@ export default function QuickCheckPage() {
     purchasePrice > 0 &&
     coldRent > 0 &&
     form.condition !== '' &&
-    (() => {
-      const y = parseInt(form.yearOfConstruction, 10);
-      return !isNaN(y) && y >= 1850 && y <= currentYear;
-    })();
+    isValidConstructionYear(parseInt(form.yearOfConstruction, 10), currentYear);
 
   const handleTakeOver = async () => {
     if (!isFormValid || isSaving) return;
@@ -151,40 +147,6 @@ export default function QuickCheckPage() {
   // -------------------------------------------------------------------------
   return (
     <>
-      {/* ── URL Import Modal ──────────────────────────────────────────────── */}
-      <Modal
-        open={urlModalOpen}
-        onClose={() => setUrlModalOpen(false)}
-        title={BUTTON_DETAILS.ImportData.label}
-        subtitle="Immobiliendaten aus einem Portal laden"
-        icon={<BUTTON_DETAILS.ImportData.icon />}
-        footer={
-          <>
-            <Button
-              label={BUTTON_DETAILS.Cancel.label}
-              icon={<BUTTON_DETAILS.Cancel.icon />}
-              variant="outline"
-              onClick={() => setUrlModalOpen(false)}
-            />
-            <Button
-              label={BUTTON_DETAILS.ImportData.label}
-              icon={<BUTTON_DETAILS.ImportData.icon />}
-              variant="primary"
-              disabled
-              title="URL-Import ist noch nicht verfügbar"
-            />
-          </>
-        }
-      >
-        <TextField
-          label="Portal-URL"
-          placeholder="https://immobilienscout24.de/expose/..."
-          helperText="Unterstützte Portale: ImmobilienScout24, Immowelt, Immonet"
-          value={portalUrl}
-          onChange={(e) => setPortalUrl(e.target.value)}
-        />
-      </Modal>
-
       {/* ── Main page ─────────────────────────────────────────────────────── */}
       <div className="min-h-screen bg-background pb-20">
 
@@ -192,14 +154,6 @@ export default function QuickCheckPage() {
           <Header
             title="Immobilien-Ersteinschätzung"
             subtitle="Bewertung von Investitionsobjekten"
-            actions={
-              <Button
-                label={BUTTON_DETAILS.ImportData.label}
-                icon={<BUTTON_DETAILS.ImportData.icon />}
-                variant="primary"
-                onClick={() => setUrlModalOpen(true)}
-              />
-            }
           />
           <div className="mt-3 flex flex-col gap-4">
             {saveError && (
@@ -217,6 +171,9 @@ export default function QuickCheckPage() {
                 {/* Address */}
                 <section>
                   <h2 className="text-md font-semibold text-foreground mb-2">Informationen zur Berechnung</h2>
+
+                  <QuickCheckImportSection portalUrl={portalUrl} onPortalUrlChange={setPortalUrl} />
+
                   <div className="flex flex-col gap-2 pt-1.5">
                     <TextField
                       label={FieldLabels.Property.Street.de + ' & ' + FieldLabels.Property.HouseNumber.de}
@@ -307,41 +264,20 @@ export default function QuickCheckPage() {
                   <NoResult className="flex-1" />
                 ) : (
                   <div className="flex flex-col gap-4 flex-1">
-                    <h2>Ersteinschätzung</h2>
-                    <h5>{`${form.street}, ${form.postalCode} ${form.city}`}</h5>
-                    <Tile title="">
-                      <div className="flex flex-col gap-3">
-                        <div className="grid grid-cols-2 gap-3">
-                          <div>
-                            <p className="text-xs text-muted-foreground">{FieldLabels.AcquisitionCosts.PurchasePrice.de}</p>
-                            <p className="text-sm font-semibold text-foreground">{purchasePrice.toLocaleString('de-DE')} €</p>
-                          </div>
-                          <div>
-                            <p className="text-xs text-muted-foreground">{FieldLabels.Tenancy.ColdRent.de}</p>
-                            <p className="text-sm font-semibold text-foreground">{coldRent.toLocaleString('de-DE')} €</p>
-                          </div>
-                          <div>
-                            <p className="text-xs text-muted-foreground">Zustand</p>
-                            <p className="text-sm font-semibold text-foreground">{condition || '—'}</p>
-                          </div>
-                          <div>
-                            <p className="text-xs text-muted-foreground">{FieldLabels.Property.YearOfConstruction.de}</p>
-                            <p className="text-sm font-semibold text-foreground">{form.yearOfConstruction || '—'}</p>
-                          </div>
-                        </div>
-
-                        {/* KPF corridor bar */}
-                        <div className="pt-3 border-t border-border">
-                          <KpfRangeBar
-                            kpf={kpf}
-                            range={range}
-                            positionPct={positionPct}
-                            isLoading={isLoading}
-                            noData={noData}
-                          />
-                        </div>
-                      </div>
-                    </Tile>
+                    <KpfAssessmentCard
+                      street={form.street}
+                      postalCode={form.postalCode}
+                      city={form.city}
+                      purchasePrice={purchasePrice}
+                      coldRent={coldRent}
+                      condition={condition}
+                      yearOfConstruction={form.yearOfConstruction}
+                      kpf={kpf}
+                      range={range}
+                      positionPct={positionPct}
+                      isLoading={isLoading}
+                      noData={noData}
+                    />
 
                     {/* Spacer fills remaining height to match left column bottom */}
                     <div className="flex-1" />
