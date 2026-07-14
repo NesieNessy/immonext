@@ -179,3 +179,13 @@
     line-height: 1.5;
   }
 }
+
+/* Hides the scrollbar on horizontally-scrollable pill/chip rows while
+   keeping native scroll (wheel/touch/drag) behaviour intact. */
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}

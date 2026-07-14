@@ -55,6 +55,13 @@ export interface TableProps<T extends Record<string, unknown> = Record<string, u
   getRowClassName?: (row: T, index: number) => string | undefined;
   className?: string;
   emptyMessage?: string;
+  /**
+   * When provided, renders one of these per row in place of the `<table>`
+   * below the `md` breakpoint — a mobile card list instead of a horizontally-
+   * scrolling table. The caller owns the card's markup entirely; Table only
+   * handles the responsive switch, spacing, and empty state.
+   */
+  renderMobileCard?: (row: T, index: number) => React.ReactNode;
 }
 
 // ---------------------------------------------------------------------------
@@ -103,6 +110,7 @@ export function Table<T extends Record<string, unknown> = Record<string, unknown
   className,
   emptyMessage = "Keine Einträge vorhanden.",
   getRowClassName,
+  renderMobileCard,
 }: TableProps<T>) {
 
   const hasFilterRow = columns.some((c) => c.filterable);
@@ -151,8 +159,8 @@ export function Table<T extends Record<string, unknown> = Record<string, unknown
 
   return (
     <div className={cn("w-full flex flex-col border border-border rounded-xl overflow-hidden", className)}>
-      {/* ── Scrollable table area ────────────────────────────────────── */}
-      <div className="w-full overflow-x-auto">
+      {/* ── Scrollable table area — hidden on mobile when a card renderer is given ── */}
+      <div className={cn("w-full overflow-x-auto", renderMobileCard && "hidden md:block")}>
         <table className="w-full border-collapse">
           <thead>
             {/* ── Sort / label row ──────────────────────────────────── */}
@@ -318,6 +326,19 @@ export function Table<T extends Record<string, unknown> = Record<string, unknown
           </tbody>
         </table>
       </div>
+
+      {/* ── Mobile card list — only rendered when a card renderer is given ── */}
+      {renderMobileCard && (
+        <div className="md:hidden flex flex-col gap-3 p-3">
+          {data.length === 0 ? (
+            <p className="text-center text-sm text-muted-foreground py-10">{emptyMessage}</p>
+          ) : (
+            data.map((row, rowIndex) => (
+              <div key={rowIndex}>{renderMobileCard(row, rowIndex)}</div>
+            ))
+          )}
+        </div>
+      )}
 
       {/* ── Footer ────────────────────────────────────────────────────── */}
       {showFooter && (

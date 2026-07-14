@@ -1,18 +1,19 @@
 "use client";
 
 import { NoResult } from '@/components/common';
-import type { SortDirection, TableColumn, TagVariant } from '@/components/ui';
+import type { MenuItem, SortDirection, TableColumn, TagVariant } from '@/components/ui';
 import { Button, Header, Icons, Table, Tag } from '@/components/ui';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { FieldLabels } from '@/constants/FieldLabels';
 import { useQuickChecks } from '@/hooks/useQuickChecks';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
 import type { QuickCheckOverview } from '@/lib/supabase/quick_check.supabase';
+import { cn } from '@/lib/utils';
 import { PropertyCondition } from '@immonext/types';
-import { MoreVertical } from 'lucide-react';
+import { ChevronLeft, ChevronRight, MoreVertical } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 
 // ---------------------------------------------------------------------------
 // Types — display-layer view model (mapped from QuickCheckOverview)
@@ -97,6 +98,14 @@ const STATUS_FILTER_OPTIONS = [
   { value: 'inaktiv', label: 'Inaktiv' },
 ];
 
+/** Shorter labels for the mobile condition-filter pills (limited width). */
+const CONDITION_PILL_LABEL: Record<PropertyCondition, string> = {
+  [PropertyCondition.InNeedOfRenovation]: 'Sanierung',
+  [PropertyCondition.Standard]:           'Standard',
+  [PropertyCondition.Upscale]:            'Gehoben',
+  [PropertyCondition.Luxury]:             'Luxus',
+};
+
 // ---------------------------------------------------------------------------
 // Page
 // ---------------------------------------------------------------------------
@@ -111,6 +120,7 @@ export default function QuickCheckOverviewPage() {
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [columnFilters, setColumnFilters] = useState<Record<string, string>>({});
   const [deletingId, setDeletingId] = useState<number | null>(null);
+  const pillScrollRef = useRef<HTMLDivElement>(null);
 
   // Map DB rows → display entries once per fetch
   const allEntries = useMemo(() => rawData.map(toEntry), [rawData]);
@@ -130,6 +140,28 @@ export default function QuickCheckOverviewPage() {
     }
   };
 
+  // Shared by the desktop table's actions column and the mobile card menu.
+  const rowMenuItems = (row: QuickCheckEntry): MenuItem[] => [
+    {
+      label: BUTTON_DETAILS.OpenResult.label,
+      icon: <BUTTON_DETAILS.OpenResult.icon />,
+      onClick: () => router.push(`/property-valuation/quick-check/${row.id}`),
+    },
+    {
+      label: BUTTON_DETAILS.StartDetailCheck.label,
+      icon: <BUTTON_DETAILS.StartDetailCheck.icon />,
+      disabled: row.status !== 'aktiv',
+      onClick: () => router.push(`/property-valuation/detail-check/property-data?quickCheckId=${row.id}`),
+    },
+    {
+      label: BUTTON_DETAILS.Delete.label,
+      icon: <BUTTON_DETAILS.Delete.icon />,
+      destructive: true,
+      disabled: deletingId === row.id,
+      onClick: () => void handleDeleteRow(row.id),
+    },
+  ];
+
   const COLUMNS: TableColumn<QuickCheckEntry>[] = [
     {
       key: 'actions',
@@ -141,26 +173,7 @@ export default function QuickCheckOverviewPage() {
           icon={<MoreVertical className="w-4 h-4" />}
           variant="ghost"
           size="sm"
-          menuItems={[
-            {
-              label: BUTTON_DETAILS.OpenResult.label,
-              icon: <BUTTON_DETAILS.OpenResult.icon />,
-              onClick: () => router.push(`/property-valuation/quick-check/${row.id}`),
-            },
-            {
-              label: BUTTON_DETAILS.StartDetailCheck.label,
-              icon: <BUTTON_DETAILS.StartDetailCheck.icon />,
-              disabled: row.status !== 'aktiv',
-              onClick: () => router.push(`/property-valuation/detail-check/property-data?quickCheckId=${row.id}`),
-            },
-            {
-              label: BUTTON_DETAILS.Delete.label,
-              icon: <BUTTON_DETAILS.Delete.icon />,
-              destructive: true,
-              disabled: deletingId === row.id,
-              onClick: () => void handleDeleteRow(row.id),
-            },
-          ]}
+          menuItems={rowMenuItems(row)}
         />
       ),
     },
@@ -320,6 +333,58 @@ export default function QuickCheckOverviewPage() {
           </div>
         </div>
 
+        {/* ── Condition filter pills — mobile only; the desktop table has a
+               dropdown filter in the Zustand column header instead ──────── */}
+        <div className="mt-4 md:hidden flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => pillScrollRef.current?.scrollBy({ left: -120, behavior: 'smooth' })}
+            className="shrink-0 p-1.5 rounded-full border border-border text-muted-foreground hover:bg-muted transition-colors"
+            aria-label="Nach links scrollen"
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </button>
+
+          <div ref={pillScrollRef} className="flex-1 flex items-center gap-2 overflow-x-auto no-scrollbar">
+            <button
+              type="button"
+              onClick={() => handleColumnFilterChange('condition', '')}
+              className={cn(
+                "shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-colors",
+                !columnFilters.condition
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-transparent border border-border text-foreground hover:bg-muted"
+              )}
+            >
+              Alle
+            </button>
+            {CONDITION_FILTER_OPTIONS.map((opt) => (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => handleColumnFilterChange('condition', opt.value)}
+                className={cn(
+                  "shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-colors",
+                  columnFilters.condition === opt.value
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-transparent border border-border text-foreground hover:bg-muted"
+                )}
+              >
+                {CONDITION_PILL_LABEL[opt.value]}
+              </button>
+            ))}
+          </div>
+
+          <button
+            type="button"
+            onClick={() => pillScrollRef.current?.scrollBy({ left: 120, behavior: 'smooth' })}
+            className="shrink-0 p-1.5 rounded-full border border-border text-muted-foreground hover:bg-muted transition-colors"
+            aria-label="Nach rechts scrollen"
+          >
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
+
         {/* ── Loading / error states ───────────────────────────────────── */}
         {(authLoading || isLoading) && (
           <div className="mt-8 text-center text-sm text-muted-foreground">
@@ -354,7 +419,6 @@ export default function QuickCheckOverviewPage() {
               />
             )}
 
-            {/* Normal table */}
             {displayedData.length > 0 && (
               <Table<QuickCheckEntry>
                 columns={COLUMNS}
@@ -368,6 +432,55 @@ export default function QuickCheckOverviewPage() {
                   row.status === 'inaktiv' ? 'opacity-40 grayscale' : undefined
                 }
                 footerLeft={`${totalCount} Einträge`}
+                renderMobileCard={(row) => (
+                  <div
+                    className={cn(
+                      "bg-card border border-border rounded-2xl p-4 flex flex-col gap-3",
+                      row.status === 'inaktiv' && 'opacity-40 grayscale'
+                    )}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className={cn(row.portalId === MANUAL_ENTRY_LABEL && 'text-muted-foreground')}>
+                        {row.portalId}
+                      </span>
+                      <Button
+                        iconOnly
+                        icon={<MoreVertical className="w-4 h-4" />}
+                        variant="outline"
+                        size="sm"
+                        menuItems={rowMenuItems(row)}
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <p className="text-xs text-muted-foreground uppercase tracking-wide">
+                          {FieldLabels.QuickCheck.PurchasePrice.de}
+                        </p>
+                        <p className="text-sm font-semibold text-foreground">
+                          {row.purchasePrice.toLocaleString('de-DE')} €
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground uppercase tracking-wide">
+                          {FieldLabels.QuickCheck.PostalCode.de}
+                        </p>
+                        <p className="text-sm font-semibold text-foreground">{row.postalCode}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground uppercase tracking-wide">
+                          {FieldLabels.QuickCheck.ConstructionYear.de}
+                        </p>
+                        <p className="text-sm font-semibold text-foreground">{row.constructionYear}</p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between pt-1">
+                      <Tag label={row.condition} variant={conditionVariant[row.condition] ?? 'default'} />
+                      <KpfBadge value={row.kpfMultiplier} />
+                    </div>
+                  </div>
+                )}
               />
             )}
           </div>
