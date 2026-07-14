@@ -73,7 +73,7 @@ export function NavigationBar({ items, logo, actions }: NavigationBarProps) {
 
   return (
     <nav className={cn("w-full bg-card border-b border-border")}>
-      <div className="max-w-7xl mx-auto px-6 py-4">
+      <div className="container mx-auto px-4 py-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-8">
             {logo && (
