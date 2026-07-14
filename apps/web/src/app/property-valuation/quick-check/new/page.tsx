@@ -7,7 +7,6 @@ import { QuickCheckImportSection } from '@/components/features/QuickCheckImportS
 import { Dropdown, Header, NumberField, StickyActionBar, TextField } from '@/components/ui';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { FieldLabels } from '@/constants/FieldLabels';
-import { useKpfResult } from '@/hooks/useKpfRanges';
 import { createQuickCheck } from '@/lib/supabase/quick_check.supabase';
 import { calcKpf } from '@/utils/kpf';
 import { isValidConstructionYear } from '@/utils/validation';
@@ -60,14 +59,7 @@ export default function QuickCheckPage() {
   const coldRent = parseFloat(form.coldRent) || 0;
   const condition = form.condition as PropertyCondition | '';
 
-  const yearOfConstructionNum = parseInt(form.yearOfConstruction, 10) || null;
-  const { kpf, range, positionPct, isLoading, noData } = useKpfResult(
-    purchasePrice,
-    coldRent,
-    form.postalCode,
-    condition,
-    yearOfConstructionNum,
-  );
+  const kpf = calcKpf(purchasePrice, coldRent);
 
   const currentYear = new Date().getFullYear();
 
@@ -267,10 +259,6 @@ export default function QuickCheckPage() {
                       condition={condition}
                       yearOfConstruction={form.yearOfConstruction}
                       kpf={kpf}
-                      range={range}
-                      positionPct={positionPct}
-                      isLoading={isLoading}
-                      noData={noData}
                     />
 
                     {/* Spacer fills remaining height to match left column bottom */}

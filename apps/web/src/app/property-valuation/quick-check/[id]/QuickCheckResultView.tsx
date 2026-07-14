@@ -7,7 +7,6 @@ import { QuickCheckImportSection } from '@/components/features/QuickCheckImportS
 import { Dropdown, Header, NumberField, StickyActionBar, TextField } from '@/components/ui';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { FieldLabels } from '@/constants/FieldLabels';
-import { useKpfResult } from '@/hooks/useKpfRanges';
 import { useQuickCheckById } from '@/hooks/useQuickCheckById';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
 import {
@@ -87,16 +86,13 @@ export function QuickCheckResultView({ id }: Props) {
     setInitialPortalUrl(data.portalId ?? '');
   }, [data]);
 
-  // Derived edit-form values 
-  const purchasePrice      = parseFloat(editForm.purchasePrice) || 0;
-  const coldRent           = parseFloat(editForm.coldRent) || 0;
-  const condition          = editForm.condition as PropertyCondition | '';
-  const yearOfConstruction = parseInt(editForm.yearOfConstruction, 10) || null;
-  const currentYear        = new Date().getFullYear();
+  // Derived edit-form values
+  const purchasePrice = parseFloat(editForm.purchasePrice) || 0;
+  const coldRent      = parseFloat(editForm.coldRent) || 0;
+  const condition     = editForm.condition as PropertyCondition | '';
+  const currentYear   = new Date().getFullYear();
 
-  const { kpf, range, positionPct, isLoading: rangeLoading, noData } = useKpfResult(
-    purchasePrice, coldRent, editForm.postalCode, condition, yearOfConstruction,
-  );
+  const kpf = calcKpf(purchasePrice, coldRent);
 
   // Validation 
   const editErrors = {
@@ -360,10 +356,6 @@ export function QuickCheckResultView({ id }: Props) {
                       condition={condition}
                       yearOfConstruction={editForm.yearOfConstruction}
                       kpf={kpf}
-                      range={range}
-                      positionPct={positionPct}
-                      isLoading={rangeLoading}
-                      noData={noData}
                     />
                     <div className="flex-1" />
                   </div>

@@ -1,5 +1,3 @@
-import type { KpfConstructionYearBucket } from '@immonext/types';
-
 /**
  * Kaufpreisfaktor = Kaufpreis / (Kaltmiete × 12), rounded to 1 decimal place.
  * Returns null when either input is ≤ 0.
@@ -23,18 +21,45 @@ export function calcPositionPct(
   return Math.min(100, Math.max(0, pct));
 }
 
-/**
- * Maps a construction year to the corresponding KPF range bucket string.
- */
-export function yearToBucket(year: number): KpfConstructionYearBucket {
-  if (year < 1918) return '<1918';
-  if (year <= 1949) return '1918-1949';
-  if (year <= 1959) return '1950-1959';
-  if (year <= 1969) return '1960-1969';
-  if (year <= 1979) return '1970-1979';
-  if (year <= 1989) return '1980-1989';
-  if (year <= 1999) return '1990-1999';
-  if (year <= 2009) return '2000-2009';
-  if (year <= 2014) return '2010-2014';
-  return '2015+';
+// ── Fixed KPF classification ─────────────────────────────────────────────────
+// Replaces the old per-postal-code comparison corridor (kpf_ranges table) with
+// a static market-knowledge scale: the KPF is the inverse of the gross yield,
+// and general German market experience puts typical bands at these bounds
+// (higher-priced regions like Munich/Hamburg > 25, mid-size cities 20–25,
+// rural / higher-yield areas < 20).
+
+/** Fixed display scale for the KPF gauge — left = green/cheap, right = red/expensive. */
+export const KPF_SCALE_MIN = 15;
+export const KPF_SCALE_MAX = 30;
+
+export interface KpfClassification {
+  label:       string;
+  description: string;
+}
+
+/** Classifies a KPF value using the fixed market-knowledge bands. */
+export function classifyKpf(kpf: number): KpfClassification {
+  if (kpf < 20) {
+    return {
+      label: 'Günstig',
+      description: `Der Faktor von ${kpf.toFixed(1)} ist günstig und deutet auf eine hohe Rendite hin – ` +
+        `oft in ländlichen Lagen oder mit erhöhtem Risiko verbunden.`,
+    };
+  }
+  if (kpf < 25) {
+    return {
+      label: 'Solide',
+      description: `Der Faktor von ${kpf.toFixed(1)} liegt in der soliden, typischen Bandbreite für Mittelstädte.`,
+    };
+  }
+  if (kpf < 30) {
+    return {
+      label: 'Hochpreisig',
+      description: `Der Faktor von ${kpf.toFixed(1)} ist typisch für einen hochpreisigen Markt (z. B. München, Hamburg).`,
+    };
+  }
+  return {
+    label: 'Sehr teuer',
+    description: `Der Faktor von ${kpf.toFixed(1)} ist sehr hoch und meist mit einer geringen Mietrendite verbunden.`,
+  };
 }
