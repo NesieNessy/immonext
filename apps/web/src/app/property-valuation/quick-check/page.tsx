@@ -9,6 +9,7 @@ import { useQuickChecks } from '@/hooks/useQuickChecks';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
 import type { QuickCheckOverview } from '@/lib/supabase/quick_check.supabase';
 import { PropertyCondition } from '@immonext/types';
+import { MoreVertical } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useMemo, useState } from 'react';
@@ -19,7 +20,10 @@ import { useMemo, useState } from 'react';
 
 interface QuickCheckEntry extends Record<string, unknown> {
   id: number;
-  ingestDate: string;          // formatted dd.MM.yy
+  /** Raw ISO timestamp — not displayed, only used as the default sort key
+   *  (ISO 8601 strings sort correctly lexicographically; a reformatted
+   *  dd.MM.yy string would not, across month/year boundaries). */
+  ingestDate: string;
   portalId: string;
   kpfMultiplier: number | null;
   purchasePrice: number;
@@ -36,19 +40,13 @@ interface QuickCheckEntry extends Record<string, unknown> {
 // Mapper — QuickCheckOverview (DB) → QuickCheckEntry (display)
 // ---------------------------------------------------------------------------
 
-function formatDate(iso: string): string {
-  const d = new Date(iso);
-  const dd = String(d.getDate()).padStart(2, '0');
-  const mm = String(d.getMonth() + 1).padStart(2, '0');
-  const yy = String(d.getFullYear()).slice(-2);
-  return `${dd}.${mm}.${yy}`;
-}
+const MANUAL_ENTRY_LABEL = 'Manuelle Erfassung';
 
 function toEntry(row: QuickCheckOverview): QuickCheckEntry {
   return {
     id:               row.quickCheckId,
-    ingestDate:       formatDate(row.ingestDate),
-    portalId:         row.portalId ?? '—',
+    ingestDate:       row.ingestDate,
+    portalId:         row.portalId ?? MANUAL_ENTRY_LABEL,
     kpfMultiplier:    row.kpfMultiplier,
     purchasePrice:    row.purchasePrice,
     postalCode:       row.postalCode,
@@ -93,113 +91,10 @@ function KpfBadge({ value }: { value: number | null }) {
   );
 }
 
-function recommendationLabel(level: string | null): string {
-  if (level === 'BUY') return 'Kaufen';
-  if (level === 'CHECK') return 'Prüfen';
-  if (level === 'CRITICAL') return 'Kritisch';
-  if (level === 'NO_BUY') return 'Nicht kaufen';
-  return 'offen';
-}
-
-function RecommendationBadge({ level, score }: { level: string | null; score: number | null }) {
-  const variant: TagVariant =
-    level === 'BUY'
-      ? 'success'
-      : level === 'CHECK'
-      ? 'info'
-      : level === 'CRITICAL'
-      ? 'warning'
-      : level === 'NO_BUY'
-      ? 'danger'
-      : 'muted';
-  const label = score == null
-    ? recommendationLabel(level)
-    : `${recommendationLabel(level)} · ${score.toFixed(0)}`;
-
-  return <Tag label={label} variant={variant} />;
-}
-
-// ---------------------------------------------------------------------------
-// Column definitions
-// ---------------------------------------------------------------------------
-
-const COLUMNS: TableColumn<QuickCheckEntry>[] = [
-  {
-    key: 'portalId',
-    label: FieldLabels.QuickCheck.PortalId.de,
-    sortable: true,
-    filterable: true,
-  },
-  {
-    key: 'kpfMultiplier',
-    label: FieldLabels.QuickCheck.KpfMultiplier.de,
-    sortable: true,
-    filterable: true,
-    align: 'center',
-    width: '110px',
-    renderCell: (value) => <KpfBadge value={value as number | null} />,
-  },
-  {
-    key: 'purchasePrice',
-    label: FieldLabels.QuickCheck.PurchasePrice.de,
-    sortable: true,
-    align: 'right',
-    width: '140px',
-    renderCell: (value) => (
-      <span>{(value as number).toLocaleString('de-DE')} €</span>
-    ),
-  },
-  {
-    key: 'postalCode',
-    label: FieldLabels.QuickCheck.PostalCode.de,
-    sortable: true,
-    filterable: true,
-    width: '110px',
-  },
-  {
-    key: 'constructionYear',
-    label: FieldLabels.QuickCheck.ConstructionYear.de,
-    sortable: true,
-    filterable: true,
-    width: '100px',
-  },
-  {
-    key: 'condition',
-    label: FieldLabels.QuickCheck.Condition.de,
-    sortable: true,
-    filterable: true,
-    width: '170px',
-    renderCell: (value) => {
-      const condition = value as PropertyCondition;
-      return <Tag label={condition} variant={conditionVariant[condition] ?? 'default'} />;
-    },
-  },
-  {
-    key: 'status',
-    label: FieldLabels.QuickCheck.Status.de,
-    sortable: true,
-    filterable: true,
-    width: '110px',
-    renderCell: (value) => (
-      <Tag
-        label={value as string}
-        variant={value === 'aktiv' ? 'success' : 'muted'}
-      />
-    ),
-  },
-  {
-    key: 'recommendationLevel',
-    label: 'Empfehlung',
-    sortable: true,
-    filterable: true,
-    width: '150px',
-    renderCell: (_value, row) => (
-      <RecommendationBadge
-        level={row.recommendationLevel}
-        score={row.recommendationScore}
-      />
-    ),
-  },
+const CONDITION_FILTER_OPTIONS = Object.values(PropertyCondition).map((v) => ({ value: v, label: v }));
+const STATUS_FILTER_OPTIONS = [
+  { value: 'aktiv', label: 'Aktiv' },
+  { value: 'inaktiv', label: 'Inaktiv' },
 ];
 
 // ---------------------------------------------------------------------------
@@ -214,31 +109,133 @@ export default function QuickCheckOverviewPage() {
   const [search, setSearch] = useState('');
   const [sortKey, setSortKey] = useState<string>('ingestDate');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
-  const [selectedIds, setSelectedIds] = useState<Set<string | number>>(new Set());
   const [columnFilters, setColumnFilters] = useState<Record<string, string>>({});
-  const [isDeleting, setIsDeleting] = useState(false);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
 
   // Map DB rows → display entries once per fetch
   const allEntries = useMemo(() => rawData.map(toEntry), [rawData]);
-
-  const hasSelection = selectedIds.size > 0;
 
   // ── Column filter handler ───────────────────────────────────────────────
   const handleColumnFilterChange = (key: string, value: string) => {
     setColumnFilters((prev) => ({ ...prev, [key]: value }));
   };
 
-  // ── Delete handler ──────────────────────────────────────────────────────
-  const handleDelete = async () => {
-    const ids = [...selectedIds] as number[];
-    setIsDeleting(true);
+  // ── Row actions ──────────────────────────────────────────────────────────
+  const handleDeleteRow = async (id: number) => {
+    setDeletingId(id);
     try {
-      await deleteSelected(ids);
-      setSelectedIds(new Set());
+      await deleteSelected([id]);
     } finally {
-      setIsDeleting(false);
+      setDeletingId(null);
     }
   };
+
+  const COLUMNS: TableColumn<QuickCheckEntry>[] = [
+    {
+      key: 'actions',
+      label: '',
+      width: '48px',
+      renderCell: (_value, row) => (
+        <Button
+          iconOnly
+          icon={<MoreVertical className="w-4 h-4" />}
+          variant="ghost"
+          size="sm"
+          menuItems={[
+            {
+              label: BUTTON_DETAILS.OpenResult.label,
+              icon: <BUTTON_DETAILS.OpenResult.icon />,
+              onClick: () => router.push(`/property-valuation/quick-check/${row.id}`),
+            },
+            {
+              label: BUTTON_DETAILS.StartDetailCheck.label,
+              icon: <BUTTON_DETAILS.StartDetailCheck.icon />,
+              disabled: row.status !== 'aktiv',
+              onClick: () => router.push(`/property-valuation/detail-check/property-data?quickCheckId=${row.id}`),
+            },
+            {
+              label: BUTTON_DETAILS.Delete.label,
+              icon: <BUTTON_DETAILS.Delete.icon />,
+              destructive: true,
+              disabled: deletingId === row.id,
+              onClick: () => void handleDeleteRow(row.id),
+            },
+          ]}
+        />
+      ),
+    },
+    {
+      key: 'portalId',
+      label: FieldLabels.QuickCheck.PortalId.de,
+      sortable: true,
+      filterable: true,
+      renderCell: (value) => {
+        const portalId = value as string;
+        return portalId === MANUAL_ENTRY_LABEL
+          ? <span className="text-muted-foreground">{portalId}</span>
+          : <span>{portalId}</span>;
+      },
+    },
+    {
+      key: 'kpfMultiplier',
+      label: FieldLabels.QuickCheck.KpfMultiplier.de,
+      sortable: true,
+      filterable: true,
+      align: 'center',
+      width: '110px',
+      renderCell: (value) => <KpfBadge value={value as number | null} />,
+    },
+    {
+      key: 'purchasePrice',
+      label: FieldLabels.QuickCheck.PurchasePrice.de,
+      sortable: true,
+      align: 'right',
+      width: '140px',
+      renderCell: (value) => (
+        <span>{(value as number).toLocaleString('de-DE')} €</span>
+      ),
+    },
+    {
+      key: 'postalCode',
+      label: FieldLabels.QuickCheck.PostalCode.de,
+      sortable: true,
+      filterable: true,
+      width: '110px',
+    },
+    {
+      key: 'constructionYear',
+      label: FieldLabels.QuickCheck.ConstructionYear.de,
+      sortable: true,
+      filterable: true,
+      width: '100px',
+    },
+    {
+      key: 'condition',
+      label: FieldLabels.QuickCheck.Condition.de,
+      sortable: true,
+      filterable: true,
+      filterOptions: CONDITION_FILTER_OPTIONS,
+      width: '170px',
+      renderCell: (value) => {
+        const condition = value as PropertyCondition;
+        return <Tag label={condition} variant={conditionVariant[condition] ?? 'default'} />;
+      },
+    },
+    {
+      key: 'status',
+      label: FieldLabels.QuickCheck.Status.de,
+      sortable: true,
+      filterable: true,
+      filterOptions: STATUS_FILTER_OPTIONS,
+      width: '110px',
+      renderCell: (value) => (
+        <Tag
+          label={value as string}
+          variant={value === 'aktiv' ? 'success' : 'muted'}
+        />
+      ),
+    },
+  ];
 
   // ── Sort handler ────────────────────────────────────────────────────────
   const handleSort = (key: string) => {
@@ -258,8 +255,7 @@ export default function QuickCheckOverviewPage() {
           (row) =>
             row.portalId.toLowerCase().includes(q) ||
             row.postalCode.includes(q) ||
-            row.condition.toLowerCase().includes(q) ||
-            recommendationLabel(row.recommendationLevel).toLowerCase().includes(q)
+            row.condition.toLowerCase().includes(q)
         )
       : allEntries;
 
@@ -288,12 +284,6 @@ export default function QuickCheckOverviewPage() {
       totalCount: sorted.length,
     };
   }, [allEntries, search, columnFilters, sortKey, sortDirection]);
-
-  // ── Selected row (only meaningful when exactly 1 row is selected) ───────
-  const selectedRow = useMemo(
-    () => (selectedIds.size === 1 ? displayedData.find((r: QuickCheckEntry) => selectedIds.has(r.id)) : undefined),
-    [selectedIds, displayedData]
-  );
 
   return (
     <div className="min-h-screen bg-background">
@@ -329,53 +319,6 @@ export default function QuickCheckOverviewPage() {
             />
           </div>
         </div>
-
-        {/* ── Context action bar — visible when rows are selected ──────── */}
-        {hasSelection && (
-          <div className="mt-4 flex items-center gap-2 px-4 py-2.5 bg-muted/50 border border-border rounded-xl">
-            <span className="text-sm text-muted-foreground">
-              {selectedIds.size} {selectedIds.size === 1 ? 'Eintrag' : 'Einträge'} ausgewählt
-            </span>
-
-            <div className="flex-1" />
-
-            {/* Delete — always shown when any selection */}
-            <Button
-              label={`${BUTTON_DETAILS.Delete.label} (${selectedIds.size})`}
-              icon={<BUTTON_DETAILS.Delete.icon />}
-              iconPosition="left"
-              variant="outline"
-              size="sm"
-              disabled={isDeleting}
-              onClick={handleDelete}
-              className="text-destructive border-destructive/40 hover:bg-destructive hover:text-destructive-foreground"
-            />
-
-            {/* Start detail check — enabled only when 1 selected + status is aktiv */}
-            <Button
-              label={BUTTON_DETAILS.StartDetailCheck.label}
-              icon={<BUTTON_DETAILS.StartDetailCheck.icon />}
-              iconPosition="left"
-              variant="outline"
-              size="sm"
-              disabled={selectedIds.size !== 1 || selectedRow?.status !== 'aktiv'}
-              onClick={() => router.push(`/property-valuation/detail-check/property-data?quickCheckId=${selectedRow!.id}`)}
-            />
-
-            {/* Open result — enabled only when exactly 1 row selected */}
-            <Button
-              label={BUTTON_DETAILS.OpenResult.label}
-              icon={<BUTTON_DETAILS.OpenResult.icon />}
-              iconPosition="left"
-              variant="outline"
-              size="sm"
-              disabled={selectedIds.size !== 1}
-              onClick={() =>
-                router.push(`/property-valuation/quick-check/${selectedRow!.id}`)
-              }
-            />
-          </div>
-        )}
 
         {/* ── Loading / error states ───────────────────────────────────── */}
         {(authLoading || isLoading) && (
@@ -416,10 +359,6 @@ export default function QuickCheckOverviewPage() {
               <Table<QuickCheckEntry>
                 columns={COLUMNS}
                 data={displayedData}
-                selectable
-                selectedIds={selectedIds}
-                getRowId={(row) => row.id}
-                onSelectionChange={setSelectedIds}
                 sortKey={sortKey}
                 sortDirection={sortDirection}
                 onSort={handleSort}
@@ -429,7 +368,6 @@ export default function QuickCheckOverviewPage() {
                   row.status === 'inaktiv' ? 'opacity-40 grayscale' : undefined
                 }
                 footerLeft={`${totalCount} Einträge`}
-                footerRight={hasSelection ? `${selectedIds.size} ausgewählt` : undefined}
               />
             )}
           </div>

@@ -17,6 +17,11 @@ export interface TableColumn<T = Record<string, unknown>> {
   sortable?: boolean;
   /** Show a filter input below this column header */
   filterable?: boolean;
+  /**
+   * When set alongside `filterable`, renders a dropdown (with a leading
+   * "Alle" option) instead of a free-text filter input.
+   */
+  filterOptions?: { value: string; label: string }[];
   /** Custom cell renderer. Receives the raw value and the full row object. */
   renderCell?: (value: unknown, row: T) => React.ReactNode;
   /** Alignment for header + cells */
@@ -201,7 +206,23 @@ export function Table<T extends Record<string, unknown> = Record<string, unknown
                     key={col.key}
                     className={cn("px-2 py-2", alignClass(col.align))}
                   >
-                    {col.filterable ? (
+                    {col.filterable && col.filterOptions ? (
+                      <select
+                        value={columnFilters[col.key] ?? ""}
+                        onChange={(e) => onColumnFilterChange?.(col.key, e.target.value)}
+                        onClick={(e) => e.stopPropagation()}
+                        className={cn(
+                          "w-full px-2 py-1 text-xs bg-background border border-border rounded-md cursor-pointer",
+                          "focus:outline-none focus:ring-1 focus:ring-primary/50 focus:border-primary",
+                          "text-foreground transition-colors"
+                        )}
+                      >
+                        <option value="">Alle</option>
+                        {col.filterOptions.map((opt) => (
+                          <option key={opt.value} value={opt.value}>{opt.label}</option>
+                        ))}
+                      </select>
+                    ) : col.filterable ? (
                       <div className="relative">
                         <input
                           type="text"

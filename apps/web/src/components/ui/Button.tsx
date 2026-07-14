@@ -8,6 +8,8 @@ export interface MenuItem {
   icon?: React.ReactNode;
   onClick: () => void;
   disabled?: boolean;
+  /** Renders in destructive (red) styling, with a divider above it. */
+  destructive?: boolean;
 }
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
@@ -103,21 +105,27 @@ export function Button({
               const itemIconWithSize = item.icon && React.isValidElement(item.icon)
                 ? React.cloneElement(item.icon as React.ReactElement<{ size?: number }>, { size: 18 })
                 : item.icon;
-              
+              const showDividerAbove = item.destructive && !menuItems[index - 1]?.destructive && index > 0;
+
               return (
-                <button
-                  key={index}
-                  onClick={item.onClick}
-                  disabled={item.disabled}
-                  className={cn(
-                    "flex items-center gap-3 px-3 py-2 text-sm rounded-md transition-colors text-left cursor-pointer",
-                    "hover:bg-muted focus:bg-muted focus:outline-none",
-                    "disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent"
-                  )}
-                >
-                  {itemIconWithSize && <span className="flex-shrink-0">{itemIconWithSize}</span>}
-                  <span>{item.label}</span>
-                </button>
+                <React.Fragment key={index}>
+                  {showDividerAbove && <div className="my-1 h-px bg-border" />}
+                  <button
+                    onClick={item.onClick}
+                    disabled={item.disabled}
+                    className={cn(
+                      "flex items-center gap-3 px-3 py-2 text-sm rounded-md transition-colors text-left cursor-pointer",
+                      item.destructive
+                        ? "text-destructive hover:bg-destructive/10"
+                        : "hover:bg-muted",
+                      "focus:bg-muted focus:outline-none",
+                      "disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+                    )}
+                  >
+                    {itemIconWithSize && <span className="flex-shrink-0">{itemIconWithSize}</span>}
+                    <span>{item.label}</span>
+                  </button>
+                </React.Fragment>
               );
             })}
           </div>
