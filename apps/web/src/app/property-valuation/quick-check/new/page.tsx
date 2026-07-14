@@ -2,6 +2,7 @@
 
 import { NoResult } from '@/components/common';
 import { KpfAssessmentCard } from '@/components/features/KpfAssessmentCard';
+import { MobileResultBanner } from '@/components/features/MobileResultBanner';
 import { QuickCheckImportSection } from '@/components/features/QuickCheckImportSection';
 import { Dropdown, Header, NumberField, StickyActionBar, TextField } from '@/components/ui';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
@@ -154,13 +155,15 @@ export default function QuickCheckPage() {
             subtitle="Bewertung von Investitionsobjekten"
           />
           <div className="mt-3 flex flex-col gap-4">
+            <MobileResultBanner show={isFormValid} resultId="qc-result" formTopId="qc-form-top" />
+
             <div className="flex flex-col lg:flex-row gap-8 items-stretch">
 
               {/* Left: form — fills full column height */}
               <div className="flex flex-col gap-3 flex-1 p-5">
 
                 {/* Address */}
-                <section>
+                <section id="qc-form-top">
                   <h2 className="text-md font-semibold text-foreground mb-2">Informationen zur Berechnung</h2>
 
                   <QuickCheckImportSection portalUrl={portalUrl} onPortalUrlChange={setPortalUrl} />
@@ -250,7 +253,7 @@ export default function QuickCheckPage() {
               </div>
 
               {/* Right: result — fills full column height */}
-              <div className="flex flex-col flex-1 gap-4 p-5">
+              <div id="qc-result" className="flex flex-col flex-1 gap-4 p-5">
                 {!isFormValid ? (
                   <NoResult className="flex-1" />
                 ) : (

@@ -2,6 +2,7 @@
 
 import { NoResult } from '@/components/common';
 import { KpfAssessmentCard } from '@/components/features/KpfAssessmentCard';
+import { MobileResultBanner } from '@/components/features/MobileResultBanner';
 import { QuickCheckImportSection } from '@/components/features/QuickCheckImportSection';
 import { Dropdown, Header, NumberField, StickyActionBar, TextField } from '@/components/ui';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
@@ -18,7 +19,7 @@ import { calcKpf } from '@/utils/kpf';
 import { isValidConstructionYear } from '@/utils/validation';
 import { PropertyCondition } from '@immonext/types';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -154,6 +155,18 @@ export function QuickCheckResultView({ id }: Props) {
   // condition and year. Legacy records can have a missing address.
   const canShowResult = financialsValid;
 
+  // On mobile, jump straight to the result on first load — this view is for
+  // an already-computed record, so there's no reason to make the user
+  // scroll past the form first. Runs once; matches the `lg` breakpoint
+  // where the two-column layout takes over and scrolling is unnecessary.
+  const hasAutoScrolled = useRef(false);
+  useEffect(() => {
+    if (hasAutoScrolled.current || !canShowResult) return;
+    if (window.innerWidth >= 1024) return;
+    hasAutoScrolled.current = true;
+    document.getElementById('qc-result')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, [canShowResult]);
+
   // Handlers
   const handleEditField = (f: keyof EditForm, v: string) =>
     setEditForm((p) => ({ ...p, [f]: v }));
@@ -242,11 +255,13 @@ export function QuickCheckResultView({ id }: Props) {
               </div>
             )}
 
+            <MobileResultBanner show={canShowResult} resultId="qc-result" formTopId="qc-form-top" />
+
             <div className="flex flex-col lg:flex-row gap-8 items-stretch">
 
               {/* Left: editable form */}
               <div className="flex flex-col gap-3 flex-1 p-5">
-                <section>
+                <section id="qc-form-top">
                   <h2 className="text-md font-semibold text-foreground mb-2">
                     Informationen zur Berechnung
                   </h2>
@@ -331,7 +346,7 @@ export function QuickCheckResultView({ id }: Props) {
               </div>
 
               {/* Right: live result */}
-              <div className="flex flex-col flex-1 gap-4 p-5">
+              <div id="qc-result" className="flex flex-col flex-1 gap-4 p-5">
                 {!canShowResult ? (
                   <NoResult className="flex-1" />
                 ) : (
