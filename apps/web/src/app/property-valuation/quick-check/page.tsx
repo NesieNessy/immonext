@@ -371,7 +371,7 @@ export default function QuickCheckOverviewPage() {
               size="sm"
               disabled={selectedIds.size !== 1}
               onClick={() =>
-                router.push(`/property-valuation/detail-check/result?quickCheckId=${selectedRow!.id}`)
+                router.push(`/property-valuation/quick-check/${selectedRow!.id}`)
               }
             />
           </div>

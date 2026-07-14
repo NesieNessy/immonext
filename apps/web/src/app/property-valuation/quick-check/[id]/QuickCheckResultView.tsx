@@ -145,6 +145,14 @@ export function QuickCheckResultView({ id }: Props) {
     purchasePrice > 0 && coldRent > 0 && condition !== '' &&
     (() => { const y = parseInt(editForm.yearOfConstruction, 10); return !isNaN(y) && y >= 1850 && y <= currentYear; })();
 
+  // Whether the KPF result panel can be shown — independent of street/city,
+  // since the calculation itself only needs price, rent, postal code,
+  // condition and year. Legacy records can have a missing address.
+  const canShowResult =
+    /^\d{5}$/.test(editForm.postalCode) &&
+    purchasePrice > 0 && coldRent > 0 && condition !== '' &&
+    (() => { const y = parseInt(editForm.yearOfConstruction, 10); return !isNaN(y) && y >= 1850 && y <= currentYear; })();
+
   const isAcceptValid =
     acceptForm.street.trim() !== '' &&
     acceptForm.houseNumber.trim() !== '' &&
@@ -441,7 +449,7 @@ export function QuickCheckResultView({ id }: Props) {
 
               {/* Right: live result */}
               <div className="flex flex-col flex-1 gap-4 p-5">
-                {!isEditValid ? (
+                {!canShowResult ? (
                   <NoResult className="flex-1" />
                 ) : (
                   <div className="flex flex-col gap-4 flex-1">
