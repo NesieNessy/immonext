@@ -60,10 +60,10 @@
   --accent-foreground: oklch(0.985 0 0);
   --destructive: oklch(0.396 0.141 25.723);
   --destructive-foreground: oklch(0.637 0.237 25.331);
-  /* Raised from 0.269 for actual visibility against both --background
-     (0.145) and --card (0.205) — the old value read as nearly invisible. */
-  --border: oklch(0.32 0 0);
-  --input: oklch(0.269 0 0);
+  /* Raised from 0.269, then again from 0.32 — still read as too faint
+     against both --background (0.145) and --card (0.205). */
+  --border: oklch(0.4 0 0);
+  --input: oklch(0.4 0 0);
   /* No dark override previously — fields fell back to the light-mode
      #f9fafb (near-white), rendering wrong in dark mode. */
   --input-background: oklch(0.269 0 0);
