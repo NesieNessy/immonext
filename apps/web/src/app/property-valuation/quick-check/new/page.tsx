@@ -7,6 +7,7 @@ import { QuickCheckImportSection } from '@/components/features/QuickCheckImportS
 import { Button, Dropdown, Header, NumberField, StickyActionBar, TextField } from '@/components/ui';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { FieldLabels } from '@/constants/FieldLabels';
+import { useRequireAuth } from '@/hooks/useRequireAuth';
 import { createQuickCheck } from '@/lib/supabase/quick_check.supabase';
 import { calcKpf } from '@/utils/kpf';
 import { isValidConstructionYear } from '@/utils/validation';
@@ -43,6 +44,7 @@ const CONDITION_OPTIONS = [
 
 export default function QuickCheckPage() {
   const router = useRouter();
+  const { user, isLoading: authLoading } = useRequireAuth();
   const [portalUrl, setPortalUrl] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [form, setForm] = useState<FormData>({
@@ -109,13 +111,14 @@ export default function QuickCheckPage() {
   // Shared by "Übernehmen" and "Detailbewertung starten" — both need the
   // quick-check saved first; they just navigate somewhere different after.
   const saveQuickCheck = async () => {
-    if (!isFormValid || isSaving) return null;
+    if (!isFormValid || isSaving || !user) return null;
     const computedKpf = calcKpf(purchasePrice, coldRent);
     if (computedKpf === null) return null;
 
     setIsSaving(true);
     try {
       return await createQuickCheck({
+        userId: user.id,
         portalId: portalUrl || undefined,
         purchasePrice,
         coldRent,
@@ -168,7 +171,7 @@ export default function QuickCheckPage() {
                 icon={<BUTTON_DETAILS.StartDetailCheck.icon />}
                 variant="outline"
                 hideLabelOnMobile
-                disabled={!isFormValid || isSaving}
+                disabled={!isFormValid || isSaving || authLoading || !user}
                 onClick={() => void handleStartDetailCheck()}
               />
             }
@@ -310,7 +313,7 @@ export default function QuickCheckPage() {
           }}
           primaryLabel={BUTTON_DETAILS.TakeOver.label}
           primaryIcon={<BUTTON_DETAILS.TakeOver.icon />}
-          primaryDisabled={!isFormValid || isSaving}
+          primaryDisabled={!isFormValid || isSaving || authLoading || !user}
           onPrimary={handleTakeOver}
         />
       </div>

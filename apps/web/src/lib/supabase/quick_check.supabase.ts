@@ -66,6 +66,7 @@ export interface QuickCheckOverview {
 }
 
 export interface CreateQuickCheckInput {
+    userId: string;
     portalId?: string;
     purchasePrice: number;
     coldRent: number;
@@ -174,6 +175,7 @@ export async function createQuickCheck(input: CreateQuickCheckInput): Promise<Qu
     const { data, error } = await supabase
         .from('quick_check')
         .insert({
+            user_id: input.userId,
             portal_id: input.portalId ?? null,
             purchase_price: input.purchasePrice,
             cold_rent: input.coldRent,

@@ -168,6 +168,7 @@ export function QuickCheckResultView({ id }: Props) {
     setIsBusy(true);
     try {
       await updateQuickCheck(id, {
+        userId: user.id,
         portalId: portalUrl || undefined,
         purchasePrice, coldRent,
         street:             editForm.street.trim(),
