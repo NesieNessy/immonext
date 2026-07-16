@@ -6,7 +6,8 @@ import { supabase } from '@/lib/supabase/client.supabase';
 import { getPersonalData, upsertPersonalData } from '@/lib/supabase/personal_data.supabase';
 import type { PersonalData } from '@immonext/types';
 import { Loader2, Save, X } from 'lucide-react';
-import { useCallback, useEffect, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { Suspense, useCallback, useEffect, useState } from 'react';
 
 const emptyForm = {
     firstName: '',
@@ -22,7 +23,9 @@ const emptyForm = {
 
 type FormData = typeof emptyForm;
 
-export default function SettingsPage() {
+function SettingsPageContent() {
+    const searchParams = useSearchParams();
+    const isOnboarding = searchParams.get('onboarding') === '1';
     const [user, setUser] = useState<{ id: string } | null>(null);
     const [formData, setFormData] = useState<FormData>(emptyForm);
     const [savedData, setSavedData] = useState<FormData>(emptyForm);
@@ -138,6 +141,12 @@ export default function SettingsPage() {
                     items={[{ label: 'Benutzereinstellungen' }]}
                 />
 
+                {isOnboarding && (
+                    <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg text-blue-700 text-sm max-w-6xl">
+                        Bitte vervollständigen Sie zunächst Ihre Benutzereinstellungen, bevor Sie ImmoNext nutzen können.
+                    </div>
+                )}
+
                 {error && (
                     <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm max-w-6xl">
                         {error}
@@ -224,5 +233,13 @@ export default function SettingsPage() {
                 primaryIcon={isSaving ? <Loader2 size={20} className="animate-spin" /> : <Save size={20} />}
             />
         </div>
+    );
+}
+
+export default function SettingsPage() {
+    return (
+        <Suspense fallback={null}>
+            <SettingsPageContent />
+        </Suspense>
     );
 }
