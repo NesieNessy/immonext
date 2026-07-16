@@ -399,6 +399,7 @@ export default function QuickCheckOverviewPage() {
                   row.status === 'inaktiv' ? 'opacity-40 grayscale' : undefined
                 }
                 footerLeft={`${totalCount} Einträge`}
+                pageSize={25}
                 renderMobileCard={(row) => (
                   <div
                     className={cn(

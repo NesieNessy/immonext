@@ -62,7 +62,17 @@ export interface TableProps<T extends Record<string, unknown> = Record<string, u
    * handles the responsive switch, spacing, and empty state.
    */
   renderMobileCard?: (row: T, index: number) => React.ReactNode;
+  /**
+   * Rows per page. Omit to disable pagination entirely (all rows render at
+   * once, as before). When set, the table body scrolls vertically within a
+   * fixed max height, the header stays pinned, and page controls (with a
+   * rows-per-page picker) render in the footer. The user can still change
+   * the page size via that picker; this is only the initial value.
+   */
+  pageSize?: number;
 }
+
+const PAGE_SIZE_OPTIONS = [10, 25, 50];
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -111,9 +121,27 @@ export function Table<T extends Record<string, unknown> = Record<string, unknown
   emptyMessage = "Keine Einträge vorhanden.",
   getRowClassName,
   renderMobileCard,
+  pageSize,
 }: TableProps<T>) {
 
   const hasFilterRow = columns.some((c) => c.filterable);
+
+  // ── Pagination ───────────────────────────────────────────────────────
+  const paginationEnabled = pageSize !== undefined;
+  const [page, setPage] = React.useState(1);
+  const [rowsPerPage, setRowsPerPage] = React.useState(pageSize ?? data.length);
+
+  // A new filtered/sorted result set (or a page-size change) always starts
+  // back at page 1 — an out-of-range page would otherwise render nothing.
+  React.useEffect(() => {
+    setPage(1);
+  }, [data, rowsPerPage]);
+
+  const totalPages = paginationEnabled ? Math.max(1, Math.ceil(data.length / rowsPerPage)) : 1;
+  const currentPage = Math.min(page, totalPages);
+  const pageData = paginationEnabled
+    ? data.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage)
+    : data;
 
   // ── Checkbox helpers ──────────────────────────────────────────────────
   const allSelected =
@@ -168,9 +196,15 @@ export function Table<T extends Record<string, unknown> = Record<string, unknown
       )}
     >
       {/* ── Scrollable table area — hidden on mobile when a card renderer is given ── */}
-      <div className={cn("w-full overflow-x-auto", renderMobileCard && "hidden md:block")}>
+      <div
+        className={cn(
+          "w-full overflow-x-auto",
+          paginationEnabled && "max-h-[600px] overflow-y-auto",
+          renderMobileCard && "hidden md:block"
+        )}
+      >
         <table className="w-full border-collapse">
-          <thead>
+          <thead className={cn(paginationEnabled && "sticky top-0 z-10")}>
             {/* ── Sort / label row ──────────────────────────────────── */}
             <tr className="bg-[hsl(var(--foreground))] text-[hsl(var(--background))]">
               {selectable && (
@@ -286,7 +320,7 @@ export function Table<T extends Record<string, unknown> = Record<string, unknown
                 </td>
               </tr>
             ) : (
-              data.map((row, rowIndex) => (
+              pageData.map((row, rowIndex) => (
                 <tr
                   key={rowIndex}
                   className={cn(
@@ -341,7 +375,7 @@ export function Table<T extends Record<string, unknown> = Record<string, unknown
           {data.length === 0 ? (
             <p className="text-center text-sm text-muted-foreground py-10">{emptyMessage}</p>
           ) : (
-            data.map((row, rowIndex) => (
+            pageData.map((row, rowIndex) => (
               <div key={rowIndex}>{renderMobileCard(row, rowIndex)}</div>
             ))
           )}
@@ -350,8 +384,51 @@ export function Table<T extends Record<string, unknown> = Record<string, unknown
 
       {/* ── Footer ────────────────────────────────────────────────────── */}
       {showFooter && (
-        <div className="flex items-center justify-between px-4 py-3 border-t border-border bg-card text-xs text-muted-foreground">
+        <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 border-t border-border bg-card text-xs text-muted-foreground">
           <span>{footerLeft}</span>
+
+          {paginationEnabled && data.length > 0 && (
+            <div className="flex items-center gap-3">
+              <label className="flex items-center gap-1.5">
+                Zeilen pro Seite
+                <select
+                  value={rowsPerPage}
+                  onChange={(e) => setRowsPerPage(Number(e.target.value))}
+                  className="px-1.5 py-1 bg-background border border-border rounded-md cursor-pointer
+                             focus:outline-none focus:ring-1 focus:ring-primary/50 focus:border-primary
+                             text-foreground transition-colors"
+                >
+                  {PAGE_SIZE_OPTIONS.map((size) => (
+                    <option key={size} value={size}>{size}</option>
+                  ))}
+                </select>
+              </label>
+
+              <span>Seite {currentPage} von {totalPages}</span>
+
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={currentPage <= 1}
+                  aria-label="Vorherige Seite"
+                  className="p-1.5 rounded-md border border-border hover:bg-muted transition-colors disabled:opacity-40 disabled:pointer-events-none"
+                >
+                  <Icons.ChevronLeft className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={currentPage >= totalPages}
+                  aria-label="Nächste Seite"
+                  className="p-1.5 rounded-md border border-border hover:bg-muted transition-colors disabled:opacity-40 disabled:pointer-events-none"
+                >
+                  <Icons.ChevronRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+          )}
+
           <span>{footerRight}</span>
         </div>
       )}
