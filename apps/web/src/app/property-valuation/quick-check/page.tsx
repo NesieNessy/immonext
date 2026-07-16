@@ -333,9 +333,41 @@ export default function QuickCheckOverviewPage() {
           </div>
         </div>
 
+        {/* ── Status filter pills — mobile only; the desktop table has a
+               dropdown filter in the Status column header instead ────────── */}
+        <div className="mt-4 md:hidden flex items-center gap-2 flex-wrap">
+          <button
+            type="button"
+            onClick={() => handleColumnFilterChange('status', '')}
+            className={cn(
+              "shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-colors",
+              !columnFilters.status
+                ? "bg-primary text-primary-foreground"
+                : "bg-transparent border border-border text-foreground hover:bg-muted"
+            )}
+          >
+            Alle
+          </button>
+          {STATUS_FILTER_OPTIONS.map((opt) => (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => handleColumnFilterChange('status', opt.value)}
+              className={cn(
+                "shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-colors",
+                columnFilters.status === opt.value
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-transparent border border-border text-foreground hover:bg-muted"
+              )}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+
         {/* ── Condition filter pills — mobile only; the desktop table has a
                dropdown filter in the Zustand column header instead ──────── */}
-        <div className="mt-4 md:hidden flex items-center gap-2">
+        <div className="mt-2 md:hidden flex items-center gap-2">
           <button
             type="button"
             onClick={() => pillScrollRef.current?.scrollBy({ left: -120, behavior: 'smooth' })}
