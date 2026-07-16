@@ -2,6 +2,7 @@
 
 import { Button, Dropdown, StickyActionBar, TextArea, TextField } from '@/components/ui';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
+import { authFetch } from '@/lib/api/authFetch';
 import { parseDecimalInput } from '@/lib/detailCheck/acquisitionCosts';
 import {
   aggregateRenovationPricing,
@@ -74,7 +75,8 @@ function RenovationContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const quickCheckId = searchParams.get('quickCheckId');
-  const suffix = quickCheckId ? `?quickCheckId=${quickCheckId}` : '';
+  const workflowId = searchParams.get('workflowId');
+  const suffix = quickCheckId ? `?quickCheckId=${encodeURIComponent(quickCheckId)}` : workflowId ? `?workflowId=${encodeURIComponent(workflowId)}` : '';
 
   const [stage, setStage] = useState<Stage>('ENTRY');
   const [cases, setCases] = useState<RenovationCase[]>([]);
@@ -97,7 +99,7 @@ function RenovationContent() {
       setIsLoading(true);
       setError(null);
       try {
-        const res = await fetch(`/api/detail-check/renovation${suffix}`, { cache: 'no-store' });
+        const res = await authFetch(`/api/detail-check/renovation${suffix}`, { cache: 'no-store' });
         if (!res.ok) throw new Error(await res.text());
         const data = await res.json() as RenovationResponse;
         if (cancelled) return;
@@ -172,11 +174,12 @@ function RenovationContent() {
     setIsSaving(true);
     setError(null);
     try {
-      const res = await fetch('/api/detail-check/renovation', {
+      const res = await authFetch('/api/detail-check/renovation', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           quickCheckId,
+          workflowId,
           cases,
           pricing: { sum_selected: sumSelected || totals.sum_mid },
           financing: {
@@ -206,6 +209,32 @@ function RenovationContent() {
     if (ok && stage === 'PRICING') router.push(`/property-valuation/detail-check/calculator${suffix}`);
   };
 
+  const continueWithoutRenovations = async () => {
+    if (isSaving) return;
+
+    setIsSaving(true);
+    setError(null);
+    try {
+      const res = await authFetch('/api/detail-check/renovation', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          quickCheckId,
+          workflowId,
+          cases: [],
+          pricing: { sum_selected: 0 },
+          financing: { mode: 'FREMD', financedAmount: 0 },
+        }),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      router.push(`/property-valuation/detail-check/calculator${suffix}`);
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : 'Sanierung konnte nicht übersprungen werden.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const updateCase = (id: string, patch: Partial<RenovationCase>) => {
     setCases((prev) => prev.map((item) => item.id === id ? { ...item, ...patch } : item));
   };
@@ -222,7 +251,8 @@ function RenovationContent() {
           label="Überspringen"
           variant="outline"
           hideLabelOnMobile
-          onClick={() => router.push(`/property-valuation/detail-check/calculator${suffix}`)}
+          disabled={isLoading || isSaving || cases.length > 0}
+          onClick={() => void continueWithoutRenovations()}
         />
       }
     >
@@ -486,7 +516,9 @@ function RenovationContent() {
         primaryLabel={primaryLabel}
         primaryIcon={<BUTTON_DETAILS.Next.icon />}
         primaryDisabled={isLoading || isSaving}
-        onPrimary={stage === 'ENTRY' ? evaluateCases : saveAndNext}
+        onPrimary={stage === 'ENTRY'
+          ? (cases.length === 0 ? () => void continueWithoutRenovations() : evaluateCases)
+          : saveAndNext}
       />
     </PropertyValuationLayout>
   );

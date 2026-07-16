@@ -1,19 +1,16 @@
 import { currentMonthDate, serviceChargesMismatch } from '@/lib/detailCheck/rental';
-import { db, DEV_USER_ID } from '@/lib/server/db';
+import { requireUserId, workflowIdFor } from '@/lib/server/auth';
+import { db } from '@/lib/server/db';
 import { NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
-
-function workflowIdFor(quickCheckId: string | null): string {
-  return quickCheckId ? `quick-check:${quickCheckId}` : `user:${DEV_USER_ID}:draft`;
-}
 
 function toNumber(value: unknown): number {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
-async function loadQuickCheck(quickCheckId: string | null) {
+async function loadQuickCheck(userId: string, quickCheckId: string | null) {
   if (!quickCheckId) return null;
   const { rows } = await db.query(
     `
@@ -23,16 +20,17 @@ async function loadQuickCheck(quickCheckId: string | null) {
         AND quick_check_id = $2
       LIMIT 1
     `,
-    [DEV_USER_ID, Number(quickCheckId)],
+    [userId, Number(quickCheckId)],
   );
   return rows[0] ?? null;
 }
 
 export async function GET(request: Request) {
+  const userId = await requireUserId(request);
   const url = new URL(request.url);
   const quickCheckId = url.searchParams.get('quickCheckId');
-  const workflowId = workflowIdFor(quickCheckId);
-  const quickCheck = await loadQuickCheck(quickCheckId);
+  const workflowId = workflowIdFor(userId, quickCheckId, url.searchParams.get('workflowId'));
+  const quickCheck = await loadQuickCheck(userId, quickCheckId);
 
   const { rows } = await db.query(
     `
@@ -42,7 +40,7 @@ export async function GET(request: Request) {
         AND workflow_id = $2
       LIMIT 1
     `,
-    [DEV_USER_ID, workflowId],
+    [userId, workflowId],
   );
 
   const saved = rows[0];
@@ -63,10 +61,11 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  const userId = await requireUserId(request);
   const input = await request.json();
   const quickCheckId = input.quickCheckId ? String(input.quickCheckId) : null;
-  const workflowId = workflowIdFor(quickCheckId);
-  const quickCheck = await loadQuickCheck(quickCheckId);
+  const workflowId = workflowIdFor(userId, quickCheckId, input.workflowId ? String(input.workflowId) : null);
+  const quickCheck = await loadQuickCheck(userId, quickCheckId);
 
   const isRented = Boolean(input.isRented);
   const valuationDate = String(input.valuationDate ?? currentMonthDate());
@@ -127,7 +126,7 @@ export async function POST(request: Request) {
         updated_at = NOW()
     `,
     [
-      DEV_USER_ID,
+      userId,
       quickCheck?.quick_check_id ?? null,
       workflowId,
       valuationDate,

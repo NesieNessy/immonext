@@ -1,4 +1,5 @@
-import { db, DEV_USER_ID } from '@/lib/server/db';
+import { requireUserId } from '@/lib/server/auth';
+import { db } from '@/lib/server/db';
 import { NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
@@ -59,6 +60,7 @@ function mapQuickCheck(row: QuickCheckRow) {
 }
 
 export async function GET(request: Request) {
+  const userId = await requireUserId(request);
   const { searchParams } = new URL(request.url);
   const detailCheck = searchParams.get('detailCheck') === 'true';
 
@@ -71,13 +73,14 @@ export async function GET(request: Request) {
       ORDER BY ingest_date DESC
       LIMIT 100
     `,
-    [DEV_USER_ID, detailCheck],
+    [userId, detailCheck],
   );
 
   return NextResponse.json(rows.map(mapQuickCheck));
 }
 
 export async function POST(request: Request) {
+  const userId = await requireUserId(request);
   const input = await request.json();
 
   const purchasePrice = Number(input.purchasePrice);
@@ -120,7 +123,7 @@ export async function POST(request: Request) {
       RETURNING *
     `,
     [
-      DEV_USER_ID,
+      userId,
       input.portalId ?? null,
       dataEntrySource,
       purchasePrice,
@@ -138,6 +141,7 @@ export async function POST(request: Request) {
 }
 
 export async function DELETE(request: Request) {
+  const userId = await requireUserId(request);
   const input = await request.json();
   const ids = Array.isArray(input.ids) ? input.ids.map(Number).filter(Number.isFinite) : [];
 
@@ -151,7 +155,7 @@ export async function DELETE(request: Request) {
       WHERE user_id = $1
         AND quick_check_id = ANY($2::int[])
     `,
-    [DEV_USER_ID, ids],
+    [userId, ids],
   );
 
   return NextResponse.json({ deleted: rowCount ?? 0 });

@@ -1,5 +1,7 @@
-import { db, DEV_USER_ID } from '@/lib/server/db';
+import { db } from '@/lib/server/db';
+import { requireUserId, workflowIdFor } from '@/lib/server/auth';
 import { NextResponse } from 'next/server';
+import { randomUUID } from 'node:crypto';
 
 export const dynamic = 'force-dynamic';
 
@@ -8,16 +10,12 @@ const DATA_ENTRY_SOURCES = new Set(['PORTAL_IMPORT', 'MANUELL']);
 const TENANCY_TYPES = new Set(['STANDARD', 'INDEXMIETE']);
 const ENERGY_CLASSES = new Set(['A+', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']);
 
-function workflowIdFor(quickCheckId: string | null): string {
-  return quickCheckId ? `quick-check:${quickCheckId}` : `user:${DEV_USER_ID}:draft`;
-}
-
 function toNumber(value: unknown): number {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
-async function loadQuickCheck(quickCheckId: string | null) {
+async function loadQuickCheck(userId: string, quickCheckId: string | null) {
   if (!quickCheckId) return null;
 
   const { rows } = await db.query(
@@ -28,19 +26,21 @@ async function loadQuickCheck(quickCheckId: string | null) {
         AND quick_check_id = $2
       LIMIT 1
     `,
-    [DEV_USER_ID, Number(quickCheckId)],
+    [userId, Number(quickCheckId)],
   );
 
   return rows[0] ?? null;
 }
 
 export async function GET(request: Request) {
+  const userId = await requireUserId(request);
   const url = new URL(request.url);
   const quickCheckId = url.searchParams.get('quickCheckId');
-  const workflowId = workflowIdFor(quickCheckId);
-  const quickCheck = await loadQuickCheck(quickCheckId);
+  const requestedWorkflowId = url.searchParams.get('workflowId');
+  const workflowId = workflowIdFor(userId, quickCheckId, requestedWorkflowId);
+  const quickCheck = await loadQuickCheck(userId, quickCheckId);
 
-  const { rows } = await db.query(
+  const { rows } = quickCheckId || requestedWorkflowId ? await db.query(
     `
       SELECT *
       FROM detail_check_property_data
@@ -48,8 +48,8 @@ export async function GET(request: Request) {
         AND workflow_id = $2
       LIMIT 1
     `,
-    [DEV_USER_ID, workflowId],
-  );
+    [userId, workflowId],
+  ) : { rows: [] };
 
   const saved = rows[0];
 
@@ -71,10 +71,14 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  const userId = await requireUserId(request);
   const input = await request.json();
   const quickCheckId = input.quickCheckId ? String(input.quickCheckId) : null;
-  const workflowId = workflowIdFor(quickCheckId);
-  const quickCheck = await loadQuickCheck(quickCheckId);
+  const requestedWorkflowId = input.workflowId ? String(input.workflowId) : null;
+  const workflowId = quickCheckId || requestedWorkflowId
+    ? workflowIdFor(userId, quickCheckId, requestedWorkflowId)
+    : `detail-check:${randomUUID()}`;
+  const quickCheck = await loadQuickCheck(userId, quickCheckId);
 
   const propertyCategory = String(input.propertyCategory ?? '');
   const dataEntrySource = String(input.dataEntrySource ?? '');
@@ -155,7 +159,7 @@ export async function POST(request: Request) {
         updated_at = NOW()
     `,
     [
-      DEV_USER_ID,
+      userId,
       quickCheck?.quick_check_id ?? null,
       workflowId,
       propertyCategory,
@@ -172,5 +176,5 @@ export async function POST(request: Request) {
     ],
   );
 
-  return NextResponse.json({ status: 'OK', next: 'KAUFKOSTEN' });
+  return NextResponse.json({ status: 'OK', next: 'KAUFKOSTEN', workflowId });
 }

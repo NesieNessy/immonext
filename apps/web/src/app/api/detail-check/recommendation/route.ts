@@ -1,12 +1,9 @@
 import { computeRecommendation } from '@/lib/detailCheck/recommendation';
-import { db, DEV_USER_ID } from '@/lib/server/db';
+import { requireUserId, workflowIdFor } from '@/lib/server/auth';
+import { db } from '@/lib/server/db';
 import { NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
-
-function workflowIdFor(quickCheckId: string | null): string {
-  return quickCheckId ? `quick-check:${quickCheckId}` : `user:${DEV_USER_ID}:draft`;
-}
 
 function toNumber(value: unknown): number {
   const parsed = Number(value);
@@ -45,11 +42,11 @@ function lastTimelineRent(calculatorResult: Record<string, unknown>, fallbackRen
   return toNumber(last?.rentTotal ?? last?.miete_monat ?? last?.rent_total ?? fallbackRent) || fallbackRent;
 }
 
-async function loadContext(workflowId: string, quickCheckId: string | null) {
+async function loadContext(userId: string, workflowId: string, quickCheckId: string | null) {
   const quickCheckRows = quickCheckId
     ? await db.query(
         'SELECT quick_check_id, purchase_price, cold_rent FROM quick_check WHERE user_id = $1 AND quick_check_id = $2 LIMIT 1',
-        [DEV_USER_ID, Number(quickCheckId)],
+        [userId, Number(quickCheckId)],
       )
     : { rows: [] };
   const acquisitionRows = await db.query(
@@ -59,7 +56,7 @@ async function loadContext(workflowId: string, quickCheckId: string | null) {
       WHERE user_id = $1 AND workflow_id = $2
       LIMIT 1
     `,
-    [DEV_USER_ID, workflowId],
+    [userId, workflowId],
   );
   const rentalRows = await db.query(
     `
@@ -68,7 +65,7 @@ async function loadContext(workflowId: string, quickCheckId: string | null) {
       WHERE user_id = $1 AND workflow_id = $2
       LIMIT 1
     `,
-    [DEV_USER_ID, workflowId],
+    [userId, workflowId],
   );
   const financingRows = await db.query(
     `
@@ -77,7 +74,7 @@ async function loadContext(workflowId: string, quickCheckId: string | null) {
       WHERE user_id = $1 AND workflow_id = $2
       LIMIT 1
     `,
-    [DEV_USER_ID, workflowId],
+    [userId, workflowId],
   );
   const depreciationRows = await db.query(
     `
@@ -86,7 +83,7 @@ async function loadContext(workflowId: string, quickCheckId: string | null) {
       WHERE user_id = $1 AND workflow_id = $2
       LIMIT 1
     `,
-    [DEV_USER_ID, workflowId],
+    [userId, workflowId],
   );
   const calculatorRows = await db.query(
     `
@@ -95,7 +92,7 @@ async function loadContext(workflowId: string, quickCheckId: string | null) {
       WHERE user_id = $1 AND workflow_id = $2
       LIMIT 1
     `,
-    [DEV_USER_ID, workflowId],
+    [userId, workflowId],
   );
   const locationRows = await db.query(
     `
@@ -104,7 +101,7 @@ async function loadContext(workflowId: string, quickCheckId: string | null) {
       WHERE user_id = $1 AND workflow_id = $2
       LIMIT 1
     `,
-    [DEV_USER_ID, workflowId],
+    [userId, workflowId],
   );
   const comparisonRows = await db.query(
     `
@@ -113,7 +110,7 @@ async function loadContext(workflowId: string, quickCheckId: string | null) {
       WHERE user_id = $1 AND workflow_id = $2
       LIMIT 1
     `,
-    [DEV_USER_ID, workflowId],
+    [userId, workflowId],
   );
 
   const quickCheck = quickCheckRows.rows[0];
@@ -152,6 +149,7 @@ async function loadContext(workflowId: string, quickCheckId: string | null) {
 }
 
 async function saveResult(
+  userId: string,
   workflowId: string,
   quickCheckId: number | null,
   result: ReturnType<typeof computeRecommendation>,
@@ -171,7 +169,7 @@ async function saveResult(
         updated_at = NOW()
     `,
     [
-      DEV_USER_ID,
+      userId,
       quickCheckId,
       workflowId,
       result.recommendationScore,
@@ -182,10 +180,11 @@ async function saveResult(
 }
 
 export async function GET(request: Request) {
+  const userId = await requireUserId(request);
   const url = new URL(request.url);
   const quickCheckId = url.searchParams.get('quickCheckId');
-  const workflowId = workflowIdFor(quickCheckId);
-  const context = await loadContext(workflowId, quickCheckId);
+  const workflowId = workflowIdFor(userId, quickCheckId, url.searchParams.get('workflowId'));
+  const context = await loadContext(userId, workflowId, quickCheckId);
   const result = computeRecommendation(context.input);
 
   return NextResponse.json({
@@ -197,12 +196,13 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  const userId = await requireUserId(request);
   const input = await request.json();
   const quickCheckId = input.quickCheckId ? String(input.quickCheckId) : null;
-  const workflowId = workflowIdFor(quickCheckId);
-  const context = await loadContext(workflowId, quickCheckId);
+  const workflowId = workflowIdFor(userId, quickCheckId, input.workflowId ? String(input.workflowId) : null);
+  const context = await loadContext(userId, workflowId, quickCheckId);
   const result = computeRecommendation(context.input);
-  await saveResult(workflowId, context.quickCheck?.quick_check_id ?? null, result);
+  await saveResult(userId, workflowId, context.quickCheck?.quick_check_id ?? null, result);
 
   return NextResponse.json({
     status: 'OK',

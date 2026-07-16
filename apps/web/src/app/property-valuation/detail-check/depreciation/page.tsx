@@ -2,6 +2,7 @@
 
 import { Button, Dropdown, StickyActionBar, TextField } from '@/components/ui';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
+import { authFetch } from '@/lib/api/authFetch';
 import { parseDecimalInput } from '@/lib/detailCheck/acquisitionCosts';
 import {
   computePriceSplitIndividual,
@@ -98,7 +99,8 @@ function DepreciationContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const quickCheckId = searchParams.get('quickCheckId');
-  const suffix = quickCheckId ? `?quickCheckId=${quickCheckId}` : '';
+  const workflowId = searchParams.get('workflowId');
+  const suffix = quickCheckId ? `?quickCheckId=${encodeURIComponent(quickCheckId)}` : workflowId ? `?workflowId=${encodeURIComponent(workflowId)}` : '';
 
   const [depreciationMode, setDepreciationMode] = useState<DepreciationMode>('STANDARD');
   const [priceSplitMode, setPriceSplitMode] = useState<PriceSplitMode>('STANDARD');
@@ -127,7 +129,7 @@ function DepreciationContent() {
       setIsLoading(true);
       setError(null);
       try {
-        const res = await fetch(`/api/detail-check/depreciation${suffix}`, { cache: 'no-store' });
+        const res = await authFetch(`/api/detail-check/depreciation${suffix}`, { cache: 'no-store' });
         if (!res.ok) throw new Error(await res.text());
         const data = await res.json() as DepreciationResponse;
         if (cancelled) return;
@@ -201,11 +203,12 @@ function DepreciationContent() {
     setIsSaving(true);
     setError(null);
     try {
-      const res = await fetch('/api/detail-check/depreciation', {
+      const res = await authFetch('/api/detail-check/depreciation', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           quickCheckId,
+          workflowId,
           depreciationMode,
           priceSplitMode,
           modernization,

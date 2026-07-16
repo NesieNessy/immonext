@@ -2,6 +2,7 @@
 
 import { Button, StickyActionBar, Tag, type TagVariant } from '@/components/ui';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
+import { authFetch } from '@/lib/api/authFetch';
 import { type MetricStatus, type RecommendationLevel, type RecommendationMetric, type RecommendationScorePart } from '@/lib/detailCheck/recommendation';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useEffect, useState } from 'react';
@@ -98,7 +99,8 @@ function ResultContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const quickCheckId = searchParams.get('quickCheckId');
-  const suffix = quickCheckId ? `?quickCheckId=${quickCheckId}` : '';
+  const workflowId = searchParams.get('workflowId');
+  const suffix = quickCheckId ? `?quickCheckId=${encodeURIComponent(quickCheckId)}` : workflowId ? `?workflowId=${encodeURIComponent(workflowId)}` : '';
 
   const [data, setData] = useState<RecommendationResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -113,7 +115,7 @@ function ResultContent() {
       setIsLoading(true);
       setError(null);
       try {
-        const res = await fetch(`/api/detail-check/recommendation${suffix}`, { cache: 'no-store' });
+        const res = await authFetch(`/api/detail-check/recommendation${suffix}`, { cache: 'no-store' });
         if (!res.ok) throw new Error(await res.text());
         const loaded = await res.json() as RecommendationResponse;
         if (!cancelled) setData(loaded);
@@ -136,16 +138,16 @@ function ResultContent() {
     setError(null);
     setSavedMessage(null);
     try {
-      const res = await fetch('/api/detail-check/recommendation', {
+      const res = await authFetch('/api/detail-check/recommendation', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ quickCheckId }),
+        body: JSON.stringify({ quickCheckId, workflowId }),
       });
       if (!res.ok) throw new Error(await res.text());
       const saved = await res.json() as RecommendationResponse;
       setData(saved);
       setSavedMessage('Empfehlung wurde gespeichert.');
-      router.push('/property-valuation/quick-check');
+      router.push('/property-valuation/detail-check');
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : 'Empfehlung konnte nicht gespeichert werden.');
     } finally {

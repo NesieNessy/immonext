@@ -1,12 +1,13 @@
 import type { User } from '@supabase/supabase-js';
+import { LOCAL_BYPASS_EMAIL, LOCAL_BYPASS_USER_ID } from './auth/localBypass';
 
 export function isAuthBypassEnabled(): boolean {
   return process.env.NEXT_PUBLIC_AUTH_BYPASS === 'true';
 }
 
 export const authBypassUser = {
-  id: '00000000-0000-4000-8000-000000000001',
-  email: 'dev@immonext.local',
+  id: LOCAL_BYPASS_USER_ID,
+  email: LOCAL_BYPASS_EMAIL,
   user_metadata: {
     full_name: 'ImmoNext Dev User',
   },

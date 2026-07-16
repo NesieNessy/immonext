@@ -3,14 +3,11 @@ import {
   computeIndividualAdditionalCosts,
   type InterestPeriodYears,
 } from '@/lib/detailCheck/financing';
-import { db, DEV_USER_ID } from '@/lib/server/db';
+import { requireUserId, workflowIdFor } from '@/lib/server/auth';
+import { db } from '@/lib/server/db';
 import { NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
-
-function workflowIdFor(quickCheckId: string | null): string {
-  return quickCheckId ? `quick-check:${quickCheckId}` : `user:${DEV_USER_ID}:draft`;
-}
 
 function toNumber(value: unknown): number {
   const parsed = Number(value);
@@ -22,11 +19,11 @@ function toInterestYears(value: unknown): InterestPeriodYears {
   return parsed === 15 || parsed === 20 ? parsed : 10;
 }
 
-async function loadContext(workflowId: string, quickCheckId: string | null) {
+async function loadContext(userId: string, workflowId: string, quickCheckId: string | null) {
   const quickCheckRows = quickCheckId
     ? await db.query(
         'SELECT quick_check_id, purchase_price FROM quick_check WHERE user_id = $1 AND quick_check_id = $2 LIMIT 1',
-        [DEV_USER_ID, Number(quickCheckId)],
+        [userId, Number(quickCheckId)],
       )
     : { rows: [] };
 
@@ -38,7 +35,7 @@ async function loadContext(workflowId: string, quickCheckId: string | null) {
       WHERE user_id = $1 AND workflow_id = $2
       LIMIT 1
     `,
-    [DEV_USER_ID, workflowId],
+    [userId, workflowId],
   );
   const renovationRows = await db.query(
     `
@@ -47,7 +44,7 @@ async function loadContext(workflowId: string, quickCheckId: string | null) {
       WHERE user_id = $1 AND workflow_id = $2
       LIMIT 1
     `,
-    [DEV_USER_ID, workflowId],
+    [userId, workflowId],
   );
 
   const acquisition = acquisitionRows.rows[0];
@@ -116,13 +113,14 @@ function buildPayload(saved: Record<string, unknown> | undefined, context: Await
 }
 
 export async function GET(request: Request) {
+  const userId = await requireUserId(request);
   const url = new URL(request.url);
   const quickCheckId = url.searchParams.get('quickCheckId');
-  const workflowId = workflowIdFor(quickCheckId);
-  const context = await loadContext(workflowId, quickCheckId);
+  const workflowId = workflowIdFor(userId, quickCheckId, url.searchParams.get('workflowId'));
+  const context = await loadContext(userId, workflowId, quickCheckId);
   const savedRows = await db.query(
     'SELECT * FROM detail_check_financing WHERE user_id = $1 AND workflow_id = $2 LIMIT 1',
-    [DEV_USER_ID, workflowId],
+    [userId, workflowId],
   );
 
   return NextResponse.json({
@@ -133,10 +131,11 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  const userId = await requireUserId(request);
   const input = await request.json();
   const quickCheckId = input.quickCheckId ? String(input.quickCheckId) : null;
-  const workflowId = workflowIdFor(quickCheckId);
-  const context = await loadContext(workflowId, quickCheckId);
+  const workflowId = workflowIdFor(userId, quickCheckId, input.workflowId ? String(input.workflowId) : null);
+  const context = await loadContext(userId, workflowId, quickCheckId);
   const repaymentRate = toNumber(input.repaymentRate ?? 2) || 2;
   const interestAdjustmentFactor = toNumber(input.interestAdjustmentFactor ?? 1) || 1;
   const offerInterestPeriodYears = toInterestYears(input.offer?.interestPeriodYears ?? 10);
@@ -207,7 +206,7 @@ export async function POST(request: Request) {
         updated_at = NOW()
     `,
     [
-      DEV_USER_ID,
+      userId,
       context.quickCheck?.quick_check_id ?? null,
       workflowId,
       input.selectedVariant === 'INDIVIDUAL' ? 'INDIVIDUAL' : 'OFFER',

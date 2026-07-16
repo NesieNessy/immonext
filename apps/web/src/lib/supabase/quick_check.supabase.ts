@@ -17,6 +17,7 @@
 
 import type { PropertyCondition } from '@immonext/types';
 import { isAuthBypassEnabled } from '../authBypass';
+import { authFetch } from '../api/authFetch';
 import { supabase } from './client.supabase';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -139,7 +140,7 @@ function mapOverview(row: Record<string, unknown>): QuickCheckOverview {
  */
 export async function getAllQuickChecks(detailCheck: boolean): Promise<QuickCheckOverview[]> {
     if (isAuthBypassEnabled()) {
-        const res = await fetch(`/api/quick-checks?detailCheck=${detailCheck}`, { cache: 'no-store' });
+        const res = await authFetch(`/api/quick-checks?detailCheck=${detailCheck}`, { cache: 'no-store' });
         if (!res.ok) throw new Error(await res.text());
         const data = await res.json();
         return (data ?? []).map(mapOverview);
@@ -170,7 +171,7 @@ export async function getQuickCheckById(quickCheckId: number): Promise<QuickChec
 /** Saves the QuickCheckPage form. Status = ACTIVE. No kpf_ranges write yet. */
 export async function createQuickCheck(input: CreateQuickCheckInput): Promise<QuickCheck> {
     if (isAuthBypassEnabled()) {
-        const res = await fetch('/api/quick-checks', {
+        const res = await authFetch('/api/quick-checks', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(input),
@@ -290,7 +291,7 @@ export async function deleteQuickCheck(quickCheckId: number): Promise<void> {
 export async function deleteQuickChecks(quickCheckIds: number[]): Promise<void> {
     if (quickCheckIds.length === 0) return;
     if (isAuthBypassEnabled()) {
-        const res = await fetch('/api/quick-checks', {
+        const res = await authFetch('/api/quick-checks', {
             method: 'DELETE',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ ids: quickCheckIds }),

@@ -2,6 +2,7 @@
 
 import { Button, Modal, StickyActionBar, TextField } from '@/components/ui';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
+import { authFetch } from '@/lib/api/authFetch';
 import { parseDecimalInput } from '@/lib/detailCheck/acquisitionCosts';
 import {
   applyServiceChargeSuggestion,
@@ -78,7 +79,8 @@ function RentalContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const quickCheckId = searchParams.get('quickCheckId');
-  const suffix = quickCheckId ? `?quickCheckId=${quickCheckId}` : '';
+  const workflowId = searchParams.get('workflowId');
+  const suffix = quickCheckId ? `?quickCheckId=${encodeURIComponent(quickCheckId)}` : workflowId ? `?workflowId=${encodeURIComponent(workflowId)}` : '';
 
   const [form, setForm] = useState<RentalForm>({
     valuationMonth: monthFromDate(currentMonthDate()),
@@ -102,7 +104,7 @@ function RentalContent() {
       setIsLoading(true);
       setTopError(null);
       try {
-        const res = await fetch(`/api/detail-check/rental${suffix}`, { cache: 'no-store' });
+        const res = await authFetch(`/api/detail-check/rental${suffix}`, { cache: 'no-store' });
         if (!res.ok) throw new Error(await res.text());
         const data = await res.json() as RentalResponse;
         if (cancelled) return;
@@ -185,11 +187,12 @@ function RentalContent() {
     setIsSaving(true);
     setTopError(null);
     try {
-      const res = await fetch('/api/detail-check/rental', {
+      const res = await authFetch('/api/detail-check/rental', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           quickCheckId,
+          workflowId,
           valuationDate: normalizeMonthInput(form.valuationMonth),
           isRented: form.isRented,
           source: 'MANUELL',

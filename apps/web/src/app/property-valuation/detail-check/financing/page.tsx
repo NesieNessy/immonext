@@ -2,6 +2,7 @@
 
 import { Dropdown, StickyActionBar, TextField } from '@/components/ui';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
+import { authFetch } from '@/lib/api/authFetch';
 import { parseDecimalInput } from '@/lib/detailCheck/acquisitionCosts';
 import {
   computeFinancing,
@@ -129,7 +130,8 @@ function FinancingContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const quickCheckId = searchParams.get('quickCheckId');
-  const suffix = quickCheckId ? `?quickCheckId=${quickCheckId}` : '';
+  const workflowId = searchParams.get('workflowId');
+  const suffix = quickCheckId ? `?quickCheckId=${encodeURIComponent(quickCheckId)}` : workflowId ? `?workflowId=${encodeURIComponent(workflowId)}` : '';
 
   const [offer, setOffer] = useState<ColumnForm>({
     purchasePrice: '0',
@@ -168,8 +170,8 @@ function FinancingContent() {
       setError(null);
       try {
         const [financingRes, acquisitionRes] = await Promise.all([
-          fetch(`/api/detail-check/financing${suffix}`, { cache: 'no-store' }),
-          fetch(`/api/detail-check/acquisition-costs${suffix}`, { cache: 'no-store' }),
+          authFetch(`/api/detail-check/financing${suffix}`, { cache: 'no-store' }),
+          authFetch(`/api/detail-check/acquisition-costs${suffix}`, { cache: 'no-store' }),
         ]);
         if (!financingRes.ok) throw new Error(await financingRes.text());
         if (!acquisitionRes.ok) throw new Error(await acquisitionRes.text());
@@ -264,11 +266,12 @@ function FinancingContent() {
     setIsSaving(true);
     setError(null);
     try {
-      const res = await fetch('/api/detail-check/financing', {
+      const res = await authFetch('/api/detail-check/financing', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           quickCheckId,
+          workflowId,
           selectedVariant: selectedVariant || 'OFFER',
           repaymentRate,
           interestAdjustmentFactor,

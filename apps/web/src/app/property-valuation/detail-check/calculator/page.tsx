@@ -2,6 +2,7 @@
 
 import { Button, Dropdown, StickyActionBar, TextField } from '@/components/ui';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
+import { authFetch } from '@/lib/api/authFetch';
 import { parseDecimalInput } from '@/lib/detailCheck/acquisitionCosts';
 import { type CalculatorMode, type ModernizationPlanRow, type RentIncrease558Row, type RentTimelineRow } from '@/lib/detailCheck/rentCalculator';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -67,7 +68,8 @@ function CalculatorContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const quickCheckId = searchParams.get('quickCheckId');
-  const suffix = quickCheckId ? `?quickCheckId=${quickCheckId}` : '';
+  const workflowId = searchParams.get('workflowId');
+  const suffix = quickCheckId ? `?quickCheckId=${encodeURIComponent(quickCheckId)}` : workflowId ? `?workflowId=${encodeURIComponent(workflowId)}` : '';
 
   const [data, setData] = useState<CalculatorResponse | null>(null);
   const [startYyyymm, setStartYyyymm] = useState('');
@@ -89,7 +91,7 @@ function CalculatorContent() {
       setIsLoading(true);
       setError(null);
       try {
-        const res = await fetch(`/api/detail-check/calculator${suffix}`, { cache: 'no-store' });
+        const res = await authFetch(`/api/detail-check/calculator${suffix}`, { cache: 'no-store' });
         if (!res.ok) throw new Error(await res.text());
         const loaded = await res.json() as CalculatorResponse;
         if (cancelled) return;
@@ -118,11 +120,12 @@ function CalculatorContent() {
     setIsSaving(true);
     setError(null);
     try {
-      const res = await fetch('/api/detail-check/calculator', {
+      const res = await authFetch('/api/detail-check/calculator', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           quickCheckId,
+          workflowId,
           startYyyymm,
           monthlyRentStart: parseDecimalInput(monthlyRentStart),
           rentIndexPerM2: rentIndexPerM2 === '' ? null : parseDecimalInput(rentIndexPerM2),

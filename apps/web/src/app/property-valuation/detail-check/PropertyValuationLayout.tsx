@@ -27,7 +27,9 @@ export function PropertyValuationLayout({ children, currentStep, title, actions 
     if (typeof window === 'undefined') return 'detail-check:max-step:draft';
     const params = new URLSearchParams(window.location.search);
     const quickCheckId = params.get('quickCheckId');
-    return quickCheckId ? `detail-check:max-step:quick-check:${quickCheckId}` : 'detail-check:max-step:draft';
+    const workflowId = params.get('workflowId');
+    if (quickCheckId) return `detail-check:max-step:quick-check:${quickCheckId}`;
+    return workflowId ? `detail-check:max-step:${workflowId}` : 'detail-check:max-step:new';
   }, []);
 
   useEffect(() => {

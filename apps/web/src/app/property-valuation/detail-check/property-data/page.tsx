@@ -2,6 +2,7 @@
 
 import { Dropdown, StickyActionBar, TextField } from '@/components/ui';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
+import { authFetch } from '@/lib/api/authFetch';
 import { parseDecimalInput } from '@/lib/detailCheck/acquisitionCosts';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useEffect, useMemo, useState } from 'react';
@@ -90,7 +91,12 @@ function PropertyDataContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const quickCheckId = searchParams.get('quickCheckId');
-  const suffix = quickCheckId ? `?quickCheckId=${quickCheckId}` : '';
+  const workflowId = searchParams.get('workflowId');
+  const suffix = quickCheckId
+    ? `?quickCheckId=${encodeURIComponent(quickCheckId)}`
+    : workflowId
+      ? `?workflowId=${encodeURIComponent(workflowId)}`
+      : '';
 
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -105,7 +111,7 @@ function PropertyDataContent() {
       setIsLoading(true);
       setTopError(null);
       try {
-        const res = await fetch(`/api/detail-check/property-data${suffix}`, { cache: 'no-store' });
+        const res = await authFetch(`/api/detail-check/property-data${suffix}`, { cache: 'no-store' });
         if (!res.ok) throw new Error(await res.text());
         const data = await res.json() as PropertyDataResponse;
         if (cancelled) return;
@@ -209,11 +215,12 @@ function PropertyDataContent() {
     setIsSaving(true);
     setTopError(null);
     try {
-      const res = await fetch('/api/detail-check/property-data', {
+      const res = await authFetch('/api/detail-check/property-data', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           quickCheckId,
+          workflowId,
           propertyCategory: form.propertyCategory,
           dataEntrySource: form.dataEntrySource,
           tenancyType: form.tenancyType,
@@ -229,16 +236,26 @@ function PropertyDataContent() {
       });
 
       if (!res.ok) {
-        const payload = await res.json().catch(() => null);
+        const responseText = await res.text();
+        let payload: { fieldErrors?: Record<string, string>; error?: string } | null = null;
+        try {
+          payload = responseText ? JSON.parse(responseText) : null;
+        } catch {
+          payload = null;
+        }
         if (payload?.fieldErrors) {
           setFieldErrors(payload.fieldErrors);
           setTopError('Bitte prüfen Sie die markierten Felder.');
           return;
         }
-        throw new Error(await res.text());
+        throw new Error(payload?.error ?? responseText);
       }
 
-      router.push(`/property-valuation/detail-check/acquisition-costs${suffix}`);
+      const payload = await res.json() as { workflowId: string };
+      const nextSuffix = quickCheckId
+        ? suffix
+        : `?workflowId=${encodeURIComponent(payload.workflowId)}`;
+      router.push(`/property-valuation/detail-check/acquisition-costs${nextSuffix}`);
     } catch (error) {
       setTopError(error instanceof Error ? error.message : 'Objektdaten konnten nicht gespeichert werden.');
     } finally {
@@ -375,7 +392,7 @@ function PropertyDataContent() {
         show
         ghostLabel={BUTTON_DETAILS.Back.label}
         ghostIcon={<BUTTON_DETAILS.Back.icon />}
-        onGhost={() => router.push('/property-valuation/quick-check')}
+        onGhost={() => router.push('/property-valuation/detail-check')}
         primaryLabel="Weiter"
         primaryIcon={<BUTTON_DETAILS.Next.icon />}
         primaryDisabled={isLoading || isSaving}

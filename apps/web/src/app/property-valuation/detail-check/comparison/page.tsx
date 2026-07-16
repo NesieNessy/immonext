@@ -2,6 +2,7 @@
 
 import { Button, StickyActionBar, Tag } from '@/components/ui';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
+import { authFetch } from '@/lib/api/authFetch';
 import { type ReferenceProperty, type SubjectProperty } from '@/lib/detailCheck/comparison';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useEffect, useState } from 'react';
@@ -99,7 +100,8 @@ function ComparisonContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const quickCheckId = searchParams.get('quickCheckId');
-  const suffix = quickCheckId ? `?quickCheckId=${quickCheckId}` : '';
+  const workflowId = searchParams.get('workflowId');
+  const suffix = quickCheckId ? `?quickCheckId=${encodeURIComponent(quickCheckId)}` : workflowId ? `?workflowId=${encodeURIComponent(workflowId)}` : '';
 
   const [data, setData] = useState<ComparisonResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -113,7 +115,7 @@ function ComparisonContent() {
       setIsLoading(true);
       setError(null);
       try {
-        const res = await fetch(`/api/detail-check/comparison${suffix}`, { cache: 'no-store' });
+        const res = await authFetch(`/api/detail-check/comparison${suffix}`, { cache: 'no-store' });
         if (!res.ok) throw new Error(await res.text());
         const loaded = await res.json() as ComparisonResponse;
         if (!cancelled) setData(loaded);
@@ -135,10 +137,10 @@ function ComparisonContent() {
     setIsSaving(true);
     setError(null);
     try {
-      const res = await fetch('/api/detail-check/comparison', {
+      const res = await authFetch('/api/detail-check/comparison', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ quickCheckId }),
+        body: JSON.stringify({ quickCheckId, workflowId }),
       });
       if (!res.ok) throw new Error(await res.text());
       router.push(`/property-valuation/detail-check/result${suffix}`);

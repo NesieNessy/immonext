@@ -1,18 +1,15 @@
 import { computeLocationScore } from '@/lib/detailCheck/locationScoring';
-import { db, DEV_USER_ID } from '@/lib/server/db';
+import { requireUserId, workflowIdFor } from '@/lib/server/auth';
+import { db } from '@/lib/server/db';
 import { NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
 
-function workflowIdFor(quickCheckId: string | null): string {
-  return quickCheckId ? `quick-check:${quickCheckId}` : `user:${DEV_USER_ID}:draft`;
-}
-
-async function loadContext(workflowId: string, quickCheckId: string | null) {
+async function loadContext(userId: string, workflowId: string, quickCheckId: string | null) {
   const quickCheckRows = quickCheckId
     ? await db.query(
         'SELECT quick_check_id, street, postal_code, city FROM quick_check WHERE user_id = $1 AND quick_check_id = $2 LIMIT 1',
-        [DEV_USER_ID, Number(quickCheckId)],
+        [userId, Number(quickCheckId)],
       )
     : { rows: [] };
   const propertyRows = await db.query(
@@ -22,7 +19,7 @@ async function loadContext(workflowId: string, quickCheckId: string | null) {
       WHERE user_id = $1 AND workflow_id = $2
       LIMIT 1
     `,
-    [DEV_USER_ID, workflowId],
+    [userId, workflowId],
   );
 
   const quickCheck = quickCheckRows.rows[0];
@@ -36,7 +33,7 @@ async function loadContext(workflowId: string, quickCheckId: string | null) {
   };
 }
 
-async function saveResult(workflowId: string, quickCheckId: number | null, result: ReturnType<typeof computeLocationScore>) {
+async function saveResult(userId: string, workflowId: string, quickCheckId: number | null, result: ReturnType<typeof computeLocationScore>) {
   await db.query(
     `
       INSERT INTO detail_check_location_score (
@@ -56,7 +53,7 @@ async function saveResult(workflowId: string, quickCheckId: number | null, resul
         updated_at = NOW()
     `,
     [
-      DEV_USER_ID,
+      userId,
       quickCheckId,
       workflowId,
       result.city || null,
@@ -71,10 +68,11 @@ async function saveResult(workflowId: string, quickCheckId: number | null, resul
 }
 
 export async function GET(request: Request) {
+  const userId = await requireUserId(request);
   const url = new URL(request.url);
   const quickCheckId = url.searchParams.get('quickCheckId');
-  const workflowId = workflowIdFor(quickCheckId);
-  const context = await loadContext(workflowId, quickCheckId);
+  const workflowId = workflowIdFor(userId, quickCheckId, url.searchParams.get('workflowId'));
+  const context = await loadContext(userId, workflowId, quickCheckId);
   const result = computeLocationScore(context);
 
   return NextResponse.json({
@@ -85,12 +83,13 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  const userId = await requireUserId(request);
   const input = await request.json();
   const quickCheckId = input.quickCheckId ? String(input.quickCheckId) : null;
-  const workflowId = workflowIdFor(quickCheckId);
-  const context = await loadContext(workflowId, quickCheckId);
+  const workflowId = workflowIdFor(userId, quickCheckId, input.workflowId ? String(input.workflowId) : null);
+  const context = await loadContext(userId, workflowId, quickCheckId);
   const result = computeLocationScore(context);
-  await saveResult(workflowId, context.quickCheck?.quick_check_id ?? null, result);
+  await saveResult(userId, workflowId, context.quickCheck?.quick_check_id ?? null, result);
 
   return NextResponse.json({
     status: 'OK',
