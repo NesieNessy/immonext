@@ -158,7 +158,15 @@ export function Table<T extends Record<string, unknown> = Record<string, unknown
   };
 
   return (
-    <div className={cn("w-full flex flex-col border border-border rounded-xl overflow-hidden", className)}>
+    <div
+      className={cn(
+        "w-full flex flex-col",
+        renderMobileCard
+          ? "md:border md:border-border md:rounded-xl md:overflow-hidden"
+          : "border border-border rounded-xl overflow-hidden",
+        className
+      )}
+    >
       {/* ── Scrollable table area — hidden on mobile when a card renderer is given ── */}
       <div className={cn("w-full overflow-x-auto", renderMobileCard && "hidden md:block")}>
         <table className="w-full border-collapse">

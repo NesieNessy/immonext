@@ -333,41 +333,10 @@ export default function QuickCheckOverviewPage() {
           </div>
         </div>
 
-        {/* ── Status filter pills — mobile only; the desktop table has a
-               dropdown filter in the Status column header instead ────────── */}
-        <div className="mt-4 md:hidden flex items-center gap-2 flex-wrap">
-          <button
-            type="button"
-            onClick={() => handleColumnFilterChange('status', '')}
-            className={cn(
-              "shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-colors",
-              !columnFilters.status
-                ? "bg-primary text-primary-foreground"
-                : "bg-transparent border border-border text-foreground hover:bg-muted"
-            )}
-          >
-            Alle
-          </button>
-          {STATUS_FILTER_OPTIONS.map((opt) => (
-            <button
-              key={opt.value}
-              type="button"
-              onClick={() => handleColumnFilterChange('status', opt.value)}
-              className={cn(
-                "shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-colors",
-                columnFilters.status === opt.value
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-transparent border border-border text-foreground hover:bg-muted"
-              )}
-            >
-              {opt.label}
-            </button>
-          ))}
-        </div>
-
-        {/* ── Condition filter pills — mobile only; the desktop table has a
-               dropdown filter in the Zustand column header instead ──────── */}
-        <div className="mt-2 md:hidden flex items-center gap-2">
+        {/* ── Status + condition filter pills — mobile only, one scrollable
+               row; the desktop table has dropdown filters in the Status and
+               Zustand column headers instead ──────────────────────────────── */}
+        <div className="mt-4 md:hidden flex items-center gap-2">
           <button
             type="button"
             onClick={() => pillScrollRef.current?.scrollBy({ left: -120, behavior: 'smooth' })}
@@ -378,6 +347,36 @@ export default function QuickCheckOverviewPage() {
           </button>
 
           <div ref={pillScrollRef} className="flex-1 flex items-center gap-2 overflow-x-auto no-scrollbar">
+            <button
+              type="button"
+              onClick={() => handleColumnFilterChange('status', '')}
+              className={cn(
+                "shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-colors",
+                !columnFilters.status
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-transparent border border-border text-foreground hover:bg-muted"
+              )}
+            >
+              Alle
+            </button>
+            {STATUS_FILTER_OPTIONS.map((opt) => (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => handleColumnFilterChange('status', opt.value)}
+                className={cn(
+                  "shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-colors",
+                  columnFilters.status === opt.value
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-transparent border border-border text-foreground hover:bg-muted"
+                )}
+              >
+                {opt.label}
+              </button>
+            ))}
+
+            <div className="shrink-0 w-px h-6 bg-border mx-1" />
+
             <button
               type="button"
               onClick={() => handleColumnFilterChange('condition', '')}
