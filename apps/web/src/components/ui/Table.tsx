@@ -31,11 +31,6 @@ export interface TableColumn<T = Record<string, unknown>> {
 export interface TableProps<T extends Record<string, unknown> = Record<string, unknown>> {
   columns: TableColumn<T>[];
   data: T[];
-  /** Enables checkbox column */
-  selectable?: boolean;
-  selectedIds?: Set<string | number>;
-  getRowId?: (row: T) => string | number;
-  onSelectionChange?: (ids: Set<string | number>) => void;
   /** Row click handler */
   onRowClick?: (row: T, index: number) => void;
   /** Sort state */
@@ -104,10 +99,6 @@ function SortIcon({
 export function Table<T extends Record<string, unknown> = Record<string, unknown>>({
   columns,
   data,
-  selectable = false,
-  selectedIds,
-  getRowId,
-  onSelectionChange,
   onRowClick,
   sortKey,
   sortDirection,
@@ -143,41 +134,6 @@ export function Table<T extends Record<string, unknown> = Record<string, unknown
     ? data.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage)
     : data;
 
-  // ── Checkbox helpers ──────────────────────────────────────────────────
-  const allSelected =
-    data.length > 0 && selectedIds && getRowId
-      ? data.every((row) => selectedIds.has(getRowId(row)))
-      : false;
-
-  const someSelected =
-    !allSelected && selectedIds && getRowId
-      ? data.some((row) => selectedIds.has(getRowId(row)))
-      : false;
-
-  const toggleAll = () => {
-    if (!onSelectionChange || !getRowId) return;
-    if (allSelected) {
-      onSelectionChange(new Set());
-    } else {
-      onSelectionChange(new Set(data.map((row) => getRowId(row))));
-    }
-  };
-
-  const toggleRow = (row: T) => {
-    if (!onSelectionChange || !getRowId || !selectedIds) return;
-    const id = getRowId(row);
-    const next = new Set(selectedIds);
-    if (next.has(id)) {
-      next.delete(id);
-    } else {
-      next.add(id);
-    }
-    onSelectionChange(next);
-  };
-
-  const isSelected = (row: T) =>
-    selectable && selectedIds && getRowId ? selectedIds.has(getRowId(row)) : false;
-
   // ── Alignment helper ──────────────────────────────────────────────────
   const alignClass = (align?: "left" | "center" | "right") => {
     if (align === "center") return "text-center";
@@ -211,20 +167,6 @@ export function Table<T extends Record<string, unknown> = Record<string, unknown
           <thead className={cn(paginationEnabled && "sticky top-0 z-10")}>
             {/* ── Sort / label row ──────────────────────────────────── */}
             <tr className="bg-muted border-b border-border">
-              {selectable && (
-                <th className="w-12 px-4 py-3">
-                  <input
-                    type="checkbox"
-                    checked={allSelected}
-                    ref={(el) => {
-                      if (el) el.indeterminate = someSelected;
-                    }}
-                    onChange={toggleAll}
-                    aria-label="Alle auswählen"
-                    className="w-4 h-4 rounded border-border accent-primary cursor-pointer"
-                  />
-                </th>
-              )}
               {columns.map((col) => (
                 <th
                   key={col.key}
@@ -256,7 +198,6 @@ export function Table<T extends Record<string, unknown> = Record<string, unknown
                  scrolled-past row show through it. ── */}
             {hasFilterRow && (
               <tr className="bg-muted border-b border-border">
-                {selectable && <th className="w-12 px-4 py-2" />}
                 {columns.map((col) => (
                   <th
                     key={col.key}
@@ -319,7 +260,7 @@ export function Table<T extends Record<string, unknown> = Record<string, unknown
             {data.length === 0 ? (
               <tr>
                 <td
-                  colSpan={columns.length + (selectable ? 1 : 0)}
+                  colSpan={columns.length}
                   className="px-4 py-10 text-center text-sm text-muted-foreground"
                 >
                   {emptyMessage}
@@ -331,29 +272,11 @@ export function Table<T extends Record<string, unknown> = Record<string, unknown
                   key={rowIndex}
                   className={cn(
                     "transition-colors",
-                    isSelected(row) && "bg-primary/5",
                     onRowClick && "cursor-pointer hover:bg-muted/50",
                     getRowClassName?.(row, rowIndex)
                   )}
                   onClick={() => onRowClick?.(row, rowIndex)}
                 >
-                  {selectable && (
-                    <td
-                      className="w-12 px-4 py-4"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        toggleRow(row);
-                      }}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={isSelected(row)}
-                        onChange={() => toggleRow(row)}
-                        aria-label="Zeile auswählen"
-                        className="w-4 h-4 rounded border-border accent-primary cursor-pointer"
-                      />
-                    </td>
-                  )}
                   {columns.map((col) => {
                     const raw = row[col.key];
                     return (

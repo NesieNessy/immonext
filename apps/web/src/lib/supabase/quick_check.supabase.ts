@@ -130,10 +130,16 @@ function mapOverview(row: Record<string, unknown>): QuickCheckOverview {
 
 // ── Queries ───────────────────────────────────────────────────────────────────
 
-/** Get the latest 100 QuickChecks for the current user */
-export async function getAllQuickChecks(): Promise<QuickCheckOverview[]> {
+/**
+ * Get the latest 100 QuickChecks for the current user, filtered by
+ * detail_check — false for the Ersteinschätzungen overview, true for the
+ * Detailbewertungen overview. Filtering server-side (rather than fetching
+ * everything and discarding half client-side) also means the 100-row cap
+ * applies per list, not split across both.
+ */
+export async function getAllQuickChecks(detailCheck: boolean): Promise<QuickCheckOverview[]> {
     if (isAuthBypassEnabled()) {
-        const res = await fetch('/api/quick-checks', { cache: 'no-store' });
+        const res = await fetch(`/api/quick-checks?detailCheck=${detailCheck}`, { cache: 'no-store' });
         if (!res.ok) throw new Error(await res.text());
         const data = await res.json();
         return (data ?? []).map(mapOverview);
@@ -142,6 +148,7 @@ export async function getAllQuickChecks(): Promise<QuickCheckOverview[]> {
     const { data, error } = await supabase
         .from('quick_check_overview')
         .select('*')
+        .eq('detail_check', detailCheck)
         .order('ingest_date', { ascending: false })
         .limit(100);
     if (error) throw error;

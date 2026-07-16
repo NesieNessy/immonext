@@ -7,6 +7,8 @@
 
 import type { TagVariant } from '@/components/ui';
 import type { QuickCheckOverview } from '@/lib/supabase/quick_check.supabase';
+import { classifyKpf } from '@/utils/kpf';
+import { isValidConstructionYear } from '@/utils/validation';
 import { PropertyCondition } from '@immonext/types';
 
 export interface QuickCheckEntry extends Record<string, unknown> {
@@ -56,16 +58,20 @@ export const conditionVariant: Record<PropertyCondition, TagVariant> = {
 };
 
 // ── KPF badge — coloured pill ───────────────────────────────────────────────
+// Colour is driven by classifyKpf() (utils/kpf.ts) — the same classification
+// KpfAssessmentCard's description text uses — so the badge and the prose
+// description of a given KPF value can never disagree with each other.
 
 export function KpfBadge({ value }: { value: number | null }) {
   if (value === null) return <span className="text-muted-foreground">—</span>;
 
+  const { label } = classifyKpf(value);
   const color =
-    value <= 20
-      ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-      : value <= 30
+    label === 'Sehr teuer'
+      ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+      : label === 'Hochpreisig'
       ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
-      : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400';
+      : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400';
 
   return (
     <span className={`inline-flex items-center justify-center font-semibold rounded-lg px-2.5 py-1 text-sm min-w-[3rem] ${color}`}>
@@ -73,6 +79,12 @@ export function KpfBadge({ value }: { value: number | null }) {
     </span>
   );
 }
+
+/** Dropdown options for the create/edit forms — includes a placeholder. */
+export const CONDITION_OPTIONS = [
+  { value: '', label: 'Bitte auswählen' },
+  ...Object.values(PropertyCondition).map((v) => ({ value: v, label: v })),
+];
 
 export const CONDITION_FILTER_OPTIONS = Object.values(PropertyCondition).map((v) => ({ value: v, label: v }));
 export const STATUS_FILTER_OPTIONS = [
@@ -103,4 +115,56 @@ export function getPlaceholderPortalUrl(row: QuickCheckEntry): string | null {
   if (row.portalId === MANUAL_ENTRY_LABEL || row.status === 'inaktiv') return null;
   const domain = PLACEHOLDER_PORTAL_DOMAINS[row.id % PLACEHOLDER_PORTAL_DOMAINS.length];
   return `${domain}/${encodeURIComponent(row.portalId)}`;
+}
+
+// ── Create/edit form validation — shared by quick-check/new and
+//    QuickCheckResultView, whose forms have identical fields and rules. ────
+
+export interface QuickCheckFormFields {
+  street: string;
+  postalCode: string;
+  city: string;
+  purchasePrice: string;
+  coldRent: string;
+  yearOfConstruction: string;
+}
+
+/**
+ * Per-field validation messages — only populated once a field has been
+ * touched (non-empty), so a fresh form doesn't show errors immediately.
+ * `purchasePrice`/`coldRent` are passed pre-parsed since callers already
+ * need the numeric values for the KPF calculation.
+ */
+export function getQuickCheckFieldErrors(
+  fields: QuickCheckFormFields,
+  purchasePrice: number,
+  coldRent: number,
+  currentYear: number
+) {
+  return {
+    street:
+      fields.street.length > 0 && fields.street.trim().length > 120
+        ? 'Maximal 120 Zeichen'
+        : '',
+    postalCode:
+      fields.postalCode.length > 0 && !/^\d{5}$/.test(fields.postalCode)
+        ? 'Genau 5 Ziffern erforderlich'
+        : '',
+    city:
+      fields.city.length > 0 && fields.city.trim().length > 120
+        ? 'Maximal 120 Zeichen'
+        : '',
+    purchasePrice:
+      fields.purchasePrice !== '' && purchasePrice <= 0
+        ? 'Muss größer als 0 sein'
+        : '',
+    coldRent:
+      fields.coldRent !== '' && coldRent <= 0
+        ? 'Muss größer als 0 sein'
+        : '',
+    yearOfConstruction:
+      fields.yearOfConstruction !== '' && !isValidConstructionYear(parseInt(fields.yearOfConstruction, 10), currentYear)
+        ? `Zwischen 1850 und ${currentYear}`
+        : '',
+  };
 }

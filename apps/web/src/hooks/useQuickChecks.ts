@@ -30,8 +30,8 @@ export function useQuickChecks(detailCheck = false): UseQuickChecksResult {
         setIsLoading(true);
         setError(null);
         try {
-            const rows = await getAllQuickChecks();
-            setData(rows.filter((row) => row.detailCheck === detailCheck));
+            const rows = await getAllQuickChecks(detailCheck);
+            setData(rows);
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Unbekannter Fehler');
         } finally {
@@ -45,8 +45,8 @@ export function useQuickChecks(detailCheck = false): UseQuickChecksResult {
 
     const deleteSelected = useCallback(async (ids: number[]) => {
         await deleteQuickChecks(ids);
-        await fetch();
-    }, [fetch]);
+        setData((prev) => prev.filter((row) => !ids.includes(row.quickCheckId)));
+    }, []);
 
     return {
         data,

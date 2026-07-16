@@ -3,6 +3,7 @@
 import { NoResult } from '@/components/common';
 import { KpfAssessmentCard } from '@/components/features/KpfAssessmentCard';
 import { MobileResultBanner } from '@/components/features/MobileResultBanner';
+import { CONDITION_OPTIONS, getQuickCheckFieldErrors } from '@/components/features/QuickCheckDisplay';
 import { QuickCheckImportSection } from '@/components/features/QuickCheckImportSection';
 import { Button, Dropdown, Header, NumberField, StickyActionBar, TextField } from '@/components/ui';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
@@ -15,11 +16,12 @@ import {
   markDetailCheck,
   updateQuickCheck,
 } from '@/lib/supabase/quick_check.supabase';
+import { cn } from '@/lib/utils';
 import { calcKpf } from '@/utils/kpf';
 import { isValidConstructionYear } from '@/utils/validation';
 import { PropertyCondition } from '@immonext/types';
 import { useRouter } from 'next/navigation';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -34,15 +36,6 @@ interface EditForm {
   condition: PropertyCondition | '';
   yearOfConstruction: string;
 }
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-const CONDITION_OPTIONS = [
-  { value: '', label: 'Bitte auswählen' },
-  ...Object.values(PropertyCondition).map((v) => ({ value: v, label: v })),
-];
 
 // ---------------------------------------------------------------------------
 // Component
@@ -61,31 +54,29 @@ export function QuickCheckResultView({ id }: Props) {
   });
   const [portalUrl, setPortalUrl] = useState('');
 
-  // Snapshot of the loaded values, to detect whether the user has changed
-  // anything since the record was fetched.
-  const [initialForm, setInitialForm] = useState<EditForm | null>(null);
-  const [initialPortalUrl, setInitialPortalUrl] = useState('');
-
   // UI state
   const [isBusy, setIsBusy] = useState(false);
 
+  // Snapshot of the loaded values (to detect whether the user has changed
+  // anything since the record was fetched) — a pure function of `data`, so
+  // derived rather than duplicated into its own state.
+  const initialForm: EditForm | null = useMemo(() => data && ({
+    street:             data.street,
+    postalCode:         data.postalCode,
+    city:               data.city,
+    purchasePrice:      String(data.purchasePrice),
+    coldRent:           String(data.coldRent),
+    condition:          data.condition,
+    yearOfConstruction: String(data.yearOfConstruction),
+  }), [data]);
+  const initialPortalUrl = data?.portalId ?? '';
+
   // Pre-fill edit form when record loads
   useEffect(() => {
-    if (!data) return;
-    const loadedForm: EditForm = {
-      street:             data.street,
-      postalCode:         data.postalCode,
-      city:               data.city,
-      purchasePrice:      String(data.purchasePrice),
-      coldRent:           String(data.coldRent),
-      condition:          data.condition,
-      yearOfConstruction: String(data.yearOfConstruction),
-    };
-    setEditForm(loadedForm);
-    setInitialForm(loadedForm);
-    setPortalUrl(data.portalId ?? '');
-    setInitialPortalUrl(data.portalId ?? '');
-  }, [data]);
+    if (!initialForm) return;
+    setEditForm(initialForm);
+    setPortalUrl(initialPortalUrl);
+  }, [initialForm, initialPortalUrl]);
 
   // Derived edit-form values
   const purchasePrice = parseFloat(editForm.purchasePrice) || 0;
@@ -95,23 +86,8 @@ export function QuickCheckResultView({ id }: Props) {
 
   const kpf = calcKpf(purchasePrice, coldRent);
 
-  // Validation 
-  const editErrors = {
-    street: editForm.street.length > 0 && editForm.street.trim().length > 120
-      ? 'Maximal 120 Zeichen' : '',
-    postalCode: editForm.postalCode.length > 0 && !/^\d{5}$/.test(editForm.postalCode)
-      ? 'Genau 5 Ziffern erforderlich' : '',
-    city: editForm.city.length > 0 && editForm.city.trim().length > 120
-      ? 'Maximal 120 Zeichen' : '',
-    purchasePrice: editForm.purchasePrice !== '' && purchasePrice <= 0
-      ? 'Muss größer als 0 sein' : '',
-    coldRent: editForm.coldRent !== '' && coldRent <= 0
-      ? 'Muss größer als 0 sein' : '',
-    yearOfConstruction:
-      editForm.yearOfConstruction !== '' && !isValidConstructionYear(parseInt(editForm.yearOfConstruction, 10), currentYear)
-        ? `Zwischen 1850 und ${currentYear}`
-        : '',
-  };
+  // Validation
+  const editErrors = getQuickCheckFieldErrors(editForm, purchasePrice, coldRent, currentYear);
 
   // Shared by isEditValid and canShowResult — everything the KPF calculation
   // itself needs (it never uses street/city).
@@ -219,25 +195,15 @@ export function QuickCheckResultView({ id }: Props) {
     router.push('/property-valuation/quick-check');
   };
 
-  // Guards
-  if (authLoading || isLoading) {
+  // Guards — loading, error, and not-found all render the same centred
+  // single-line message, just with different text/styling.
+  if (authLoading || isLoading || error || !data) {
+    const message = error ? `Fehler: ${error}`
+      : authLoading || isLoading ? 'Ergebnis wird geladen…'
+      : 'Ersteinschätzung nicht gefunden.';
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <p className="text-sm text-muted-foreground">Ergebnis wird geladen…</p>
-      </div>
-    );
-  }
-  if (error) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <p className="text-sm text-destructive">Fehler: {error}</p>
-      </div>
-    );
-  }
-  if (!data) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <p className="text-sm text-muted-foreground">Ersteinschätzung nicht gefunden.</p>
+        <p className={cn('text-sm', error ? 'text-destructive' : 'text-muted-foreground')}>{message}</p>
       </div>
     );
   }

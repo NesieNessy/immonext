@@ -58,16 +58,20 @@ function mapQuickCheck(row: QuickCheckRow) {
   };
 }
 
-export async function GET() {
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const detailCheck = searchParams.get('detailCheck') === 'true';
+
   const { rows } = await db.query<QuickCheckRow>(
     `
       SELECT *
       FROM quick_check_overview
       WHERE user_id = $1
+        AND detail_check = $2
       ORDER BY ingest_date DESC
       LIMIT 100
     `,
-    [DEV_USER_ID],
+    [DEV_USER_ID, detailCheck],
   );
 
   return NextResponse.json(rows.map(mapQuickCheck));

@@ -3,6 +3,7 @@
 import { NoResult } from '@/components/common';
 import { KpfAssessmentCard } from '@/components/features/KpfAssessmentCard';
 import { MobileResultBanner } from '@/components/features/MobileResultBanner';
+import { CONDITION_OPTIONS, getQuickCheckFieldErrors } from '@/components/features/QuickCheckDisplay';
 import { QuickCheckImportSection } from '@/components/features/QuickCheckImportSection';
 import { Button, Dropdown, Header, NumberField, StickyActionBar, TextField } from '@/components/ui';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
@@ -28,15 +29,6 @@ interface FormData {
   condition: PropertyCondition | '';
   yearOfConstruction: string;
 }
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-const CONDITION_OPTIONS = [
-  { value: '', label: 'Bitte auswählen' },
-  ...Object.values(PropertyCondition).map((v) => ({ value: v, label: v })),
-];
 
 // ---------------------------------------------------------------------------
 // Page
@@ -66,32 +58,7 @@ export default function QuickCheckPage() {
   const currentYear = new Date().getFullYear();
 
   // Per-field validation — only shown when the field has been touched (non-empty)
-  const fieldErrors = {
-    street:
-      form.street.length > 0 && form.street.trim().length > 120
-        ? 'Maximal 120 Zeichen'
-        : '',
-    postalCode:
-      form.postalCode.length > 0 && !/^\d{5}$/.test(form.postalCode)
-        ? 'Genau 5 Ziffern erforderlich'
-        : '',
-    city:
-      form.city.length > 0 && form.city.trim().length > 120
-        ? 'Maximal 120 Zeichen'
-        : '',
-    purchasePrice:
-      form.purchasePrice !== '' && purchasePrice <= 0
-        ? 'Muss größer als 0 sein'
-        : '',
-    coldRent:
-      form.coldRent !== '' && coldRent <= 0
-        ? 'Muss größer als 0 sein'
-        : '',
-    yearOfConstruction:
-      form.yearOfConstruction !== '' && !isValidConstructionYear(parseInt(form.yearOfConstruction, 10), currentYear)
-        ? `Zwischen 1850 und ${currentYear}`
-        : '',
-  };
+  const fieldErrors = getQuickCheckFieldErrors(form, purchasePrice, coldRent, currentYear);
 
   const handleFieldChange = (field: keyof FormData, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }));
