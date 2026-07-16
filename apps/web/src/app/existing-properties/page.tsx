@@ -36,13 +36,13 @@ export default function ExistingPropertiesPage() {
       <main className="container mx-auto px-4 py-8">
         {/* Page Header */}
         <Header
-          title="Bestandsobjekte"
-          subtitle="Übersicht aller vorhandenen Immobilien"
+          items={[{ label: 'Bestandsobjekte' }]}
           actions={
-            <Button 
+            <Button
               label={BUTTON_DETAILS.Create.label}
               icon={<BUTTON_DETAILS.Create.icon />}
-              variant="primary" 
+              variant="primary"
+              hideLabelOnMobile
               onClick={handleCreateProperty}
             />
           }

@@ -35,15 +35,19 @@ export default function TenancyTrends({ propertyId }: { propertyId: string }) {
     return (
         <div className="min-h-screen bg-background pb-24">
             <main className="container mx-auto px-4 py-8">
-                <Header 
-                    title={`${property.street} ${property.houseNumber}`}
-                    subtitle={ExistingPropertiesUseCases.TenancyTrends}
-                    image={property.imageUrl ? <img src={base64ToDataUri(property.imageUrl)!} alt={`${property.street} ${property.houseNumber}`} className="w-16 h-16 object-cover rounded-lg" /> : undefined}
+                <Header
+                    items={[
+                        { label: 'Bestandsobjekte', href: '/existing-properties' },
+                        { label: `${property.street} ${property.houseNumber}` },
+                        { label: ExistingPropertiesUseCases.TenancyTrends },
+                    ]}
+                    image={property.imageUrl ? <img src={base64ToDataUri(property.imageUrl)!} alt={`${property.street} ${property.houseNumber}`} className="w-10 h-10 object-cover rounded-lg" /> : undefined}
                     actions={
-                        <Button 
+                        <Button
                             label={BUTTON_DETAILS.UseCases.label}
                             icon={<BUTTON_DETAILS.UseCases.icon />}
                             variant="primary"
+                            hideLabelOnMobile
                             menuItems={useCaseMenuItems}
                         />
                     }

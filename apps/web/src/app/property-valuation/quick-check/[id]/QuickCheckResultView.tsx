@@ -233,13 +233,13 @@ export function QuickCheckResultView({ id }: Props) {
       <div className="min-h-screen bg-background pb-20">
         <main className="container mx-auto px-4 py-3">
           <Header
-            title="Immobilien-Ersteinschätzung"
-            subtitle="Bewertung von Investitionsobjekten"
+            items={[{ label: 'Objektbewertung' }, { label: 'Immobilien-Ersteinschätzung' }]}
             actions={
               <Button
                 label={BUTTON_DETAILS.StartDetailCheck.label}
                 icon={<BUTTON_DETAILS.StartDetailCheck.icon />}
                 variant="outline"
+                hideLabelOnMobile
                 onClick={() => router.push(`/property-valuation/detail-check/property-data?quickCheckId=${id}`)}
               />
             }

@@ -150,22 +150,19 @@ function ComparisonContent() {
   };
 
   return (
-    <PropertyValuationLayout currentStep={8}>
+    <PropertyValuationLayout
+      currentStep={8}
+      title="Vergleich"
+      actions={
+        <Button
+          label="Überspringen"
+          variant="outline"
+          hideLabelOnMobile
+          onClick={() => router.push(`/property-valuation/detail-check/result${suffix}`)}
+        />
+      }
+    >
       <div className="pb-24">
-        <div className="mb-6 flex items-start justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-semibold text-foreground">Vergleich</h1>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Vergleich mit Referenzobjekten anderer Kunden anhand Adresse, Kaltmiete, Wohnfläche, Baujahr und Mietfaktor.
-            </p>
-          </div>
-          <Button
-            label="Überspringen"
-            variant="outline"
-            onClick={() => router.push(`/property-valuation/detail-check/result${suffix}`)}
-          />
-        </div>
-
         {error && (
           <div className="mb-4 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
             {error}

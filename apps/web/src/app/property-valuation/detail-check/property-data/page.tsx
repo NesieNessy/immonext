@@ -247,15 +247,8 @@ function PropertyDataContent() {
   };
 
   return (
-    <PropertyValuationLayout currentStep={0}>
+    <PropertyValuationLayout currentStep={0} title="Objektdaten">
       <div className="pb-24">
-        <div className="mb-6">
-          <h1 className="text-2xl font-semibold text-foreground">Objektdaten</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Erfassen Sie zuerst Kategorie, Erfassungsart und die Basisdaten des Objekts.
-          </p>
-        </div>
-
         {topError && (
           <div aria-live="assertive" className="mb-4 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
             {topError}

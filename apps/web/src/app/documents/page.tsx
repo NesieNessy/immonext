@@ -8,8 +8,7 @@ export default function DocumentsPage() {
             <main className="container mx-auto px-4 py-8">
                 {/* Page Header */}
                 <Header
-                    title="Dokumente"
-                    subtitle="Ihre Immobiliendokumente"
+                    items={[{ label: 'Dokumente' }]}
                 />
 
                 <div className="mt-8">

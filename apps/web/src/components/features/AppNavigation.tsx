@@ -81,6 +81,7 @@ export function AppNavigation() {
           iconName: 'logout' as const,
           ariaLabel: 'Abmelden',
           onClick: handleLogout,
+          separator: true,
         }] : []),
       ]}
     />

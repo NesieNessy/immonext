@@ -57,6 +57,9 @@ interface ActionButton {
   ariaLabel?: string;
   href?: string;
   active?: boolean;
+  /** Renders a vertical divider immediately before this action, to visually
+   *  separate it from the preceding group (e.g. logout from search/user). */
+  separator?: boolean;
 }
 
 export function NavigationBar({ items, logo, actions }: NavigationBarProps) {
@@ -109,11 +112,11 @@ export function NavigationBar({ items, logo, actions }: NavigationBarProps) {
                         className={cn(
                           "px-4 py-2 rounded-lg transition-all duration-200 flex items-center gap-2 cursor-pointer",
                           item.active
-                            ? "bg-primary text-primary-foreground"
+                            ? "text-primary"
                             : "text-foreground hover:bg-muted"
                         )}
                       >
-                        {Icon && <Icon size={20} className={item.active ? "" : "text-primary"} />}
+                        {Icon && <Icon size={20} className="text-primary" />}
                         <span>{item.label}</span>
                         {hasSubItems && <ChevronDown size={16} className={cn("transition-transform", isOpen && "rotate-180")} />}
                       </button>
@@ -123,13 +126,20 @@ export function NavigationBar({ items, logo, actions }: NavigationBarProps) {
                         className={cn(
                           "px-4 py-2 rounded-lg transition-all duration-200 flex items-center gap-2 cursor-pointer",
                           item.active
-                            ? "bg-primary text-primary-foreground"
+                            ? "text-primary"
                             : "text-foreground hover:bg-muted"
                         )}
                       >
-                        {Icon && <Icon size={20} className={item.active ? "" : "text-primary"} />}
+                        {Icon && <Icon size={20} className="text-primary" />}
                         <span>{item.label}</span>
                       </Link>
+                    )}
+
+                    {/* Active indicator — extends through the nav's own bottom
+                        padding so it sits flush on the nav/page separator
+                        line, instead of looking like the button's own edge. */}
+                    {item.active && (
+                      <span className="absolute left-4 right-4 -bottom-4 h-0.5 bg-primary" />
                     )}
 
                     {hasSubItems && isOpen && (
@@ -193,7 +203,9 @@ export function NavigationBar({ items, logo, actions }: NavigationBarProps) {
           </div>
           <div className="flex items-center gap-2">
             {actions && actions.length > 0 && actions.map((action, index) => (
-              <div key={index} className="relative">
+              <React.Fragment key={index}>
+                {action.separator && <div className="w-px h-6 bg-border mx-1" />}
+                <div className="relative">
                 {action.href ? (
                   <Link
                     href={action.href}
@@ -227,7 +239,8 @@ export function NavigationBar({ items, logo, actions }: NavigationBarProps) {
                     })}
                   </button>
                 )}
-              </div>
+                </div>
+              </React.Fragment>
             ))}
 
             {/* Mobile-only hamburger — reveals `items` in a right-side drawer */}

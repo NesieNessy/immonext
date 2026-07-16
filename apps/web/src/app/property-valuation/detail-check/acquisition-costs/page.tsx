@@ -236,14 +236,8 @@ function AcquisitionCostsContent() {
   };
 
   return (
-    <PropertyValuationLayout currentStep={1}>
+    <PropertyValuationLayout currentStep={1} title="Kaufkosten">
       <div className="pb-24">
-        <div className="mb-6">
-          <h1 className="text-2xl font-semibold text-foreground">Kaufkosten</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Bekannte Werte aus der Ersteinschätzung werden vorbefüllt. Graue Felder werden automatisch berechnet.
-          </p>
-        </div>
 
         {error && (
           <div className="mb-4 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">

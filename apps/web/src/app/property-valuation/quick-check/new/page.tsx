@@ -161,13 +161,13 @@ export default function QuickCheckPage() {
 
         <main className="container mx-auto px-4 py-3">
           <Header
-            title="Immobilien-Ersteinschätzung"
-            subtitle="Bewertung von Investitionsobjekten"
+            items={[{ label: 'Objektbewertung' }, { label: 'Immobilien-Ersteinschätzung' }]}
             actions={
               <Button
                 label={BUTTON_DETAILS.StartDetailCheck.label}
                 icon={<BUTTON_DETAILS.StartDetailCheck.icon />}
                 variant="outline"
+                hideLabelOnMobile
                 disabled={!isFormValid || isSaving}
                 onClick={() => void handleStartDetailCheck()}
               />

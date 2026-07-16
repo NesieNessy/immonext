@@ -7,6 +7,7 @@ export { Diagram } from "./Diagram";
 export { Dropdown } from "./Dropdown";
 export { Gauge } from "./Gauge";
 export { Header } from "./Header";
+export type { BreadcrumbItem } from "./Header";
 export { Image } from "./Image";
 export { List } from "./List";
 export { Modal } from "./Modal";

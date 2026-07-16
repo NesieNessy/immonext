@@ -8,8 +8,7 @@ export default function NetworkPage() {
             <main className="container mx-auto px-4 py-8">
                 {/* Page Header */}
                 <Header
-                    title="Netzwerk"
-                    subtitle="Ihr professionelles Netzwerk"
+                    items={[{ label: 'Netzwerk' }]}
                 />
 
                 <div className="mt-8">

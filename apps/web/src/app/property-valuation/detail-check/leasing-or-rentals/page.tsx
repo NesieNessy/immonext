@@ -210,7 +210,7 @@ function RentalContent() {
   };
 
   return (
-    <PropertyValuationLayout currentStep={2}>
+    <PropertyValuationLayout currentStep={2} title="Vermietung">
       <Modal
         open={infoOpen}
         onClose={() => setInfoOpen(false)}
@@ -265,12 +265,6 @@ function RentalContent() {
       </Modal>
 
       <div className="pb-24">
-        <div className="mb-6">
-          <h1 className="text-2xl font-semibold text-foreground">Vermietung</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Alle Beträge werden monatlich in Euro erfasst.
-          </p>
-        </div>
 
         {topError && (
           <div className="mb-4 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">

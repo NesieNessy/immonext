@@ -12,18 +12,11 @@ export default function Home() {
 
         {/* Page Header */}
         <Header
-          title="🏡 ImmoNext"
-          subtitle="Your Real Estate Management Platform"
+          items={[{ label: 'Startseite' }]}
           actions={
             <>
-              <Button variant="outline" size="sm">
-                <Icons.Filter className="w-4 h-4 mr-2" />
-                Filter
-              </Button>
-              <Button variant="primary" size="sm">
-                <Icons.UserPlus className="w-4 h-4 mr-2" />
-                Add Customer
-              </Button>
+              <Button variant="outline" size="sm" label="Filter" hideLabelOnMobile icon={<Icons.Filter />} />
+              <Button variant="primary" size="sm" label="Add Customer" hideLabelOnMobile icon={<Icons.UserPlus />} />
             </>
           }
         />

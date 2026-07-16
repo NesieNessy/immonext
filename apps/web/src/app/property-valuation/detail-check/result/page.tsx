@@ -154,22 +154,19 @@ function ResultContent() {
   };
 
   return (
-    <PropertyValuationLayout currentStep={9}>
+    <PropertyValuationLayout
+      currentStep={9}
+      title="Empfehlung"
+      actions={
+        <Button
+          label="Zur Übersicht"
+          variant="outline"
+          hideLabelOnMobile
+          onClick={() => router.push('/property-valuation/detail-check')}
+        />
+      }
+    >
       <div className="pb-24">
-        <div className="mb-6 flex items-start justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-semibold text-foreground">Empfehlung</h1>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Ergebnis aus Rendite, Cashflow, AfA, Mietentwicklung, Lage und Vergleich. Offene Rechenlogiken sind sichtbar gekennzeichnet.
-            </p>
-          </div>
-          <Button
-            label="Zur Übersicht"
-            variant="outline"
-            onClick={() => router.push('/property-valuation/detail-check')}
-          />
-        </div>
-
         {error && (
           <div className="mb-4 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
             {error}

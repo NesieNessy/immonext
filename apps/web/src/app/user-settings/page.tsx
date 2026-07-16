@@ -135,8 +135,7 @@ export default function SettingsPage() {
         <div className="min-h-screen bg-background pb-24">
             <main className="container mx-auto px-4 py-8">
                 <Header
-                    title="Benutzereinstellungen"
-                    subtitle="Ihre persönlichen Daten und Kontoeinstellungen"
+                    items={[{ label: 'Benutzereinstellungen' }]}
                 />
 
                 {error && (

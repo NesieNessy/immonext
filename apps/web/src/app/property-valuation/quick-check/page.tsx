@@ -304,14 +304,14 @@ export default function QuickCheckOverviewPage() {
 
         {/* ── Page header ─────────────────────────────────────────────── */}
         <Header
-          title="Immobilien-Übersicht"
-          subtitle="Alle importierten Objekte auf einen Blick"
+          items={[{ label: 'Objektbewertung' }, { label: 'Ersteinschätzungen' }]}
           actions={
             <Link href="/property-valuation/quick-check/new">
               <Button
                 label={BUTTON_DETAILS.AddQuickCheck.label}
                 icon={<BUTTON_DETAILS.AddQuickCheck.icon />}
                 variant="primary"
+                hideLabelOnMobile
               />
             </Link>
           }
@@ -446,7 +446,7 @@ export default function QuickCheckOverviewPage() {
                       <Button
                         iconOnly
                         icon={<MoreVertical className="w-4 h-4" />}
-                        variant="outline"
+                        variant="ghost"
                         size="sm"
                         menuItems={rowMenuItems(row)}
                       />

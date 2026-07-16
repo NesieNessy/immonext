@@ -225,22 +225,19 @@ function DepreciationContent() {
   };
 
   return (
-    <PropertyValuationLayout currentStep={4}>
+    <PropertyValuationLayout
+      currentStep={4}
+      title="Restnutzungsdauer in Jahren"
+      actions={
+        <Button
+          label="Überspringen"
+          variant="outline"
+          hideLabelOnMobile
+          onClick={() => router.push(`/property-valuation/detail-check/renovation${suffix}`)}
+        />
+      }
+    >
       <div className="pb-24">
-        <div className="mb-6 flex items-start justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-semibold text-foreground">Restnutzungsdauer in Jahren</h1>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Möchten Sie individuell prüfen oder mit dem Standardwert von 50 Jahren planen?
-            </p>
-          </div>
-          <Button
-            label="Überspringen"
-            variant="outline"
-            onClick={() => router.push(`/property-valuation/detail-check/renovation${suffix}`)}
-          />
-        </div>
-
         {error && (
           <div className="mb-4 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
             {error}

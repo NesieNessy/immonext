@@ -1,6 +1,6 @@
 "use client";
 
-import { Stepper } from '@/components/ui';
+import { Header, Stepper } from '@/components/ui';
 import { PropertyValuationSteps } from '@/constants/PropertyValuationUseCases';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
@@ -8,9 +8,14 @@ import { useEffect, useMemo, useState } from 'react';
 interface PropertyValuationLayoutProps {
   children: React.ReactNode;
   currentStep: number;
+  /** Current step's page title — usually more specific than the generic
+   *  Stepper label (e.g. "Restnutzungsdauer in Jahren" vs. "Abschreibung"). */
+  title: string;
+  /** Optional action(s) shown next to the breadcrumb, e.g. a "Überspringen" button. */
+  actions?: React.ReactNode;
 }
 
-export function PropertyValuationLayout({ children, currentStep }: PropertyValuationLayoutProps) {
+export function PropertyValuationLayout({ children, currentStep, title, actions }: PropertyValuationLayoutProps) {
   const router = useRouter();
   const [maxReachedStep, setMaxReachedStep] = useState(currentStep);
 
@@ -44,10 +49,19 @@ export function PropertyValuationLayout({ children, currentStep }: PropertyValua
     <div className="min-h-screen bg-background">
       {/* Navigation Bar - always shows property-valuation as active */}
       <main className="container mx-auto px-4 py-8">
+        <Header
+          items={[
+            { label: 'Objektbewertung' },
+            { label: 'Detailbewertung', href: '/property-valuation/detail-check' },
+            { label: title },
+          ]}
+          actions={actions}
+        />
+
         {/* Stepper */}
-        <div className="mb-8">
-          <Stepper 
-            steps={stepperSteps} 
+        <div className="mt-6 mb-8">
+          <Stepper
+            steps={stepperSteps}
             currentStep={currentStep}
             maxClickableStep={maxReachedStep}
             onStepClick={navigateToStep}
