@@ -233,7 +233,7 @@ export function QuickCheckResultView({ id }: Props) {
       <div className="min-h-screen bg-background pb-20">
         <main className="container mx-auto px-4 py-3">
           <Header
-            items={[{ label: 'Objektbewertung' }, { label: 'Immobilien-Ersteinschätzung' }]}
+            items={[{ label: 'Objektbewertung' }, { label: editForm.street || 'Immobilien-Ersteinschätzung' }]}
             actions={
               <Button
                 label={BUTTON_DETAILS.StartDetailCheck.label}

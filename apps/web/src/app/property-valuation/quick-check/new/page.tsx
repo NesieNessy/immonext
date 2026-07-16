@@ -161,7 +161,7 @@ export default function QuickCheckPage() {
 
         <main className="container mx-auto px-4 py-3">
           <Header
-            items={[{ label: 'Objektbewertung' }, { label: 'Immobilien-Ersteinschätzung' }]}
+            items={[{ label: 'Objektbewertung' }, { label: 'Neue Ersteinschätzung' }]}
             actions={
               <Button
                 label={BUTTON_DETAILS.StartDetailCheck.label}
