@@ -157,6 +157,13 @@ export async function getAllQuickChecks(detailCheck: boolean): Promise<QuickChec
 }
 
 export async function getQuickCheckById(quickCheckId: number): Promise<QuickCheck | null> {
+    if (isAuthBypassEnabled()) {
+        const res = await authFetch(`/api/quick-checks?id=${quickCheckId}`, { cache: 'no-store' });
+        if (res.status === 404) return null;
+        if (!res.ok) throw new Error(await res.text());
+        return mapQuickCheck(await res.json());
+    }
+
     const { data, error } = await supabase
         .from('quick_check')
         .select('*')

@@ -56,6 +56,7 @@ export async function GET(request: Request) {
   return NextResponse.json({
     workflowId,
     quickCheckId: quickCheck?.quick_check_id ?? null,
+    hasDetailCheckData: Boolean(saved),
     propertyCategory: saved?.property_category ?? '',
     dataEntrySource: saved?.data_entry_source ?? quickCheck?.data_entry_source ?? '',
     tenancyType: saved?.tenancy_type ?? '',
@@ -124,57 +125,81 @@ export async function POST(request: Request) {
     return NextResponse.json({ fieldErrors }, { status: 400 });
   }
 
-  await db.query(
-    `
-      INSERT INTO detail_check_property_data (
-        user_id,
-        quick_check_id,
-        workflow_id,
-        property_category,
-        data_entry_source,
-        tenancy_type,
-        source_url,
-        street_house_number,
-        postal_code,
+  const client = await db.connect();
+  try {
+    await client.query('BEGIN');
+    await client.query(
+      `
+        INSERT INTO detail_check_property_data (
+          user_id,
+          quick_check_id,
+          workflow_id,
+          property_category,
+          data_entry_source,
+          tenancy_type,
+          source_url,
+          street_house_number,
+          postal_code,
+          city,
+          year_of_construction,
+          living_area_m2,
+          parking_spaces,
+          energy_efficiency
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+        ON CONFLICT (user_id, workflow_id) DO UPDATE SET
+          quick_check_id = EXCLUDED.quick_check_id,
+          property_category = EXCLUDED.property_category,
+          data_entry_source = EXCLUDED.data_entry_source,
+          tenancy_type = EXCLUDED.tenancy_type,
+          source_url = EXCLUDED.source_url,
+          street_house_number = EXCLUDED.street_house_number,
+          postal_code = EXCLUDED.postal_code,
+          city = EXCLUDED.city,
+          year_of_construction = EXCLUDED.year_of_construction,
+          living_area_m2 = EXCLUDED.living_area_m2,
+          parking_spaces = EXCLUDED.parking_spaces,
+          energy_efficiency = EXCLUDED.energy_efficiency,
+          updated_at = NOW()
+      `,
+      [
+        userId,
+        quickCheck?.quick_check_id ?? null,
+        workflowId,
+        propertyCategory,
+        dataEntrySource,
+        tenancyType,
+        sourceUrl || null,
+        streetHouseNumber || null,
+        postalCode || null,
         city,
-        year_of_construction,
-        living_area_m2,
-        parking_spaces,
-        energy_efficiency
-      )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
-      ON CONFLICT (user_id, workflow_id) DO UPDATE SET
-        quick_check_id = EXCLUDED.quick_check_id,
-        property_category = EXCLUDED.property_category,
-        data_entry_source = EXCLUDED.data_entry_source,
-        tenancy_type = EXCLUDED.tenancy_type,
-        source_url = EXCLUDED.source_url,
-        street_house_number = EXCLUDED.street_house_number,
-        postal_code = EXCLUDED.postal_code,
-        city = EXCLUDED.city,
-        year_of_construction = EXCLUDED.year_of_construction,
-        living_area_m2 = EXCLUDED.living_area_m2,
-        parking_spaces = EXCLUDED.parking_spaces,
-        energy_efficiency = EXCLUDED.energy_efficiency,
-        updated_at = NOW()
-    `,
-    [
-      userId,
-      quickCheck?.quick_check_id ?? null,
-      workflowId,
-      propertyCategory,
-      dataEntrySource,
-      tenancyType,
-      sourceUrl || null,
-      streetHouseNumber || null,
-      postalCode || null,
-      city,
-      yearOfConstruction,
-      livingAreaM2,
-      parkingSpaces,
-      energyEfficiency || null,
-    ],
-  );
+        yearOfConstruction,
+        livingAreaM2,
+        parkingSpaces,
+        energyEfficiency || null,
+      ],
+    );
+
+    if (quickCheck?.quick_check_id) {
+      await client.query(
+        `
+          UPDATE quick_check
+          SET detail_check = TRUE,
+              updated_at = NOW()
+          WHERE user_id = $1
+            AND quick_check_id = $2
+        `,
+        [userId, quickCheck.quick_check_id],
+      );
+    }
+
+    await client.query('COMMIT');
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
 
   return NextResponse.json({ status: 'OK', next: 'KAUFKOSTEN', workflowId });
 }

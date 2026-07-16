@@ -13,7 +13,6 @@ import { useRequireAuth } from '@/hooks/useRequireAuth';
 import {
   acceptQuickCheck,
   discardQuickCheck,
-  markDetailCheck,
   updateQuickCheck,
 } from '@/lib/supabase/quick_check.supabase';
 import { cn } from '@/lib/utils';
@@ -164,13 +163,11 @@ export function QuickCheckResultView({ id }: Props) {
     }
   };
 
-  // Moves the row out of the Ersteinschätzungen list and into the
-  // Detailbewertungen overview (see useQuickChecks' detailCheck filter),
-  // then jumps into the wizard.
+  // Jumps into the wizard. The row only moves into Detailbewertungen after the
+  // first detail-check page was saved successfully.
   const handleStartDetailCheck = async () => {
     setIsBusy(true);
     try {
-      await markDetailCheck(id);
       router.push(`/property-valuation/detail-check/property-data?quickCheckId=${id}`);
     } catch (err) {
       console.error('Detailbewertung starten fehlgeschlagen', err);

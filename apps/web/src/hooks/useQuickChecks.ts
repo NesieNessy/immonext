@@ -18,8 +18,8 @@ export interface UseQuickChecksResult {
 /**
  * @param detailCheck Filters by quick_check.detail_check — false (default)
  *   for the Ersteinschätzungen overview, true for the Detailbewertungen
- *   overview. A row moves from one list to the other the moment its detail
- *   check is started (see markDetailCheck).
+ *   overview. A row moves from one list to the other after the first
+ *   detail-check page has been saved successfully.
  */
 export function useQuickChecks(detailCheck = false): UseQuickChecksResult {
     const [data, setData] = useState<QuickCheckOverview[]>([]);

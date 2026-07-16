@@ -25,6 +25,7 @@ type FormState = {
 type PropertyDataResponse = FormState & {
   workflowId: string;
   quickCheckId: number | null;
+  hasDetailCheckData: boolean;
   livingAreaM2: number | string;
   parkingSpaces: number | string;
   yearOfConstruction: number | string;
@@ -103,6 +104,7 @@ function PropertyDataContent() {
   const [topError, setTopError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [hasDetailCheckData, setHasDetailCheckData] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -115,6 +117,7 @@ function PropertyDataContent() {
         if (!res.ok) throw new Error(await res.text());
         const data = await res.json() as PropertyDataResponse;
         if (cancelled) return;
+        setHasDetailCheckData(data.hasDetailCheckData);
         setForm({
           propertyCategory: data.propertyCategory || '',
           dataEntrySource: data.dataEntrySource || '',
@@ -173,7 +176,9 @@ function PropertyDataContent() {
 
     setForm((prev) => {
       if (field === 'propertyCategory') {
-        return { ...prev, propertyCategory: value, dataEntrySource: '', tenancyType: '', sourceUrl: '' };
+        return value
+          ? { ...prev, propertyCategory: value }
+          : { ...prev, propertyCategory: '', dataEntrySource: '', tenancyType: '', sourceUrl: '' };
       }
       if (field === 'dataEntrySource') {
         return { ...prev, dataEntrySource: value, tenancyType: '', sourceUrl: value === 'PORTAL_IMPORT' ? prev.sourceUrl : '' };
@@ -261,6 +266,12 @@ function PropertyDataContent() {
     } finally {
       setIsSaving(false);
     }
+  };
+
+  const handleBack = () => {
+    router.push(quickCheckId && !hasDetailCheckData
+      ? '/property-valuation/quick-check'
+      : '/property-valuation/detail-check');
   };
 
   return (
@@ -392,7 +403,7 @@ function PropertyDataContent() {
         show
         ghostLabel={BUTTON_DETAILS.Back.label}
         ghostIcon={<BUTTON_DETAILS.Back.icon />}
-        onGhost={() => router.push('/property-valuation/detail-check')}
+        onGhost={handleBack}
         primaryLabel="Weiter"
         primaryIcon={<BUTTON_DETAILS.Next.icon />}
         primaryDisabled={isLoading || isSaving}

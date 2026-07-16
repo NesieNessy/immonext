@@ -62,7 +62,27 @@ function mapQuickCheck(row: QuickCheckRow) {
 export async function GET(request: Request) {
   const userId = await requireUserId(request);
   const { searchParams } = new URL(request.url);
+  const id = searchParams.get('id');
   const detailCheck = searchParams.get('detailCheck') === 'true';
+
+  if (id) {
+    const { rows } = await db.query<QuickCheckRow>(
+      `
+        SELECT *
+        FROM quick_check
+        WHERE user_id = $1
+          AND quick_check_id = $2
+        LIMIT 1
+      `,
+      [userId, Number(id)],
+    );
+
+    if (!rows[0]) {
+      return NextResponse.json({ error: 'Quick-check not found' }, { status: 404 });
+    }
+
+    return NextResponse.json(mapQuickCheck(rows[0]));
+  }
 
   const { rows } = await db.query<QuickCheckRow>(
     `
