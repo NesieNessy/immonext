@@ -53,11 +53,10 @@ export function QuickCheckImportSection({ portalUrl, onPortalUrlChange }: Props)
 
       <Button
         label={BUTTON_DETAILS.ImportData.label}
-        icon={<BUTTON_DETAILS.ImportData.icon className="text-primary" />}
+        icon={<BUTTON_DETAILS.ImportData.icon />}
         variant="outline"
         onClick={() => setModalOpen(true)}
-        className="w-full border border-border text-foreground bg-transparent
-                   hover:bg-primary/5 hover:border-primary/40 hover:text-foreground mb-3"
+        className="w-full mb-3"
       />
 
       <div className="flex items-center gap-3 mb-3">

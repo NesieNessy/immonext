@@ -60,12 +60,12 @@ function KpfDetails({
 
   return (
     <>
-      {/* Amber assessment banner */}
-      <div className="flex items-start gap-3 px-4 py-3 bg-amber-50 border border-amber-200 rounded-lg">
-        <Icons.AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+      {/* Blue info banner */}
+      <div className="flex items-start gap-3 px-4 py-3 bg-blue-50 border border-blue-200 rounded-lg dark:bg-blue-950/30 dark:border-blue-900">
+        <Icons.AlertCircle className="w-5 h-5 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
         <div>
-          <p className="text-sm font-semibold text-amber-900">Marktüblicher Kaufpreisfaktor</p>
-          <p className="text-sm text-amber-800 mt-0.5">
+          <p className="text-sm font-semibold text-blue-900 dark:text-blue-200">Marktüblicher Kaufpreisfaktor</p>
+          <p className="text-sm text-blue-800 dark:text-blue-300 mt-0.5">
             Faktor {kpf.toFixed(1)}
             {rendite !== null && ` · Rendite ${rendite.toFixed(2)} % p.a.`}
           </p>
