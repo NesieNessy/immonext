@@ -8,7 +8,7 @@ import { Button, Dropdown, Header, NumberField, StickyActionBar, TextField } fro
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { FieldLabels } from '@/constants/FieldLabels';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
-import { createQuickCheck } from '@/lib/supabase/quick_check.supabase';
+import { createQuickCheck, markDetailCheck } from '@/lib/supabase/quick_check.supabase';
 import { calcKpf } from '@/utils/kpf';
 import { isValidConstructionYear } from '@/utils/validation';
 import { PropertyCondition } from '@immonext/types';
@@ -148,6 +148,7 @@ export default function QuickCheckPage() {
     try {
       const created = await saveQuickCheck();
       if (!created) return;
+      await markDetailCheck(created.quickCheckId);
       router.push(`/property-valuation/detail-check/property-data?quickCheckId=${created.quickCheckId}`);
     } catch (error) {
       console.error('Detailbewertung starten fehlgeschlagen', error);

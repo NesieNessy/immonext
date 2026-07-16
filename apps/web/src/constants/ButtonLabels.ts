@@ -36,6 +36,8 @@ enum ButtonType {
   Delete = 'Delete',
   OpenResult = 'OpenResult',
   StartDetailCheck = 'StartDetailCheck',
+  OpenDetailCheck = 'OpenDetailCheck',
+  AddDetailCheck = 'AddDetailCheck',
 }
 
 // 2. Define the structure for your button properties
@@ -65,4 +67,6 @@ export const BUTTON_DETAILS: Record<ButtonType, ButtonConfig> = {
   [ButtonType.Delete]:           { label: 'Löschen',                 icon: Trash2 },
   [ButtonType.OpenResult]:       { label: 'Ergebnis öffnen',         icon: ExternalLink },
   [ButtonType.StartDetailCheck]: { label: 'Detailbewertung starten', icon: BookCheck },
+  [ButtonType.OpenDetailCheck]:  { label: 'Detailbewertung öffnen',  icon: ExternalLink },
+  [ButtonType.AddDetailCheck]:   { label: 'Neue Detailbewertung',    icon: Plus },
 };

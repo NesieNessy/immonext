@@ -12,6 +12,7 @@ import { useRequireAuth } from '@/hooks/useRequireAuth';
 import {
   acceptQuickCheck,
   discardQuickCheck,
+  markDetailCheck,
   updateQuickCheck,
 } from '@/lib/supabase/quick_check.supabase';
 import { calcKpf } from '@/utils/kpf';
@@ -187,6 +188,20 @@ export function QuickCheckResultView({ id }: Props) {
     }
   };
 
+  // Moves the row out of the Ersteinschätzungen list and into the
+  // Detailbewertungen overview (see useQuickChecks' detailCheck filter),
+  // then jumps into the wizard.
+  const handleStartDetailCheck = async () => {
+    setIsBusy(true);
+    try {
+      await markDetailCheck(id);
+      router.push(`/property-valuation/detail-check/property-data?quickCheckId=${id}`);
+    } catch (err) {
+      console.error('Detailbewertung starten fehlgeschlagen', err);
+      setIsBusy(false);
+    }
+  };
+
   // Always leaves back to the overview — that's its main job. The actual
   // DISCARD write only happens when there's something meaningful to record
   // (record still pending a decision, and the user actually changed something).
@@ -241,7 +256,8 @@ export function QuickCheckResultView({ id }: Props) {
                 icon={<BUTTON_DETAILS.StartDetailCheck.icon />}
                 variant="outline"
                 hideLabelOnMobile
-                onClick={() => router.push(`/property-valuation/detail-check/property-data?quickCheckId=${id}`)}
+                disabled={isBusy}
+                onClick={() => void handleStartDetailCheck()}
               />
             }
           />

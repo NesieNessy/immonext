@@ -1,13 +1,23 @@
 "use client";
 
 import { NoResult } from '@/components/common';
-import type { MenuItem, SortDirection, TableColumn, TagVariant } from '@/components/ui';
+import {
+  CONDITION_FILTER_OPTIONS,
+  CONDITION_PILL_LABEL,
+  KpfBadge,
+  STATUS_FILTER_OPTIONS,
+  conditionVariant,
+  getPlaceholderPortalUrl,
+  toEntry,
+  type QuickCheckEntry,
+} from '@/components/features/QuickCheckDisplay';
+import type { MenuItem, SortDirection, TableColumn } from '@/components/ui';
 import { Button, Header, Icons, Table, Tag } from '@/components/ui';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { FieldLabels } from '@/constants/FieldLabels';
 import { useQuickChecks } from '@/hooks/useQuickChecks';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
-import type { QuickCheckOverview } from '@/lib/supabase/quick_check.supabase';
+import { markDetailCheck } from '@/lib/supabase/quick_check.supabase';
 import { cn } from '@/lib/utils';
 import { PropertyCondition } from '@immonext/types';
 import { ChevronLeft, ChevronRight, MoreVertical } from 'lucide-react';
@@ -16,121 +26,13 @@ import { useRouter } from 'next/navigation';
 import { useMemo, useRef, useState } from 'react';
 
 // ---------------------------------------------------------------------------
-// Types — display-layer view model (mapped from QuickCheckOverview)
-// ---------------------------------------------------------------------------
-
-interface QuickCheckEntry extends Record<string, unknown> {
-  id: number;
-  /** Raw ISO timestamp — not displayed, only used as the default sort key
-   *  (ISO 8601 strings sort correctly lexicographically; a reformatted
-   *  dd.MM.yy string would not, across month/year boundaries). */
-  ingestDate: string;
-  portalId: string;
-  kpfMultiplier: number | null;
-  purchasePrice: number;
-  postalCode: string;
-  constructionYear: number;
-  condition: PropertyCondition;
-  detailCheck: boolean;
-  status: 'aktiv' | 'inaktiv';
-  recommendationScore: number | null;
-  recommendationLevel: string | null;
-}
-
-// ---------------------------------------------------------------------------
-// Mapper — QuickCheckOverview (DB) → QuickCheckEntry (display)
-// ---------------------------------------------------------------------------
-
-const MANUAL_ENTRY_LABEL = 'Manuelle Erfassung';
-
-function toEntry(row: QuickCheckOverview): QuickCheckEntry {
-  return {
-    id:               row.quickCheckId,
-    ingestDate:       row.ingestDate,
-    portalId:         row.portalId ?? MANUAL_ENTRY_LABEL,
-    kpfMultiplier:    row.kpfMultiplier,
-    purchasePrice:    row.purchasePrice,
-    postalCode:       row.postalCode,
-    constructionYear: row.yearOfConstruction,
-    condition:        row.condition,
-    detailCheck:      row.detailCheck,
-    status:           row.status === 'ACTIVE' ? 'aktiv' : 'inaktiv',
-    recommendationScore: row.recommendationScore,
-    recommendationLevel: row.recommendationLevel,
-  };
-}
-
-// ---------------------------------------------------------------------------
-// Helpers — condition → Tag variant
-// ---------------------------------------------------------------------------
-
-const conditionVariant: Record<PropertyCondition, TagVariant> = {
-  [PropertyCondition.Upscale]:            'purple',
-  [PropertyCondition.Standard]:           'teal',
-  [PropertyCondition.Luxury]:             'violet',
-  [PropertyCondition.InNeedOfRenovation]: 'orange',
-};
-
-// ---------------------------------------------------------------------------
-// KPF badge — coloured pill matching the screenshot
-// ---------------------------------------------------------------------------
-
-function KpfBadge({ value }: { value: number | null }) {
-  if (value === null) return <span className="text-muted-foreground">—</span>;
-
-  const color =
-    value <= 20
-      ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-      : value <= 30
-      ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
-      : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400';
-
-  return (
-    <span className={`inline-flex items-center justify-center font-semibold rounded-lg px-2.5 py-1 text-sm min-w-[3rem] ${color}`}>
-      {value.toFixed(1).replace(/\.0$/, '')}
-    </span>
-  );
-}
-
-const CONDITION_FILTER_OPTIONS = Object.values(PropertyCondition).map((v) => ({ value: v, label: v }));
-const STATUS_FILTER_OPTIONS = [
-  { value: 'aktiv', label: 'Aktiv' },
-  { value: 'inaktiv', label: 'Inaktiv' },
-];
-
-/** Shorter labels for the mobile condition-filter pills (limited width). */
-const CONDITION_PILL_LABEL: Record<PropertyCondition, string> = {
-  [PropertyCondition.InNeedOfRenovation]: 'Sanierung',
-  [PropertyCondition.Standard]:           'Standard',
-  [PropertyCondition.Upscale]:            'Gehoben',
-  [PropertyCondition.Luxury]:             'Luxus',
-};
-
-// Portal import isn't implemented yet — quick_check.portal_id is just an
-// opaque reference, not a real URL. Until the import flow exists, link
-// each portal-sourced row to a placeholder expose page (deterministic per
-// row, so the link doesn't change on re-render) instead of leaving the
-// Portal-ID cell unclickable.
-const PLACEHOLDER_PORTAL_DOMAINS = [
-  'https://www.immobilienscout24.de/expose',
-  'https://www.immowelt.de/expose',
-  'https://www.immonet.de/expose',
-];
-
-function getPlaceholderPortalUrl(row: QuickCheckEntry): string | null {
-  if (row.portalId === MANUAL_ENTRY_LABEL || row.status === 'inaktiv') return null;
-  const domain = PLACEHOLDER_PORTAL_DOMAINS[row.id % PLACEHOLDER_PORTAL_DOMAINS.length];
-  return `${domain}/${encodeURIComponent(row.portalId)}`;
-}
-
-// ---------------------------------------------------------------------------
 // Page
 // ---------------------------------------------------------------------------
 
 export default function QuickCheckOverviewPage() {
   const router = useRouter();
   const { isLoading: authLoading } = useRequireAuth();
-  const { data: rawData, isLoading, error, deleteSelected } = useQuickChecks();
+  const { data: rawData, isLoading, error, deleteSelected } = useQuickChecks(false);
 
   const [search, setSearch] = useState('');
   const [sortKey, setSortKey] = useState<string>('ingestDate');
@@ -157,6 +59,14 @@ export default function QuickCheckOverviewPage() {
     }
   };
 
+  // Starting a detail check moves the row out of this (Ersteinschätzungen)
+  // list and into the Detailbewertungen overview — see useQuickChecks'
+  // detailCheck filter, which reads this same flag.
+  const handleStartDetailCheck = async (id: number) => {
+    await markDetailCheck(id);
+    router.push(`/property-valuation/detail-check/property-data?quickCheckId=${id}`);
+  };
+
   // Shared by the desktop table's actions column and the mobile card menu.
   const rowMenuItems = (row: QuickCheckEntry): MenuItem[] => [
     {
@@ -168,7 +78,7 @@ export default function QuickCheckOverviewPage() {
       label: BUTTON_DETAILS.StartDetailCheck.label,
       icon: <BUTTON_DETAILS.StartDetailCheck.icon />,
       disabled: row.status !== 'aktiv',
-      onClick: () => router.push(`/property-valuation/detail-check/property-data?quickCheckId=${row.id}`),
+      onClick: () => void handleStartDetailCheck(row.id),
     },
     {
       label: BUTTON_DETAILS.Delete.label,

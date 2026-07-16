@@ -15,7 +15,13 @@ export interface UseQuickChecksResult {
     deleteSelected: (ids: number[]) => Promise<void>;
 }
 
-export function useQuickChecks(): UseQuickChecksResult {
+/**
+ * @param detailCheck Filters by quick_check.detail_check — false (default)
+ *   for the Ersteinschätzungen overview, true for the Detailbewertungen
+ *   overview. A row moves from one list to the other the moment its detail
+ *   check is started (see markDetailCheck).
+ */
+export function useQuickChecks(detailCheck = false): UseQuickChecksResult {
     const [data, setData] = useState<QuickCheckOverview[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -25,13 +31,13 @@ export function useQuickChecks(): UseQuickChecksResult {
         setError(null);
         try {
             const rows = await getAllQuickChecks();
-            setData(rows);
+            setData(rows.filter((row) => row.detailCheck === detailCheck));
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Unbekannter Fehler');
         } finally {
             setIsLoading(false);
         }
-    }, []);
+    }, [detailCheck]);
 
     useEffect(() => {
         fetch();
