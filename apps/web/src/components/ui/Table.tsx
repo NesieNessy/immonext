@@ -203,10 +203,14 @@ export function Table<T extends Record<string, unknown> = Record<string, unknown
           renderMobileCard && "hidden md:block"
         )}
       >
-        <table className="w-full border-collapse">
+        {/* border-separate (not border-collapse) — sticky positioning on
+            <thead> is unreliable with collapsed table borders in several
+            browsers, which otherwise let the header scroll away with the
+            body instead of staying pinned while only the rows scroll. */}
+        <table className="w-full border-separate border-spacing-0">
           <thead className={cn(paginationEnabled && "sticky top-0 z-10")}>
             {/* ── Sort / label row ──────────────────────────────────── */}
-            <tr className="bg-[hsl(var(--foreground))] text-[hsl(var(--background))]">
+            <tr className="bg-muted border-b border-border">
               {selectable && (
                 <th className="w-12 px-4 py-3">
                   <input
@@ -217,7 +221,7 @@ export function Table<T extends Record<string, unknown> = Record<string, unknown
                     }}
                     onChange={toggleAll}
                     aria-label="Alle auswählen"
-                    className="w-4 h-4 rounded border-white/40 accent-white cursor-pointer"
+                    className="w-4 h-4 rounded border-border accent-primary cursor-pointer"
                   />
                 </th>
               )}
@@ -247,9 +251,11 @@ export function Table<T extends Record<string, unknown> = Record<string, unknown
               ))}
             </tr>
 
-            {/* ── Filter row — only rendered if at least one column has filterable ── */}
+            {/* ── Filter row — only rendered if at least one column has filterable ──
+                 Solid (not translucent) so the sticky header can't let a
+                 scrolled-past row show through it. ── */}
             {hasFilterRow && (
-              <tr className="bg-muted/60 border-b border-border">
+              <tr className="bg-muted border-b border-border">
                 {selectable && <th className="w-12 px-4 py-2" />}
                 {columns.map((col) => (
                   <th
