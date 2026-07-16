@@ -106,6 +106,23 @@ const CONDITION_PILL_LABEL: Record<PropertyCondition, string> = {
   [PropertyCondition.Luxury]:             'Luxus',
 };
 
+// Portal import isn't implemented yet — quick_check.portal_id is just an
+// opaque reference, not a real URL. Until the import flow exists, link
+// each portal-sourced row to a placeholder expose page (deterministic per
+// row, so the link doesn't change on re-render) instead of leaving the
+// Portal-ID cell unclickable.
+const PLACEHOLDER_PORTAL_DOMAINS = [
+  'https://www.immobilienscout24.de/expose',
+  'https://www.immowelt.de/expose',
+  'https://www.immonet.de/expose',
+];
+
+function getPlaceholderPortalUrl(row: QuickCheckEntry): string | null {
+  if (row.portalId === MANUAL_ENTRY_LABEL || row.status === 'inaktiv') return null;
+  const domain = PLACEHOLDER_PORTAL_DOMAINS[row.id % PLACEHOLDER_PORTAL_DOMAINS.length];
+  return `${domain}/${encodeURIComponent(row.portalId)}`;
+}
+
 // ---------------------------------------------------------------------------
 // Page
 // ---------------------------------------------------------------------------
@@ -182,11 +199,20 @@ export default function QuickCheckOverviewPage() {
       label: FieldLabels.QuickCheck.PortalId.de,
       sortable: true,
       filterable: true,
-      renderCell: (value) => {
+      renderCell: (value, row) => {
         const portalId = value as string;
-        return portalId === MANUAL_ENTRY_LABEL
-          ? <span className="text-muted-foreground">{portalId}</span>
-          : <span>{portalId}</span>;
+        const url = getPlaceholderPortalUrl(row);
+        if (!url) return <span className="text-muted-foreground">{portalId}</span>;
+        return (
+          <a
+            href={url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-primary hover:underline"
+          >
+            {portalId}
+          </a>
+        );
       },
     },
     {
@@ -471,9 +497,21 @@ export default function QuickCheckOverviewPage() {
                     )}
                   >
                     <div className="flex items-center justify-between">
-                      <span className={cn(row.portalId === MANUAL_ENTRY_LABEL && 'text-muted-foreground')}>
-                        {row.portalId}
-                      </span>
+                      {(() => {
+                        const url = getPlaceholderPortalUrl(row);
+                        return url ? (
+                          <a
+                            href={url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-primary hover:underline"
+                          >
+                            {row.portalId}
+                          </a>
+                        ) : (
+                          <span className="text-muted-foreground">{row.portalId}</span>
+                        );
+                      })()}
                       <Button
                         iconOnly
                         icon={<MoreVertical className="w-4 h-4" />}
