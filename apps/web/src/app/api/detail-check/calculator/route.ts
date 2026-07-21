@@ -3,8 +3,12 @@ import {
   runRentCalculator,
   type CalculatorMode,
   type CalculatorParams,
+  type PlacementMode,
 } from '@/lib/detailCheck/rentCalculator';
 import { type RenovationCase } from '@/lib/detailCheck/renovation';
+import { computeIndividualAdditionalCosts, computeFinancing, type InterestPeriodYears } from '@/lib/detailCheck/financing';
+import { estimateRentIndexPerM2 } from '@/lib/detailCheck/rentIndex';
+import { roundCurrency } from '@/lib/detailCheck/acquisitionCosts';
 import { requireUserId, workflowIdFor } from '@/lib/server/auth';
 import { db } from '@/lib/server/db';
 import { NextResponse } from 'next/server';
@@ -20,6 +24,15 @@ function toMode(value: unknown): CalculatorMode {
   return value === 'POTENTIAL' ? 'POTENTIAL' : 'KNOWN';
 }
 
+function toPlacementMode(value: unknown): PlacementMode {
+  return value === 'OPTIMIZED' ? 'OPTIMIZED' : 'DEFAULT';
+}
+
+function toInterestYears(value: unknown): InterestPeriodYears {
+  const parsed = Number(value);
+  return parsed === 15 || parsed === 20 ? parsed : 10;
+}
+
 function safeCases(value: unknown): RenovationCase[] {
   return Array.isArray(value) ? value as RenovationCase[] : [];
 }
@@ -27,21 +40,21 @@ function safeCases(value: unknown): RenovationCase[] {
 async function loadContext(userId: string, workflowId: string, quickCheckId: string | null) {
   const quickCheckRows = quickCheckId
     ? await db.query(
-        'SELECT quick_check_id, city, postal_code, cold_rent FROM quick_check WHERE user_id = $1 AND quick_check_id = $2 LIMIT 1',
+        'SELECT quick_check_id, purchase_price, city, postal_code, cold_rent, year_of_construction FROM quick_check WHERE user_id = $1 AND quick_check_id = $2 LIMIT 1',
         [userId, Number(quickCheckId)],
       )
     : { rows: [] };
   const propertyRows = await db.query(
-    'SELECT city, postal_code, living_area_m2 FROM detail_check_property_data WHERE user_id = $1 AND workflow_id = $2 LIMIT 1',
+    'SELECT city, postal_code, living_area_m2, year_of_construction FROM detail_check_property_data WHERE user_id = $1 AND workflow_id = $2 LIMIT 1',
     [userId, workflowId],
   );
   const rentalRows = await db.query(
-    'SELECT valuation_date, cold_rent FROM detail_check_rental WHERE user_id = $1 AND workflow_id = $2 LIMIT 1',
+    'SELECT valuation_date, cold_rent, service_charges_allocable, service_charges_non_allocable FROM detail_check_rental WHERE user_id = $1 AND workflow_id = $2 LIMIT 1',
     [userId, workflowId],
   );
   const financingRows = await db.query(
     `
-      SELECT selected_variant, offer_monthly_debt_service, individual_monthly_debt_service
+      SELECT *
       FROM detail_check_financing
       WHERE user_id = $1 AND workflow_id = $2
       LIMIT 1
@@ -49,7 +62,27 @@ async function loadContext(userId: string, workflowId: string, quickCheckId: str
     [userId, workflowId],
   );
   const renovationRows = await db.query(
-    'SELECT cases FROM detail_check_renovation WHERE user_id = $1 AND workflow_id = $2 LIMIT 1',
+    'SELECT cases, financed_amount FROM detail_check_renovation WHERE user_id = $1 AND workflow_id = $2 LIMIT 1',
+    [userId, workflowId],
+  );
+  const acquisitionRows = await db.query(
+    `
+      SELECT purchase_price, parking_purchase_price, total_additional_costs,
+             broker_percent, notary_percent, land_registry_percent,
+             property_transfer_tax_percent
+      FROM detail_check_acquisition_costs
+      WHERE user_id = $1 AND workflow_id = $2
+      LIMIT 1
+    `,
+    [userId, workflowId],
+  );
+  const depreciationRows = await db.query(
+    `
+      SELECT building_value, afa_percent
+      FROM detail_check_depreciation
+      WHERE user_id = $1 AND workflow_id = $2
+      LIMIT 1
+    `,
     [userId, workflowId],
   );
 
@@ -57,21 +90,72 @@ async function loadContext(userId: string, workflowId: string, quickCheckId: str
   const property = propertyRows.rows[0];
   const rental = rentalRows.rows[0];
   const financing = financingRows.rows[0];
+  const acquisition = acquisitionRows.rows[0];
+  const depreciation = depreciationRows.rows[0];
+  const purchasePrice = toNumber(acquisition?.purchase_price ?? quickCheck?.purchase_price ?? 0);
+  const parkingPrice = toNumber(acquisition?.parking_purchase_price ?? 0);
+  const additionalCosts = toNumber(acquisition?.total_additional_costs ?? 0);
+  const renovationCases = safeCases(renovationRows.rows[0]?.cases);
+  const renovationFinancedAmount = toNumber(renovationRows.rows[0]?.financed_amount ?? 0);
   const selectedVariant = financing?.selected_variant === 'INDIVIDUAL' ? 'INDIVIDUAL' : 'OFFER';
-  const monthlyDebtService = selectedVariant === 'INDIVIDUAL'
-    ? toNumber(financing?.individual_monthly_debt_service)
-    : toNumber(financing?.offer_monthly_debt_service);
-
+  const individualPurchasePrice = toNumber(financing?.individual_purchase_price ?? purchasePrice);
+  const individualParkingPrice = toNumber(financing?.individual_parking_price ?? parkingPrice);
+  const individualAdditionalCosts = computeIndividualAdditionalCosts({
+    purchasePrice: individualPurchasePrice,
+    parkingPrice: individualParkingPrice,
+    brokerPercent: toNumber(acquisition?.broker_percent ?? 3.57),
+    notaryPercent: toNumber(acquisition?.notary_percent ?? 1.5),
+    landRegistryPercent: toNumber(acquisition?.land_registry_percent ?? 0.5),
+    propertyTransferTaxPercent: acquisition?.property_transfer_tax_percent == null
+      ? null
+      : toNumber(acquisition.property_transfer_tax_percent),
+  });
+  const offerFinancing = computeFinancing({
+    purchasePrice,
+    parkingPrice,
+    additionalCosts,
+    renovationCosts: toNumber(financing?.offer_renovation_costs ?? renovationFinancedAmount),
+    equity: toNumber(financing?.offer_equity ?? 0),
+    interestPeriodYears: toInterestYears(financing?.offer_interest_period_years),
+    repaymentRate: toNumber(financing?.repayment_rate ?? 2) || 2,
+    interestAdjustmentFactor: toNumber(financing?.interest_adjustment_factor ?? 1) || 1,
+  });
+  const individualFinancing = computeFinancing({
+    purchasePrice: individualPurchasePrice,
+    parkingPrice: individualParkingPrice,
+    additionalCosts: individualAdditionalCosts,
+    renovationCosts: toNumber(financing?.individual_renovation_costs ?? renovationFinancedAmount),
+    equity: toNumber(financing?.individual_equity ?? 0),
+    interestPeriodYears: toInterestYears(financing?.individual_interest_period_years),
+    repaymentRate: toNumber(financing?.repayment_rate ?? 2) || 2,
+    interestAdjustmentFactor: toNumber(financing?.interest_adjustment_factor ?? 1) || 1,
+  });
+  const selectedFinancing = selectedVariant === 'INDIVIDUAL' ? individualFinancing : offerFinancing;
+  const buildingValue = toNumber(depreciation?.building_value ?? 0);
+  const afaPercent = toNumber(depreciation?.afa_percent ?? 0);
+  const propertyYear = toNumber(property?.year_of_construction ?? quickCheck?.year_of_construction ?? new Date().getFullYear());
+  const livingAreaM2 = toNumber(property?.living_area_m2 ?? 0);
+  const serviceChargesAllocable = toNumber(rental?.service_charges_allocable ?? 0);
+  const serviceChargesNonAllocable = toNumber(rental?.service_charges_non_allocable ?? 0);
   return {
     quickCheck,
     city: property?.city ?? quickCheck?.city ?? '',
     postalCode: property?.postal_code ?? quickCheck?.postal_code ?? '',
-    livingAreaM2: toNumber(property?.living_area_m2 ?? 0),
+    livingAreaM2,
+    yearOfConstruction: propertyYear,
     valuationDate: rental?.valuation_date ?? null,
     coldRent: toNumber(rental?.cold_rent ?? quickCheck?.cold_rent ?? 0),
+    serviceChargesAllocable,
+    serviceChargesNonAllocable,
     selectedVariant,
-    monthlyDebtService,
-    renovationCases: safeCases(renovationRows.rows[0]?.cases),
+    monthlyDebtService: toNumber(financing?.[selectedVariant === 'INDIVIDUAL' ? 'individual_monthly_debt_service' : 'offer_monthly_debt_service']) || selectedFinancing.monthlyDebtService,
+    loanAmount: selectedFinancing.loanAmount,
+    interestRate: selectedFinancing.interestRate,
+    repaymentRate: toNumber(financing?.repayment_rate ?? 2) || 2,
+    monthlyAfa: buildingValue > 0 && afaPercent > 0 ? roundCurrency((buildingValue * (afaPercent / 100)) / 12) : 0,
+    purchasePrice,
+    totalInvestment: roundCurrency(selectedFinancing.totalCosts),
+    renovationCases,
   };
 }
 
@@ -79,19 +163,32 @@ function buildParams(saved: Record<string, unknown> | undefined, context: Awaite
   const fallbackStart = normalizeYyyymm(context.valuationDate, new Date().toISOString().slice(0, 7));
   const livingAreaM2 = context.livingAreaM2;
   const rentStart = toNumber(saved?.monthly_rent_start ?? context.coldRent);
-  const fallbackRentIndex = livingAreaM2 > 0 && rentStart > 0 ? (rentStart / livingAreaM2) * 1.02 : null;
+  const fallbackRentIndex = estimateRentIndexPerM2(context.yearOfConstruction, livingAreaM2)
+    ?? (livingAreaM2 > 0 && rentStart > 0 ? (rentStart / livingAreaM2) * 1.02 : null);
 
   return {
     startYyyymm: normalizeYyyymm(saved?.start_yyyymm as string | undefined, fallbackStart),
     monthlyRentStart: rentStart,
     livingAreaM2,
+    yearOfConstruction: context.yearOfConstruction,
     city: context.city,
     postalCode: context.postalCode,
     last558Date: saved?.last_558_date ? normalizeYyyymm(saved.last_558_date as string) : null,
     last559Date: saved?.last_559_date ? normalizeYyyymm(saved.last_559_date as string) : null,
     rentIndexPerM2: saved?.rent_index_per_m2 == null ? fallbackRentIndex : toNumber(saved.rent_index_per_m2),
+    rentIndexSource: saved?.rent_index_per_m2 == null ? 'AUTOMATIC' : 'MANUAL',
     monthlyDebtService: context.monthlyDebtService,
+    loanAmount: context.loanAmount,
+    interestRate: context.interestRate,
+    repaymentRate: context.repaymentRate,
+    monthlyAfa: context.monthlyAfa,
+    serviceChargesAllocable: context.serviceChargesAllocable,
+    serviceChargesNonAllocable: context.serviceChargesNonAllocable,
+    purchasePrice: context.purchasePrice,
+    totalInvestment: context.totalInvestment,
+    taxRate: 0.42,
     mode: toMode(saved?.mode),
+    placementMode: toPlacementMode((saved?.result as Record<string, unknown> | undefined)?.placementMode),
   };
 }
 
@@ -122,19 +219,34 @@ export async function POST(request: Request) {
   const quickCheckId = input.quickCheckId ? String(input.quickCheckId) : null;
   const workflowId = workflowIdFor(userId, quickCheckId, input.workflowId ? String(input.workflowId) : null);
   const context = await loadContext(userId, workflowId, quickCheckId);
+  const savedResult = input.optimize === true ? 'OPTIMIZED' : 'DEFAULT';
   const params: CalculatorParams = {
     startYyyymm: normalizeYyyymm(input.startYyyymm, new Date().toISOString().slice(0, 7)),
     monthlyRentStart: toNumber(input.monthlyRentStart),
     livingAreaM2: context.livingAreaM2,
+    yearOfConstruction: context.yearOfConstruction,
     city: context.city,
     postalCode: context.postalCode,
     last558Date: input.last558Date ? normalizeYyyymm(input.last558Date) : null,
     last559Date: input.last559Date ? normalizeYyyymm(input.last559Date) : null,
-    rentIndexPerM2: input.rentIndexPerM2 == null || input.rentIndexPerM2 === ''
-      ? null
+    rentIndexPerM2: input.rentIndexSource !== 'MANUAL' || input.rentIndexPerM2 == null || input.rentIndexPerM2 === ''
+      ? estimateRentIndexPerM2(context.yearOfConstruction, context.livingAreaM2)
       : toNumber(input.rentIndexPerM2),
+    rentIndexSource: input.rentIndexSource === 'MANUAL' && input.rentIndexPerM2 != null && input.rentIndexPerM2 !== ''
+      ? 'MANUAL'
+      : 'AUTOMATIC',
     monthlyDebtService: context.monthlyDebtService,
+    loanAmount: context.loanAmount,
+    interestRate: context.interestRate,
+    repaymentRate: context.repaymentRate,
+    monthlyAfa: context.monthlyAfa,
+    serviceChargesAllocable: context.serviceChargesAllocable,
+    serviceChargesNonAllocable: context.serviceChargesNonAllocable,
+    purchasePrice: context.purchasePrice,
+    totalInvestment: context.totalInvestment,
+    taxRate: 0.42,
     mode: toMode(input.mode),
+    placementMode: savedResult,
   };
 
   const result = runRentCalculator(params, context.renovationCases);

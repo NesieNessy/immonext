@@ -4,7 +4,8 @@ import { Button, Dropdown, StickyActionBar, TextField } from '@/components/ui';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { authFetch } from '@/lib/api/authFetch';
 import { parseDecimalInput } from '@/lib/detailCheck/acquisitionCosts';
-import { type CalculatorMode, type ModernizationPlanRow, type RentIncrease558Row, type RentTimelineRow } from '@/lib/detailCheck/rentCalculator';
+import { CALCULATION_HORIZON_YEARS, type CalculatorMode, type ModernizationPlanRow, type PlacementMode, type RentIndexSource, type RentIncrease558Row, type RentTimelineRow } from '@/lib/detailCheck/rentCalculator';
+import { Sparkles } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useEffect, useMemo, useState } from 'react';
 import { PropertyValuationLayout } from '../PropertyValuationLayout';
@@ -19,8 +20,10 @@ type CalculatorResponse = {
     last558Date: string | null;
     last559Date: string | null;
     rentIndexPerM2: number | null;
+    rentIndexSource: RentIndexSource;
     monthlyDebtService: number;
     mode: CalculatorMode;
+    placementMode: PlacementMode;
   };
   selectedFinancingVariant: 'OFFER' | 'INDIVIDUAL';
   denseMarket: boolean;
@@ -31,6 +34,19 @@ type CalculatorResponse = {
   modernizationPlan: ModernizationPlanRow[];
   increases558: RentIncrease558Row[];
   breakEven: string | null;
+  breakEvenWithRentIndex: string | null;
+  placementMode: PlacementMode;
+  rentIndexSource: 'MANUAL' | 'AUTOMATIC';
+  metrics: {
+    grossYieldToday: number;
+    netYieldToday: number;
+    cashflowToday: number;
+    afterTaxCashflowToday: number;
+    rentAtHorizon: number;
+    rentAtHorizonWithRentIndex: number;
+    endingCashflow: number;
+    endingCashflowWithRentIndex: number;
+  };
 };
 
 const currencyFormatter = new Intl.NumberFormat('de-DE', {
@@ -48,6 +64,10 @@ function formatCurrency(value: number): string {
 
 function formatPercent(value: number): string {
   return `${numberFormatter.format(value * 100)} %`;
+}
+
+function formatPercentValue(value: number): string {
+  return `${numberFormatter.format(value)} %`;
 }
 
 function valueString(value: number | null | undefined): string {
@@ -75,9 +95,11 @@ function CalculatorContent() {
   const [startYyyymm, setStartYyyymm] = useState('');
   const [monthlyRentStart, setMonthlyRentStart] = useState('');
   const [rentIndexPerM2, setRentIndexPerM2] = useState('');
+  const [rentIndexSource, setRentIndexSource] = useState<RentIndexSource>('AUTOMATIC');
   const [last558Date, setLast558Date] = useState('');
   const [last559Date, setLast559Date] = useState('');
   const [mode, setMode] = useState<CalculatorMode>('KNOWN');
+  const [placementMode, setPlacementMode] = useState<PlacementMode>('DEFAULT');
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -99,9 +121,11 @@ function CalculatorContent() {
         setStartYyyymm(loaded.params.startYyyymm);
         setMonthlyRentStart(valueString(loaded.params.monthlyRentStart));
         setRentIndexPerM2(valueString(loaded.params.rentIndexPerM2));
+        setRentIndexSource(loaded.params.rentIndexSource ?? loaded.rentIndexSource ?? 'AUTOMATIC');
         setLast558Date(loaded.params.last558Date ?? '');
         setLast559Date(loaded.params.last559Date ?? '');
         setMode(loaded.params.mode);
+        setPlacementMode(loaded.placementMode ?? loaded.params.placementMode ?? 'DEFAULT');
       } catch (loadError) {
         if (!cancelled) setError(loadError instanceof Error ? loadError.message : 'Kalkulator konnte nicht geladen werden.');
       } finally {
@@ -115,7 +139,7 @@ function CalculatorContent() {
     };
   }, [suffix]);
 
-  const recalc = async (nextMode = mode, navigate = false) => {
+  const recalc = async (nextMode = mode, navigate = false, optimize = false) => {
     if (isSaving) return;
     setIsSaving(true);
     setError(null);
@@ -128,16 +152,19 @@ function CalculatorContent() {
           workflowId,
           startYyyymm,
           monthlyRentStart: parseDecimalInput(monthlyRentStart),
-          rentIndexPerM2: rentIndexPerM2 === '' ? null : parseDecimalInput(rentIndexPerM2),
+          rentIndexPerM2: rentIndexSource === 'AUTOMATIC' || rentIndexPerM2 === '' ? null : parseDecimalInput(rentIndexPerM2),
+          rentIndexSource,
           last558Date: last558Date || null,
           last559Date: last559Date || null,
           mode: nextMode,
+          optimize,
         }),
       });
       if (!res.ok) throw new Error(await res.text());
       const updated = await res.json() as CalculatorResponse;
       setData(updated);
       setMode(updated.params.mode);
+      setPlacementMode(updated.placementMode ?? 'DEFAULT');
       if (navigate) router.push(`/property-valuation/detail-check/macro-location${suffix}`);
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : 'Kalkulation konnte nicht gespeichert werden.');
@@ -188,7 +215,7 @@ function CalculatorContent() {
                 <TextField label="Ausgangsmiete bei Kauf" value={monthlyRentStart} suffix="€" inputMode="decimal" onChange={(e) => setMonthlyRentStart(e.target.value)} />
                 <TextField label="Letzte Mieterhöhung §558" type="month" value={last558Date} onChange={(e) => setLast558Date(e.target.value)} />
                 <TextField label="Letzte §559-Erhöhung" type="month" value={last559Date} onChange={(e) => setLast559Date(e.target.value)} />
-                <TextField label="Mietspiegel Vergleichswert" value={rentIndexPerM2} suffix="€/m²" inputMode="decimal" onChange={(e) => setRentIndexPerM2(e.target.value)} helperText="Leer = Fallback aus Startmiete pro m² + 2%." />
+                <TextField label="Mietspiegel Vergleichswert" value={rentIndexPerM2} suffix="€/m²" inputMode="decimal" onChange={(e) => { setRentIndexPerM2(e.target.value); setRentIndexSource('MANUAL'); }} helperText="Automatisch aus Baujahr/Fläche, solange nicht überschrieben." />
                 <ReadOnlyValue label="Größe" value={`${numberFormatter.format(data.params.livingAreaM2)} m²`} />
                 <ReadOnlyValue label="Ort / PLZ" value={`${data.params.city || '-'} ${data.params.postalCode || ''}`.trim()} />
                 <ReadOnlyValue label="Kappungsgrenze" value={`${data.denseMarket ? 'Ballungsgebiet' : 'Regelfall'} · ${formatPercent(data.capPercent)}`} />
@@ -196,6 +223,15 @@ function CalculatorContent() {
                 <ReadOnlyValue label="Kapitaldienst Monat" value={formatCurrency(data.params.monthlyDebtService)} />
                 <ReadOnlyValue label="§559-Deckel" value={`${formatCurrency(data.capAbs)} / Monat`} />
                 <ReadOnlyValue label="Break Even Point" value={data.breakEven ?? 'nicht erreicht'} />
+                <ReadOnlyValue label="Break Even mit Mietspiegel" value={data.breakEvenWithRentIndex ?? 'nicht erreicht'} />
+                <ReadOnlyValue label="Mietspiegelquelle" value={data.rentIndexSource === 'MANUAL' ? 'Manuelle Eingabe' : 'Automatisch aus Baujahr/Fläche'} />
+                <ReadOnlyValue label="AfA pro Monat" value={formatCurrency(data.timeline[0]?.afa ?? 0)} />
+                <ReadOnlyValue label="Nicht umlagefähige Kosten" value={formatCurrency(data.timeline[0]?.nonAllocableCosts ?? 0)} />
+                <ReadOnlyValue label="Cashflow heute" value={formatCurrency(data.metrics.cashflowToday)} />
+                <ReadOnlyValue label="Nettomietrendite heute" value={formatPercentValue(data.metrics.netYieldToday)} />
+                <ReadOnlyValue label={`Miete nach ${CALCULATION_HORIZON_YEARS} Jahren`} value={formatCurrency(data.metrics.rentAtHorizon)} />
+                <ReadOnlyValue label={`Miete nach ${CALCULATION_HORIZON_YEARS} Jahren mit Mietspiegel`} value={formatCurrency(data.metrics.rentAtHorizonWithRentIndex)} />
+                <ReadOnlyValue label={`Kumulierter Cashflow nach ${CALCULATION_HORIZON_YEARS} Jahren`} value={formatCurrency(data.metrics.endingCashflow)} />
               </div>
 
               <div className="mt-6 grid gap-4 md:grid-cols-[minmax(0,320px)_minmax(0,1fr)] md:items-end">
@@ -223,12 +259,25 @@ function CalculatorContent() {
                 </div>
               </div>
 
-              <Button
-                label="Neu berechnen"
-                className="mt-4"
-                onClick={() => recalc(mode)}
-                disabled={isSaving}
-              />
+              <div className="mt-4 flex flex-wrap gap-3">
+                <Button
+                  label="Neu berechnen"
+                  onClick={() => recalc(mode)}
+                  disabled={isSaving}
+                />
+                <Button
+                  label="Sanierungen optimal platzieren"
+                  variant="outline"
+                  icon={<Sparkles />}
+                  onClick={() => recalc(mode, false, true)}
+                  disabled={isSaving || mode === 'POTENTIAL'}
+                />
+              </div>
+              {placementMode === 'OPTIMIZED' && (
+                <p className="mt-3 text-sm text-muted-foreground">
+                  Die angezeigten Sanierungszeitpunkte sind auf den frühestmöglichen Break-even optimiert.
+                </p>
+              )}
             </section>
 
             <section>
