@@ -1,9 +1,12 @@
 import { BarChart2 } from 'lucide-react';
+import type { ReactNode } from 'react';
 
 interface NoResultProps {
   title?: string;
   message?: string;
   className?: string;
+  /** Optional action rendered below the message, e.g. a "reset filters" button. */
+  action?: ReactNode;
 }
 
 /**
@@ -15,6 +18,7 @@ export function NoResult({
   title = 'Kein Ergebnis vorhanden',
   message = 'Füllen Sie alle Pflichtfelder aus, um die Ersteinschätzung automatisch zu erhalten.',
   className = '',
+  action,
 }: NoResultProps) {
   return (
     <div className={`flex h-full flex-col items-center justify-center gap-4 rounded-xl border border-dashed border-border bg-muted/30 px-8 py-16 text-center ${className}`}>
@@ -25,6 +29,7 @@ export function NoResult({
         <p className="text-sm font-semibold text-foreground">{title}</p>
         <p className="text-xs text-muted-foreground max-w-xs leading-relaxed">{message}</p>
       </div>
+      {action}
     </div>
   );
 }

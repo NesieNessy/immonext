@@ -332,7 +332,7 @@ export const FieldLabels: Record<string, TableLabels> = {
   QuickCheck: {
     IngestDate:          { en: "Capture Date",    de: "Erfassungsdatum" },
     PortalId:            { en: "Portal ID",       de: "Portal ID" },
-    KpfMultiplier:       { en: "KPF Multiplier",      de: "KPF Faktor" },
+    KpfMultiplier:       { en: "KPF",      de: "KPF" },
     PurchasePrice:       { en: "Purchase Price",  de: "Kaufpreis" },
     PostalCode:          { en: "Postal Code",     de: "PLZ" },
     ConstructionYear:    { en: "Year of Const.",  de: "Baujahr" },

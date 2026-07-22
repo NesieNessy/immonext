@@ -73,6 +73,12 @@ export function QuickCheckOverviewTable({
     setColumnFilters((prev) => ({ ...prev, [key]: value }));
   };
 
+  const hasActiveFilters = search !== '' || Object.values(columnFilters).some((v) => v);
+  const handleResetFilters = () => {
+    setSearch('');
+    setColumnFilters({});
+  };
+
   const handleDeleteRow = useCallback(async (id: number) => {
     setDeletingId(id);
     try {
@@ -143,6 +149,7 @@ export function QuickCheckOverviewTable({
       key: 'purchasePrice',
       label: FieldLabels.QuickCheck.PurchasePrice.de,
       sortable: true,
+      filterable: true,
       align: 'right',
       width: '140px',
       renderCell: (value) => (
@@ -377,6 +384,17 @@ export function QuickCheckOverviewTable({
                 title="Keine Treffer"
                 message="Kein Eintrag entspricht den aktuellen Suchbegriffen oder Filtern."
                 className="py-24"
+                action={
+                  hasActiveFilters && (
+                    <Button
+                      label="Filter zurücksetzen"
+                      icon={<Icons.Filter className="w-4 h-4" />}
+                      variant="outline"
+                      type="button"
+                      onClick={handleResetFilters}
+                    />
+                  )
+                }
               />
             )}
 

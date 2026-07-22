@@ -24,6 +24,11 @@ interface DetailCheckRow extends Record<string, unknown> {
   updatedAt: string;
 }
 
+const STATUS_FILTER_OPTIONS = [
+  { value: 'Abgeschlossen', label: 'Abgeschlossen' },
+  { value: 'In Bearbeitung', label: 'In Bearbeitung' },
+];
+
 interface DetailCheckApiRow {
   workflow_id: string;
   quick_check_id: number | null;
@@ -46,6 +51,7 @@ export default function DetailCheckOverviewPage() {
   const [search, setSearch] = useState('');
   const [sortKey, setSortKey] = useState('updatedAt');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
+  const [columnFilters, setColumnFilters] = useState<Record<string, string>>({});
 
   useEffect(() => {
     let cancelled = false;
@@ -101,14 +107,15 @@ export default function DetailCheckOverviewPage() {
         <Button iconOnly icon={<MoreVertical className="h-4 w-4" />} variant="ghost" size="sm" menuItems={menuItems(row)} />
       ),
     },
-    { key: 'address', label: 'Objekt', sortable: true },
-    { key: 'postalCode', label: 'PLZ', sortable: true, width: '100px' },
-    { key: 'city', label: 'Ort', sortable: true },
-    { key: 'constructionYear', label: 'Baujahr', sortable: true, width: '100px' },
+    { key: 'address', label: 'Objekt', sortable: true, filterable: true },
+    { key: 'postalCode', label: 'PLZ', sortable: true, filterable: true, width: '100px' },
+    { key: 'city', label: 'Ort', sortable: true, filterable: true },
+    { key: 'constructionYear', label: 'Baujahr', sortable: true, filterable: true, width: '100px' },
     {
       key: 'livingAreaM2',
       label: 'Wohnfläche',
       sortable: true,
+      filterable: true,
       align: 'right',
       renderCell: (value) => `${Number(value).toLocaleString('de-DE')} m²`,
     },
@@ -116,6 +123,7 @@ export default function DetailCheckOverviewPage() {
       key: 'purchasePrice',
       label: 'Kaufpreis',
       sortable: true,
+      filterable: true,
       align: 'right',
       renderCell: (value) => Number(value) > 0 ? `${Number(value).toLocaleString('de-DE')} €` : 'Noch nicht erfasst',
     },
@@ -123,6 +131,8 @@ export default function DetailCheckOverviewPage() {
       key: 'status',
       label: 'Status',
       sortable: true,
+      filterable: true,
+      filterOptions: STATUS_FILTER_OPTIONS,
       renderCell: (value) => (
         <Tag label={String(value)} variant={value === 'Abgeschlossen' ? 'success' : 'muted'} />
       ),
@@ -131,22 +141,32 @@ export default function DetailCheckOverviewPage() {
       key: 'updatedAt',
       label: 'Zuletzt bearbeitet',
       sortable: true,
+      filterable: true,
       renderCell: (value) => new Date(String(value)).toLocaleDateString('de-DE'),
     },
   ], [menuItems]);
 
   const displayedRows = useMemo(() => {
     const query = search.trim().toLowerCase();
-    const filtered = query
+    let filtered = query
       ? rows.filter((row) => `${row.address} ${row.postalCode} ${row.city}`.toLowerCase().includes(query))
       : rows;
+
+    for (const [key, val] of Object.entries(columnFilters)) {
+      if (!val) continue;
+      const lower = val.toLowerCase();
+      filtered = filtered.filter((row) =>
+        String(row[key] ?? '').toLowerCase().includes(lower)
+      );
+    }
+
     return [...filtered].sort((a, b) => {
       const left = a[sortKey] as string | number;
       const right = b[sortKey] as string | number;
       const result = left < right ? -1 : left > right ? 1 : 0;
       return sortDirection === 'asc' ? result : -result;
     });
-  }, [rows, search, sortDirection, sortKey]);
+  }, [rows, search, columnFilters, sortDirection, sortKey]);
 
   const handleSort = (key: string) => {
     if (key === sortKey) setSortDirection((current) => current === 'asc' ? 'desc' : 'asc');
@@ -154,6 +174,16 @@ export default function DetailCheckOverviewPage() {
       setSortKey(key);
       setSortDirection('asc');
     }
+  };
+
+  const handleColumnFilterChange = (key: string, value: string) => {
+    setColumnFilters((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const hasActiveFilters = search.trim() !== '' || Object.values(columnFilters).some((v) => v);
+  const handleResetFilters = () => {
+    setSearch('');
+    setColumnFilters({});
   };
 
   return (
@@ -180,7 +210,22 @@ export default function DetailCheckOverviewPage() {
             {rows.length === 0 ? (
               <NoResult title="Noch keine Detailbewertungen vorhanden" message="Legen Sie eine neue Detailbewertung an oder starten Sie eine aus einer Ersteinschätzung." className="py-24" />
             ) : displayedRows.length === 0 ? (
-              <NoResult title="Keine Treffer" message="Keine Detailbewertung entspricht dem Suchbegriff." className="py-24" />
+              <NoResult
+                title="Keine Treffer"
+                message="Kein Eintrag entspricht den aktuellen Suchbegriffen oder Filtern."
+                className="py-24"
+                action={
+                  hasActiveFilters && (
+                    <Button
+                      label="Filter zurücksetzen"
+                      icon={<Icons.Filter className="w-4 h-4" />}
+                      variant="outline"
+                      type="button"
+                      onClick={handleResetFilters}
+                    />
+                  )
+                }
+              />
             ) : (
               <Table<DetailCheckRow>
                 columns={columns}
@@ -188,6 +233,8 @@ export default function DetailCheckOverviewPage() {
                 sortKey={sortKey}
                 sortDirection={sortDirection}
                 onSort={handleSort}
+                columnFilters={columnFilters}
+                onColumnFilterChange={handleColumnFilterChange}
                 onRowClick={openRow}
                 footerLeft={`${displayedRows.length} Einträge`}
                 pageSize={25}

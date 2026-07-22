@@ -110,6 +110,7 @@ export function Button({
       <Popover>
         <PopoverTrigger asChild>
           <button
+            type="button"
             className={cn(baseStyles, variants[variant], sizes[size], className)}
             aria-label={resolvedAriaLabel}
             {...props}
@@ -154,6 +155,7 @@ export function Button({
 
   return (
     <button
+      type="button"
       className={cn(baseStyles, variants[variant], sizes[size], className)}
       aria-label={resolvedAriaLabel}
       {...props}
