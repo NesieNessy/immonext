@@ -4,22 +4,43 @@ import { Button, Dropdown, Modal } from '@/components/ui';
 import { authFetch } from '@/lib/api/authFetch';
 import { cn } from '@/lib/utils';
 import { ArrowRight, ClipboardCheck, Edit3 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
 export type PropertyCreationMode = 'manual' | 'detail-check';
 
+interface DetailCheckApiRow {
+  workflow_id: string;
+  street_house_number: string | null;
+  postal_code: string | null;
+  city: string;
+  year_of_construction: number;
+  living_area_m2: string | number;
+  property_category: string | null;
+}
+
+/** Data available to prefill the /existing-properties/new form from when
+ *  the user picked an existing Detailbewertung — a subset of the
+ *  /api/detail-checks row shape. Detail-check data has no purchase-date
+ *  concept, so Kaufdatum is never prefilled either way. */
+interface DetailCheckPrefill {
+  streetHouseNumber: string | null;
+  postalCode: string | null;
+  city: string;
+  yearOfConstruction: number;
+  livingAreaM2: number;
+  propertyCategory: string | null;
+}
+
 interface DetailCheckOption {
   workflowId: string;
   label: string;
+  prefill: DetailCheckPrefill;
 }
 
 interface NewPropertyModalProps {
   open: boolean;
   onClose: () => void;
-  /** No destination is built yet — the caller currently just receives the
-   *  chosen mode/workflowId. Wire this up once the actual creation form
-   *  (manual or pre-filled-from-detail-check) exists. */
-  onContinue: (mode: PropertyCreationMode, workflowId: string | null) => void;
 }
 
 function OptionCard({
@@ -74,7 +95,8 @@ function OptionCard({
  * from an existing Detailbewertung, sourced from the same /api/detail-checks
  * route the Detailbewertungen overview uses.
  */
-export function NewPropertyModal({ open, onClose, onContinue }: NewPropertyModalProps) {
+export function NewPropertyModal({ open, onClose }: NewPropertyModalProps) {
+  const router = useRouter();
   const [mode, setMode] = useState<PropertyCreationMode>('detail-check');
   const [workflowId, setWorkflowId] = useState('');
   const [options, setOptions] = useState<DetailCheckOption[]>([]);
@@ -89,10 +111,18 @@ export function NewPropertyModal({ open, onClose, onContinue }: NewPropertyModal
     setIsLoading(true);
     authFetch('/api/detail-checks', { cache: 'no-store' })
       .then((res) => res.json())
-      .then((rows: Array<{ workflow_id: string; street_house_number: string | null; city: string }>) => {
+      .then((rows: DetailCheckApiRow[]) => {
         setOptions(rows.map((row) => ({
           workflowId: row.workflow_id,
           label: `${row.street_house_number || 'Adresse noch nicht erfasst'}, ${row.city}`,
+          prefill: {
+            streetHouseNumber: row.street_house_number,
+            postalCode: row.postal_code,
+            city: row.city,
+            yearOfConstruction: row.year_of_construction,
+            livingAreaM2: Number(row.living_area_m2),
+            propertyCategory: row.property_category,
+          },
         })));
       })
       .catch(() => setOptions([]))
@@ -100,6 +130,24 @@ export function NewPropertyModal({ open, onClose, onContinue }: NewPropertyModal
   }, [open]);
 
   const canContinue = mode === 'manual' || workflowId !== '';
+  const selectedOption = options.find((opt) => opt.workflowId === workflowId) ?? null;
+
+  const handleContinue = () => {
+    const prefill = mode === 'detail-check' ? selectedOption?.prefill : null;
+    onClose();
+    if (!prefill) {
+      router.push('/existing-properties/new');
+      return;
+    }
+    const params = new URLSearchParams();
+    if (prefill.streetHouseNumber) params.set('strasse', prefill.streetHouseNumber);
+    if (prefill.postalCode) params.set('plz', prefill.postalCode);
+    if (prefill.city) params.set('ort', prefill.city);
+    params.set('baujahr', String(prefill.yearOfConstruction));
+    params.set('wohnflaeche', String(prefill.livingAreaM2));
+    if (prefill.propertyCategory) params.set('kategorie', prefill.propertyCategory);
+    router.push(`/existing-properties/new?${params.toString()}`);
+  };
 
   return (
     <Modal
@@ -116,7 +164,7 @@ export function NewPropertyModal({ open, onClose, onContinue }: NewPropertyModal
             iconPosition="right"
             variant="primary"
             disabled={!canContinue}
-            onClick={() => onContinue(mode, mode === 'detail-check' ? workflowId : null)}
+            onClick={handleContinue}
           />
         </>
       }

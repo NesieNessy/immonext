@@ -2,7 +2,7 @@
 
 import { NoResult } from '@/components/common';
 import { PROPERTY_CATEGORY_FILTER_OPTIONS, RENTAL_STATUS_FILTER_OPTIONS } from '@/components/features/PropertyDisplay';
-import { NewPropertyModal, type PropertyCreationMode } from '@/components/features/NewPropertyModal';
+import { NewPropertyModal } from '@/components/features/NewPropertyModal';
 import { PropertyCard } from '@/components/features/PropertyCard';
 import { PropertyListRow } from '@/components/features/PropertyListRow';
 import type { MenuItem } from '@/components/ui';
@@ -75,14 +75,6 @@ export default function ExistingPropertiesPage() {
 
   const handlePropertyClick = (propertyId: number) => {
     router.push(`/existing-properties/${propertyId}/property-data`);
-  };
-
-  // TODO: no destination exists yet for either path — there's no blank
-  // property-creation form, and no form that pre-fills from a detail check.
-  // This just captures the choice until one of those is built.
-  const handleContinueCreateProperty = (mode: PropertyCreationMode, workflowId: string | null) => {
-    console.log('Neues Objekt anlegen — TODO: no destination form yet', { mode, workflowId });
-    setNewPropertyModalOpen(false);
   };
 
   const handleConfirmDelete = async () => {
@@ -391,7 +383,6 @@ export default function ExistingPropertiesPage() {
       <NewPropertyModal
         open={newPropertyModalOpen}
         onClose={() => setNewPropertyModalOpen(false)}
-        onContinue={handleContinueCreateProperty}
       />
     </div>
   );

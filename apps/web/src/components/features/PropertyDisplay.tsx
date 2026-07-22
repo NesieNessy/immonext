@@ -8,14 +8,18 @@
 
 import type { TagVariant } from '@/components/ui';
 
-/** Mirrors propertyCategoryOptions in detail-check/property-data/page.tsx —
- *  property_category is free TEXT, not a DB enum, so this is just the known
- *  set of values that form can write. An unrecognized value still displays
- *  (falls back to the raw value) rather than being hidden. */
+/** property_category is free TEXT, not a DB enum — this is the known set of
+ *  values written across the app (detail-check/property-data's form plus
+ *  the wider set offered on the property-creation form). An unrecognized
+ *  value still displays (falls back to the raw value) rather than being
+ *  hidden. */
 export const PROPERTY_CATEGORY_LABEL: Record<string, string> = {
   EIGENTUMSWOHNUNG: 'Eigentumswohnung',
   EINFAMILIENHAUS: 'Einfamilienhaus',
   MEHRFAMILIENHAUS: 'Mehrfamilienhaus',
+  DOPPELHAUS: 'Doppelhaus',
+  GEWERBE: 'Gewerbe',
+  GRUNDSTUECK: 'Grundstück',
   HOLZBAUWEISE: 'Holzbauweise',
   DENKMALGESCHUETZT: 'Denkmalgeschützt',
 };
@@ -24,6 +28,9 @@ export const PROPERTY_CATEGORY_VARIANT: Record<string, TagVariant> = {
   EIGENTUMSWOHNUNG: 'info',
   EINFAMILIENHAUS: 'success',
   MEHRFAMILIENHAUS: 'purple',
+  DOPPELHAUS: 'teal',
+  GEWERBE: 'warning',
+  GRUNDSTUECK: 'muted',
   HOLZBAUWEISE: 'orange',
   DENKMALGESCHUETZT: 'violet',
 };
@@ -31,6 +38,17 @@ export const PROPERTY_CATEGORY_VARIANT: Record<string, TagVariant> = {
 export const PROPERTY_CATEGORY_FILTER_OPTIONS = Object.entries(PROPERTY_CATEGORY_LABEL).map(
   ([value, label]) => ({ value, label })
 );
+
+/** The 6 options offered on the "Neues Objekt anlegen" form — a narrower,
+ *  purpose-picked subset/ordering of PROPERTY_CATEGORY_LABEL, not the full set. */
+export const PROPERTY_CATEGORY_CREATE_OPTIONS = [
+  'EIGENTUMSWOHNUNG',
+  'EINFAMILIENHAUS',
+  'MEHRFAMILIENHAUS',
+  'DOPPELHAUS',
+  'GEWERBE',
+  'GRUNDSTUECK',
+].map((value) => ({ value, label: PROPERTY_CATEGORY_LABEL[value] }));
 
 export const RENTAL_STATUS_FILTER_OPTIONS = [
   { value: 'vermietet', label: 'Vermietet' },

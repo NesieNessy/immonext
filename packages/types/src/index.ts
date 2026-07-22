@@ -128,8 +128,8 @@ export enum EnergyEfficient {
 export interface Property {
   propertyId: number;
   userId: string;
-  cityId: number;
-  propertyAbbreviation: string;
+  cityId: number | null;
+  propertyAbbreviation: string | null;
   street: string;
   houseNumber: string;
   yearOfConstruction: number;
@@ -139,7 +139,9 @@ export interface Property {
   postalCode: string;
   federalState: string;
   squareMeters: number;
-  numberOfRooms: number;
+  numberOfRooms: number | null;
+  /** Objekttyp, e.g. EIGENTUMSWOHNUNG — free text, no DB enum. */
+  propertyCategory: string | null;
   createdAt: string;
   updatedAt: string;
 }

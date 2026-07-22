@@ -138,7 +138,7 @@ export default function PropertyData({ propertyId }: { propertyId: string }) {
                             />
                             <NumberField
                                 label="Anzahl Zimmer"
-                                value={formData.numberOfRooms}
+                                value={formData.numberOfRooms ?? ''}
                                 onChange={(e) => handleInputChange('numberOfRooms', parseInt(e.target.value) || 0)}
                             />
                             <TextField
