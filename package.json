@@ -5,11 +5,7 @@
   "description": "ImmoNext - Real Estate Management Platform Monorepo",
   "scripts": {
     "dev": "npm run dev --workspace=apps/web",
-    "dev:api": "cd apps/api && ./mvnw quarkus:dev",
-    "dev:all": "npm run dev & npm run dev:api",
     "build": "npm run build --workspace=apps/web",
-    "build:api": "cd apps/api && ./mvnw clean package",
-    "build:all": "npm run build && npm run build:api",
     "start": "npm run start --workspace=apps/web",
     "lint": "npm run lint --workspace=apps/web",
     "type-check": "npm run type-check --workspace=apps/web",
@@ -29,7 +25,6 @@
     "property-management",
     "monorepo",
     "nextjs",
-    "quarkus",
     "supabase"
   ],
   "author": "",

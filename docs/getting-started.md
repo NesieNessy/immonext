@@ -8,16 +8,7 @@ This guide will help you set up the development environment for Immonext.
 - Download from: https://nodejs.org/
 - Verify installation: `node --version`
 
-### 2. Install Java 21+
-- Download from: https://adoptium.net/
-- Verify installation: `java --version`
-
-### 3. Install Maven 3.9+
-- Download from: https://maven.apache.org/download.cgi
-- Add to PATH
-- Verify installation: `mvn --version`
-
-### 4. Install Docker Desktop
+### 2. Install Docker Desktop (optional, for local Postgres)
 - Download from: https://www.docker.com/products/docker-desktop
 - Start Docker Desktop
 - Verify installation: `docker --version`
@@ -40,63 +31,34 @@ cp .env.example .env
 
 ### 2. Install Dependencies
 
-#### Frontend (apps/web)
 ```bash
-cd apps/web
-npm install
-cd ../..
+npm ci
 ```
 
-#### Shared Types (packages/types)
+This installs dependencies for `apps/web` and `packages/types` via npm workspaces.
+
+### 3. Start the App
+
+#### Option A: Against hosted Supabase (Recommended)
+
+Set `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_KEY` in `apps/web/.env.local` to your Supabase project, then:
+
 ```bash
-cd packages/types
-npm install
-cd ../..
+npm run dev
 ```
 
-### 3. Start Services
-
-#### Option A: Start All Services with Docker Compose (Recommended)
+#### Option B: Local Postgres via Docker Compose
 
 ```bash
 docker-compose up --build
 ```
 
-This will start:
-- Supabase PostgreSQL database
-- Supabase Kong API Gateway
-- Quarkus API server
-- Next.js web application
-
-#### Option B: Start Services Individually
-
-**Terminal 1 - Database:**
-```bash
-docker-compose up supabase-db supabase-kong
-```
-
-**Terminal 2 - Quarkus API:**
-```bash
-cd apps/api
-./mvnw quarkus:dev
-```
-
-**Terminal 3 - Next.js Frontend:**
-```bash
-cd apps/web
-npm run dev
-```
+This starts a local Postgres instance and the web app in `NEXT_PUBLIC_AUTH_BYPASS=true` mode, which talks to that local database through the Next.js API routes instead of hosted Supabase.
 
 ## Accessing the Application
 
-Once all services are running:
-
 - **Web App**: http://localhost:3000
-- **API**: http://localhost:8080
-- **Swagger UI**: http://localhost:8080/swagger-ui
-- **API Health**: http://localhost:8080/q/health
-- **Supabase Studio**: http://localhost:54324
-- **Supabase API**: http://localhost:54321
+- **Supabase Studio** (if using hosted Supabase): your project's dashboard on supabase.com
 
 ## Running Database Migrations
 
@@ -106,39 +68,26 @@ Once all services are running:
 # Install Supabase CLI
 npm install -g supabase
 
-# Initialize Supabase
-supabase init
-
-# Start Supabase locally
-supabase start
+# Link to your project
+supabase link
 
 # Apply migrations
 supabase db push
 ```
 
-### Manual Migration
+### Local Postgres
 
-The migrations will automatically run when the database starts via docker-compose.
+Migrations in `supabase/migrations/` run automatically when the local Postgres container starts via docker-compose.
 
 ## Development Workflow
 
-### 1. Making Changes to Frontend
+### 1. Making Changes
 
 ```bash
-cd apps/web
-# Make your changes
 npm run dev  # Hot reload is enabled
 ```
 
-### 2. Making Changes to Backend
-
-```bash
-cd apps/api
-# Make your changes
-./mvnw quarkus:dev  # Hot reload is enabled
-```
-
-### 3. Adding Database Migrations
+### 2. Adding Database Migrations
 
 Create a new migration file:
 ```bash
@@ -156,18 +105,11 @@ CREATE TABLE user_preferences (
 );
 ```
 
-### 4. Running Tests
+### 3. Running Checks
 
-**Frontend Tests:**
 ```bash
-cd apps/web
-npm test
-```
-
-**Backend Tests:**
-```bash
-cd apps/api
-./mvnw test
+npm run lint
+npm run type-check
 ```
 
 ## Common Issues and Solutions
@@ -177,28 +119,24 @@ cd apps/api
 **Solution:** Stop the service using the port or change the port in configuration.
 
 ```bash
-# Check what's using port 8080
-netstat -ano | findstr :8080  # Windows
-lsof -i :8080  # Mac/Linux
+# Check what's using port 3000
+netstat -ano | findstr :3000  # Windows
+lsof -i :3000  # Mac/Linux
 
 # Kill the process
 taskkill /PID <PID> /F  # Windows
 kill -9 <PID>  # Mac/Linux
 ```
 
+### Issue: `npm start` shows stale content
+
+**Solution:** `npm start` (`next start`) serves a frozen production build from the last `npm run build` — it does not hot-reload. Rebuild after any source change, or use `npm run dev` while actively developing.
+
 ### Issue: Database Connection Failed
 
-**Solution:** Ensure Supabase is running:
+**Solution:** If using local Postgres, ensure it's running:
 ```bash
-docker-compose up supabase-db -d
-```
-
-### Issue: Maven Build Fails
-
-**Solution:** Clear Maven cache and rebuild:
-```bash
-cd apps/api
-./mvnw clean install -U
+docker-compose up db -d
 ```
 
 ### Issue: Next.js Build Fails
@@ -206,14 +144,16 @@ cd apps/api
 **Solution:** Clear cache and reinstall:
 ```bash
 cd apps/web
-rm -rf .next node_modules package-lock.json
+rm -rf .next node_modules
+cd ../..
+rm -rf node_modules package-lock.json
 npm install
 npm run build
 ```
 
 ## IDE Setup
 
-### VS Code (Recommended for Frontend)
+### VS Code (Recommended)
 
 Install extensions:
 - ESLint
@@ -221,23 +161,16 @@ Install extensions:
 - Tailwind CSS IntelliSense
 - TypeScript React code snippets
 
-### IntelliJ IDEA (Recommended for Backend)
-
-1. Open `apps/api` as a Maven project
-2. Enable annotation processing
-3. Install Quarkus Tools plugin
-
 ## Next Steps
 
 1. Read the [Architecture Documentation](architecture.md)
-2. Review the [API Documentation](api.md)
-3. Explore the codebase
-4. Start building features!
+2. Explore the codebase
+3. Start building features!
 
 ## Getting Help
 
 - Check existing issues on GitHub
 - Review documentation in `/docs`
 - Ask questions in team chat
-- Consult Quarkus docs: https://quarkus.io/guides/
 - Consult Next.js docs: https://nextjs.org/docs
+- Consult Supabase docs: https://supabase.com/docs

@@ -1,32 +1,25 @@
 # Immonext Architecture
 
 ## Overview
-Immonext is a monorepo application for real estate property management and valuation, built with modern technologies and best practices.
+Immonext is a monorepo application for real estate property management and valuation, built with Next.js and Supabase.
 
 ## Technology Stack
 
 ### Frontend (`apps/web`)
-- **Framework**: Next.js 16.1.6 (App Router)
-- **UI Library**: React 19.2.3
-- **Styling**: Tailwind CSS with custom design system
-- **Components**: Custom component library (`immonext-design`)
+- **Framework**: Next.js (App Router)
+- **UI Library**: React 19
+- **Styling**: Tailwind CSS v4 with a custom design system
+- **Components**: Shared component library (`apps/web/src/components/ui`)
 - **State Management**: React Hooks
 - **Icons**: Lucide React
-- **Database Client**: Supabase JS SDK
+- **Database Client**: Supabase JS SDK (`@supabase/supabase-js`, `@supabase/ssr`)
 
-### Backend (`apps/api`)
-- **Framework**: Quarkus 3.16.3
-- **Language**: Java 21
-- **ORM**: Hibernate ORM with Panache
-- **API**: JAX-RS (REST)
-- **Security**: SmallRye JWT
-- **Documentation**: OpenAPI/Swagger
-- **Monitoring**: Micrometer + Prometheus
-
-### Database
-- **Primary DB**: PostgreSQL 15 (via Supabase)
-- **Features**: Row-Level Security (RLS), Realtime subscriptions
+### Database & Backend Services
+- **Primary DB**: PostgreSQL (via Supabase)
+- **Auth**: Supabase Auth
+- **Features**: Row-Level Security (RLS) policies, RPC functions for multi-step writes
 - **Migrations**: SQL-based migrations in `supabase/migrations/`
+- **Local dev API routes**: A small set of Next.js API routes under `apps/web/src/app/api/` back a local `NEXT_PUBLIC_AUTH_BYPASS` dev mode that talks to a local Postgres instead of hosted Supabase
 
 ## Architecture Diagram
 
@@ -37,25 +30,22 @@ Immonext is a monorepo application for real estate property management and valua
 │  │          Next.js (apps/web)                     │   │
 │  │  - Server Components                            │   │
 │  │  - Client Components                            │   │
-│  │  - API Routes                                   │   │
+│  │  - API Routes (local auth-bypass dev mode only) │   │
 │  └─────────────────────────────────────────────────┘   │
 └─────────────────────────────────────────────────────────┘
                            │
-                           ├──────────┬──────────┐
-                           │          │          │
-                     ┌─────▼────┐ ┌──▼───┐ ┌───▼────┐
-                     │ Supabase │ │ Kong │ │Quarkus │
-                     │  Client  │ │ API  │ │  API   │
-                     └─────┬────┘ └──┬───┘ └───┬────┘
-                           │         │          │
-                           │         │          │
-                    ┌──────▼─────────▼──────────▼─────┐
-                    │      Supabase PostgreSQL        │
-                    │  - auth.users                   │
-                    │  - public.profiles              │
-                    │  - public.properties            │
-                    │  - public.property_valuations   │
-                    └─────────────────────────────────┘
+                     ┌─────▼────┐
+                     │ Supabase │
+                     │  Client  │
+                     └─────┬────┘
+                           │
+                    ┌──────▼───────────────┐
+                    │  Supabase PostgreSQL │
+                    │  - auth.users        │
+                    │  - public.quick_check│
+                    │  - public.property   │
+                    │  - detail_check_*    │
+                    └───────────────────────┘
 ```
 
 ## Project Structure
@@ -63,37 +53,20 @@ Immonext is a monorepo application for real estate property management and valua
 ```
 immonext/
 ├── apps/
-│   ├── web/              # Next.js frontend
-│   │   ├── src/
-│   │   │   ├── app/      # App Router pages
-│   │   │   ├── components/
-│   │   │   │   ├── immonext-design/  # Design system
-│   │   │   │   └── ui/               # Shadcn components
-│   │   │   ├── lib/
-│   │   │   │   ├── supabase/  # Supabase clients
-│   │   │   │   └── api/       # API client helpers
-│   │   │   ├── hooks/
-│   │   │   ├── types/
-│   │   │   └── styles/
-│   │   └── public/
-│   │
-│   └── api/              # Quarkus backend
-│       ├── src/main/java/com/immonext/
-│       │   ├── config/       # Configuration
-│       │   ├── resource/     # REST endpoints
-│       │   ├── service/      # Business logic
-│       │   ├── repository/   # Data access
-│       │   ├── model/
-│       │   │   ├── entity/   # JPA entities
-│       │   │   └── dto/      # DTOs
-│       │   ├── exception/    # Exception handlers
-│       │   └── security/     # Security config
-│       └── src/main/resources/
+│   └── web/               # Next.js frontend
+│       ├── src/
+│       │   ├── app/       # App Router pages + API routes (auth-bypass dev mode)
+│       │   ├── components/
+│       │   │   ├── ui/        # Shared design-system components
+│       │   │   └── features/  # Feature-specific components
+│       │   ├── lib/
+│       │   │   └── supabase/  # Supabase clients
+│       │   ├── hooks/
+│       │   └── styles/
+│       └── public/
 │
 ├── supabase/
 │   ├── migrations/       # Database migrations
-│   ├── functions/        # Edge functions
-│   ├── seed.sql          # Seed data
 │   └── config.toml       # Supabase config
 │
 ├── packages/
@@ -101,7 +74,8 @@ immonext/
 │
 ├── docs/
 │   ├── architecture.md
-│   └── api.md
+│   ├── getting-started.md
+│   └── vercel-deployment.md
 │
 ├── docker-compose.yml
 └── .github/workflows/
@@ -111,36 +85,26 @@ immonext/
 
 ### Authentication
 1. User authenticates via Supabase Auth
-2. Supabase issues JWT token
-3. Frontend stores token in cookies
-4. Token sent with API requests to Quarkus
-5. Quarkus validates JWT against Supabase public key
+2. Supabase issues a session/JWT
+3. The Next.js app reads the session client-side (and via `@supabase/ssr` where needed) and uses it for all Supabase queries
+4. Row-Level Security policies on each table enforce that a user can only read/write their own rows
 
 ### Property Valuation Flow
-1. User initiates valuation (Quick Check or Detail Check)
-2. Frontend validates input with design system components
-3. Data sent to Quarkus API
-4. Quarkus validates, processes, and stores in PostgreSQL
-5. Results returned to frontend
-6. Frontend updates UI with real-time subscriptions (Supabase Realtime)
+1. User initiates a valuation (Ersteinschätzung / quick check, or a full Detailbewertung / detail check)
+2. Frontend validates input with the shared form components
+3. Data is written directly to Supabase from the client (or, in local auth-bypass dev mode, via the Next.js API routes to a local Postgres)
+4. Results are read back and rendered in the UI
 
 ## Security
 
 ### Frontend
-- Environment variables for API URLs and keys
+- Environment variables for Supabase URL/keys
 - HTTPS in production
-- CORS properly configured
-
-### Backend (Quarkus)
-- JWT authentication
-- Role-based access control
-- Input validation (Hibernate Validator)
-- CORS configuration
-- SQL injection prevention (Panache)
+- No secrets embedded client-side beyond the public anon key
 
 ### Database (Supabase)
-- Row-Level Security (RLS) policies
-- User-specific data access
+- Row-Level Security (RLS) policies on every table
+- User-specific data access enforced at the database layer
 - Encrypted connections
 - Automated backups
 
@@ -148,40 +112,17 @@ immonext/
 
 ### Development
 ```bash
-# Start Supabase
-docker-compose up supabase-db supabase-kong
-
-# Start Quarkus API
-cd apps/api
-./mvnw quarkus:dev
-
-# Start Next.js
 cd apps/web
 npm run dev
 ```
 
 ### Production
-```bash
-# Build and run all services
-docker-compose up --build
-```
+Deployed on Vercel — see [vercel-deployment.md](vercel-deployment.md).
 
 ## Environment Variables
 
 ### Web App
 - `NEXT_PUBLIC_SUPABASE_URL`: Supabase project URL
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`: Supabase anonymous key
-- `NEXT_PUBLIC_API_URL`: Quarkus API URL
-
-### Quarkus API
-- `QUARKUS_DATASOURCE_JDBC_URL`: PostgreSQL connection string
-- `QUARKUS_DATASOURCE_USERNAME`: DB username
-- `QUARKUS_DATASOURCE_PASSWORD`: DB password
-- `QUARKUS_HTTP_CORS_ORIGINS`: Allowed CORS origins
-
-## Monitoring & Observability
-
-- **Health Checks**: `/q/health` (Quarkus)
-- **Metrics**: `/q/metrics` (Prometheus format)
-- **API Documentation**: `/swagger-ui` (Quarkus)
-- **Logs**: Structured logging with correlation IDs
+- `NEXT_PUBLIC_AUTH_BYPASS`: `true` to use the local Postgres + auth-bypass dev mode instead of hosted Supabase
+- `DATABASE_URL`: Postgres connection string, used by the auth-bypass API routes

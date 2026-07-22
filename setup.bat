@@ -14,28 +14,8 @@ if %ERRORLEVEL% NEQ 0 (
     pause
     exit /b 1
 )
-echo [OK] Node.js found: 
+echo [OK] Node.js found:
 node --version
-
-REM Check Java
-where java >nul 2>nul
-if %ERRORLEVEL% NEQ 0 (
-    echo [ERROR] Java is not installed. Please install Java 21+ from https://adoptium.net/
-    pause
-    exit /b 1
-)
-echo [OK] Java found:
-java --version | findstr "version"
-
-REM Check Maven
-where mvn >nul 2>nul
-if %ERRORLEVEL% NEQ 0 (
-    echo [ERROR] Maven is not installed. Please install Maven 3.9+ from https://maven.apache.org/
-    pause
-    exit /b 1
-)
-echo [OK] Maven found:
-mvn --version | findstr "Maven"
 
 REM Check Docker
 where docker >nul 2>nul
@@ -103,13 +83,10 @@ echo   docker-compose up --build
 echo.
 echo Option 2: Start services individually
 echo   Terminal 1: docker-compose up supabase-db supabase-kong
-echo   Terminal 2: cd apps\api ^&^& mvnw quarkus:dev
-echo   Terminal 3: cd apps\web ^&^& npm run dev
+echo   Terminal 2: cd apps\web ^&^& npm run dev
 echo.
 echo Access points:
 echo   - Web App: http://localhost:3000
-echo   - API: http://localhost:8080
-echo   - Swagger UI: http://localhost:8080/swagger-ui
 echo   - Supabase Studio: http://localhost:54324
 echo.
 pause

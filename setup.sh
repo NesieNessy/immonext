@@ -15,20 +15,6 @@ if ! command -v node &> /dev/null; then
 fi
 echo "[OK] Node.js found: $(node --version)"
 
-# Check Java
-if ! command -v java &> /dev/null; then
-    echo "[ERROR] Java is not installed. Please install Java 21+ from https://adoptium.net/"
-    exit 1
-fi
-echo "[OK] Java found: $(java --version | head -n 1)"
-
-# Check Maven
-if ! command -v mvn &> /dev/null; then
-    echo "[ERROR] Maven is not installed. Please install Maven 3.9+ from https://maven.apache.org/"
-    exit 1
-fi
-echo "[OK] Maven found: $(mvn --version | head -n 1)"
-
 # Check Docker
 if ! command -v docker &> /dev/null; then
     echo "[ERROR] Docker is not installed. Please install Docker Desktop from https://www.docker.com/"
@@ -90,12 +76,9 @@ echo "  docker-compose up --build"
 echo ""
 echo "Option 2: Start services individually"
 echo "  Terminal 1: docker-compose up supabase-db supabase-kong"
-echo "  Terminal 2: cd apps/api && ./mvnw quarkus:dev"
-echo "  Terminal 3: cd apps/web && npm run dev"
+echo "  Terminal 2: cd apps/web && npm run dev"
 echo ""
 echo "Access points:"
 echo "  - Web App: http://localhost:3000"
-echo "  - API: http://localhost:8080"
-echo "  - Swagger UI: http://localhost:8080/swagger-ui"
 echo "  - Supabase Studio: http://localhost:54324"
 echo ""

@@ -27,7 +27,6 @@ Do not use the local Docker defaults in Vercel:
 
 ```text
 http://localhost:54321
-http://localhost:8080
 postgresql://postgres:postgres@localhost:54322/postgres
 local-dev-anon-key
 ```

@@ -16,25 +16,6 @@ services:
       timeout: 5s
       retries: 5
 
-  api:
-    profiles:
-      - api
-    build:
-      context: ./apps/api
-      dockerfile: src/main/docker/Dockerfile.jvm
-    container_name: immonext-api
-    ports:
-      - "8080:8080"
-    environment:
-      QUARKUS_DATASOURCE_JDBC_URL: jdbc:postgresql://db:5432/postgres
-      QUARKUS_DATASOURCE_USERNAME: postgres
-      QUARKUS_DATASOURCE_PASSWORD: postgres
-      QUARKUS_HTTP_CORS_ORIGINS: http://localhost:3000
-    depends_on:
-      db:
-        condition: service_healthy
-    restart: unless-stopped
-
   web:
     build:
       context: .
@@ -42,7 +23,6 @@ services:
       args:
         NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL:-http://localhost:54321}
         NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY:-local-dev-anon-key}
-        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8080}
         NEXT_PUBLIC_AUTH_BYPASS: ${NEXT_PUBLIC_AUTH_BYPASS:-true}
         DATABASE_URL: ${DATABASE_URL:-postgresql://postgres:postgres@db:5432/postgres}
     container_name: immonext-web
@@ -51,7 +31,6 @@ services:
     environment:
       NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL:-http://localhost:54321}
       NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY:-local-dev-anon-key}
-      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8080}
       NEXT_PUBLIC_AUTH_BYPASS: ${NEXT_PUBLIC_AUTH_BYPASS:-true}
       DATABASE_URL: ${DATABASE_URL:-postgresql://postgres:postgres@db:5432/postgres}
     depends_on:
