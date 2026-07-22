@@ -36,6 +36,32 @@ function toPropertyWithCity(row: Record<string, unknown>): PropertyWithCity {
   };
 }
 
+/**
+ * property + fields from the property_overview view:
+ *   - propertyCategory: a direct (nullable) column on `property`, falling
+ *     back to the accepted quick-check's detail-check data if not set
+ *     directly. No UI writes it yet — currently only set via direct DB
+ *     access or a completed detail check.
+ *   - isRented: TRUE if any tenancy row for this property has is_rented
+ *   - purchasePrice: from acquisition_costs (NULL if never entered)
+ */
+export interface PropertyOverview extends Property {
+  propertyCategory: string | null;
+  isRented: boolean;
+  purchasePrice: number | null;
+}
+
+function toPropertyOverview(row: Record<string, unknown>): PropertyOverview {
+  return {
+    ...toProperty(row),
+    propertyCategory: (row.property_category as string | null) ?? null,
+    isRented: Boolean(row.is_rented),
+    purchasePrice: row.purchase_price === null || row.purchase_price === undefined
+      ? null
+      : Number(row.purchase_price),
+  };
+}
+
 export async function getProperties(userId: string): Promise<Property[]> {
   const { data, error } = await supabase
     .from('property')
@@ -45,6 +71,17 @@ export async function getProperties(userId: string): Promise<Property[]> {
 
   if (error || !data) return [];
   return data.map(toProperty);
+}
+
+export async function getPropertiesOverview(userId: string): Promise<PropertyOverview[]> {
+  const { data, error } = await supabase
+    .from('property_overview')
+    .select('*')
+    .eq('user_id', userId)
+    .order('property_abbreviation', { ascending: true });
+
+  if (error || !data) return [];
+  return data.map(toPropertyOverview);
 }
 
 export async function getPropertiesWithCity(userId: string): Promise<PropertyWithCity[]> {

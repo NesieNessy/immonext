@@ -1,11 +1,10 @@
 'use client';
 
-import { deleteProperty, getProperties } from '@/lib/supabase/property.supabase';
-import type { Property } from '@immonext/types';
+import { deleteProperty, getPropertiesOverview, type PropertyOverview } from '@/lib/supabase/property.supabase';
 import { useCallback, useEffect, useState } from 'react';
 
 export interface UsePropertiesResult {
-    data: Property[];
+    data: PropertyOverview[];
     isLoading: boolean;
     error: string | null;
     refetch: () => void;
@@ -14,11 +13,11 @@ export interface UsePropertiesResult {
 
 /**
  * @param userId Current user's id (from useRequireAuth in the caller) —
- *   getProperties needs it explicitly, unlike the quick_check queries which
- *   rely on RLS alone. Fetch is skipped until it's available.
+ *   getPropertiesOverview needs it explicitly, unlike the quick_check
+ *   queries which rely on RLS alone. Fetch is skipped until it's available.
  */
 export function useProperties(userId: string | undefined): UsePropertiesResult {
-    const [data, setData] = useState<Property[]>([]);
+    const [data, setData] = useState<PropertyOverview[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
@@ -27,7 +26,7 @@ export function useProperties(userId: string | undefined): UsePropertiesResult {
         setIsLoading(true);
         setError(null);
         try {
-            const rows = await getProperties(userId);
+            const rows = await getPropertiesOverview(userId);
             setData(rows);
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Unbekannter Fehler');

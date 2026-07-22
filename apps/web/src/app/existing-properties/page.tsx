@@ -1,18 +1,61 @@
 "use client";
 
 import { NoResult } from '@/components/common';
+import { PROPERTY_CATEGORY_FILTER_OPTIONS, RENTAL_STATUS_FILTER_OPTIONS } from '@/components/features/PropertyDisplay';
+import { PropertyCard } from '@/components/features/PropertyCard';
+import { PropertyListRow } from '@/components/features/PropertyListRow';
 import type { MenuItem } from '@/components/ui';
-import { Button, Header, Icons, TextFieldWithIcon, TileWithImage } from '@/components/ui';
+import { Button, Header, Icons, TextFieldWithIcon } from '@/components/ui';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { useProperties } from '@/hooks/useProperties';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
-import { base64ToDataUri } from '@/lib/utils';
-import type { Property } from '@immonext/types';
-import { MoreVertical } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import type { PropertyOverview } from '@/lib/supabase/property.supabase';
+import { Building2, ChevronDown, KeyRound, LayoutGrid, List } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 
 const PAGE_SIZE_OPTIONS = [12, 24, 48];
+
+type ViewMode = 'grid' | 'list';
+
+function FilterPill({
+  icon: Icon,
+  label,
+  value,
+  options,
+  onChange,
+}: {
+  icon: React.ElementType;
+  label: string;
+  value: string;
+  options: { value: string; label: string }[];
+  onChange: (value: string) => void;
+}) {
+  const active = value !== '';
+  return (
+    <div className="relative">
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        aria-label={label}
+        className={cn(
+          "appearance-none pl-8 pr-7 py-2 rounded-full border text-sm font-medium cursor-pointer transition-colors",
+          active
+            ? "bg-primary text-primary-foreground border-primary"
+            : "bg-transparent border-border text-foreground hover:bg-muted"
+        )}
+      >
+        <option value="">Alle</option>
+        {options.map((opt) => (
+          <option key={opt.value} value={opt.value}>{opt.label}</option>
+        ))}
+      </select>
+      <Icon className={cn("absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none", active ? "text-primary-foreground" : "text-muted-foreground")} />
+      <ChevronDown className={cn("absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none", active ? "text-primary-foreground" : "text-muted-foreground")} />
+    </div>
+  );
+}
 
 export default function ExistingPropertiesPage() {
   const router = useRouter();
@@ -20,6 +63,9 @@ export default function ExistingPropertiesPage() {
   const { data: properties, isLoading, error, deleteSelected } = useProperties(user?.id);
 
   const [search, setSearch] = useState('');
+  const [objektTyp, setObjektTyp] = useState('');
+  const [vermietung, setVermietung] = useState('');
+  const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(24);
   const [deletingId, setDeletingId] = useState<number | null>(null);
@@ -44,10 +90,18 @@ export default function ExistingPropertiesPage() {
     }
   };
 
-  const buildMenuItems = (property: Property): MenuItem[] => [
+  // "Bearbeiten" and "Öffnen" both land on property-data — it's the only
+  // page that's actually an editable form for the property's own base data;
+  // the other use-case pages (tenant-data, etc.) are separate concerns.
+  const buildMenuItems = (property: PropertyOverview): MenuItem[] => [
     {
       label: BUTTON_DETAILS.Open.label,
       icon: <BUTTON_DETAILS.Open.icon />,
+      onClick: () => handlePropertyClick(property.propertyId),
+    },
+    {
+      label: BUTTON_DETAILS.Edit.label,
+      icon: <BUTTON_DETAILS.Edit.icon />,
       onClick: () => handlePropertyClick(property.propertyId),
     },
     {
@@ -61,13 +115,21 @@ export default function ExistingPropertiesPage() {
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    if (!q) return properties;
-    return properties.filter((p) =>
-      `${p.street} ${p.houseNumber} ${p.city} ${p.postalCode} ${p.propertyAbbreviation}`
-        .toLowerCase()
-        .includes(q)
-    );
-  }, [properties, search]);
+    return properties.filter((p) => {
+      if (q && !`${p.street} ${p.houseNumber} ${p.city} ${p.postalCode} ${p.propertyAbbreviation}`.toLowerCase().includes(q)) return false;
+      if (objektTyp && p.propertyCategory !== objektTyp) return false;
+      if (vermietung === 'vermietet' && !p.isRented) return false;
+      if (vermietung === 'unvermietet' && p.isRented) return false;
+      return true;
+    });
+  }, [properties, search, objektTyp, vermietung]);
+
+  const hasActiveFilters = search.trim() !== '' || objektTyp !== '' || vermietung !== '';
+  const handleResetFilters = () => {
+    setSearch('');
+    setObjektTyp('');
+    setVermietung('');
+  };
 
   // A new filtered result set (or a page-size change) always starts back at
   // page 1 — an out-of-range page would otherwise render nothing.
@@ -95,14 +157,59 @@ export default function ExistingPropertiesPage() {
           }
         />
 
-        <div className="mt-6 max-w-sm">
-          <TextFieldWithIcon
-            type="search"
-            icon={Icons.Search}
-            placeholder="Objekte durchsuchen"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
+        {/* ── Search + filter pills + view toggle ─────────────────────────── */}
+        <div className="mt-6 flex flex-wrap items-center gap-3">
+          <div className="max-w-sm flex-1 min-w-[220px]">
+            <TextFieldWithIcon
+              type="search"
+              icon={Icons.Search}
+              placeholder="Adresse oder Stadt suchen…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+
+          <FilterPill
+            icon={Building2}
+            label="Objekttyp"
+            value={objektTyp}
+            options={PROPERTY_CATEGORY_FILTER_OPTIONS}
+            onChange={setObjektTyp}
           />
+          <FilterPill
+            icon={KeyRound}
+            label="Vermietung"
+            value={vermietung}
+            options={RENTAL_STATUS_FILTER_OPTIONS}
+            onChange={setVermietung}
+          />
+
+          <div className="hidden md:inline-flex items-center rounded-lg border border-border p-0.5 ml-auto">
+            <button
+              type="button"
+              onClick={() => setViewMode('grid')}
+              aria-label="Rasteransicht"
+              aria-pressed={viewMode === 'grid'}
+              className={cn(
+                "p-1.5 rounded-md transition-colors",
+                viewMode === 'grid' ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"
+              )}
+            >
+              <LayoutGrid className="w-4 h-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode('list')}
+              aria-label="Listenansicht"
+              aria-pressed={viewMode === 'list'}
+              className={cn(
+                "p-1.5 rounded-md transition-colors",
+                viewMode === 'list' ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"
+              )}
+            >
+              <List className="w-4 h-4" />
+            </button>
+          </div>
         </div>
 
         {(authLoading || isLoading) && (
@@ -118,7 +225,7 @@ export default function ExistingPropertiesPage() {
         )}
 
         {!authLoading && !isLoading && !error && (
-          <div className="mt-6">
+          <div className="mt-4">
             {properties.length === 0 && (
               <NoResult
                 title="Noch keine Objekte vorhanden"
@@ -130,45 +237,67 @@ export default function ExistingPropertiesPage() {
             {properties.length > 0 && filtered.length === 0 && (
               <NoResult
                 title="Keine Treffer"
-                message="Kein Objekt entspricht dem Suchbegriff."
+                message="Kein Objekt entspricht den aktuellen Suchbegriffen oder Filtern."
                 className="py-24"
                 action={
-                  <Button
-                    label="Filter zurücksetzen"
-                    icon={<Icons.Filter className="w-4 h-4" />}
-                    variant="outline"
-                    type="button"
-                    onClick={() => setSearch('')}
-                  />
+                  hasActiveFilters && (
+                    <Button
+                      label="Filter zurücksetzen"
+                      icon={<Icons.Filter className="w-4 h-4" />}
+                      variant="outline"
+                      type="button"
+                      onClick={handleResetFilters}
+                    />
+                  )
                 }
               />
             )}
 
             {filtered.length > 0 && (
               <>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {pageItems.map((property) => (
-                    <TileWithImage
-                      key={property.propertyId}
-                      image={base64ToDataUri(property.imageUrl) ?? ""}
-                      imageAlt={`${property.street} ${property.houseNumber}`}
-                      title={`${property.street} ${property.houseNumber}`}
-                      description={`${property.postalCode} ${property.city}`}
-                      className="h-full"
-                      onClick={() => handlePropertyClick(property.propertyId)}
-                      actions={
-                        <div className="w-full flex justify-end" onClick={(e) => e.stopPropagation()}>
-                          <Button
-                            iconOnly
-                            icon={<MoreVertical className="w-4 h-4" />}
-                            variant="ghost"
-                            size="sm"
+                <div className="max-h-[600px] overflow-y-auto pr-1">
+                  {/* Mobile — always the card grid; the grid/list toggle only
+                      applies at md+, same md:hidden / hidden md:block split
+                      the quick-check overview uses for its mobile cards. */}
+                  <div className="grid grid-cols-1 gap-4 md:hidden">
+                    {pageItems.map((property, index) => (
+                      <PropertyCard
+                        key={property.propertyId}
+                        property={property}
+                        colorIndex={index}
+                        menuItems={buildMenuItems(property)}
+                        onClick={() => handlePropertyClick(property.propertyId)}
+                      />
+                    ))}
+                  </div>
+
+                  <div className="hidden md:block">
+                    {viewMode === 'grid' ? (
+                      <div className="grid grid-cols-2 lg:grid-cols-3 gap-6">
+                        {pageItems.map((property, index) => (
+                          <PropertyCard
+                            key={property.propertyId}
+                            property={property}
+                            colorIndex={index}
                             menuItems={buildMenuItems(property)}
+                            onClick={() => handlePropertyClick(property.propertyId)}
                           />
-                        </div>
-                      }
-                    />
-                  ))}
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="flex flex-col gap-3">
+                        {pageItems.map((property, index) => (
+                          <PropertyListRow
+                            key={property.propertyId}
+                            property={property}
+                            colorIndex={index}
+                            menuItems={buildMenuItems(property)}
+                            onClick={() => handlePropertyClick(property.propertyId)}
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 {/* ── Pagination footer ──────────────────────────────────── */}
