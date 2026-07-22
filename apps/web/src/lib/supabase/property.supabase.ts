@@ -113,6 +113,17 @@ export async function getPropertyById(propertyId: number): Promise<Property | nu
   return toProperty(data);
 }
 
+export async function getPropertyOverviewById(propertyId: number): Promise<PropertyOverview | null> {
+  const { data, error } = await supabase
+    .from('property_overview')
+    .select('*')
+    .eq('property_id', propertyId)
+    .single();
+
+  if (error || !data) return null;
+  return toPropertyOverview(data);
+}
+
 export async function getPropertyWithCityById(propertyId: number): Promise<PropertyWithCity | null> {
   const { data, error } = await supabase
     .from('property')

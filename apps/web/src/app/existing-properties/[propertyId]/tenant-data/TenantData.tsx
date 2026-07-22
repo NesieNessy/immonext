@@ -53,7 +53,7 @@ export default function TenantData({ propertyId }: { propertyId: string }) {
                     }
                 />
 
-                <div className="mt-8 max-w-4xl">
+                <div className="mt-8 mx-auto max-w-4xl">
                     <Tile title={ExistingPropertiesUseCases.TenantData}>
                         <div className="p-4">
                             <p className="text-muted-foreground">

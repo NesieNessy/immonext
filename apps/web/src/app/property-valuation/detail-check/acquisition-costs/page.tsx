@@ -251,7 +251,7 @@ function AcquisitionCostsContent() {
         {isLoading ? (
           <p className="text-sm text-muted-foreground">Kaufkosten werden geladen...</p>
         ) : (
-          <div className="max-w-5xl space-y-6">
+          <div className="mx-auto max-w-5xl space-y-6">
             <section>
               <h2 className="mb-3 text-lg font-medium text-foreground">Kaufkosten</h2>
               <div className="grid gap-4 md:grid-cols-3">

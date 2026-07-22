@@ -205,7 +205,7 @@ export default function AdjustDistribution({ propertyId }: { propertyId: string 
           }
         />
 
-        <div className="mt-8 max-w-4xl">
+        <div className="mt-8 mx-auto max-w-4xl">
           <div className="p-6 bg-card border border-border rounded-lg space-y-6">
             <div className="flex items-start gap-3">
               <Calculator className="w-6 h-6 text-primary flex-shrink-0 mt-0.5" />

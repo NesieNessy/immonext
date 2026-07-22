@@ -74,7 +74,7 @@ export default function ExistingPropertiesPage() {
   const [newPropertyModalOpen, setNewPropertyModalOpen] = useState(false);
 
   const handlePropertyClick = (propertyId: number) => {
-    router.push(`/existing-properties/${propertyId}/property-data`);
+    router.push(`/existing-properties/${propertyId}`);
   };
 
   const handleConfirmDelete = async () => {
@@ -89,9 +89,8 @@ export default function ExistingPropertiesPage() {
     }
   };
 
-  // "Bearbeiten" and "Öffnen" both land on property-data — it's the only
-  // page that's actually an editable form for the property's own base data;
-  // the other use-case pages (tenant-data, etc.) are separate concerns.
+  // "Bearbeiten" and "Öffnen" both land on the property hub page, which
+  // links out to every use case (Objektdaten, Mieterdaten, etc.).
   const buildMenuItems = (property: PropertyOverview): MenuItem[] => [
     {
       label: BUTTON_DETAILS.Open.label,

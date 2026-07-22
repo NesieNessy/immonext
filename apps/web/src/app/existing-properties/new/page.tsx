@@ -1,17 +1,32 @@
 "use client";
 
 import { PROPERTY_CATEGORY_CREATE_OPTIONS } from '@/components/features/PropertyDisplay';
-import { CalendarField, Dropdown, Header, NumberField, StickyActionBar, TextField } from '@/components/ui';
+import { CalendarField, Dropdown, Header, NumberField, StickyActionBar, TextField, UploadButton } from '@/components/ui';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
 import { createParkingSpace } from '@/lib/supabase/parking_space.supabase';
 import { createProperty } from '@/lib/supabase/property.supabase';
 import { createPropertyAcquisition } from '@/lib/supabase/property_acquisition.supabase';
-import { cn } from '@/lib/utils';
+import { base64ToDataUri, cn } from '@/lib/utils';
 import { EnergyEfficient } from '@immonext/types';
 import { format } from 'date-fns';
+import { X } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useState } from 'react';
+
+/** Strips the "data:image/...;base64," prefix — Property.imageUrl stores
+ *  raw base64 only; base64ToDataUri() re-adds the right prefix for display. */
+function readFileAsRawBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result as string;
+      resolve(result.slice(result.indexOf(',') + 1));
+    };
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(file);
+  });
+}
 
 const ENERGY_OPTIONS = [
   { value: '', label: '–' },
@@ -43,8 +58,15 @@ function NewPropertyPageContent() {
   const [wohnflaeche, setWohnflaeche] = useState(searchParams.get('wohnflaeche') ?? '');
   const [stellplaetze, setStellplaetze] = useState('0');
   const [energieeffizienz, setEnergieeffizienz] = useState('');
+  const [bildBase64, setBildBase64] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const handleImageSelect = async (files: FileList | null) => {
+    const file = files?.[0];
+    if (!file) return;
+    setBildBase64(await readFileAsRawBase64(file));
+  };
 
   const currentYear = new Date().getFullYear();
   const isValid =
@@ -75,7 +97,7 @@ function NewPropertyPageContent() {
         yearOfConstruction: Number(baujahr),
         energyEfficient: (energieeffizienz || null) as EnergyEfficient | null,
         propertyCategory: objektkategorie,
-        imageUrl: null,
+        imageUrl: bildBase64,
       });
       if (!created) {
         setError('Objekt konnte nicht gespeichert werden.');
@@ -117,7 +139,7 @@ function NewPropertyPageContent() {
           ]}
         />
 
-        <div className="mt-6 flex flex-col gap-6 max-w-2xl">
+        <div className="mt-6 mx-auto flex flex-col gap-6 max-w-2xl">
           <p className="text-sm text-muted-foreground">Erfassen Sie die Stammdaten des Bestandsobjekts.</p>
 
           {error && (
@@ -125,6 +147,34 @@ function NewPropertyPageContent() {
               {error}
             </div>
           )}
+
+          <div className="flex flex-col gap-2">
+            <SectionLabel>Objektbild (opt.)</SectionLabel>
+            <div className="flex items-center gap-4">
+              {bildBase64 && (
+                <div className="relative shrink-0">
+                  <img
+                    src={base64ToDataUri(bildBase64)!}
+                    alt=""
+                    className="w-20 h-20 object-cover rounded-lg border border-border"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setBildBase64(null)}
+                    aria-label="Bild entfernen"
+                    className="absolute -top-2 -right-2 p-1 rounded-full bg-card border border-border text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              )}
+              <UploadButton
+                buttonText={bildBase64 ? 'Anderes Bild wählen' : 'Bild hochladen'}
+                accept="image/*"
+                onFileSelect={(files) => void handleImageSelect(files)}
+              />
+            </div>
+          </div>
 
           <div className="flex flex-col gap-2">
             <SectionLabel>Objektkategorie</SectionLabel>
@@ -212,30 +262,6 @@ function NewPropertyPageContent() {
                 value={energieeffizienz}
                 onChange={(e) => setEnergieeffizienz(e.target.value)}
               />
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-2">
-            <SectionLabel>Weitere Einstellungen</SectionLabel>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div className="flex items-center justify-between gap-3 p-3 rounded-lg border border-border">
-                <div>
-                  <p className="text-sm font-medium text-foreground">RND anpassen</p>
-                  <p className="text-xs text-muted-foreground">Restnutzungsdauer individuell festlegen</p>
-                </div>
-                <span className="text-xs text-muted-foreground shrink-0" title="Erst nach dem Speichern verfügbar">
-                  Nach dem Speichern
-                </span>
-              </div>
-              <div className="flex items-center justify-between gap-3 p-3 rounded-lg border border-border">
-                <div>
-                  <p className="text-sm font-medium text-foreground">Aufteilung Grund/Boden &amp; Gebäude</p>
-                  <p className="text-xs text-muted-foreground">Prozentuale Verteilung für die Abschreibung</p>
-                </div>
-                <span className="text-xs text-muted-foreground shrink-0" title="Erst nach dem Speichern verfügbar">
-                  Nach dem Speichern
-                </span>
-              </div>
             </div>
           </div>
 

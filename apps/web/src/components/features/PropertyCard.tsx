@@ -86,9 +86,8 @@ export function PropertyCard({ property, colorIndex, menuItems, onClick }: Prope
           </div>
         </div>
 
-        <div className="flex items-center gap-1.5 pt-3 text-sm mt-auto">
-          <span className={cn("w-2 h-2 rounded-full", property.isRented ? "bg-green-500" : "bg-muted-foreground/40")} />
-          <span className="text-muted-foreground">{property.isRented ? 'Vermietet' : 'Unvermietet'}</span>
+        <div className="pt-3 mt-auto">
+          <Tag label={property.isRented ? 'Vermietet' : 'Unvermietet'} variant={property.isRented ? 'success' : 'warning'} />
         </div>
       </div>
     </div>

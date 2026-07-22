@@ -73,9 +73,8 @@ export function PropertyListRow({ property, colorIndex, menuItems, onClick }: Pr
         </div>
       </div>
 
-      <div className="flex items-center gap-1.5 shrink-0 text-xs text-muted-foreground">
-        <span className={cn("w-2 h-2 rounded-full", property.isRented ? "bg-green-500" : "bg-muted-foreground/40")} />
-        <span className="hidden md:inline">{property.isRented ? 'Vermietet' : 'Unvermietet'}</span>
+      <div className="hidden md:block shrink-0">
+        <Tag label={property.isRented ? 'Vermietet' : 'Unvermietet'} variant={property.isRented ? 'success' : 'warning'} />
       </div>
 
       <div className="shrink-0" onClick={(e) => e.stopPropagation()}>

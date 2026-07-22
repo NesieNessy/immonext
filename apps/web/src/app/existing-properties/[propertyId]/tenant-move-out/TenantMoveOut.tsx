@@ -44,7 +44,7 @@ export default function TenantMoveOut({ propertyId }: { propertyId: string }) {
                         menuItems={useCaseMenuItems}
                     />
                 } />
-                <div className="mt-8 max-w-4xl">
+                <div className="mt-8 mx-auto max-w-4xl">
                     <Tile title={ExistingPropertiesUseCases.TenantMoveOut}>
                         <div className="p-4"><p className="text-muted-foreground">Hier können Sie Mieterauszüge für diese Immobilie verwalten.</p></div>
                     </Tile>

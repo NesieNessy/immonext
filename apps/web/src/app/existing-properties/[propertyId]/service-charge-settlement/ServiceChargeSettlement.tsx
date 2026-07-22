@@ -52,7 +52,7 @@ export default function ServiceChargeSettlement({ propertyId }: { propertyId: st
                         />
                     }
                 />
-                <div className="mt-8 max-w-4xl">
+                <div className="mt-8 mx-auto max-w-4xl">
                     <Tile title={ExistingPropertiesUseCases.ServiceChargeSettlement}>
                         <div className="p-4"><p className="text-muted-foreground">Hier können Sie die Nebenkostenabrechnungen für diese Immobilie verwalten.</p></div>
                     </Tile>

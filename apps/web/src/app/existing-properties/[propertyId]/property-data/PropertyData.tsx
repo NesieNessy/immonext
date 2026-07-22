@@ -93,7 +93,7 @@ export default function PropertyData({ propertyId }: { propertyId: string }) {
                     }
                 />
 
-                <div className="mt-8 grid grid-cols-1 lg:grid-cols-2 gap-6 max-w-6xl">
+                <div className="mt-8 mx-auto grid grid-cols-1 lg:grid-cols-2 gap-6 max-w-6xl">
                     {/* Address Information */}
                     <Tile title="Adresse">
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4">
