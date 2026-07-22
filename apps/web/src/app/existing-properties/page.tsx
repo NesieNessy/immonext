@@ -2,10 +2,11 @@
 
 import { NoResult } from '@/components/common';
 import { PROPERTY_CATEGORY_FILTER_OPTIONS, RENTAL_STATUS_FILTER_OPTIONS } from '@/components/features/PropertyDisplay';
+import { NewPropertyModal, type PropertyCreationMode } from '@/components/features/NewPropertyModal';
 import { PropertyCard } from '@/components/features/PropertyCard';
 import { PropertyListRow } from '@/components/features/PropertyListRow';
 import type { MenuItem } from '@/components/ui';
-import { Button, Header, Icons, TextFieldWithIcon } from '@/components/ui';
+import { Button, Header, Icons, Modal, TextFieldWithIcon } from '@/components/ui';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { useProperties } from '@/hooks/useProperties';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
@@ -69,22 +70,28 @@ export default function ExistingPropertiesPage() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(24);
   const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [propertyToDelete, setPropertyToDelete] = useState<PropertyOverview | null>(null);
+  const [newPropertyModalOpen, setNewPropertyModalOpen] = useState(false);
 
   const handlePropertyClick = (propertyId: number) => {
     router.push(`/existing-properties/${propertyId}/property-data`);
   };
 
-  const handleCreateProperty = () => {
-    // TODO: no standalone "create property" flow exists yet — properties
-    // are currently only created by accepting a quick-check into the
-    // portfolio (finalize_quick_check RPC).
-    console.log('Create new property');
+  // TODO: no destination exists yet for either path — there's no blank
+  // property-creation form, and no form that pre-fills from a detail check.
+  // This just captures the choice until one of those is built.
+  const handleContinueCreateProperty = (mode: PropertyCreationMode, workflowId: string | null) => {
+    console.log('Neues Objekt anlegen — TODO: no destination form yet', { mode, workflowId });
+    setNewPropertyModalOpen(false);
   };
 
-  const handleDeleteProperty = async (id: number) => {
+  const handleConfirmDelete = async () => {
+    if (!propertyToDelete) return;
+    const id = propertyToDelete.propertyId;
     setDeletingId(id);
     try {
       await deleteSelected(id);
+      setPropertyToDelete(null);
     } finally {
       setDeletingId(null);
     }
@@ -109,7 +116,7 @@ export default function ExistingPropertiesPage() {
       icon: <BUTTON_DETAILS.Delete.icon />,
       destructive: true,
       disabled: deletingId === property.propertyId,
-      onClick: () => void handleDeleteProperty(property.propertyId),
+      onClick: () => setPropertyToDelete(property),
     },
   ];
 
@@ -152,7 +159,7 @@ export default function ExistingPropertiesPage() {
               icon={<BUTTON_DETAILS.AddProperty.icon />}
               variant="primary"
               hideLabelOnMobile
-              onClick={handleCreateProperty}
+              onClick={() => setNewPropertyModalOpen(true)}
             />
           }
         />
@@ -348,6 +355,44 @@ export default function ExistingPropertiesPage() {
           </div>
         )}
       </main>
+
+      <Modal
+        open={propertyToDelete !== null}
+        onClose={() => setPropertyToDelete(null)}
+        title="Objekt löschen"
+        icon={<BUTTON_DETAILS.Delete.icon />}
+        footer={
+          <>
+            <Button
+              label={BUTTON_DETAILS.Cancel.label}
+              icon={<BUTTON_DETAILS.Cancel.icon />}
+              variant="outline"
+              onClick={() => setPropertyToDelete(null)}
+            />
+            <Button
+              label={BUTTON_DETAILS.Delete.label}
+              icon={<BUTTON_DETAILS.Delete.icon />}
+              variant="primary"
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={deletingId === propertyToDelete?.propertyId}
+              onClick={() => void handleConfirmDelete()}
+            />
+          </>
+        }
+      >
+        {propertyToDelete && (
+          <p className="text-sm text-muted-foreground">
+            Möchten Sie <span className="font-medium text-foreground">{propertyToDelete.street} {propertyToDelete.houseNumber}</span>,{' '}
+            {propertyToDelete.postalCode} {propertyToDelete.city} wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.
+          </p>
+        )}
+      </Modal>
+
+      <NewPropertyModal
+        open={newPropertyModalOpen}
+        onClose={() => setNewPropertyModalOpen(false)}
+        onContinue={handleContinueCreateProperty}
+      />
     </div>
   );
 }
