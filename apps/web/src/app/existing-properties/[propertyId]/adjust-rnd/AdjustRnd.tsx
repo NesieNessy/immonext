@@ -1,147 +1,108 @@
 "use client";
 
-import { Button, Dropdown, Header, NumberField, RadioButton, StickyActionBar } from '@/components/ui';
+import { Button, Dropdown, Header, StickyActionBar } from '@/components/ui';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { ExistingPropertiesUseCases } from '@/constants/ExistingPropertiesUseCases';
-import { RenovationAttribute, RenovationValue, RndMode, getPropertyRndDefaults } from '@/constants/RndValues';
-import propertyRndData from '@/data/property_rnd.json';
-import rndRenovationData from '@/data/rnd_renovation.json';
+import {
+    computeRemainingUsefulLife,
+    MODERNIZATION_FIELDS,
+    MODERNIZATION_OPTIONS,
+    type ModernizationSelections,
+} from '@/lib/detailCheck/depreciation';
 import { getPropertyById } from '@/lib/supabase/property.supabase';
 import { createUseCaseMenuItems } from '@/lib/useCaseMenu';
-import { base64ToDataUri } from '@/lib/utils';
-import type { RenovationFields } from '@/types/Rnd';
+import { base64ToDataUri, cn } from '@/lib/utils';
 import type { Property } from '@immonext/types';
-import { Calculator } from 'lucide-react';
+import { Clock } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 
+type RndMode = 'STANDARD' | 'INDIVIDUAL';
+
+const numberFormatter = new Intl.NumberFormat('de-DE', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+
+const EMPTY_MODERNIZATION: ModernizationSelections = {
+    modernizationRoof: '',
+    modernizationWindows: '',
+    modernizationLines: '',
+    modernizationHeating: '',
+    modernizationFacade: '',
+    modernizationBathrooms: '',
+    modernizationInterior: '',
+};
+
+function SectionLabel({ children }: { children: React.ReactNode }) {
+    return (
+        <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide pb-2 border-b border-border">
+            {children}
+        </h3>
+    );
+}
+
 export default function AdjustRnd({ propertyId }: { propertyId: string }) {
     const router = useRouter();
-    
-    // State - initialize with static defaults
-    const [rndMode, setRndMode] = useState<RndMode>(RndMode.STANDARD);
-    const [rndYears, setRndYears] = useState<number>(getPropertyRndDefaults(RndMode.STANDARD).rnd_years);
-    const [afaPercent, setAfaPercent] = useState<number>(getPropertyRndDefaults(RndMode.STANDARD).afa_percent);
-    const [renovations, setRenovations] = useState<Partial<RenovationFields>>({});
-    
-    // Track original values for change detection
-    const [originalRndMode, setOriginalRndMode] = useState<RndMode>(RndMode.STANDARD);
-    const [originalRndYears, setOriginalRndYears] = useState<number>(getPropertyRndDefaults(RndMode.STANDARD).rnd_years);
-    const [originalAfaPercent, setOriginalAfaPercent] = useState<number>(getPropertyRndDefaults(RndMode.STANDARD).afa_percent);
-    const [originalRenovations, setOriginalRenovations] = useState<Partial<RenovationFields>>({});
-    
+
+    const [rndMode, setRndMode] = useState<RndMode>('STANDARD');
+    const [modernization, setModernization] = useState<ModernizationSelections>(EMPTY_MODERNIZATION);
+
+    const [originalRndMode, setOriginalRndMode] = useState<RndMode>('STANDARD');
+    const [originalModernization, setOriginalModernization] = useState<ModernizationSelections>(EMPTY_MODERNIZATION);
+
     const [isEditing, setIsEditing] = useState(false);
     const [property, setProperty] = useState<Property | undefined>(undefined);
 
-    // Load data on mount - client-side only
     useEffect(() => {
-        // Find property data
         getPropertyById(parseInt(propertyId, 10)).then(p => setProperty(p ?? undefined));
-
-        // Load property RND data
-        const propertyRnd = propertyRndData.property_rnd.find(r => r.property_id === propertyId);
-        const renovationData = propertyRnd?.renovation_id 
-            ? rndRenovationData.rnd_renovation.find(r => r.id === propertyRnd.renovation_id)
-            : null;
-
-        if (propertyRnd) {
-            const mode = propertyRnd.rnd_mode === 'Individuell' ? RndMode.INDIVIDUAL : RndMode.STANDARD;
-            setRndMode(mode);
-            setOriginalRndMode(mode);
-            
-            if (mode === RndMode.INDIVIDUAL && propertyRnd.rnd_years && propertyRnd.afa_percent) {
-                setRndYears(propertyRnd.rnd_years);
-                setAfaPercent(propertyRnd.afa_percent);
-                setOriginalRndYears(propertyRnd.rnd_years);
-                setOriginalAfaPercent(propertyRnd.afa_percent);
-            } else {
-                const defaults = getPropertyRndDefaults(RndMode.STANDARD);
-                setRndYears(defaults.rnd_years);
-                setAfaPercent(defaults.afa_percent);
-                setOriginalRndYears(defaults.rnd_years);
-                setOriginalAfaPercent(defaults.afa_percent);
-            }
-
-            if (renovationData) {
-                const loadedRenovations = {
-                    [RenovationAttribute.ROOF_RENEWAL_INCL_INSULATION]: renovationData.roof_renewal_incl_insulation as RenovationValue,
-                    [RenovationAttribute.WINDOWS_AND_EXTERIOR_DOORS]: renovationData.windows_and_exterior_doors as RenovationValue,
-                    [RenovationAttribute.PIPING_SYSTEMS]: renovationData.piping_systems as RenovationValue,
-                    [RenovationAttribute.HEATING_SYSTEM]: renovationData.heating_system as RenovationValue,
-                    [RenovationAttribute.EXTERIOR_WALL_INSULATION]: renovationData.exterior_wall_insulation as RenovationValue,
-                    [RenovationAttribute.BATHROOMS]: renovationData.bathrooms as RenovationValue,
-                    [RenovationAttribute.INTERIOR_WORK_EXCL_BATHROOMS]: renovationData.interior_work_excl_bathrooms as RenovationValue,
-                };
-                setRenovations(loadedRenovations);
-                setOriginalRenovations(loadedRenovations);
-            }
-        }
     }, [propertyId]);
 
-    // Check if any changes were made
     useEffect(() => {
-        const hasChanges = 
+        const hasChanges =
             rndMode !== originalRndMode ||
-            rndYears !== originalRndYears ||
-            afaPercent !== originalAfaPercent ||
-            JSON.stringify(renovations) !== JSON.stringify(originalRenovations);
-        
-        setIsEditing(hasChanges);
-    }, [rndMode, rndYears, afaPercent, renovations, originalRndMode, originalRndYears, originalAfaPercent, originalRenovations]);
+            JSON.stringify(modernization) !== JSON.stringify(originalModernization);
 
-    const useCaseMenuItems = useMemo(() => 
+        setIsEditing(hasChanges);
+    }, [rndMode, modernization, originalRndMode, originalModernization]);
+
+    const useCaseMenuItems = useMemo(() =>
         createUseCaseMenuItems(propertyId, 'RND', (route) => {
             router.push(route);
         }),
         [propertyId, router]
     );
 
-    const renovationTimeOptions = useMemo(() => [
-        { value: '', label: 'Zeitraum wählen' },
-        { value: RenovationValue.ZERO_TO_FIVE, label: RenovationValue.ZERO_TO_FIVE },
-        { value: RenovationValue.FIVE_TO_TEN, label: RenovationValue.FIVE_TO_TEN },
-        { value: RenovationValue.TEN_TO_FIFTEEN, label: RenovationValue.TEN_TO_FIFTEEN },
-        { value: RenovationValue.FIFTEEN_TO_TWENTY, label: RenovationValue.FIFTEEN_TO_TWENTY },
-        { value: RenovationValue.OVER_TWENTY, label: RenovationValue.OVER_TWENTY }
-    ], []);
+    const individualRnd = useMemo(() => {
+        if (!property) return null;
+        return computeRemainingUsefulLife({
+            category: property.propertyCategory,
+            yearOfConstruction: property.yearOfConstruction,
+            selections: modernization,
+        });
+    }, [property, modernization]);
 
-    const handleModeChange = (mode: RndMode) => {
-        setRndMode(mode);
-        if (mode === RndMode.STANDARD) {
-            const defaults = getPropertyRndDefaults(RndMode.STANDARD);
-            setRndYears(defaults.rnd_years);
-            setAfaPercent(defaults.afa_percent);
-        }
-    };
+    const selectedRnd = rndMode === 'STANDARD'
+        ? { remainingUsefulLifeYears: 50, afaPercent: 2 }
+        : individualRnd;
 
     const handleSave = () => {
+        // Standard mode ignores modernization entirely, so don't carry stale
+        // individual selections forward once it's saved.
+        const savedModernization = rndMode === 'STANDARD' ? EMPTY_MODERNIZATION : modernization;
+
         // TODO: Implement save functionality
-        console.log('Saving RND data:', { rndMode, rndYears, afaPercent, renovations });
-        
-        // Update original values
+        console.log('Saving RND data:', { rndMode, modernization: savedModernization, selectedRnd });
+
+        setModernization(savedModernization);
         setOriginalRndMode(rndMode);
-        setOriginalRndYears(rndYears);
-        setOriginalAfaPercent(afaPercent);
-        setOriginalRenovations(renovations);
+        setOriginalModernization(savedModernization);
         setIsEditing(false);
     };
 
     const handleCancel = () => {
-        // Restore original values
-        setRndMode(originalRndMode);
-        setRndYears(originalRndYears);
-        setAfaPercent(originalAfaPercent);
-        setRenovations(originalRenovations);
-        setIsEditing(false);
-    };
-
-    const handleRequestAppraisal = () => {
-        // TODO: Implement request appraisal functionality
-        console.log('Requesting appraisal for property:', propertyId);
+        router.push(`/existing-properties/${propertyId}`);
     };
 
     if (!property) return (<div className="min-h-screen bg-background">
-<main className="container mx-auto px-4 py-8"><p className="text-muted-foreground">Objekt nicht gefunden</p></main></div>);
+        <main className="container mx-auto px-4 py-8"><p className="text-muted-foreground">Objekt nicht gefunden</p></main></div>);
 
     return (
         <div className="min-h-screen bg-background pb-24">
@@ -154,98 +115,119 @@ export default function AdjustRnd({ propertyId }: { propertyId: string }) {
                     ]}
                     image={property.imageUrl ? <img src={base64ToDataUri(property.imageUrl)!} alt={`${property.street} ${property.houseNumber}`} className="w-10 h-10 object-cover rounded-lg" /> : undefined}
                     actions={
-                        <div className="flex gap-3">
-                            <Button
-                                label={BUTTON_DETAILS.RequestAppraisal.label}
-                                icon={<BUTTON_DETAILS.RequestAppraisal.icon />}
-                                variant="outline"
-                                hideLabelOnMobile
-                                onClick={handleRequestAppraisal}
-                                disabled={rndMode === RndMode.STANDARD}
-                            />
-                            <Button
-                                label={BUTTON_DETAILS.UseCases.label}
-                                icon={<BUTTON_DETAILS.UseCases.icon />}
-                                variant="primary"
-                                hideLabelOnMobile
-                                menuItems={useCaseMenuItems}
-                            />
-                        </div>
+                        <Button
+                            label={BUTTON_DETAILS.UseCases.label}
+                            icon={<BUTTON_DETAILS.UseCases.icon />}
+                            variant="primary"
+                            hideLabelOnMobile
+                            menuItems={useCaseMenuItems}
+                        />
                     }
                 />
 
                 <div className="mt-8 mx-auto max-w-4xl">
-                    <div className="p-6 bg-card border border-border rounded-lg space-y-6">
-                        <div className="flex items-start gap-3">
-                            <Calculator className="w-6 h-6 text-primary flex-shrink-0 mt-0.5" />
-                            <p className="text-muted-foreground">
-                                Berechnen Sie die Restnutzungsdauer (RND) und Abschreibung für Abnutzung (AfA) Ihrer Immobilie
-                            </p>
+                    <div className="space-y-6">
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                                <Clock className="w-5 h-5 text-primary" />
+                            </div>
+                            <div className="min-w-0">
+                                <h2 className="text-lg font-semibold text-foreground">Restnutzungsdauer (RND)</h2>
+                                <p className="text-sm text-muted-foreground truncate">
+                                    {property.street} {property.houseNumber}, {property.postalCode} {property.city}
+                                </p>
+                            </div>
                         </div>
 
                         {/* Calculation Mode */}
                         <div>
-                            <h3 className="text-sm font-medium text-foreground mb-3">Berechnungsmodus</h3>
-                            <div className="space-y-2">
-                                <RadioButton
-                                    label={`${RndMode.STANDARD} (${getPropertyRndDefaults(RndMode.STANDARD).rnd_years} Jahre RND, ${getPropertyRndDefaults(RndMode.STANDARD).afa_percent}% AfA)`}
-                                    checked={rndMode === RndMode.STANDARD}
-                                    onChange={() => handleModeChange(RndMode.STANDARD)}
-                                    name="rnd-mode"
-                                />
-                                <RadioButton
-                                    label={RndMode.INDIVIDUAL}
-                                    checked={rndMode === RndMode.INDIVIDUAL}
-                                    onChange={() => handleModeChange(RndMode.INDIVIDUAL)}
-                                    name="rnd-mode"
-                                />
+                            <SectionLabel>Berechnungsmodus</SectionLabel>
+                            <div className="flex flex-wrap gap-2 pt-3">
+                                <button
+                                    type="button"
+                                    onClick={() => setRndMode('STANDARD')}
+                                    className={cn(
+                                        "px-4 py-2 rounded-full text-sm font-medium border transition-colors cursor-pointer",
+                                        rndMode === 'STANDARD'
+                                            ? "bg-primary/10 border-primary text-primary"
+                                            : "border-border text-foreground hover:bg-muted"
+                                    )}
+                                >
+                                    Standard (50 Jahre)
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setRndMode('INDIVIDUAL')}
+                                    className={cn(
+                                        "px-4 py-2 rounded-full text-sm font-medium border transition-colors cursor-pointer",
+                                        rndMode === 'INDIVIDUAL'
+                                            ? "bg-primary/10 border-primary text-primary"
+                                            : "border-border text-foreground hover:bg-muted"
+                                    )}
+                                >
+                                    Individuell prüfen
+                                </button>
                             </div>
                         </div>
 
-                        {/* RND and AfA Inputs - Only show in Individual mode */}
-                        {rndMode === RndMode.INDIVIDUAL && (
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <NumberField
-                                    label="Restnutzungsdauer (RND)"
-                                    unit="Jahre"
-                                    value={rndYears}
-                                    onChange={(e) => setRndYears(Number(e.target.value))}
-                                    min={1}
-                                    max={100}
-                                />
-                                <NumberField
-                                    label="Abschreibung für Abnutzung (AfA)"
-                                    unit="%"
-                                    value={afaPercent}
-                                    onChange={(e) => setAfaPercent(Number(e.target.value))}
-                                    min={0}
-                                    max={100}
-                                    step={0.1}
-                                />
+                        {/* Summary */}
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-4 p-4 rounded-lg border border-border bg-muted/30">
+                            <div className="flex gap-8 shrink-0">
+                                <div>
+                                    <p className="text-xs text-muted-foreground uppercase tracking-wide">RND</p>
+                                    <p className="text-lg font-semibold text-foreground">
+                                        {selectedRnd ? `${numberFormatter.format(selectedRnd.remainingUsefulLifeYears)} Jahre` : '– Jahre'}
+                                    </p>
+                                </div>
+                                <div>
+                                    <p className="text-xs text-muted-foreground uppercase tracking-wide">AfA</p>
+                                    <p className="text-lg font-semibold text-foreground">
+                                        {selectedRnd ? `${numberFormatter.format(selectedRnd.afaPercent)}%` : '– %'}
+                                    </p>
+                                </div>
                             </div>
-                        )}
+                            <p className="text-sm text-muted-foreground sm:text-right sm:ml-auto">
+                                {rndMode === 'STANDARD'
+                                    ? 'Standardwert gemäß gesetzlicher Regelung. Baujahr und Modernisierungen werden nicht berücksichtigt.'
+                                    : 'Individuell ermittelt anhand von Baujahr, Objektkategorie und Modernisierungen.'}
+                            </p>
+                        </div>
 
                         {/* Renovation Section */}
-                        {rndMode === RndMode.INDIVIDUAL && (
+                        {rndMode === 'INDIVIDUAL' && (
                             <div className="pt-4 border-t border-border">
-                                <h3 className="text-sm font-medium text-foreground mb-3">Modernisierung</h3>
-                                <p className="text-sm text-muted-foreground mb-4">
-                                    Geben Sie das Alter der letzten Modernisierungsmaßnahmen an
-                                </p>
-                                
-                                <div className="space-y-4">
-                                    {Object.values(RenovationAttribute).map((attribute) => (
-                                        <div key={attribute} className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
-                                            <div className="text-sm text-foreground">
-                                                {attribute}
-                                            </div>
+                                <div className="flex items-center justify-between gap-3 mb-3">
+                                    <SectionLabel>Letzte Modernisierung</SectionLabel>
+                                    <span title="Coming soon">
+                                        <Button
+                                            label={BUTTON_DETAILS.RequestAppraisal.label}
+                                            icon={<BUTTON_DETAILS.RequestAppraisal.icon />}
+                                            variant="outline"
+                                            size="sm"
+                                            hideLabelOnMobile
+                                            disabled
+                                        />
+                                    </span>
+                                </div>
+
+                                <div className="border border-border rounded-lg overflow-hidden">
+                                    <div className="grid grid-cols-2 gap-4 px-4 py-2 bg-muted/40 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                                        <span>Maßnahme</span>
+                                        <span>Zuletzt erneuert</span>
+                                    </div>
+                                    {MODERNIZATION_FIELDS.map(([field, label], index) => (
+                                        <div
+                                            key={field}
+                                            className={cn(
+                                                "grid grid-cols-2 items-center gap-4 px-4 py-3",
+                                                index > 0 && "border-t border-border"
+                                            )}
+                                        >
+                                            <span className="text-sm text-foreground">{label}</span>
                                             <Dropdown
-                                                options={renovationTimeOptions}
-                                                value={renovations[attribute] || ''}
-                                                onChange={(e) => setRenovations({
-                                                    ...renovations,
-                                                    [attribute]: e.target.value as RenovationValue
-                                                })}
+                                                options={MODERNIZATION_OPTIONS}
+                                                value={modernization[field]}
+                                                onChange={(e) => setModernization((prev) => ({ ...prev, [field]: e.target.value }))}
                                             />
                                         </div>
                                     ))}
@@ -258,13 +240,14 @@ export default function AdjustRnd({ propertyId }: { propertyId: string }) {
 
             {/* Sticky Action Bar */}
             <StickyActionBar
-                show={isEditing}
+                show={true}
                 onGhost={handleCancel}
                 onPrimary={handleSave}
                 ghostLabel={BUTTON_DETAILS.Cancel.label}
                 primaryLabel={BUTTON_DETAILS.Save.label}
                 ghostIcon={<BUTTON_DETAILS.Cancel.icon />}
                 primaryIcon={<BUTTON_DETAILS.Save.icon />}
+                primaryDisabled={!isEditing}
             />
         </div>
     );
