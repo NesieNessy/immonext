@@ -39,8 +39,9 @@ export const PROPERTY_CATEGORY_FILTER_OPTIONS = Object.entries(PROPERTY_CATEGORY
   ([value, label]) => ({ value, label })
 );
 
-/** The 6 options offered on the "Neues Objekt anlegen" form — a narrower,
- *  purpose-picked subset/ordering of PROPERTY_CATEGORY_LABEL, not the full set. */
+/** The options offered on the property-creation and property-data-edit
+ *  forms — every value in PROPERTY_CATEGORY_LABEL, so a previously saved
+ *  category always has a matching pill to show as selected. */
 export const PROPERTY_CATEGORY_CREATE_OPTIONS = [
   'EIGENTUMSWOHNUNG',
   'EINFAMILIENHAUS',
@@ -48,6 +49,8 @@ export const PROPERTY_CATEGORY_CREATE_OPTIONS = [
   'DOPPELHAUS',
   'GEWERBE',
   'GRUNDSTUECK',
+  'HOLZBAUWEISE',
+  'DENKMALGESCHUETZT',
 ].map((value) => ({ value, label: PROPERTY_CATEGORY_LABEL[value] }));
 
 export const RENTAL_STATUS_FILTER_OPTIONS = [

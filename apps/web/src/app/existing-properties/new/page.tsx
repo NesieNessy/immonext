@@ -54,8 +54,10 @@ function NewPropertyPageContent() {
   const [strasseHausnummer, setStrasseHausnummer] = useState(searchParams.get('strasse') ?? '');
   const [plz, setPlz] = useState(searchParams.get('plz') ?? '');
   const [ort, setOrt] = useState(searchParams.get('ort') ?? '');
+  const [bundesland, setBundesland] = useState('');
   const [baujahr, setBaujahr] = useState(searchParams.get('baujahr') ?? '');
   const [wohnflaeche, setWohnflaeche] = useState(searchParams.get('wohnflaeche') ?? '');
+  const [anzahlZimmer, setAnzahlZimmer] = useState('');
   const [stellplaetze, setStellplaetze] = useState('0');
   const [energieeffizienz, setEnergieeffizienz] = useState('');
   const [bildBase64, setBildBase64] = useState<string | null>(null);
@@ -91,9 +93,9 @@ function NewPropertyPageContent() {
         houseNumber: '',
         city: ort.trim(),
         postalCode: plz,
-        federalState: '',
+        federalState: bundesland.trim(),
         squareMeters: Number(wohnflaeche),
-        numberOfRooms: null,
+        numberOfRooms: anzahlZimmer !== '' ? Number(anzahlZimmer) : null,
         yearOfConstruction: Number(baujahr),
         energyEfficient: (energieeffizienz || null) as EnergyEfficient | null,
         propertyCategory: objektkategorie,
@@ -229,6 +231,13 @@ function NewPropertyPageContent() {
                 value={ort}
                 onChange={(e) => setOrt(e.target.value)}
               />
+              <TextField
+                label="Bundesland (opt.)"
+                placeholder="Bayern"
+                value={bundesland}
+                onChange={(e) => setBundesland(e.target.value)}
+                className="sm:col-span-2"
+              />
             </div>
           </div>
 
@@ -250,6 +259,13 @@ function NewPropertyPageContent() {
                 min={0}
               />
               <NumberField
+                label="Anzahl Zimmer (opt.)"
+                placeholder="3"
+                value={anzahlZimmer}
+                onChange={(e) => setAnzahlZimmer(e.target.value)}
+                min={0}
+              />
+              <NumberField
                 label="Stellplätze"
                 placeholder="0"
                 value={stellplaetze}
@@ -264,8 +280,6 @@ function NewPropertyPageContent() {
               />
             </div>
           </div>
-
-          <p className="text-xs text-muted-foreground">* Pflichtfelder</p>
         </div>
       </main>
 

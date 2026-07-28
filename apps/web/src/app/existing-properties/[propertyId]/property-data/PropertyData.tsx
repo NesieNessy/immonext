@@ -1,68 +1,215 @@
 "use client";
 
-import { Button, Header, NumberField, StickyActionBar, TextField, Tile } from '@/components/ui';
+import { PROPERTY_CATEGORY_CREATE_OPTIONS } from '@/components/features/PropertyDisplay';
+import { Button, CalendarField, Dropdown, Header, NumberField, StickyActionBar, TextField, UploadButton } from '@/components/ui';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { ExistingPropertiesUseCases } from '@/constants/ExistingPropertiesUseCases';
+import { createParkingSpace, deleteParkingSpace, getParkingSpacesByProperty, updateParkingSpace } from '@/lib/supabase/parking_space.supabase';
 import { getPropertyById, updateProperty } from '@/lib/supabase/property.supabase';
+import { getPropertyAcquisitionByProperty, upsertPropertyAcquisition } from '@/lib/supabase/property_acquisition.supabase';
 import { createUseCaseMenuItems } from '@/lib/useCaseMenu';
-import { base64ToDataUri } from '@/lib/utils';
-import type { Property } from '@immonext/types';
+import { base64ToDataUri, cn } from '@/lib/utils';
+import { EnergyEfficient, type ParkingSpace, type Property } from '@immonext/types';
+import { format, parseISO } from 'date-fns';
+import { X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+
+/** Strips the "data:image/...;base64," prefix — Property.imageUrl stores
+ *  raw base64 only; base64ToDataUri() re-adds the right prefix for display. */
+function readFileAsRawBase64(file: File): Promise<string> {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+            const result = reader.result as string;
+            resolve(result.slice(result.indexOf(',') + 1));
+        };
+        reader.onerror = () => reject(reader.error);
+        reader.readAsDataURL(file);
+    });
+}
+
+const ENERGY_OPTIONS = [
+    { value: '', label: '–' },
+    ...Object.values(EnergyEfficient).map((v) => ({ value: v, label: v })),
+];
+
+function SectionLabel({ children }: { children: React.ReactNode }) {
+    return (
+        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide pb-2 border-b border-border">
+            {children}
+        </p>
+    );
+}
+
+interface FormState {
+    objektkategorie: string;
+    kaufdatum: string;
+    strasseHausnummer: string;
+    plz: string;
+    ort: string;
+    bundesland: string;
+    baujahr: string;
+    wohnflaeche: string;
+    anzahlZimmer: string;
+    stellplaetze: string;
+    energieeffizienz: string;
+    bildBase64: string | null;
+}
+
+const EMPTY_FORM: FormState = {
+    objektkategorie: '',
+    kaufdatum: '',
+    strasseHausnummer: '',
+    plz: '',
+    ort: '',
+    bundesland: '',
+    baujahr: '',
+    wohnflaeche: '',
+    anzahlZimmer: '',
+    stellplaetze: '0',
+    energieeffizienz: '',
+    bildBase64: null,
+};
 
 export default function PropertyData({ propertyId }: { propertyId: string }) {
     const router = useRouter();
 
     const [property, setProperty] = useState<Property | null>(null);
-    const [isEditing, setIsEditing] = useState(false);
-    const [formData, setFormData] = useState<Property | null>(null);
+    const [parkingSpace, setParkingSpace] = useState<ParkingSpace | null>(null);
+    const [form, setForm] = useState<FormState>(EMPTY_FORM);
+    const [original, setOriginal] = useState<FormState>(EMPTY_FORM);
+    const [isSaving, setIsSaving] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
-        getPropertyById(parseInt(propertyId, 10)).then((found) => {
-            if (found) {
-                setProperty(found);
-                setFormData(found);
-            }
+        const id = parseInt(propertyId, 10);
+        let cancelled = false;
+
+        Promise.all([
+            getPropertyById(id),
+            getPropertyAcquisitionByProperty(id),
+            getParkingSpacesByProperty(id),
+        ]).then(([foundProperty, acquisition, spaces]) => {
+            if (cancelled || !foundProperty) return;
+            const existingParking = spaces[0] ?? null;
+
+            const initial: FormState = {
+                objektkategorie: foundProperty.propertyCategory ?? '',
+                kaufdatum: acquisition?.purchaseDate ?? '',
+                strasseHausnummer: `${foundProperty.street} ${foundProperty.houseNumber}`.trim(),
+                plz: foundProperty.postalCode,
+                ort: foundProperty.city,
+                bundesland: foundProperty.federalState,
+                baujahr: String(foundProperty.yearOfConstruction),
+                wohnflaeche: String(foundProperty.squareMeters),
+                anzahlZimmer: foundProperty.numberOfRooms != null ? String(foundProperty.numberOfRooms) : '',
+                stellplaetze: existingParking?.numberOfParkingSpaces ? String(existingParking.numberOfParkingSpaces) : '0',
+                energieeffizienz: foundProperty.energyEfficient ?? '',
+                bildBase64: foundProperty.imageUrl,
+            };
+
+            setProperty(foundProperty);
+            setParkingSpace(existingParking);
+            setForm(initial);
+            setOriginal(initial);
         });
+
+        return () => { cancelled = true; };
     }, [propertyId]);
 
-    const handleInputChange = (field: keyof Property, value: string | number) => {
-        if (!formData) return;
-        setFormData({ ...formData, [field]: value });
-        if (!isEditing) setIsEditing(true);
+    const isEditing = JSON.stringify(form) !== JSON.stringify(original);
+
+    const update = (patch: Partial<FormState>) => setForm((prev) => ({ ...prev, ...patch }));
+
+    const handleImageSelect = async (files: FileList | null) => {
+        const file = files?.[0];
+        if (!file) return;
+        update({ bildBase64: await readFileAsRawBase64(file) });
     };
 
+    const currentYear = new Date().getFullYear();
+    const isValid =
+        form.objektkategorie !== '' &&
+        form.strasseHausnummer.trim() !== '' &&
+        /^\d{5}$/.test(form.plz) &&
+        form.ort.trim() !== '' &&
+        /^\d{4}$/.test(form.baujahr) && Number(form.baujahr) >= 1800 && Number(form.baujahr) <= currentYear &&
+        Number(form.wohnflaeche) > 0 &&
+        form.stellplaetze !== '' && Number(form.stellplaetze) >= 0;
+
     const handleCancel = () => {
-        setFormData(property);
-        setIsEditing(false);
+        setForm(original);
+        setError(null);
     };
 
     const handleSave = async () => {
-        if (!formData || !property) return;
-        const updated = await updateProperty(property.propertyId, {
-            street:               formData.street,
-            houseNumber:          formData.houseNumber,
-            city:                 formData.city,
-            postalCode:           formData.postalCode,
-            federalState:         formData.federalState,
-            squareMeters:         formData.squareMeters,
-            numberOfRooms:        formData.numberOfRooms,
-            yearOfConstruction:   formData.yearOfConstruction,
-            energyEfficient:      formData.energyEfficient,
-       });
-        if (updated) {
+        if (!property || !isValid) return;
+        setIsSaving(true);
+        setError(null);
+        try {
+            const updated = await updateProperty(property.propertyId, {
+                street: form.strasseHausnummer.trim(),
+                houseNumber: '',
+                city: form.ort.trim(),
+                postalCode: form.plz,
+                federalState: form.bundesland.trim(),
+                squareMeters: Number(form.wohnflaeche),
+                numberOfRooms: form.anzahlZimmer !== '' ? Number(form.anzahlZimmer) : null,
+                yearOfConstruction: Number(form.baujahr),
+                energyEfficient: (form.energieeffizienz || null) as EnergyEfficient | null,
+                propertyCategory: form.objektkategorie,
+                imageUrl: form.bildBase64,
+            });
+            if (!updated) {
+                setError('Objekt konnte nicht gespeichert werden.');
+                return;
+            }
+
+            if (form.kaufdatum) {
+                await upsertPropertyAcquisition({
+                    propertyId: property.propertyId,
+                    houseCompletionYear: null,
+                    purchaseDate: form.kaufdatum,
+                    transferDate: null,
+                });
+            }
+
+            const parkingCount = Number(form.stellplaetze) || 0;
+            if (parkingCount > 0) {
+                if (parkingSpace) {
+                    await updateParkingSpace(parkingSpace.parkingSpaceId, { numberOfParkingSpaces: parkingCount });
+                } else {
+                    const createdParking = await createParkingSpace({
+                        propertyId: property.propertyId,
+                        parkingSpaceType: 'OTHER',
+                        numberOfParkingSpaces: parkingCount,
+                    });
+                    setParkingSpace(createdParking);
+                }
+            } else if (parkingSpace) {
+                await deleteParkingSpace(parkingSpace.parkingSpaceId);
+                setParkingSpace(null);
+            }
+
             setProperty(updated);
-            setFormData(updated);
+            setOriginal(form);
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Unbekannter Fehler');
+        } finally {
+            setIsSaving(false);
         }
-        setIsEditing(false);
     };
 
     // Create menu items for all use cases
-    const useCaseMenuItems = createUseCaseMenuItems(propertyId, 'PropertyData', (route) => {
-        router.push(route);
-    });
+    const useCaseMenuItems = useMemo(() =>
+        createUseCaseMenuItems(propertyId, 'PropertyData', (route) => {
+            router.push(route);
+        }),
+        [propertyId, router]
+    );
 
-    if (!property || !formData) {
+    if (!property) {
         return (
             <div className="min-h-screen bg-background">
                 <main className="container mx-auto px-4 py-8">
@@ -78,10 +225,10 @@ export default function PropertyData({ propertyId }: { propertyId: string }) {
                 <Header
                     items={[
                         { label: 'Bestandsobjekte', href: '/existing-properties' },
-                        { label: `${property.street} ${property.houseNumber}` },
+                        { label: `${property.street} ${property.houseNumber}`, href: `/existing-properties/${propertyId}` },
                         { label: ExistingPropertiesUseCases.PropertyData },
                     ]}
-                    image={property.imageUrl ? <img src={base64ToDataUri(property.imageUrl)!} alt={`${property.street} ${property.houseNumber}`} className="w-10 h-10 object-cover rounded-lg" /> : undefined}
+                    image={form.bildBase64 ? <img src={base64ToDataUri(form.bildBase64)!} alt={`${property.street} ${property.houseNumber}`} className="w-10 h-10 object-cover rounded-lg" /> : undefined}
                     actions={
                         <Button
                             label={BUTTON_DETAILS.UseCases.label}
@@ -93,66 +240,143 @@ export default function PropertyData({ propertyId }: { propertyId: string }) {
                     }
                 />
 
-                <div className="mt-8 mx-auto grid grid-cols-1 lg:grid-cols-2 gap-6 max-w-6xl">
-                    {/* Address Information */}
-                    <Tile title="Adresse">
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4">
+                <div className="mt-6 mx-auto flex flex-col gap-6 max-w-2xl">
+                    {error && (
+                        <div className="px-3 py-2 rounded-lg bg-destructive/10 border border-destructive/30 text-sm text-destructive">
+                            {error}
+                        </div>
+                    )}
+
+                    <div className="flex flex-col gap-2">
+                        <SectionLabel>Objektbild (opt.)</SectionLabel>
+                        <div className="flex items-center gap-4">
+                            {form.bildBase64 && (
+                                <div className="relative shrink-0">
+                                    <img
+                                        src={base64ToDataUri(form.bildBase64)!}
+                                        alt=""
+                                        className="w-20 h-20 object-cover rounded-lg border border-border"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => update({ bildBase64: null })}
+                                        aria-label="Bild entfernen"
+                                        className="absolute -top-2 -right-2 p-1 rounded-full bg-card border border-border text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                                    >
+                                        <X className="w-3.5 h-3.5" />
+                                    </button>
+                                </div>
+                            )}
+                            <UploadButton
+                                buttonText={form.bildBase64 ? 'Anderes Bild wählen' : 'Bild hochladen'}
+                                accept="image/*"
+                                onFileSelect={(files) => void handleImageSelect(files)}
+                            />
+                        </div>
+                    </div>
+
+                    <div className="flex flex-col gap-2">
+                        <SectionLabel>Objektkategorie</SectionLabel>
+                        <div className="flex flex-wrap gap-2">
+                            {PROPERTY_CATEGORY_CREATE_OPTIONS.map((opt) => (
+                                <button
+                                    key={opt.value}
+                                    type="button"
+                                    onClick={() => update({ objektkategorie: opt.value })}
+                                    className={cn(
+                                        "px-3 py-1.5 rounded-full text-sm font-medium border transition-colors",
+                                        form.objektkategorie === opt.value
+                                            ? "bg-primary/10 border-primary text-primary"
+                                            : "border-border text-foreground hover:bg-muted"
+                                    )}
+                                >
+                                    {opt.label}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    <div className="flex flex-col gap-2">
+                        <SectionLabel>Kaufdatum</SectionLabel>
+                        <div className="max-w-[220px]">
+                            <CalendarField
+                                label="Kaufdatum (opt.)"
+                                value={form.kaufdatum ? parseISO(form.kaufdatum) : undefined}
+                                onChange={(date) => update({ kaufdatum: date ? format(date, 'yyyy-MM-dd') : '' })}
+                            />
+                        </div>
+                    </div>
+
+                    <div className="flex flex-col gap-2">
+                        <SectionLabel>Adresse</SectionLabel>
+                        <div className="grid grid-cols-1 sm:grid-cols-[2fr_1fr_1fr] gap-3">
                             <TextField
-                                label="Straße"
-                                value={formData.street}
-                                onChange={(e) => handleInputChange('street', e.target.value)}
-                                className="sm:col-span-2"
+                                label="Straße & Hausnummer"
+                                placeholder="Beispielstraße 123"
+                                value={form.strasseHausnummer}
+                                onChange={(e) => update({ strasseHausnummer: e.target.value })}
                             />
                             <TextField
-                                label="Hausnummer"
-                                value={formData.houseNumber}
-                                onChange={(e) => handleInputChange('houseNumber', e.target.value)}
+                                label="PLZ"
+                                placeholder="80801"
+                                value={form.plz}
+                                onChange={(e) => update({ plz: e.target.value.replace(/\D/g, '').slice(0, 5) })}
                             />
                             <TextField
-                                label="Postleitzahl"
-                                value={formData.postalCode}
-                                onChange={(e) => handleInputChange('postalCode', e.target.value)}
+                                label="Ort"
+                                placeholder="München"
+                                value={form.ort}
+                                onChange={(e) => update({ ort: e.target.value })}
                             />
                             <TextField
-                                label="Stadt"
-                                value={formData.city}
-                                onChange={(e) => handleInputChange('city', e.target.value)}
-                                className="sm:col-span-2"
-                            />
-                            <TextField
-                                label="Bundesland"
-                                value={formData.federalState}
-                                onChange={(e) => handleInputChange('federalState', e.target.value)}
+                                label="Bundesland (opt.)"
+                                placeholder="Bayern"
+                                value={form.bundesland}
+                                onChange={(e) => update({ bundesland: e.target.value })}
                                 className="sm:col-span-2"
                             />
                         </div>
-                    </Tile>
+                    </div>
 
-                    {/* Property Details */}
-                    <Tile title="Objektdetails">
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4">
+                    <div className="flex flex-col gap-2">
+                        <SectionLabel>Objektdetails</SectionLabel>
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                             <NumberField
                                 label="Baujahr"
-                                value={formData.yearOfConstruction}
-                                onChange={(e) => handleInputChange('yearOfConstruction', parseInt(e.target.value) || 0)}
+                                placeholder="1980"
+                                value={form.baujahr}
+                                onChange={(e) => update({ baujahr: e.target.value.replace(/\D/g, '').slice(0, 4) })}
                             />
                             <NumberField
-                                label="Anzahl Zimmer"
-                                value={formData.numberOfRooms ?? ''}
-                                onChange={(e) => handleInputChange('numberOfRooms', parseInt(e.target.value) || 0)}
-                            />
-                            <TextField
-                                label="Energieeffizienz"
-                                value={formData.energyEfficient ?? ''}
-                                onChange={(e) => handleInputChange('energyEfficient', e.target.value)}
+                                label="Wohnfläche"
+                                placeholder="100"
+                                unit="m²"
+                                value={form.wohnflaeche}
+                                onChange={(e) => update({ wohnflaeche: e.target.value })}
+                                min={0}
                             />
                             <NumberField
-                                label="Wohnfläche (m²)"
-                                value={formData.squareMeters}
-                                onChange={(e) => handleInputChange('squareMeters', parseFloat(e.target.value) || 0)}
+                                label="Anzahl Zimmer (opt.)"
+                                placeholder="3"
+                                value={form.anzahlZimmer}
+                                onChange={(e) => update({ anzahlZimmer: e.target.value })}
+                                min={0}
+                            />
+                            <NumberField
+                                label="Stellplätze"
+                                placeholder="0"
+                                value={form.stellplaetze}
+                                onChange={(e) => update({ stellplaetze: e.target.value })}
+                                min={0}
+                            />
+                            <Dropdown
+                                label="Energieeffizienz (opt.)"
+                                options={ENERGY_OPTIONS}
+                                value={form.energieeffizienz}
+                                onChange={(e) => update({ energieeffizienz: e.target.value })}
                             />
                         </div>
-                    </Tile>
+                    </div>
                 </div>
             </main>
 
@@ -160,11 +384,12 @@ export default function PropertyData({ propertyId }: { propertyId: string }) {
             <StickyActionBar
                 show={isEditing}
                 onGhost={handleCancel}
-                onPrimary={handleSave}
+                onPrimary={() => void handleSave()}
                 ghostLabel={BUTTON_DETAILS.Cancel.label}
                 primaryLabel={BUTTON_DETAILS.Save.label}
                 ghostIcon={<BUTTON_DETAILS.Cancel.icon />}
                 primaryIcon={<BUTTON_DETAILS.Save.icon />}
+                primaryDisabled={!isValid || isSaving}
             />
         </div>
     );

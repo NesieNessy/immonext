@@ -183,6 +183,7 @@ export async function updateProperty(propertyId: number, updates: PropertyUpdate
   if (updates.energyEfficient !== undefined) dbUpdates.energy_efficient = updates.energyEfficient;
   if (updates.propertyAbbreviation !== undefined) dbUpdates.property_abbreviation = updates.propertyAbbreviation;
   if (updates.propertyCategory !== undefined) dbUpdates.property_category = updates.propertyCategory;
+  if (updates.imageUrl !== undefined) dbUpdates.image_base64 = updates.imageUrl;
 
   const { data, error } = await supabase
     .from('property')
