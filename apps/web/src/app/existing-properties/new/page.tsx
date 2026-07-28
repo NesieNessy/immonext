@@ -4,6 +4,7 @@ import { PROPERTY_CATEGORY_CREATE_OPTIONS } from '@/components/features/Property
 import { CalendarField, Dropdown, Header, NumberField, StickyActionBar, TextField, UploadButton } from '@/components/ui';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
+import { createAcquisitionCosts } from '@/lib/supabase/acquisition_costs.supabase';
 import { createParkingSpace } from '@/lib/supabase/parking_space.supabase';
 import { createProperty } from '@/lib/supabase/property.supabase';
 import { createPropertyAcquisition } from '@/lib/supabase/property_acquisition.supabase';
@@ -51,6 +52,7 @@ function NewPropertyPageContent() {
   // so there's no need to re-fetch it here. Absent for "Manuell erfassen".
   const [objektkategorie, setObjektkategorie] = useState(searchParams.get('kategorie') ?? '');
   const [kaufdatum, setKaufdatum] = useState<Date | undefined>(undefined);
+  const [kaufpreis, setKaufpreis] = useState('');
   const [strasseHausnummer, setStrasseHausnummer] = useState(searchParams.get('strasse') ?? '');
   const [plz, setPlz] = useState(searchParams.get('plz') ?? '');
   const [ort, setOrt] = useState(searchParams.get('ort') ?? '');
@@ -112,6 +114,28 @@ function NewPropertyPageContent() {
           houseCompletionYear: null,
           purchaseDate: format(kaufdatum, 'yyyy-MM-dd'),
           transferDate: null,
+        });
+      }
+
+      if (kaufpreis !== '' && Number(kaufpreis) > 0) {
+        await createAcquisitionCosts({
+          propertyId: created.propertyId,
+          parkingSpaceId: null,
+          propertyPurchasePrice: Number(kaufpreis),
+          pricePerSqm: null,
+          broker: null,
+          brokerValue: null,
+          notary: null,
+          notaryValue: null,
+          landRegistry: null,
+          landRegistryValue: null,
+          realEstateTax: null,
+          realEstateTaxValue: null,
+          adjustmentVariable: null,
+          adjustmentVariableValue: null,
+          totalAncillaryCostsValue: null,
+          totalAncillaryCosts: null,
+          parkingSpacePurchasePrice: null,
         });
       }
 
@@ -200,12 +224,20 @@ function NewPropertyPageContent() {
           </div>
 
           <div className="flex flex-col gap-2">
-            <SectionLabel>Kaufdatum</SectionLabel>
-            <div className="max-w-[220px]">
+            <SectionLabel>Kaufinformationen</SectionLabel>
+            <div className="grid grid-cols-2 gap-3 max-w-md">
               <CalendarField
                 label="Kaufdatum (opt.)"
                 value={kaufdatum}
                 onChange={setKaufdatum}
+              />
+              <NumberField
+                label="Kaufpreis (opt.)"
+                placeholder="450.000"
+                unit="€"
+                value={kaufpreis}
+                onChange={(e) => setKaufpreis(e.target.value)}
+                min={0}
               />
             </div>
           </div>

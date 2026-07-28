@@ -4,12 +4,13 @@ import { PROPERTY_CATEGORY_CREATE_OPTIONS } from '@/components/features/Property
 import { Button, CalendarField, Dropdown, Header, NumberField, StickyActionBar, TextField, UploadButton } from '@/components/ui';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { ExistingPropertiesUseCases } from '@/constants/ExistingPropertiesUseCases';
+import { createAcquisitionCosts, getAcquisitionCosts, updateAcquisitionCosts } from '@/lib/supabase/acquisition_costs.supabase';
 import { createParkingSpace, deleteParkingSpace, getParkingSpacesByProperty, updateParkingSpace } from '@/lib/supabase/parking_space.supabase';
 import { getPropertyById, updateProperty } from '@/lib/supabase/property.supabase';
 import { getPropertyAcquisitionByProperty, upsertPropertyAcquisition } from '@/lib/supabase/property_acquisition.supabase';
 import { createUseCaseMenuItems } from '@/lib/useCaseMenu';
 import { base64ToDataUri, cn } from '@/lib/utils';
-import { EnergyEfficient, type ParkingSpace, type Property } from '@immonext/types';
+import { EnergyEfficient, type AcquisitionCosts, type ParkingSpace, type Property } from '@immonext/types';
 import { format, parseISO } from 'date-fns';
 import { X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -45,6 +46,7 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
 interface FormState {
     objektkategorie: string;
     kaufdatum: string;
+    kaufpreis: string;
     strasseHausnummer: string;
     plz: string;
     ort: string;
@@ -60,6 +62,7 @@ interface FormState {
 const EMPTY_FORM: FormState = {
     objektkategorie: '',
     kaufdatum: '',
+    kaufpreis: '',
     strasseHausnummer: '',
     plz: '',
     ort: '',
@@ -77,6 +80,7 @@ export default function PropertyData({ propertyId }: { propertyId: string }) {
 
     const [property, setProperty] = useState<Property | null>(null);
     const [parkingSpace, setParkingSpace] = useState<ParkingSpace | null>(null);
+    const [acquisitionCosts, setAcquisitionCosts] = useState<AcquisitionCosts | null>(null);
     const [form, setForm] = useState<FormState>(EMPTY_FORM);
     const [original, setOriginal] = useState<FormState>(EMPTY_FORM);
     const [isSaving, setIsSaving] = useState(false);
@@ -90,13 +94,16 @@ export default function PropertyData({ propertyId }: { propertyId: string }) {
             getPropertyById(id),
             getPropertyAcquisitionByProperty(id),
             getParkingSpacesByProperty(id),
-        ]).then(([foundProperty, acquisition, spaces]) => {
+            getAcquisitionCosts(id),
+        ]).then(([foundProperty, acquisition, spaces, acquisitionCostsRows]) => {
             if (cancelled || !foundProperty) return;
             const existingParking = spaces[0] ?? null;
+            const existingAcquisitionCosts = acquisitionCostsRows[0] ?? null;
 
             const initial: FormState = {
                 objektkategorie: foundProperty.propertyCategory ?? '',
                 kaufdatum: acquisition?.purchaseDate ?? '',
+                kaufpreis: existingAcquisitionCosts ? String(existingAcquisitionCosts.propertyPurchasePrice) : '',
                 strasseHausnummer: `${foundProperty.street} ${foundProperty.houseNumber}`.trim(),
                 plz: foundProperty.postalCode,
                 ort: foundProperty.city,
@@ -111,6 +118,7 @@ export default function PropertyData({ propertyId }: { propertyId: string }) {
 
             setProperty(foundProperty);
             setParkingSpace(existingParking);
+            setAcquisitionCosts(existingAcquisitionCosts);
             setForm(initial);
             setOriginal(initial);
         });
@@ -173,6 +181,35 @@ export default function PropertyData({ propertyId }: { propertyId: string }) {
                     purchaseDate: form.kaufdatum,
                     transferDate: null,
                 });
+            }
+
+            if (form.kaufpreis !== '' && Number(form.kaufpreis) > 0) {
+                if (acquisitionCosts) {
+                    await updateAcquisitionCosts(acquisitionCosts.acquisitionCostsId, {
+                        propertyPurchasePrice: Number(form.kaufpreis),
+                    });
+                } else {
+                    const createdAcquisitionCosts = await createAcquisitionCosts({
+                        propertyId: property.propertyId,
+                        parkingSpaceId: null,
+                        propertyPurchasePrice: Number(form.kaufpreis),
+                        pricePerSqm: null,
+                        broker: null,
+                        brokerValue: null,
+                        notary: null,
+                        notaryValue: null,
+                        landRegistry: null,
+                        landRegistryValue: null,
+                        realEstateTax: null,
+                        realEstateTaxValue: null,
+                        adjustmentVariable: null,
+                        adjustmentVariableValue: null,
+                        totalAncillaryCostsValue: null,
+                        totalAncillaryCosts: null,
+                        parkingSpacePurchasePrice: null,
+                    });
+                    setAcquisitionCosts(createdAcquisitionCosts);
+                }
             }
 
             const parkingCount = Number(form.stellplaetze) || 0;
@@ -297,12 +334,20 @@ export default function PropertyData({ propertyId }: { propertyId: string }) {
                     </div>
 
                     <div className="flex flex-col gap-2">
-                        <SectionLabel>Kaufdatum</SectionLabel>
-                        <div className="max-w-[220px]">
+                        <SectionLabel>Kaufinformationen</SectionLabel>
+                        <div className="grid grid-cols-2 gap-3 max-w-md">
                             <CalendarField
                                 label="Kaufdatum (opt.)"
                                 value={form.kaufdatum ? parseISO(form.kaufdatum) : undefined}
                                 onChange={(date) => update({ kaufdatum: date ? format(date, 'yyyy-MM-dd') : '' })}
+                            />
+                            <NumberField
+                                label="Kaufpreis (opt.)"
+                                placeholder="450.000"
+                                unit="€"
+                                value={form.kaufpreis}
+                                onChange={(e) => update({ kaufpreis: e.target.value })}
+                                min={0}
                             />
                         </div>
                     </div>
