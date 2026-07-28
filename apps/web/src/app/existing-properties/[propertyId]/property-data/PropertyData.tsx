@@ -1,7 +1,7 @@
 "use client";
 
-import { PROPERTY_CATEGORY_CREATE_OPTIONS } from '@/components/features/PropertyDisplay';
-import { Button, CalendarField, Dropdown, Header, NumberField, StickyActionBar, TextField, UploadButton } from '@/components/ui';
+import { buildPropertyUseCaseBreadcrumb, PROPERTY_CATEGORY_CREATE_OPTIONS, PropertyNotFoundPage } from '@/components/features/PropertyDisplay';
+import { Button, CalendarField, Dropdown, Header, NumberField, SectionLabel, StickyActionBar, TextField, UploadButton } from '@/components/ui';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { ExistingPropertiesUseCases } from '@/constants/ExistingPropertiesUseCases';
 import { createAcquisitionCosts, getAcquisitionCosts, updateAcquisitionCosts } from '@/lib/supabase/acquisition_costs.supabase';
@@ -34,14 +34,6 @@ const ENERGY_OPTIONS = [
     { value: '', label: '–' },
     ...Object.values(EnergyEfficient).map((v) => ({ value: v, label: v })),
 ];
-
-function SectionLabel({ children }: { children: React.ReactNode }) {
-    return (
-        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide pb-2 border-b border-border">
-            {children}
-        </p>
-    );
-}
 
 interface FormState {
     objektkategorie: string;
@@ -246,25 +238,13 @@ export default function PropertyData({ propertyId }: { propertyId: string }) {
         [propertyId, router]
     );
 
-    if (!property) {
-        return (
-            <div className="min-h-screen bg-background">
-                <main className="container mx-auto px-4 py-8">
-                    <p className="text-muted-foreground">Objekt nicht gefunden</p>
-                </main>
-            </div>
-        );
-    }
+    if (!property) return <PropertyNotFoundPage />;
 
     return (
         <div className="min-h-screen bg-background pb-24">
             <main className="container mx-auto px-4 py-8">
                 <Header
-                    items={[
-                        { label: 'Bestandsobjekte', href: '/existing-properties' },
-                        { label: `${property.street} ${property.houseNumber}`, href: `/existing-properties/${propertyId}` },
-                        { label: ExistingPropertiesUseCases.PropertyData },
-                    ]}
+                    items={buildPropertyUseCaseBreadcrumb(property, propertyId, ExistingPropertiesUseCases.PropertyData)}
                     image={form.bildBase64 ? <img src={base64ToDataUri(form.bildBase64)!} alt={`${property.street} ${property.houseNumber}`} className="w-10 h-10 object-cover rounded-lg" /> : undefined}
                     actions={
                         <Button

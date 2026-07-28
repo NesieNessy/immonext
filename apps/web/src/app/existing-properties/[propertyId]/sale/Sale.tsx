@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from 'react';
 
+import { buildPropertyUseCaseBreadcrumb, PropertyNotFoundPage } from '@/components/features/PropertyDisplay';
 import { Button, Header, Tile } from '@/components/ui';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { ExistingPropertiesUseCases } from '@/constants/ExistingPropertiesUseCases';
@@ -22,18 +23,13 @@ export default function Sale({ propertyId }: { propertyId: string }) {
         router.push(route);
     });
 
-    if (!property) return (<div className="min-h-screen bg-background">
-<main className="container mx-auto px-4 py-8"><p className="text-muted-foreground">Objekt nicht gefunden</p></main></div>);
+    if (!property) return <PropertyNotFoundPage />;
 
     return (
         <div className="min-h-screen bg-background pb-24">
             <main className="container mx-auto px-4 py-8">
                 <Header
-                    items={[
-                        { label: 'Bestandsobjekte', href: '/existing-properties' },
-                        { label: `${property.street} ${property.houseNumber}` },
-                        { label: ExistingPropertiesUseCases.Sale },
-                    ]}
+                    items={buildPropertyUseCaseBreadcrumb(property, propertyId, ExistingPropertiesUseCases.Sale)}
                     image={property.imageUrl ? <img src={base64ToDataUri(property.imageUrl)!} alt={`${property.street} ${property.houseNumber}`} className="w-10 h-10 object-cover rounded-lg" /> : undefined}
                     actions={
                     <Button

@@ -1,6 +1,7 @@
 "use client";
 
-import { Button, Dropdown, Header, StickyActionBar, UnsavedChangesModal } from '@/components/ui';
+import { PropertyNotFoundPage } from '@/components/features/PropertyDisplay';
+import { Button, Dropdown, Header, SectionLabel, StickyActionBar, UnsavedChangesModal } from '@/components/ui';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { ExistingPropertiesUseCases } from '@/constants/ExistingPropertiesUseCases';
 import {
@@ -29,14 +30,6 @@ const EMPTY_MODERNIZATION: ModernizationSelections = {
     modernizationBathrooms: '',
     modernizationInterior: '',
 };
-
-function SectionLabel({ children }: { children: React.ReactNode }) {
-    return (
-        <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide pb-2 border-b border-border">
-            {children}
-        </h3>
-    );
-}
 
 export default function AdjustRnd({ propertyId }: { propertyId: string }) {
     const router = useRouter();
@@ -158,8 +151,7 @@ export default function AdjustRnd({ propertyId }: { propertyId: string }) {
         goTo(`/existing-properties/${propertyId}`);
     };
 
-    if (!property) return (<div className="min-h-screen bg-background">
-        <main className="container mx-auto px-4 py-8"><p className="text-muted-foreground">Objekt nicht gefunden</p></main></div>);
+    if (!property) return <PropertyNotFoundPage />;
 
     return (
         <div className="min-h-screen bg-background pb-24">

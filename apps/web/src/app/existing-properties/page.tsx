@@ -1,7 +1,7 @@
 "use client";
 
 import { NoResult } from '@/components/common';
-import { PROPERTY_CATEGORY_FILTER_OPTIONS, RENTAL_STATUS_FILTER_OPTIONS } from '@/components/features/PropertyDisplay';
+import { BESTANDSOBJEKTE_BREADCRUMB_ROOT, PROPERTY_CATEGORY_FILTER_OPTIONS, RENTAL_STATUS_FILTER_OPTIONS } from '@/components/features/PropertyDisplay';
 import { NewPropertyModal } from '@/components/features/NewPropertyModal';
 import { PropertyCard } from '@/components/features/PropertyCard';
 import { PropertyListRow } from '@/components/features/PropertyListRow';
@@ -143,7 +143,7 @@ export default function ExistingPropertiesPage() {
     <div className="min-h-screen bg-background pb-12">
       <main className="container mx-auto px-4 py-8">
         <Header
-          items={[{ label: 'Bestandsobjekte' }]}
+          items={[BESTANDSOBJEKTE_BREADCRUMB_ROOT]}
           actions={
             <Button
               label={BUTTON_DETAILS.AddProperty.label}

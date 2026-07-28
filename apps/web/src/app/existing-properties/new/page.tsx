@@ -1,7 +1,7 @@
 "use client";
 
-import { PROPERTY_CATEGORY_CREATE_OPTIONS } from '@/components/features/PropertyDisplay';
-import { CalendarField, Dropdown, Header, NumberField, StickyActionBar, TextField, UploadButton } from '@/components/ui';
+import { BESTANDSOBJEKTE_BREADCRUMB_ROOT, PROPERTY_CATEGORY_CREATE_OPTIONS } from '@/components/features/PropertyDisplay';
+import { CalendarField, Dropdown, Header, NumberField, SectionLabel, StickyActionBar, TextField, UploadButton } from '@/components/ui';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
 import { createAcquisitionCosts } from '@/lib/supabase/acquisition_costs.supabase';
@@ -33,14 +33,6 @@ const ENERGY_OPTIONS = [
   { value: '', label: '–' },
   ...Object.values(EnergyEfficient).map((v) => ({ value: v, label: v })),
 ];
-
-function SectionLabel({ children }: { children: React.ReactNode }) {
-  return (
-    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide pb-2 border-b border-border">
-      {children}
-    </p>
-  );
-}
 
 function NewPropertyPageContent() {
   const router = useRouter();
@@ -160,7 +152,7 @@ function NewPropertyPageContent() {
       <main className="container mx-auto px-4 pt-8 pb-3">
         <Header
           items={[
-            { label: 'Bestandsobjekte', href: '/existing-properties' },
+            BESTANDSOBJEKTE_BREADCRUMB_ROOT,
             { label: 'Neues Objekt anlegen' },
           ]}
         />

@@ -17,6 +17,7 @@ export { NumberInput } from "./NumberInput";
 export { RadioButton } from "./RadioButton";
 export { Rating } from "./Rating";
 export { RatingScale } from "./RatingScale";
+export { SectionLabel } from "./SectionLabel";
 export { Stepper } from "./Stepper";
 export { StickyActionBar } from "./StickyActionBar";
 export { Table } from "./Table";

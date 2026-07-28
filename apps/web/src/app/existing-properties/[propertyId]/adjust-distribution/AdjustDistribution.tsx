@@ -1,6 +1,7 @@
 "use client";
 
-import { Button, Header, NumberField, StickyActionBar } from '@/components/ui';
+import { buildPropertyUseCaseBreadcrumb, PropertyNotFoundPage } from '@/components/features/PropertyDisplay';
+import { Button, Header, NumberField, SectionLabel, StickyActionBar } from '@/components/ui';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { ExistingPropertiesUseCases } from '@/constants/ExistingPropertiesUseCases';
 import { computePriceSplitIndividual, computePriceSplitStandard } from '@/lib/detailCheck/depreciation';
@@ -16,14 +17,6 @@ type SplitMode = 'STANDARD' | 'INDIVIDUAL';
 
 const numberFormatter = new Intl.NumberFormat('de-DE', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
 const currencyFormatter = new Intl.NumberFormat('de-DE', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
-
-function SectionLabel({ children }: { children: React.ReactNode }) {
-    return (
-        <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide pb-2 border-b border-border">
-            {children}
-        </h3>
-    );
-}
 
 export default function AdjustDistribution({ propertyId }: { propertyId: string }) {
     const router = useRouter();
@@ -107,25 +100,13 @@ export default function AdjustDistribution({ propertyId }: { propertyId: string 
         setCoOwnershipDenominator(originalCoOwnershipDenominator);
     };
 
-    if (!property) {
-        return (
-            <div className="min-h-screen bg-background">
-                <main className="container mx-auto px-4 py-8">
-                    <p className="text-muted-foreground">Objekt nicht gefunden</p>
-                </main>
-            </div>
-        );
-    }
+    if (!property) return <PropertyNotFoundPage />;
 
     return (
         <div className="min-h-screen bg-background pb-24">
             <main className="container mx-auto px-4 py-8">
                 <Header
-                    items={[
-                        { label: 'Bestandsobjekte', href: '/existing-properties' },
-                        { label: `${property.street} ${property.houseNumber}`, href: `/existing-properties/${propertyId}` },
-                        { label: ExistingPropertiesUseCases.SplitPurchasePrice },
-                    ]}
+                    items={buildPropertyUseCaseBreadcrumb(property, propertyId, ExistingPropertiesUseCases.SplitPurchasePrice)}
                     image={property.imageUrl ? <img src={base64ToDataUri(property.imageUrl)!} alt={`${property.street} ${property.houseNumber}`} className="w-10 h-10 object-cover rounded-lg" /> : undefined}
                     actions={
                         <Button

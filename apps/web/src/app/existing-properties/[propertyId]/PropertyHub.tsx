@@ -1,7 +1,7 @@
 "use client";
 
-import { PROPERTY_CATEGORY_LABEL } from '@/components/features/PropertyDisplay';
-import { Button, Header, Modal, Tag } from '@/components/ui';
+import { BESTANDSOBJEKTE_BREADCRUMB_ROOT, PROPERTY_CATEGORY_LABEL } from '@/components/features/PropertyDisplay';
+import { Button, Header, Modal, SectionLabel, Tag } from '@/components/ui';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { deleteProperty, getPropertyOverviewById, type PropertyOverview } from '@/lib/supabase/property.supabase';
 import { base64ToDataUri, cn } from '@/lib/utils';
@@ -145,14 +145,6 @@ const WEITERE_AKTIONEN: HubCard[] = [
   },
 ];
 
-function SectionTitle({ children }: { children: React.ReactNode }) {
-  return (
-    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide pb-2 border-b border-border">
-      {children}
-    </p>
-  );
-}
-
 function HubCardTile({ card, propertyId }: { card: HubCard; propertyId: string }) {
   const router = useRouter();
   const Icon = card.icon;
@@ -232,7 +224,7 @@ export default function PropertyHub({ propertyId }: { propertyId: string }) {
       <main className="container mx-auto px-4 py-8 max-w-5xl">
         <Header
           items={[
-            { label: 'Bestandsobjekte', href: '/existing-properties' },
+            BESTANDSOBJEKTE_BREADCRUMB_ROOT,
             { label: `${property.street} ${property.houseNumber}, ${property.postalCode} ${property.city}` },
           ]}
           image={
@@ -265,7 +257,7 @@ export default function PropertyHub({ propertyId }: { propertyId: string }) {
         </p>
 
         <div className="mt-8 flex flex-col gap-3">
-          <SectionTitle>Objektverwaltung</SectionTitle>
+          <SectionLabel>Objektverwaltung</SectionLabel>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {OBJEKTVERWALTUNG.map((card) => (
               <HubCardTile key={card.key} card={card} propertyId={propertyId} />
@@ -274,7 +266,7 @@ export default function PropertyHub({ propertyId }: { propertyId: string }) {
         </div>
 
         <div className="mt-8 flex flex-col gap-3">
-          <SectionTitle>Miete</SectionTitle>
+          <SectionLabel>Miete</SectionLabel>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {MIETE.map((card) => (
               <HubCardTile key={card.key} card={card} propertyId={propertyId} />
@@ -283,7 +275,7 @@ export default function PropertyHub({ propertyId }: { propertyId: string }) {
         </div>
 
         <div className="mt-8 flex flex-col gap-3">
-          <SectionTitle>Finanzen &amp; Dokumente</SectionTitle>
+          <SectionLabel>Finanzen &amp; Dokumente</SectionLabel>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {FINANZEN_DOKUMENTE.map((card) => (
               <HubCardTile key={card.key} card={card} propertyId={propertyId} />
@@ -292,7 +284,7 @@ export default function PropertyHub({ propertyId }: { propertyId: string }) {
         </div>
 
         <div className="mt-8 flex flex-col gap-3">
-          <SectionTitle>Weitere Aktionen</SectionTitle>
+          <SectionLabel>Weitere Aktionen</SectionLabel>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {weitereAktionen.map((card) => (
               <HubCardTile key={card.key} card={card} propertyId={propertyId} />

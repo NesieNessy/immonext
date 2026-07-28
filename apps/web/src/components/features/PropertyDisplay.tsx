@@ -6,7 +6,41 @@
 // rotating card accent-color palette.
 // ---------------------------------------------------------------------------
 
-import type { TagVariant } from '@/components/ui';
+import type { BreadcrumbItem, TagVariant } from '@/components/ui';
+
+// ---------------------------------------------------------------------------
+// Breadcrumb — every property sub-page starts with "Bestandsobjekte" › the
+// property's address (linking back to its hub page) › the current use case.
+// Shared here so the address-href fix doesn't have to be copy-pasted again.
+// ---------------------------------------------------------------------------
+
+export const BESTANDSOBJEKTE_BREADCRUMB_ROOT: BreadcrumbItem = {
+  label: 'Bestandsobjekte',
+  href: '/existing-properties',
+};
+
+export function buildPropertyUseCaseBreadcrumb(
+  property: { street: string; houseNumber: string },
+  propertyId: string,
+  currentLabel: string,
+): BreadcrumbItem[] {
+  return [
+    BESTANDSOBJEKTE_BREADCRUMB_ROOT,
+    { label: `${property.street} ${property.houseNumber}`, href: `/existing-properties/${propertyId}` },
+    { label: currentLabel },
+  ];
+}
+
+/** Shared "property not found" fallback for the use-case sub-pages. */
+export function PropertyNotFoundPage() {
+  return (
+    <div className="min-h-screen bg-background">
+      <main className="container mx-auto px-4 py-8">
+        <p className="text-muted-foreground">Objekt nicht gefunden</p>
+      </main>
+    </div>
+  );
+}
 
 /** property_category is free TEXT, not a DB enum — this is the known set of
  *  values written across the app (detail-check/property-data's form plus
