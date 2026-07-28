@@ -1,8 +1,9 @@
 "use client";
 
 import { PROPERTY_CATEGORY_LABEL } from '@/components/features/PropertyDisplay';
-import { Header, Tag } from '@/components/ui';
-import { getPropertyOverviewById, type PropertyOverview } from '@/lib/supabase/property.supabase';
+import { Button, Header, Modal, Tag } from '@/components/ui';
+import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
+import { deleteProperty, getPropertyOverviewById, type PropertyOverview } from '@/lib/supabase/property.supabase';
 import { base64ToDataUri, cn } from '@/lib/utils';
 import {
   BarChart3,
@@ -15,6 +16,7 @@ import {
   PieChart,
   Receipt,
   ShoppingCart,
+  Trash2,
   TrendingUp,
   Users,
   Wrench,
@@ -26,7 +28,10 @@ interface HubCard {
   key: string;
   title: string;
   description: string;
-  route: string;
+  /** Navigates to `/existing-properties/{propertyId}/{route}` when set. */
+  route?: string;
+  /** Runs instead of navigating when set (e.g. opening a confirm dialog). */
+  onClick?: () => void;
   icon: React.ElementType;
   colorClass: string;
 }
@@ -154,7 +159,7 @@ function HubCardTile({ card, propertyId }: { card: HubCard; propertyId: string }
   return (
     <button
       type="button"
-      onClick={() => router.push(`/existing-properties/${propertyId}/${card.route}`)}
+      onClick={() => card.onClick ? card.onClick() : router.push(`/existing-properties/${propertyId}/${card.route}`)}
       className="text-left p-4 rounded-lg border border-border bg-card hover:border-primary/50 hover:shadow-md transition-all cursor-pointer"
     >
       <div className={cn("w-9 h-9 rounded-lg flex items-center justify-center mb-3", card.colorClass)}>
@@ -167,8 +172,11 @@ function HubCardTile({ card, propertyId }: { card: HubCard; propertyId: string }
 }
 
 export default function PropertyHub({ propertyId }: { propertyId: string }) {
+  const router = useRouter();
   const [property, setProperty] = useState<PropertyOverview | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     getPropertyOverviewById(parseInt(propertyId, 10)).then((p) => {
@@ -176,6 +184,15 @@ export default function PropertyHub({ propertyId }: { propertyId: string }) {
       setIsLoading(false);
     });
   }, [propertyId]);
+
+  const handleConfirmDelete = async () => {
+    setIsDeleting(true);
+    const success = await deleteProperty(parseInt(propertyId, 10));
+    setIsDeleting(false);
+    if (success) {
+      router.push('/existing-properties');
+    }
+  };
 
   if (isLoading) {
     return (
@@ -197,6 +214,18 @@ export default function PropertyHub({ propertyId }: { propertyId: string }) {
   const categoryLabel = property.propertyCategory
     ? PROPERTY_CATEGORY_LABEL[property.propertyCategory] ?? property.propertyCategory
     : null;
+
+  const weitereAktionen: HubCard[] = [
+    ...WEITERE_AKTIONEN,
+    {
+      key: 'delete-property',
+      title: 'Objekt löschen',
+      description: 'Bestandsobjekt endgültig entfernen',
+      icon: Trash2,
+      colorClass: 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400',
+      onClick: () => setDeleteModalOpen(true),
+    },
+  ];
 
   return (
     <div className="min-h-screen bg-background pb-12">
@@ -265,12 +294,42 @@ export default function PropertyHub({ propertyId }: { propertyId: string }) {
         <div className="mt-8 flex flex-col gap-3">
           <SectionTitle>Weitere Aktionen</SectionTitle>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {WEITERE_AKTIONEN.map((card) => (
+            {weitereAktionen.map((card) => (
               <HubCardTile key={card.key} card={card} propertyId={propertyId} />
             ))}
           </div>
         </div>
       </main>
+
+      <Modal
+        open={deleteModalOpen}
+        onClose={() => setDeleteModalOpen(false)}
+        title="Objekt löschen"
+        icon={<BUTTON_DETAILS.Delete.icon />}
+        footer={
+          <>
+            <Button
+              label={BUTTON_DETAILS.Cancel.label}
+              icon={<BUTTON_DETAILS.Cancel.icon />}
+              variant="outline"
+              onClick={() => setDeleteModalOpen(false)}
+            />
+            <Button
+              label={BUTTON_DETAILS.Delete.label}
+              icon={<BUTTON_DETAILS.Delete.icon />}
+              variant="primary"
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={isDeleting}
+              onClick={() => void handleConfirmDelete()}
+            />
+          </>
+        }
+      >
+        <p className="text-sm text-muted-foreground">
+          Möchten Sie <span className="font-medium text-foreground">{property.street} {property.houseNumber}</span>,{' '}
+          {property.postalCode} {property.city} wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.
+        </p>
+      </Modal>
     </div>
   );
 }
