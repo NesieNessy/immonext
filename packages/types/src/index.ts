@@ -250,6 +250,32 @@ export type PropertyAcquisitionInsert = Omit<PropertyAcquisition, 'propertyAcqui
 export type PropertyAcquisitionUpdate = Partial<Omit<PropertyAcquisition, 'propertyAcquisitionId' | 'createdAt' | 'updatedAt'>>;
 
 // ----------------------------------------------------------------------------
+// PropertyRnd
+// ----------------------------------------------------------------------------
+
+export type RndMode = 'STANDARD' | 'INDIVIDUAL';
+
+export interface PropertyRnd {
+  propertyRndId: number;
+  propertyId: number;
+  rndMode: RndMode;
+  modernizationRoof: string | null;
+  modernizationWindows: string | null;
+  modernizationLines: string | null;
+  modernizationHeating: string | null;
+  modernizationFacade: string | null;
+  modernizationBathrooms: string | null;
+  modernizationInterior: string | null;
+  remainingUsefulLifeYears: number;
+  afaPercent: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type PropertyRndInsert = Omit<PropertyRnd, 'propertyRndId' | 'createdAt' | 'updatedAt'>;
+export type PropertyRndUpdate = Partial<Omit<PropertyRnd, 'propertyRndId' | 'propertyId' | 'createdAt' | 'updatedAt'>>;
+
+// ----------------------------------------------------------------------------
 // Tenancy
 // ----------------------------------------------------------------------------
 

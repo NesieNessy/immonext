@@ -8,6 +8,9 @@ export interface BreadcrumbItem {
   /** Omit for the current page (rendered bold, not a link) and for
    *  ancestor segments that have no single natural destination. */
   href?: string;
+  /** Intercept the click (e.g. to confirm discarding unsaved changes)
+   *  before the Link navigates. Call `e.preventDefault()` to stop it. */
+  onClick?: (e: React.MouseEvent<HTMLAnchorElement>) => void;
 }
 
 interface HeaderProps {
@@ -34,6 +37,7 @@ export function Header({ items, actions, image, className }: HeaderProps) {
                 {item.href && !isLast ? (
                   <Link
                     href={item.href}
+                    onClick={item.onClick}
                     className="text-sm text-muted-foreground hover:text-foreground transition-colors truncate"
                   >
                     {item.label}

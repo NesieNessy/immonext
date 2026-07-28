@@ -28,6 +28,7 @@ export { TextField } from "./TextField";
 export { TextFieldWithIcon } from "./TextFieldWithIcon";
 export { Tile } from "./Tile";
 export { TileWithImage } from "./TileWithImage";
+export { UnsavedChangesModal } from "./UnsavedChangesModal";
 export { UploadButton } from "./UploadButton";
 
 // Re-export common components for convenience

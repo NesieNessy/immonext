@@ -11,6 +11,7 @@ import {
   Plus,
   Save,
   Trash2,
+  Undo2,
   Upload,
   X
 } from 'lucide-react';
@@ -63,7 +64,7 @@ export const BUTTON_DETAILS: Record<ButtonType, ButtonConfig> = {
   [ButtonType.EnterManually]:    { label: 'Manuell eingeben',        icon: Edit3 },
   [ButtonType.Calculate]:        { label: 'Berechnen',               icon: Calculator },
   [ButtonType.TakeOver]:         { label: 'Übernehmen',              icon: Check },
-  [ButtonType.Discard]:          { label: 'Verwerfen',               icon: X },
+  [ButtonType.Discard]:          { label: 'Verwerfen',               icon: Undo2 },
   [ButtonType.AddProperty]:      { label: 'Objekt hinzufügen',       icon: Plus },
   [ButtonType.AddQuickCheck]:    { label: 'Neue Ersteinschätzung',   icon: Plus },
   [ButtonType.Delete]:           { label: 'Löschen',                 icon: Trash2 },

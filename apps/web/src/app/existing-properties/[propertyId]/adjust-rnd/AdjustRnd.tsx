@@ -1,6 +1,6 @@
 "use client";
 
-import { Button, Dropdown, Header, StickyActionBar } from '@/components/ui';
+import { Button, Dropdown, Header, StickyActionBar, UnsavedChangesModal } from '@/components/ui';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { ExistingPropertiesUseCases } from '@/constants/ExistingPropertiesUseCases';
 import {
@@ -9,15 +9,14 @@ import {
     MODERNIZATION_OPTIONS,
     type ModernizationSelections,
 } from '@/lib/detailCheck/depreciation';
+import { getPropertyRndByProperty, upsertPropertyRnd } from '@/lib/supabase/property_rnd.supabase';
 import { getPropertyById } from '@/lib/supabase/property.supabase';
 import { createUseCaseMenuItems } from '@/lib/useCaseMenu';
 import { base64ToDataUri, cn } from '@/lib/utils';
-import type { Property } from '@immonext/types';
+import type { Property, RndMode } from '@immonext/types';
 import { Clock } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
-
-type RndMode = 'STANDARD' | 'INDIVIDUAL';
 
 const numberFormatter = new Intl.NumberFormat('de-DE', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
 
@@ -49,10 +48,29 @@ export default function AdjustRnd({ propertyId }: { propertyId: string }) {
     const [originalModernization, setOriginalModernization] = useState<ModernizationSelections>(EMPTY_MODERNIZATION);
 
     const [isEditing, setIsEditing] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
     const [property, setProperty] = useState<Property | undefined>(undefined);
+    const [pendingHref, setPendingHref] = useState<string | null>(null);
 
     useEffect(() => {
         getPropertyById(parseInt(propertyId, 10)).then(p => setProperty(p ?? undefined));
+
+        getPropertyRndByProperty(parseInt(propertyId, 10)).then((rnd) => {
+            if (!rnd) return;
+            const loadedModernization: ModernizationSelections = {
+                modernizationRoof: rnd.modernizationRoof ?? '',
+                modernizationWindows: rnd.modernizationWindows ?? '',
+                modernizationLines: rnd.modernizationLines ?? '',
+                modernizationHeating: rnd.modernizationHeating ?? '',
+                modernizationFacade: rnd.modernizationFacade ?? '',
+                modernizationBathrooms: rnd.modernizationBathrooms ?? '',
+                modernizationInterior: rnd.modernizationInterior ?? '',
+            };
+            setRndMode(rnd.rndMode);
+            setOriginalRndMode(rnd.rndMode);
+            setModernization(loadedModernization);
+            setOriginalModernization(loadedModernization);
+        });
     }, [propertyId]);
 
     useEffect(() => {
@@ -63,11 +81,26 @@ export default function AdjustRnd({ propertyId }: { propertyId: string }) {
         setIsEditing(hasChanges);
     }, [rndMode, modernization, originalRndMode, originalModernization]);
 
+    // Any navigation away from an unsaved edit is routed through here so it
+    // can be confirmed first (breadcrumb links, Abbrechen, Anwendungsfall).
+    const goTo = (href: string) => {
+        if (isEditing) {
+            setPendingHref(href);
+        } else {
+            router.push(href);
+        }
+    };
+
+    const confirmDiscard = () => {
+        if (pendingHref) router.push(pendingHref);
+        setPendingHref(null);
+    };
+
     const useCaseMenuItems = useMemo(() =>
         createUseCaseMenuItems(propertyId, 'RND', (route) => {
-            router.push(route);
+            goTo(route);
         }),
-        [propertyId, router]
+        [propertyId, isEditing] // eslint-disable-line react-hooks/exhaustive-deps
     );
 
     const individualRnd = useMemo(() => {
@@ -83,22 +116,46 @@ export default function AdjustRnd({ propertyId }: { propertyId: string }) {
         ? { remainingUsefulLifeYears: 50, afaPercent: 2 }
         : individualRnd;
 
-    const handleSave = () => {
-        // Standard mode ignores modernization entirely, so don't carry stale
-        // individual selections forward once it's saved.
-        const savedModernization = rndMode === 'STANDARD' ? EMPTY_MODERNIZATION : modernization;
+    const handleSave = async () => {
+        if (!property) return;
 
-        // TODO: Implement save functionality
-        console.log('Saving RND data:', { rndMode, modernization: savedModernization, selectedRnd });
+        // Standard mode ignores modernization entirely, so don't carry stale
+        // individual selections (or their derived RND/AfA) forward once saved.
+        const savedModernization = rndMode === 'STANDARD' ? EMPTY_MODERNIZATION : modernization;
+        const savedRnd = rndMode === 'STANDARD'
+            ? { remainingUsefulLifeYears: 50, afaPercent: 2 }
+            : computeRemainingUsefulLife({
+                category: property.propertyCategory,
+                yearOfConstruction: property.yearOfConstruction,
+                selections: savedModernization,
+            });
+
+        setIsSaving(true);
+        const saved = await upsertPropertyRnd({
+            propertyId: parseInt(propertyId, 10),
+            rndMode,
+            modernizationRoof: savedModernization.modernizationRoof || null,
+            modernizationWindows: savedModernization.modernizationWindows || null,
+            modernizationLines: savedModernization.modernizationLines || null,
+            modernizationHeating: savedModernization.modernizationHeating || null,
+            modernizationFacade: savedModernization.modernizationFacade || null,
+            modernizationBathrooms: savedModernization.modernizationBathrooms || null,
+            modernizationInterior: savedModernization.modernizationInterior || null,
+            remainingUsefulLifeYears: savedRnd.remainingUsefulLifeYears,
+            afaPercent: savedRnd.afaPercent,
+        });
+        setIsSaving(false);
+        if (!saved) return;
 
         setModernization(savedModernization);
         setOriginalRndMode(rndMode);
         setOriginalModernization(savedModernization);
         setIsEditing(false);
+        router.push(`/existing-properties/${propertyId}`);
     };
 
     const handleCancel = () => {
-        router.push(`/existing-properties/${propertyId}`);
+        goTo(`/existing-properties/${propertyId}`);
     };
 
     if (!property) return (<div className="min-h-screen bg-background">
@@ -109,8 +166,16 @@ export default function AdjustRnd({ propertyId }: { propertyId: string }) {
             <main className="container mx-auto px-4 py-8">
                 <Header
                     items={[
-                        { label: 'Bestandsobjekte', href: '/existing-properties' },
-                        { label: `${property.street} ${property.houseNumber}` },
+                        {
+                            label: 'Bestandsobjekte',
+                            href: '/existing-properties',
+                            onClick: (e) => { if (isEditing) { e.preventDefault(); goTo('/existing-properties'); } },
+                        },
+                        {
+                            label: `${property.street} ${property.houseNumber}`,
+                            href: `/existing-properties/${propertyId}`,
+                            onClick: (e) => { if (isEditing) { e.preventDefault(); goTo(`/existing-properties/${propertyId}`); } },
+                        },
                         { label: ExistingPropertiesUseCases.RND },
                     ]}
                     image={property.imageUrl ? <img src={base64ToDataUri(property.imageUrl)!} alt={`${property.street} ${property.houseNumber}`} className="w-10 h-10 object-cover rounded-lg" /> : undefined}
@@ -247,7 +312,14 @@ export default function AdjustRnd({ propertyId }: { propertyId: string }) {
                 primaryLabel={BUTTON_DETAILS.Save.label}
                 ghostIcon={<BUTTON_DETAILS.Cancel.icon />}
                 primaryIcon={<BUTTON_DETAILS.Save.icon />}
-                primaryDisabled={!isEditing}
+                primaryDisabled={!isEditing || isSaving}
+            />
+
+            <UnsavedChangesModal
+                open={pendingHref !== null}
+                onCancel={() => setPendingHref(null)}
+                onDiscard={confirmDiscard}
+                context="an der Restnutzungsdauer"
             />
         </div>
     );
