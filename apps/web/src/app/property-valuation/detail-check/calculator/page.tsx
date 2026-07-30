@@ -4,10 +4,11 @@ import { Button, Dropdown, StickyActionBar, TextField } from '@/components/ui';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { authFetch } from '@/lib/api/authFetch';
 import { parseDecimalInput } from '@/lib/detailCheck/acquisitionCosts';
-import { CALCULATION_HORIZON_YEARS, type CalculatorMode, type ModernizationPlanRow, type PlacementMode, type RentIndexSource, type RentIncrease558Row, type RentTimelineRow } from '@/lib/detailCheck/rentCalculator';
+import { addMonths, CALCULATION_HORIZON_MONTHS, CALCULATION_HORIZON_YEARS, type CalculatorMode, type ModernizationPlanRow, type PlacementMode, type RentIndexSource, type RentIncrease558Row, type RentTimelineRow } from '@/lib/detailCheck/rentCalculator';
+import { costForCase, type RenovationCase, type RenovationTiming } from '@/lib/detailCheck/renovation';
 import { ChevronDown, ChevronUp, LineChart, Sparkles } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Suspense, useEffect, useMemo, useState } from 'react';
+import { Suspense, useEffect, useMemo, useRef, useState, type PointerEvent } from 'react';
 import { PropertyValuationLayout } from '../PropertyValuationLayout';
 
 type CalculatorResponse = {
@@ -22,6 +23,19 @@ type CalculatorResponse = {
     rentIndexPerM2: number | null;
     rentIndexSource: RentIndexSource;
     monthlyDebtService: number;
+    interestRate: number;
+    taxRate: number;
+    taxableLossesOffsettable?: boolean;
+    financingInterestRateOverride?: number | null;
+    interestRateOverride?: number | null;
+    refinancingInterestRate?: number | null;
+    interestPeriodYears?: number;
+    equityAmount: number;
+    equityIncluded?: boolean;
+    modernizationPlacements?: Record<string, string>;
+    rentIncreaseOverrides?: Record<string, { effectiveYyyymm?: string; monthlyDelta?: number }>;
+    modernizationCostOverrides?: Record<string, number>;
+    renovationTimingOverrides?: Record<string, RenovationTiming>;
     mode: CalculatorMode;
     placementMode: PlacementMode;
   };
@@ -32,6 +46,7 @@ type CalculatorResponse = {
   capAbs: number;
   timeline: RentTimelineRow[];
   modernizationPlan: ModernizationPlanRow[];
+  renovationCases: RenovationCase[];
   increases558: RentIncrease558Row[];
   breakEven: string | null;
   breakEvenWithRentIndex: string | null;
@@ -91,11 +106,11 @@ function roundChartValue(value: number): number {
 }
 
 function buildChartRows(rows: RentTimelineRow[]): ChartRow[] {
-  let afterTaxCumulative = 0;
-  return rows.map((row) => {
-    afterTaxCumulative = roundChartValue(afterTaxCumulative + row.afterTaxCashflow);
-    return { ...row, afterTaxCumulative };
-  });
+  return rows.map((row) => ({ ...row, afterTaxCumulative: row.cumulativeCashflow }));
+}
+
+function chartExpenses(row: RentTimelineRow): number {
+  return roundChartValue(row.expenses + row.taxes);
 }
 
 function chartPath(
@@ -115,113 +130,249 @@ function chartPath(
   }).join(' ');
 }
 
+function chartBandPath(
+  first: number[],
+  second: number[],
+  min: number,
+  max: number,
+  left: number,
+  top: number,
+  width: number,
+  height: number,
+): string {
+  const range = max - min || 1;
+  const point = (value: number, index: number, count: number) => {
+    const x = left + (count <= 1 ? 0 : (index / (count - 1)) * width);
+    const y = top + height - ((value - min) / range) * height;
+    return `${x.toFixed(2)} ${y.toFixed(2)}`;
+  };
+  const forward = first.map((value, index) => point(value, index, first.length));
+  const backward = second.map((value, index) => point(value, index, second.length)).reverse();
+  return forward.length === 0 ? '' : `M ${forward.join(' L ')} L ${backward.join(' L ')} Z`;
+}
+
 function formatAxisCurrency(value: number): string {
   const absolute = Math.abs(value);
   if (absolute >= 1000) return `${numberFormatter.format(value / 1000)}k €`;
   return `${numberFormatter.format(value)} €`;
 }
 
-function CalculatorChart({ rows, showRentIndex }: { rows: ChartRow[]; showRentIndex: boolean }) {
-  const width = 980;
-  const left = 76;
-  const right = 24;
-  const plotWidth = width - left - right;
-  const top = { y: 56, height: 170 };
-  const bottom = { y: 316, height: 170 };
-  const monthlyValues = rows.flatMap((row) => [row.income, row.expenses, ...(showRentIndex ? [row.rentTotalWithRentIndex] : [])]);
-  const monthlyMax = Math.max(1, ...monthlyValues) * 1.08;
-  const afterTaxValues = rows.map((row) => row.afterTaxCumulative);
-  const afterTaxMin = Math.min(0, ...afterTaxValues);
-  const afterTaxMax = Math.max(0, ...afterTaxValues);
-  const afterTaxPadding = Math.max(1, (afterTaxMax - afterTaxMin) * 0.08);
-  const afterTaxDomain = { min: afterTaxMin - afterTaxPadding, max: afterTaxMax + afterTaxPadding };
-  const xAt = (index: number) => left + (rows.length <= 1 ? 0 : (index / (rows.length - 1)) * plotWidth);
-  const yMonthly = (value: number) => top.y + top.height - (value / monthlyMax) * top.height;
-  const yAfterTax = (value: number) => bottom.y + bottom.height - ((value - afterTaxDomain.min) / (afterTaxDomain.max - afterTaxDomain.min)) * bottom.height;
-  const zeroY = yAfterTax(0);
-  const breakEvenIndex = rows.findIndex((row) => row.afterTaxCumulative >= 0);
-  const eventRows = rows.filter((row) => row.renovationPayment > 0);
-  const axisIndexes = [0, 0.25, 0.5, 0.75, 1].map((ratio) => Math.min(rows.length - 1, Math.round(ratio * Math.max(0, rows.length - 1))));
+type TimelineViewport = { start: number; span: number };
 
-  if (rows.length === 0) {
-    return <p className="rounded-lg border border-border px-4 py-6 text-sm text-muted-foreground">Noch keine Zeitreihe verfügbar.</p>;
-  }
+function viewportLabel(startYyyymm: string, viewport: TimelineViewport): string {
+  return `${addMonths(startYyyymm, viewport.start)} bis ${addMonths(startYyyymm, viewport.start + viewport.span - 1)}`;
+}
+
+function TimelineRangeBar({
+  startYyyymm,
+  viewport,
+  onChange,
+}: {
+  startYyyymm: string;
+  viewport: TimelineViewport;
+  onChange: (next: TimelineViewport) => void;
+}) {
+  const dragRef = useRef<{
+    mode: 'start' | 'end' | 'window';
+    clientX: number;
+    viewport: TimelineViewport;
+  } | null>(null);
+  const minimumSpan = 24;
+  const end = viewport.start + viewport.span;
+  const startPercent = (viewport.start / CALCULATION_HORIZON_MONTHS) * 100;
+  const spanPercent = (viewport.span / CALCULATION_HORIZON_MONTHS) * 100;
+
+  const handlePointerDown = (event: PointerEvent<HTMLDivElement>, mode: 'start' | 'end' | 'window') => {
+    event.preventDefault();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    dragRef.current = { mode, clientX: event.clientX, viewport };
+  };
+
+  const handlePointerMove = (event: PointerEvent<HTMLDivElement>) => {
+    const drag = dragRef.current;
+    if (!drag) return;
+    const track = event.currentTarget.closest('[data-timeline-range]') as HTMLDivElement | null;
+    if (!track) return;
+    const delta = Math.round(((event.clientX - drag.clientX) / track.getBoundingClientRect().width) * CALCULATION_HORIZON_MONTHS);
+    const initialEnd = drag.viewport.start + drag.viewport.span;
+
+    if (drag.mode === 'start') {
+      const nextStart = Math.max(0, Math.min(initialEnd - minimumSpan, drag.viewport.start + delta));
+      onChange({ start: nextStart, span: initialEnd - nextStart });
+      return;
+    }
+    if (drag.mode === 'end') {
+      const nextEnd = Math.max(drag.viewport.start + minimumSpan, Math.min(CALCULATION_HORIZON_MONTHS, initialEnd + delta));
+      onChange({ start: drag.viewport.start, span: nextEnd - drag.viewport.start });
+      return;
+    }
+    const nextStart = Math.max(0, Math.min(CALCULATION_HORIZON_MONTHS - drag.viewport.span, drag.viewport.start + delta));
+    onChange({ start: nextStart, span: drag.viewport.span });
+  };
+
+  const finishDrag = () => {
+    dragRef.current = null;
+  };
 
   return (
-    <div className="rounded-lg border border-border bg-card p-4 sm:p-6">
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <div className="text-lg font-medium text-foreground">Entwicklung über {CALCULATION_HORIZON_YEARS} Jahre</div>
-          <div className="text-sm text-muted-foreground">Monatliche Werte und kumulierter Cashflow nach Steuern</div>
-        </div>
-        {breakEvenIndex >= 0 ? (
-          <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-foreground">
-            Break-even nach Steuern: <strong>{rows[breakEvenIndex].yyyymm}</strong>
-          </div>
-        ) : (
-          <div className="rounded-lg border border-border bg-muted px-3 py-2 text-sm text-muted-foreground">Break-even im Zeitraum nicht erreicht</div>
-        )}
-      </div>
-
+    <div className="grid grid-cols-[15%_85%] border-t border-border pt-2">
+      <div />
       <div>
-        <svg className="h-auto w-full" viewBox={`0 0 ${width} 535`} role="img" aria-labelledby="calculator-chart-title calculator-chart-description">
-          <title id="calculator-chart-title">Mieteinnahmen, Ausgaben und Cashflow über {CALCULATION_HORIZON_YEARS} Jahre</title>
-          <desc id="calculator-chart-description">Oben werden Mieteinnahmen und Ausgaben je Monat gezeigt. Unten wird der kumulierte Cashflow nach Steuern angezeigt. Sanierungszahlungen sind als Markierungen im oberen Diagramm sichtbar.</desc>
+        <div className="relative h-10 touch-none select-none" data-timeline-range>
+          <div className="absolute inset-x-0 top-4 h-2 rounded-full bg-[#dce7f2]" />
+          <div
+            className="absolute top-3 h-4 cursor-grab rounded border-2 border-[#3b92e8] bg-[#d9ebff] active:cursor-grabbing"
+            style={{ left: `${startPercent}%`, width: `${spanPercent}%` }}
+            onPointerDown={(event) => handlePointerDown(event, 'window')}
+            onPointerMove={handlePointerMove}
+            onPointerUp={finishDrag}
+            onPointerCancel={finishDrag}
+            title={`Gemeinsame Ansicht: ${viewportLabel(startYyyymm, viewport)}`}
+          />
+          <div
+            className="absolute top-2 h-6 w-3 -translate-x-1/2 cursor-ew-resize rounded bg-[#3b92e8]"
+            style={{ left: `${startPercent}%` }}
+            onPointerDown={(event) => handlePointerDown(event, 'start')}
+            onPointerMove={handlePointerMove}
+            onPointerUp={finishDrag}
+            onPointerCancel={finishDrag}
+            role="slider"
+            aria-label="Beginn des sichtbaren Zeitraums"
+            aria-valuemin={0}
+            aria-valuemax={end - minimumSpan}
+            aria-valuenow={viewport.start}
+          />
+          <div
+            className="absolute top-2 h-6 w-3 -translate-x-1/2 cursor-ew-resize rounded bg-[#3b92e8]"
+            style={{ left: `${startPercent + spanPercent}%` }}
+            onPointerDown={(event) => handlePointerDown(event, 'end')}
+            onPointerMove={handlePointerMove}
+            onPointerUp={finishDrag}
+            onPointerCancel={finishDrag}
+            role="slider"
+            aria-label="Ende des sichtbaren Zeitraums"
+            aria-valuemin={viewport.start + minimumSpan}
+            aria-valuemax={CALCULATION_HORIZON_MONTHS}
+            aria-valuenow={end}
+          />
+        </div>
+        <div className="text-center text-xs text-muted-foreground">Gemeinsame Ansicht: {viewportLabel(startYyyymm, viewport)}</div>
+      </div>
+    </div>
+  );
+}
 
-          <text x={left} y="25" className="fill-foreground text-sm font-medium">Monatliche Entwicklung</text>
-          <text x="10" y={top.y + 5} className="fill-muted-foreground text-xs">{formatAxisCurrency(monthlyMax)}</text>
-          <text x="28" y={top.y + top.height + 4} className="fill-muted-foreground text-xs">0 €</text>
-          {[0, 0.5, 1].map((ratio) => (
-            <line key={`monthly-grid-${ratio}`} x1={left} x2={left + plotWidth} y1={top.y + ratio * top.height} y2={top.y + ratio * top.height} className="stroke-border" strokeWidth="1" />
-          ))}
-          <line x1={left} x2={left} y1={top.y} y2={top.y + top.height} className="stroke-muted-foreground" strokeWidth="1" />
-          <line x1={left} x2={left + plotWidth} y1={top.y + top.height} y2={top.y + top.height} className="stroke-muted-foreground" strokeWidth="1" />
-          <path d={chartPath(rows.map((row) => row.income), 0, monthlyMax, left, top.y, plotWidth, top.height)} fill="none" className="stroke-primary" strokeWidth="3" />
-          <path d={chartPath(rows.map((row) => row.expenses), 0, monthlyMax, left, top.y, plotWidth, top.height)} fill="none" className="stroke-destructive" strokeWidth="3" strokeDasharray="8 5" />
-          {showRentIndex && <path d={chartPath(rows.map((row) => row.rentTotalWithRentIndex), 0, monthlyMax, left, top.y, plotWidth, top.height)} fill="none" className="stroke-accent-foreground" strokeWidth="2" strokeDasharray="3 4" />}
-          {eventRows.map((row) => {
-            const index = rows.indexOf(row);
-            const x = xAt(index);
-            return (
-              <g key={`event-${row.yyyymm}`}>
-                <line x1={x} x2={x} y1={top.y + 12} y2={top.y + top.height} className="stroke-destructive/40" strokeWidth="1" strokeDasharray="3 4" />
-                <circle cx={x} cy={yMonthly(row.expenses)} r="4" className="fill-destructive" stroke="var(--card)" strokeWidth="2">
-                  <title>{`Sanierungszahlung ${row.yyyymm}: ${formatCurrency(row.renovationPayment)}`}</title>
-                </circle>
-              </g>
-            );
-          })}
+function CalculatorChart({ rows, showRentIndex, viewport }: { rows: ChartRow[]; showRentIndex: boolean; viewport: TimelineViewport }) {
+  const [chartMode, setChartMode] = useState<'monthly' | 'cumulative'>('monthly');
+  const [hoveredEvent, setHoveredEvent] = useState<{ x: number; title: string; detail: string } | null>(null);
+  const width = 1000;
+  const left = 150;
+  const right = 25;
+  const top = 42;
+  const height = 278;
+  const plotWidth = width - left - right;
+  const visibleRows = rows.slice(viewport.start, viewport.start + viewport.span);
+  const monthlyAfterTax = visibleRows.map(chartExpenses);
+  const monthlyWithoutTax = visibleRows.map((row) => row.expenses);
+  const monthlyValues = visibleRows.flatMap((row) => [
+    row.income,
+    chartExpenses(row),
+    row.expenses,
+    ...(showRentIndex ? [row.rentTotalWithRentIndex] : []),
+  ]);
+  const monthlyMin = Math.min(0, ...monthlyValues);
+  const monthlyMaxValue = Math.max(1, ...monthlyValues);
+  const monthlyPadding = Math.max(1, (monthlyMaxValue - monthlyMin) * 0.08);
+  const monthlyDomain = { min: monthlyMin - (monthlyMin < 0 ? monthlyPadding : 0), max: monthlyMaxValue + monthlyPadding };
+  const cumulativeAfterTax = visibleRows.map((row) => row.afterTaxCumulative);
+  const cumulativeWithoutTax = visibleRows.map((row) => row.cumulativeCashflowBeforeTax);
+  const cumulativeValues = [...cumulativeAfterTax, ...cumulativeWithoutTax];
+  const cumulativeMin = Math.min(0, ...cumulativeValues);
+  const cumulativeMax = Math.max(0, ...cumulativeValues);
+  const cumulativePadding = Math.max(1, (cumulativeMax - cumulativeMin) * 0.08);
+  const cumulativeDomain = { min: cumulativeMin - cumulativePadding, max: cumulativeMax + cumulativePadding };
+  const domain = chartMode === 'monthly' ? monthlyDomain : cumulativeDomain;
+  const primaryValues = chartMode === 'monthly' ? monthlyAfterTax : cumulativeAfterTax;
+  const comparisonValues = chartMode === 'monthly' ? monthlyWithoutTax : cumulativeWithoutTax;
+  const xAt = (index: number) => left + (visibleRows.length <= 1 ? 0 : (index / (visibleRows.length - 1)) * plotWidth);
+  const yAt = (value: number) => top + height - ((value - domain.min) / (domain.max - domain.min || 1)) * height;
+  const breakEvenGlobalIndex = rows.findIndex((row) => row.afterTaxCumulative >= 0);
+  const breakEvenIndex = breakEvenGlobalIndex >= viewport.start && breakEvenGlobalIndex < viewport.start + viewport.span ? breakEvenGlobalIndex - viewport.start : -1;
+  const eventRows = visibleRows.filter((row) => row.renovationPayment > 0 || row.delta558 > 0 || row.delta559 > 0);
+  const zeroY = yAt(0);
 
-          <text x={left} y="285" className="fill-foreground text-sm font-medium">Kumulierter Cashflow nach Steuern</text>
-          <text x="2" y={bottom.y + 5} className="fill-muted-foreground text-xs">{formatAxisCurrency(afterTaxDomain.max)}</text>
-          <text x="8" y={zeroY + 4} className="fill-destructive text-xs">0 €</text>
-          <text x="2" y={bottom.y + bottom.height + 4} className="fill-muted-foreground text-xs">{formatAxisCurrency(afterTaxDomain.min)}</text>
-          {[afterTaxDomain.max, 0, afterTaxDomain.min].map((value) => (
-            <line key={`cash-grid-${value}`} x1={left} x2={left + plotWidth} y1={yAfterTax(value)} y2={yAfterTax(value)} className={value === 0 ? 'stroke-destructive' : 'stroke-border'} strokeWidth={value === 0 ? 1.5 : 1} strokeDasharray={value === 0 ? '5 4' : undefined} />
-          ))}
-          <line x1={left} x2={left} y1={bottom.y} y2={bottom.y + bottom.height} className="stroke-muted-foreground" strokeWidth="1" />
-          <path d={chartPath(afterTaxValues, afterTaxDomain.min, afterTaxDomain.max, left, bottom.y, plotWidth, bottom.height)} fill="none" className="stroke-accent-foreground" strokeWidth="3" />
-          {breakEvenIndex >= 0 && (
-            <g>
-              <line x1={xAt(breakEvenIndex)} x2={xAt(breakEvenIndex)} y1={bottom.y} y2={bottom.y + bottom.height} className="stroke-destructive" strokeWidth="1.5" strokeDasharray="5 4" />
-              <circle cx={xAt(breakEvenIndex)} cy={zeroY} r="5" className="fill-destructive" stroke="var(--card)" strokeWidth="2">
-                <title>{`Break-even nach Steuern: ${rows[breakEvenIndex].yyyymm}`}</title>
-              </circle>
-            </g>
-          )}
-          {axisIndexes.map((index) => (
-            <text key={`axis-${index}`} x={xAt(index)} y="525" textAnchor={index === 0 ? 'start' : index === rows.length - 1 ? 'end' : 'middle'} className="fill-muted-foreground text-xs">{rows[index].yyyymm}</text>
-          ))}
+  if (visibleRows.length === 0) return <p className="rounded-lg border border-border px-4 py-6 text-sm text-muted-foreground">Noch keine Zeitreihe verfügbar.</p>;
+
+  return (
+    <div>
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+        <div><div className="text-lg font-medium text-foreground">Cashflow-Entwicklung</div><div className="text-sm text-muted-foreground">{chartMode === 'monthly' ? 'Monatliche Einnahmen und Ausgaben mit Steuerwirkung' : 'Kumulierter Cashflow nach Steuern'}</div></div>
+        <div className="flex flex-wrap items-center justify-end gap-x-5 gap-y-2">
+          <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+            {chartMode === 'monthly' && <span className="inline-flex items-center gap-2"><span className="h-0.5 w-5 bg-[#2c9b7b]" />Einnahmen</span>}
+            <span className="inline-flex items-center gap-2"><span className="h-0.5 w-5 bg-[#d65b58]" />{chartMode === 'monthly' ? 'Ausgaben inkl. Steuern' : 'Cashflow nach Steuern'}</span>
+            <span className="inline-flex items-center gap-2"><span className="h-0.5 w-5 bg-[#d9a441]" />{chartMode === 'monthly' ? 'Ausgaben ohne Steuerwirkung' : 'Cashflow ohne Steuerwirkung'}</span>
+            {showRentIndex && chartMode === 'monthly' && <span className="inline-flex items-center gap-2"><span className="h-0.5 w-5 border-t-2 border-dotted border-[#8069bd]" />Mietspiegel</span>}
+          </div>
+          <div className="inline-flex rounded-md border border-border bg-muted p-1"><button className={`rounded px-3 py-1.5 text-sm ${chartMode === 'monthly' ? 'bg-card font-semibold text-foreground shadow-sm' : 'text-muted-foreground'}`} onClick={() => setChartMode('monthly')}>Monatlich</button><button className={`rounded px-3 py-1.5 text-sm ${chartMode === 'cumulative' ? 'bg-card font-semibold text-foreground shadow-sm' : 'text-muted-foreground'}`} onClick={() => setChartMode('cumulative')}>Kumuliert</button></div>
+        </div>
+      </div>
+      <div className="relative overflow-hidden bg-[#fbfcfe]">
+        <svg className="h-auto w-full" viewBox={`0 0 ${width} 342`} role="img" aria-labelledby="calculator-chart-title calculator-chart-description">
+          <title id="calculator-chart-title">Cashflow-Entwicklung über {CALCULATION_HORIZON_YEARS} Jahre</title>
+          <desc id="calculator-chart-description">Interaktive Darstellung der monatlichen oder kumulierten Einnahmen und Ausgaben.</desc>
+          <defs>
+            <linearGradient id="calculator-tax-band" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stopColor="#e2b85d" stopOpacity=".34" />
+              <stop offset="1" stopColor="#f3dca4" stopOpacity=".16" />
+            </linearGradient>
+          </defs>
+          <text x="20" y="24" className="fill-foreground text-sm font-medium">{chartMode === 'monthly' ? 'Betrag / Monat' : 'Kumulierter Cashflow'}</text>
+          {[0, .25, .5, .75, 1].map((ratio) => <line key={ratio} x1={left} x2={left + plotWidth} y1={top + ratio * height} y2={top + ratio * height} className="stroke-border" strokeWidth="1" />)}
+          <text x="20" y={top + 4} className="fill-muted-foreground text-xs">{formatAxisCurrency(domain.max)}</text><text x="20" y={top + height + 4} className="fill-muted-foreground text-xs">{formatAxisCurrency(domain.min)}</text>
+          {chartMode === 'cumulative' && <line x1={left} x2={left + plotWidth} y1={zeroY} y2={zeroY} stroke="#d99432" strokeWidth="1.5" strokeDasharray="5 4" />}
+          <line x1={left} x2={left} y1={top} y2={top + height} className="stroke-muted-foreground" strokeWidth="1" />
+          <path d={chartBandPath(primaryValues, comparisonValues, domain.min, domain.max, left, top, plotWidth, height)} fill="url(#calculator-tax-band)" />
+          {chartMode === 'monthly' && <path d={chartPath(visibleRows.map((row) => row.income), domain.min, domain.max, left, top, plotWidth, height)} fill="none" stroke="#2c9b7b" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />}
+          <path d={chartPath(comparisonValues, domain.min, domain.max, left, top, plotWidth, height)} fill="none" stroke="#d9a441" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+          <path d={chartPath(primaryValues, domain.min, domain.max, left, top, plotWidth, height)} fill="none" stroke="#d65b58" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+          {showRentIndex && chartMode === 'monthly' && <path d={chartPath(visibleRows.map((row) => row.rentTotalWithRentIndex), domain.min, domain.max, left, top, plotWidth, height)} fill="none" stroke="#8069bd" strokeWidth="2" strokeDasharray="3 4" />}
+          {eventRows.map((row) => { const index = visibleRows.indexOf(row); const x = xAt(index); const title = row.renovationPayment > 0 ? 'Sanierungszahlung' : row.delta559 > 0 ? 'Mieterhöhung aufgrund Sanierung' : 'Mieterhöhung aufgrund Mietspiegel'; const detail = row.renovationPayment > 0 ? `${row.yyyymm}: ${formatCurrency(row.renovationPayment)} Zahlung` : `${row.yyyymm}: +${formatCurrency(row.delta559 > 0 ? row.delta559 : row.delta558)} monatlich`; const isRent = row.renovationPayment === 0; const eventValue = isRent ? row.income : chartExpenses(row); return <g key={`event-${row.yyyymm}`} onMouseEnter={() => setHoveredEvent({ x: (x / width) * 100, title, detail })} onMouseLeave={() => setHoveredEvent(null)}><circle cx={x} cy={chartMode === 'monthly' ? yAt(eventValue) : yAt(row.afterTaxCumulative)} r="6" fill={isRent ? '#2c9b7b' : '#d65b58'} stroke="var(--card)" strokeWidth="2" /></g>; })}
+          {breakEvenIndex >= 0 && chartMode === 'cumulative' && <><line x1={xAt(breakEvenIndex)} x2={xAt(breakEvenIndex)} y1={top} y2={top + height} stroke="#d99432" strokeWidth="1.5" strokeDasharray="5 4" /><circle cx={xAt(breakEvenIndex)} cy={zeroY} r="6" fill="#d99432" stroke="var(--card)" strokeWidth="2" /></>}
         </svg>
+        {hoveredEvent && <div className="pointer-events-none absolute top-4 z-30 w-56 rounded-md bg-[#172434] px-3 py-2 text-xs text-white shadow-lg" style={{ left: `clamp(8px, ${hoveredEvent.x}%, calc(100% - 232px))` }}><strong className="block">{hoveredEvent.title}</strong><span className="text-[#cfdae7]">{hoveredEvent.detail}</span></div>}
       </div>
+    </div>
+  );
+}
 
-      <div className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-sm text-muted-foreground">
-        <span className="inline-flex items-center gap-2"><span className="h-0.5 w-6 bg-primary" />Mieteinnahmen</span>
-        <span className="inline-flex items-center gap-2"><span className="h-0.5 w-6 border-t-2 border-dashed border-destructive" />Ausgaben</span>
-        {showRentIndex && <span className="inline-flex items-center gap-2"><span className="h-0.5 w-6 border-t-2 border-dotted border-accent-foreground" />Mietspiegel-Szenario</span>}
-        <span className="inline-flex items-center gap-2"><span className="h-0.5 w-6 bg-accent-foreground" />Cashflow nach Steuern</span>
-        {eventRows.length > 0 && <span className="inline-flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-destructive" />Sanierungszahlung</span>}
-      </div>
+function TimelineEventConnectors({ rows, viewport }: { rows: ChartRow[]; viewport: TimelineViewport }) {
+  const visibleRows = rows.slice(viewport.start, viewport.start + viewport.span);
+  if (visibleRows.length === 0) return null;
+  const events = visibleRows
+    .map((row, index) => ({ row, index }))
+    .filter(({ row }) => row.renovationPayment > 0 || row.delta558 > 0 || row.delta559 > 0);
+  const breakEvenIndex = visibleRows.findIndex((row) => row.afterTaxCumulative >= 0);
+  const leftForIndex = (index: number) => 15 + (index / Math.max(1, visibleRows.length - 1)) * 85;
+
+  return (
+    <div className="pointer-events-none absolute inset-x-0 bottom-20 top-36 z-10 overflow-hidden" aria-hidden="true">
+      {events.map(({ row, index }) => (
+        <div
+          key={`connector-${row.yyyymm}-${row.renovationPayment}-${row.delta558}-${row.delta559}`}
+          className="absolute inset-y-0 border-l border-dashed opacity-55"
+          style={{
+            left: `${leftForIndex(index)}%`,
+            borderColor: row.renovationPayment > 0 ? '#d65b58' : '#2c9b7b',
+          }}
+        />
+      ))}
+      {breakEvenIndex >= 0 && (
+        <div
+          className="absolute inset-y-0 border-l-2 opacity-60"
+          style={{ left: `${leftForIndex(breakEvenIndex)}%`, borderColor: '#d99432' }}
+        />
+      )}
     </div>
   );
 }
@@ -236,6 +387,505 @@ function TableToggle({ label, open, onClick }: { label: string; open: boolean; o
       aria-expanded={open}
       onClick={onClick}
     />
+  );
+}
+
+type CalculatorOverrides = {
+  modernizationPlacements: Record<string, string>;
+  modernizationCostOverrides: Record<string, number>;
+  renovationTimingOverrides: Record<string, RenovationTiming>;
+  rentIncreaseOverrides: Record<string, { effectiveYyyymm?: string; monthlyDelta?: number }>;
+  financingInterestRateOverride: number | null;
+  interestRateOverride: number | null;
+  equityIncluded: boolean;
+  taxRate?: number;
+  taxableLossesOffsettable?: boolean;
+};
+
+function monthOffset(start: string, value: string): number {
+  const [sy, sm] = start.split('-').map(Number);
+  const [vy, vm] = value.split('-').map(Number);
+  return (vy - sy) * 12 + (vm - sm);
+}
+
+function monthFromOffset(start: string, offset: number): string {
+  return addMonths(start, Math.max(0, Math.min(CALCULATION_HORIZON_MONTHS - 1, Math.round(offset))));
+}
+
+type PlanDragState = {
+  id: string;
+  kind: 'modernization' | 'rent' | 'finance' | 'tax';
+  initialLeft: number;
+  currentLeft: number;
+  grabOffset: number;
+  startY: number;
+  currentAmount: number;
+  minAmount: number;
+  maxAmount: number;
+  step: number;
+  dateEditable: boolean;
+};
+
+function snapTaxPercent(previous: number, requested: number): number {
+  if (previous === 45 && requested < 45) return 42;
+  if (previous <= 42 && requested > 42) return 45;
+  return Math.max(0, Math.min(42, requested));
+}
+
+function PlanEditor({
+  data,
+  startYyyymm,
+  equityIncluded,
+  viewport,
+  isSaving,
+  onViewportChange,
+  onChange,
+  onApply,
+}: {
+  data: CalculatorResponse;
+  startYyyymm: string;
+  equityIncluded: boolean;
+  viewport: TimelineViewport;
+  isSaving: boolean;
+  onViewportChange: (next: TimelineViewport) => void;
+  onChange: (overrides: CalculatorOverrides) => Promise<void>;
+  onApply: (overrides: CalculatorOverrides) => Promise<void>;
+}) {
+  const [dragging, setDragging] = useState<PlanDragState | null>(null);
+  const draggingRef = useRef<PlanDragState | null>(null);
+  const [draftFinancingRate, setDraftFinancingRate] = useState(data.params.interestRate);
+  const [draftRefinancingRate, setDraftRefinancingRate] = useState(data.params.refinancingInterestRate ?? data.params.interestRate);
+  const [draftEquity, setDraftEquity] = useState(equityIncluded);
+  const [draftTaxRate, setDraftTaxRate] = useState(data.params.taxRate * 100);
+  const [draftLossesOffsettable, setDraftLossesOffsettable] = useState(data.params.taxableLossesOffsettable === true);
+  const [draftTimingOverrides, setDraftTimingOverrides] = useState<Record<string, RenovationTiming>>(data.params.renovationTimingOverrides ?? {});
+  const [immediateMoveWarning, setImmediateMoveWarning] = useState<RenovationCase | null>(null);
+  const [showApply, setShowApply] = useState(false);
+  const [message, setMessage] = useState('');
+  const initialValuesRef = useRef({
+    financingRate: data.params.interestRate,
+    refinancingRate: data.params.refinancingInterestRate ?? data.params.interestRate,
+    equityIncluded,
+    taxRate: data.params.taxRate * 100,
+    taxableLossesOffsettable: data.params.taxableLossesOffsettable === true,
+  });
+
+  useEffect(() => setDraftFinancingRate(data.params.interestRate), [data.params.interestRate]);
+  useEffect(() => setDraftRefinancingRate(data.params.refinancingInterestRate ?? data.params.interestRate), [data.params.interestRate, data.params.refinancingInterestRate]);
+  useEffect(() => setDraftEquity(equityIncluded), [equityIncluded]);
+  useEffect(() => setDraftTaxRate(data.params.taxRate * 100), [data.params.taxRate]);
+  useEffect(() => setDraftLossesOffsettable(data.params.taxableLossesOffsettable === true), [data.params.taxableLossesOffsettable]);
+  useEffect(() => setDraftTimingOverrides(data.params.renovationTimingOverrides ?? {}), [data.params.renovationTimingOverrides]);
+
+  const planPlacement = (item: ModernizationPlanRow) => data.params.modernizationPlacements?.[item.id] ?? item.effectiveYyyymm;
+
+  const submit = async (next: CalculatorOverrides) => {
+    setMessage('Berechnung wird aktualisiert...');
+    try {
+      await onChange(next);
+      setMessage('Chart, Folgeereignisse und Break-even wurden aktualisiert.');
+    } catch {
+      setMessage('Die Änderung konnte nicht übernommen werden. Der Zeitpunkt bleibt unverändert.');
+    }
+  };
+
+  const handlePointerMove = (event: PointerEvent<HTMLDivElement>) => {
+    const activeDrag = draggingRef.current;
+    if (!activeDrag) return;
+    const element = event.currentTarget as HTMLDivElement;
+    const track = element.dataset.ganttTrack === 'true' ? element : element.parentElement;
+    if (!track) return;
+    const rect = track.getBoundingClientRect();
+    const pointerLeft = ((event.clientX - rect.left) / rect.width) * 100;
+    const nextLeft = activeDrag.dateEditable
+      ? Math.max(0, Math.min(98, pointerLeft - activeDrag.grabOffset))
+      : activeDrag.currentLeft;
+    const renovationCase = activeDrag.kind === 'modernization'
+      ? data.renovationCases.find((item) => item.id === activeDrag.id)
+      : undefined;
+    const timing = renovationCase ? (draftTimingOverrides[renovationCase.id] ?? renovationCase.zeitpunkt) : null;
+    if (renovationCase && timing === 'SOFORT' && Math.abs(nextLeft - activeDrag.initialLeft) >= 0.5) {
+      draggingRef.current = null;
+      setDragging(null);
+      setImmediateMoveWarning(renovationCase);
+      return;
+    }
+    const verticalSteps = Math.round((activeDrag.startY - event.clientY) / 8);
+    const requestedAmount = Math.round((activeDrag.currentAmount + verticalSteps * activeDrag.step) * 100) / 100;
+    const nextAmount = activeDrag.kind === 'tax'
+      ? snapTaxPercent(activeDrag.currentAmount, requestedAmount)
+      : Math.max(activeDrag.minAmount, Math.min(activeDrag.maxAmount, requestedAmount));
+    const nextDrag = {
+      ...activeDrag,
+      currentLeft: nextLeft,
+      currentAmount: nextAmount,
+      startY: event.clientY,
+    };
+    draggingRef.current = nextDrag;
+    setDragging(nextDrag);
+    window.addEventListener('pointerup', () => { void finishDrag(); }, { once: true });
+    window.addEventListener('pointercancel', () => {
+      draggingRef.current = null;
+      setDragging(null);
+    }, { once: true });
+  };
+
+  const finishDrag = async () => {
+    const completedDrag = draggingRef.current;
+    if (!completedDrag) return;
+    const placements = { ...(data.params.modernizationPlacements ?? {}) };
+    const rentOverrides = { ...(data.params.rentIncreaseOverrides ?? {}) };
+    const modernizationCostOverrides = { ...(data.params.modernizationCostOverrides ?? {}) };
+
+    if (completedDrag.dateEditable) {
+      const offset = Math.round(viewport.start + (completedDrag.currentLeft / 100) * viewport.span);
+      if (offset < 3) {
+        draggingRef.current = null;
+        setDragging(null);
+        setMessage('Zeitpunkt nicht übernommen: Eine Erhöhung oder Modernisierung kann frühestens ab dem 3. Monat wirksam werden.');
+        return;
+      }
+      const date = monthFromOffset(startYyyymm, offset);
+      if (completedDrag.kind === 'modernization') placements[completedDrag.id] = date;
+      if (completedDrag.kind === 'rent') rentOverrides[completedDrag.id] = { ...rentOverrides[completedDrag.id], effectiveYyyymm: date };
+    }
+
+    if (completedDrag.kind === 'modernization') modernizationCostOverrides[completedDrag.id] = completedDrag.currentAmount;
+    if (completedDrag.kind === 'rent') rentOverrides[completedDrag.id] = { ...rentOverrides[completedDrag.id], monthlyDelta: completedDrag.currentAmount };
+    if (completedDrag.id === 'financing-rate') setDraftFinancingRate(completedDrag.currentAmount);
+    if (completedDrag.id === 'refinancing-rate') setDraftRefinancingRate(completedDrag.currentAmount);
+    if (completedDrag.id === 'tax-rate') setDraftTaxRate(completedDrag.currentAmount);
+
+    draggingRef.current = null;
+    setDragging(null);
+    await submit({
+      modernizationPlacements: placements,
+      modernizationCostOverrides,
+      renovationTimingOverrides: draftTimingOverrides,
+      rentIncreaseOverrides: rentOverrides,
+      financingInterestRateOverride: completedDrag.id === 'financing-rate' ? completedDrag.currentAmount : draftFinancingRate,
+      interestRateOverride: completedDrag.id === 'refinancing-rate' ? completedDrag.currentAmount : draftRefinancingRate,
+      equityIncluded: draftEquity,
+      taxRate: (completedDrag.id === 'tax-rate' ? completedDrag.currentAmount : draftTaxRate) / 100,
+      taxableLossesOffsettable: draftLossesOffsettable,
+    });
+  };
+
+  const beginDrag = (
+    event: PointerEvent<HTMLDivElement>,
+    id: string,
+    kind: 'modernization' | 'rent' | 'finance' | 'tax',
+    baseLeft: number,
+    amount: number,
+    maxAmount: number,
+    dateEditable: boolean,
+  ) => {
+    event.preventDefault();
+    const track = event.currentTarget.parentElement;
+    const rect = track?.getBoundingClientRect();
+    const pointerLeft = rect ? ((event.clientX - rect.left) / rect.width) * 100 : baseLeft;
+    event.currentTarget.setPointerCapture(event.pointerId);
+    const nextDrag: PlanDragState = {
+      id,
+      kind,
+      initialLeft: baseLeft,
+      currentLeft: baseLeft,
+      grabOffset: pointerLeft - baseLeft,
+      startY: event.clientY,
+      currentAmount: amount,
+      minAmount: 0,
+      maxAmount,
+      step: kind === 'modernization' ? 250 : kind === 'rent' || kind === 'tax' ? 1 : 0.1,
+      dateEditable,
+    };
+    draggingRef.current = nextDrag;
+    setDragging(nextDrag);
+  };
+
+  const renderBar = (id: string, kind: 'modernization' | 'rent', label: string, date: string, amount: number, maxAmount: number, editable = true, layer = 0) => {
+    const offset = monthOffset(startYyyymm, date);
+    if (offset < viewport.start - 18 || offset > viewport.start + viewport.span) return null;
+    const baseLeft = Math.max(0, Math.min(96, ((offset - viewport.start) / viewport.span) * 100));
+    const left = dragging?.id === id ? dragging.currentLeft : baseLeft;
+    const displayedAmount = dragging?.id === id ? dragging.currentAmount : amount;
+    const reason = kind === 'modernization'
+      ? `Sanierung ${label}: Zahlung und spätere §559-Mietanpassung werden neu berechnet.`
+      : label.startsWith('§558')
+        ? `Mieterhöhung nach §558 aufgrund Mietspiegel und Kappungsgrenze.`
+        : `Mieterhöhung aufgrund der Sanierung ${label}. Wirksamkeit folgt der gesetzlichen Frist.`;
+    return (
+      <div
+        key={`${kind}-${id}`}
+        className={`absolute top-2 flex h-8 min-w-[94px] touch-none cursor-grab items-center gap-1 rounded-md border-2 px-2 text-[11px] font-semibold text-white shadow-sm active:cursor-grabbing ${kind === 'rent' ? 'border-[#9fd7c5] bg-[#2c9b7b]' : 'border-[#efb1ae] bg-[#d65b58]'} ${dragging?.id === id ? 'ring-2 ring-[#d99432] ring-offset-2' : ''}`}
+        style={{ left: `${left}%`, width: '15%', zIndex: 20 + layer }}
+        onPointerDown={editable ? (event) => beginDrag(event, id, kind, baseLeft, amount, maxAmount, true) : undefined}
+        onPointerMove={editable ? handlePointerMove : undefined}
+        onPointerUp={editable ? (event) => { event.stopPropagation(); void finishDrag(); } : undefined}
+        onPointerCancel={editable ? () => { draggingRef.current = null; setDragging(null); } : undefined}
+        title={`${reason} Wirksam ab ${date}. Nach oben oder unten ziehen, um den Wert zu ändern.`}
+      >
+        <span className="truncate">{label}</span>
+        <span className="ml-auto whitespace-nowrap">{formatCurrency(displayedAmount)}</span>
+      </div>
+    );
+  };
+
+  const fixedInterestMonths = (data.params.interestPeriodYears ?? 10) * 12;
+  const fixedInterestLeft = Math.max(0, ((0 - viewport.start) / viewport.span) * 100);
+  const fixedInterestWidth = Math.max(0, Math.min(100, ((fixedInterestMonths - viewport.start) / viewport.span) * 100));
+  const refinancingLeft = Math.max(0, ((fixedInterestMonths - viewport.start) / viewport.span) * 100);
+  const refinancingWidth = Math.max(0, Math.min(100, ((CALCULATION_HORIZON_MONTHS - Math.max(viewport.start, fixedInterestMonths)) / viewport.span) * 100));
+  const displayedFinancingRate = dragging?.id === 'financing-rate' ? dragging.currentAmount : draftFinancingRate;
+  const displayedRefinancingRate = dragging?.id === 'refinancing-rate' ? dragging.currentAmount : draftRefinancingRate;
+  const displayedTaxRate = dragging?.id === 'tax-rate' ? dragging.currentAmount : draftTaxRate;
+  const earliest559Offset = data.params.last559Date
+    ? Math.max(3, monthOffset(startYyyymm, data.params.last559Date) + 72)
+    : 3;
+  const baselineDateForCase = (item: RenovationCase) => {
+    if (item.calculator_effective_yyyymm) return item.calculator_effective_yyyymm;
+    const index = data.renovationCases.findIndex((candidate) => candidate.id === item.id);
+    const offset = item.zeitpunkt === 'SOFORT' ? 3 : 6 + Math.max(0, index) * 3;
+    return addMonths(startYyyymm, Math.max(earliest559Offset, offset));
+  };
+  const renovationChanges = data.modernizationPlan.flatMap((planItem) => {
+    const source = data.renovationCases.find((item) => item.id === planItem.id);
+    if (!source) return [];
+    const originalDate = baselineDateForCase(source);
+    const currentDate = planPlacement(planItem);
+    const originalCost = costForCase(source);
+    const currentCost = data.params.modernizationCostOverrides?.[planItem.id] ?? planItem.allocableCosts;
+    const currentTiming = draftTimingOverrides[planItem.id] ?? source.zeitpunkt;
+    if (originalDate === currentDate && originalCost === currentCost && source.zeitpunkt === currentTiming) return [];
+    return [{ planItem, source, originalDate, currentDate, originalCost, currentCost, currentTiming }];
+  });
+  const rentChanges = Object.entries(data.params.rentIncreaseOverrides ?? {});
+  const effectiveModernizationPlacements = Object.fromEntries(
+    data.modernizationPlan.map((item) => [item.id, planPlacement(item)]),
+  );
+  const financingChanged = Math.abs(draftFinancingRate - initialValuesRef.current.financingRate) > 0.001;
+  const refinancingChanged = Math.abs(draftRefinancingRate - initialValuesRef.current.refinancingRate) > 0.001;
+  const equityChanged = draftEquity !== initialValuesRef.current.equityIncluded;
+  const taxRateChanged = Math.abs(draftTaxRate - initialValuesRef.current.taxRate) > 0.001;
+  const lossesOffsettableChanged = draftLossesOffsettable !== initialValuesRef.current.taxableLossesOffsettable;
+  const changeCount = renovationChanges.length
+    + rentChanges.length
+    + Number(financingChanged)
+    + Number(refinancingChanged)
+    + Number(equityChanged)
+    + Number(taxRateChanged)
+    + Number(lossesOffsettableChanged);
+
+  return (
+    <div className="relative border-t border-border pt-5">
+      <div className="mb-4"><h2 className="text-lg font-medium text-foreground">Interaktive Planung</h2></div>
+      <div className="overflow-hidden">
+        <div className="w-full min-w-0">
+          <div className="grid grid-cols-[15%_85%] border-t border-border"><div className="py-4 pr-3 font-medium">Sanierungen</div><div data-gantt-track="true" className="relative h-14 bg-[repeating-linear-gradient(90deg,transparent,transparent_calc(20%-1px),theme(colors.border)_calc(20%-1px),theme(colors.border)_20%)]" onPointerMove={handlePointerMove} onPointerUp={() => void finishDrag()}>{viewport.start === 0 && <div className="absolute inset-y-0 left-0 w-[2.5%] bg-[repeating-linear-gradient(135deg,rgba(100,116,139,.12),rgba(100,116,139,.12)_5px,transparent_5px,transparent_10px)]" title="Vor dem Startmonat gesperrt" />}{data.modernizationPlan.map((item, index) => { const amount = data.params.modernizationCostOverrides?.[item.id] ?? item.allocableCosts; return renderBar(item.id, 'modernization', item.title, planPlacement(item), amount, Math.max(1000, amount * 3, item.allocableCosts * 3), true, index); })}</div></div>
+          <div className="grid grid-cols-[15%_85%] border-t border-border"><div className="py-4 pr-3 font-medium">§559 Wirksamkeit</div><div data-gantt-track="true" className="relative h-14 bg-[repeating-linear-gradient(90deg,transparent,transparent_calc(20%-1px),theme(colors.border)_calc(20%-1px),theme(colors.border)_20%)]" onPointerMove={handlePointerMove} onPointerUp={() => void finishDrag()}>{data.modernizationPlan.map((item, index) => renderBar(`${item.id}-559`, 'rent', item.title, planPlacement(item), item.monthlyDelta, item.monthlyDelta, false, index))}</div></div>
+          <div className="grid grid-cols-[15%_85%] border-t border-border"><div className="py-4 pr-3 font-medium">§558 Mieterhöhungen</div><div data-gantt-track="true" className="relative h-14 bg-[repeating-linear-gradient(90deg,transparent,transparent_calc(20%-1px),theme(colors.border)_calc(20%-1px),theme(colors.border)_20%)]" onPointerMove={handlePointerMove} onPointerUp={() => void finishDrag()}>{data.increases558.map((item, index) => renderBar(item.id ?? `558-${index + 1}`, 'rent', '§558 · Mietspiegel', item.effectiveYyyymm, item.monthlyDelta, item.monthlyDelta, true, index))}</div></div>
+          <div className="grid grid-cols-[15%_85%] border-t border-border"><div className="py-4 pr-3 font-medium">Finanzierung</div><div data-gantt-track="true" className="relative h-14 bg-[repeating-linear-gradient(90deg,transparent,transparent_calc(20%-1px),theme(colors.border)_calc(20%-1px),theme(colors.border)_20%)]" onPointerMove={handlePointerMove} onPointerUp={() => void finishDrag()}><div className={`absolute top-2 z-10 h-8 touch-none cursor-ns-resize overflow-hidden rounded-md border-2 border-[#9bbbd3] bg-[#245b88] px-2 py-2 text-[11px] font-semibold text-white shadow-sm ${dragging?.id === 'financing-rate' ? 'ring-2 ring-[#d99432] ring-offset-2' : ''}`} style={{ left: `${fixedInterestLeft}%`, width: `${fixedInterestWidth}%` }} onPointerDown={(event) => beginDrag(event, 'financing-rate', 'finance', fixedInterestLeft, draftFinancingRate, 25, false)} onPointerMove={handlePointerMove} onPointerUp={(event) => { event.stopPropagation(); void finishDrag(); }} onPointerCancel={() => { draggingRef.current = null; setDragging(null); }} title="Finanzierungszins: Nach oben ziehen zum Erhöhen, nach unten zum Senken.">Zinsbindung {numberFormatter.format(displayedFinancingRate)} %</div>{refinancingWidth > 0 && refinancingLeft < 100 && <div className={`absolute top-2 z-20 h-8 touch-none cursor-ns-resize overflow-hidden rounded-md border-2 border-[#c2b8df] bg-[#8069bd] px-2 py-2 text-[11px] font-semibold text-white shadow-sm ${dragging?.id === 'refinancing-rate' ? 'ring-2 ring-[#d99432] ring-offset-2' : ''}`} style={{ left: `${refinancingLeft}%`, width: `${refinancingWidth}%` }} onPointerDown={(event) => beginDrag(event, 'refinancing-rate', 'finance', refinancingLeft, draftRefinancingRate, 25, false)} onPointerMove={handlePointerMove} onPointerUp={(event) => { event.stopPropagation(); void finishDrag(); }} onPointerCancel={() => { draggingRef.current = null; setDragging(null); }} title="Anschlussfinanzierung: Nach oben ziehen zum Erhöhen, nach unten zum Senken.">Anschlussfinanzierung {numberFormatter.format(displayedRefinancingRate)} %</div>}</div></div>
+          <div className="grid grid-cols-[15%_85%] border-t border-border">
+            <div className="py-4 pr-3 font-medium">Steuern</div>
+            <div data-gantt-track="true" className="relative h-14 bg-[repeating-linear-gradient(90deg,transparent,transparent_calc(20%-1px),theme(colors.border)_calc(20%-1px),theme(colors.border)_20%)]" onPointerMove={handlePointerMove} onPointerUp={() => void finishDrag()}>
+              <div
+                className={`absolute inset-x-0 top-2 z-20 flex h-8 touch-none cursor-ns-resize items-center rounded-md border-2 border-[#f2d799] bg-[#d9a441] px-3 text-[11px] font-semibold text-[#34260b] shadow-sm ${dragging?.id === 'tax-rate' ? 'ring-2 ring-[#d65b58] ring-offset-2' : ''}`}
+                onPointerDown={(event) => beginDrag(event, 'tax-rate', 'tax', 0, draftTaxRate, 45, false)}
+                onPointerMove={handlePointerMove}
+                onPointerUp={(event) => { event.stopPropagation(); void finishDrag(); }}
+                onPointerCancel={() => { draggingRef.current = null; setDragging(null); }}
+                role="slider"
+                tabIndex={0}
+                aria-label="Grenzsteuersatz"
+                aria-valuemin={0}
+                aria-valuemax={45}
+                aria-valuenow={displayedTaxRate}
+                onKeyDown={(event) => {
+                  if (!['ArrowUp', 'ArrowRight', 'ArrowDown', 'ArrowLeft', 'Home', 'End'].includes(event.key)) return;
+                  event.preventDefault();
+                  const requested = event.key === 'Home'
+                    ? 0
+                    : event.key === 'End'
+                      ? 45
+                      : draftTaxRate + (event.key === 'ArrowUp' || event.key === 'ArrowRight' ? 1 : -1);
+                  const nextRate = event.key === 'Home' || event.key === 'End'
+                    ? requested
+                    : snapTaxPercent(draftTaxRate, requested);
+                  setDraftTaxRate(nextRate);
+                  void submit({
+                    modernizationPlacements: data.params.modernizationPlacements ?? {},
+                    modernizationCostOverrides: data.params.modernizationCostOverrides ?? {},
+                    renovationTimingOverrides: draftTimingOverrides,
+                    rentIncreaseOverrides: data.params.rentIncreaseOverrides ?? {},
+                    financingInterestRateOverride: draftFinancingRate,
+                    interestRateOverride: draftRefinancingRate,
+                    equityIncluded: draftEquity,
+                    taxRate: nextRate / 100,
+                    taxableLossesOffsettable: draftLossesOffsettable,
+                  });
+                }}
+                title="Grenzsteuersatz für die gesamte Laufzeit. Nach oben ziehen zum Erhöhen, nach unten zum Senken. Zulässig sind 0 bis 42 Prozent sowie 45 Prozent."
+              >
+                Grenzsteuersatz {numberFormatter.format(displayedTaxRate)} %
+              </div>
+            </div>
+          </div>
+          <div className="grid grid-cols-[15%_85%] border-t border-border">
+            <div />
+            <div className="flex min-h-12 flex-wrap items-center justify-between gap-3 py-2">
+              <div className="flex items-center gap-3 text-sm text-foreground">
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={draftLossesOffsettable}
+                  aria-label="Steuerliche Verluste verrechenbar"
+                  className={`relative h-6 w-11 rounded-full transition-colors ${draftLossesOffsettable ? 'bg-[#d9a441]' : 'bg-muted-foreground/35'}`}
+                  onClick={() => {
+                    const nextValue = !draftLossesOffsettable;
+                    setDraftLossesOffsettable(nextValue);
+                    void submit({
+                      modernizationPlacements: data.params.modernizationPlacements ?? {},
+                      modernizationCostOverrides: data.params.modernizationCostOverrides ?? {},
+                      renovationTimingOverrides: draftTimingOverrides,
+                      rentIncreaseOverrides: data.params.rentIncreaseOverrides ?? {},
+                      financingInterestRateOverride: draftFinancingRate,
+                      interestRateOverride: draftRefinancingRate,
+                      equityIncluded: draftEquity,
+                      taxRate: draftTaxRate / 100,
+                      taxableLossesOffsettable: nextValue,
+                    });
+                  }}
+                >
+                  <span className={`absolute top-1 h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${draftLossesOffsettable ? 'translate-x-6' : 'translate-x-1'}`} />
+                </button>
+                <span>Steuerliche Verluste verrechenbar: {draftLossesOffsettable ? 'An' : 'Aus'}</span>
+              </div>
+              <label className="flex items-center gap-2 text-sm text-foreground"><input type="checkbox" checked={draftEquity} onChange={(event) => { setDraftEquity(event.target.checked); void submit({ modernizationPlacements: data.params.modernizationPlacements ?? {}, modernizationCostOverrides: data.params.modernizationCostOverrides ?? {}, renovationTimingOverrides: draftTimingOverrides, rentIncreaseOverrides: data.params.rentIncreaseOverrides ?? {}, financingInterestRateOverride: draftFinancingRate, interestRateOverride: draftRefinancingRate, equityIncluded: event.target.checked, taxRate: draftTaxRate / 100, taxableLossesOffsettable: draftLossesOffsettable }); }} /> Eigenkapital berücksichtigen</label>
+            </div>
+          </div>
+          <div className="grid grid-cols-[15%_repeat(6,minmax(0,1fr))] text-xs text-muted-foreground"><div />{[0, .2, .4, .6, .8, 1].map((ratio) => { const offset = Math.min(CALCULATION_HORIZON_MONTHS - 1, Math.round(viewport.start + viewport.span * ratio)); return <div key={ratio} className="border-l border-border px-2 py-2 text-center">{addMonths(startYyyymm, offset)}</div>; })}</div>
+          <TimelineRangeBar startYyyymm={startYyyymm} viewport={viewport} onChange={onViewportChange} />
+        </div>
+      </div>
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-3"><span className="text-sm text-muted-foreground">{message || 'Noch keine Änderung vorgemerkt.'}</span><button className="rounded-md bg-primary px-4 py-2 font-medium text-primary-foreground" onClick={() => setShowApply(true)} disabled={isSaving}>Änderungen prüfen und übernehmen</button></div>
+      {immediateMoveWarning && (
+        <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4" role="dialog" aria-modal="true" aria-labelledby="immediate-warning-title">
+          <div className="w-full max-w-md rounded-lg border border-border bg-card p-6 shadow-xl">
+            <h2 id="immediate-warning-title" className="text-lg font-medium">Sofort-Sanierung verschieben?</h2>
+            <p className="mt-2 text-sm text-muted-foreground">
+              „{immediateMoveWarning.massnahme}“ ist im Sanierungsreiter als „Sofort“ festgelegt. Zum Verschieben muss die Planung auf „Flexibel“ geändert werden.
+            </p>
+            <div className="mt-6 flex justify-end gap-2">
+              <button className="rounded-md border border-border px-3 py-2" onClick={() => setImmediateMoveWarning(null)}>Nicht verschieben</button>
+              <button
+                className="rounded-md bg-primary px-3 py-2 font-medium text-primary-foreground"
+                onClick={async () => {
+                  const nextTiming = { ...draftTimingOverrides, [immediateMoveWarning.id]: 'FLEXIBEL' as const };
+                  const currentPlan = data.modernizationPlan.find((item) => item.id === immediateMoveWarning.id);
+                  const nextPlacements = {
+                    ...(data.params.modernizationPlacements ?? {}),
+                    ...(currentPlan ? { [immediateMoveWarning.id]: planPlacement(currentPlan) } : {}),
+                  };
+                  setDraftTimingOverrides(nextTiming);
+                  setImmediateMoveWarning(null);
+                  await submit({
+                    modernizationPlacements: nextPlacements,
+                    modernizationCostOverrides: data.params.modernizationCostOverrides ?? {},
+                    renovationTimingOverrides: nextTiming,
+                    rentIncreaseOverrides: data.params.rentIncreaseOverrides ?? {},
+                    financingInterestRateOverride: draftFinancingRate,
+                    interestRateOverride: draftRefinancingRate,
+                    equityIncluded: draftEquity,
+                    taxRate: draftTaxRate / 100,
+                    taxableLossesOffsettable: draftLossesOffsettable,
+                  });
+                  setMessage('Sanierung auf „Flexibel“ umgestellt. Sie kann jetzt verschoben werden.');
+                }}
+              >
+                Auf Flexibel umstellen
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {showApply && (
+        <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4" role="dialog" aria-modal="true">
+          <div className="flex max-h-[85vh] w-full max-w-2xl flex-col rounded-lg border border-border bg-card p-6 shadow-xl">
+            <h2 className="text-lg font-medium">Änderungen übernehmen?</h2>
+            <p className="mt-1 text-sm text-muted-foreground">{changeCount} Änderung{changeCount === 1 ? '' : 'en'} {changeCount === 1 ? 'wird' : 'werden'} in die Detailseiten geschrieben.</p>
+            <div className="my-5 space-y-3 overflow-y-auto pr-1 text-sm">
+              {changeCount === 0 && <div className="rounded-md border border-border p-4 text-muted-foreground">Es wurden keine Werte verändert.</div>}
+              {renovationChanges.length > 0 && (
+                <details className="rounded-md border border-border" open>
+                  <summary className="cursor-pointer px-4 py-3 font-medium">Sanierungen ({renovationChanges.length})</summary>
+                  <div className="divide-y divide-border border-t border-border">
+                    {renovationChanges.map((change) => (
+                      <div key={change.planItem.id} className="space-y-2 px-4 py-3">
+                        <div className="font-medium">{change.planItem.title}</div>
+                        {change.originalDate !== change.currentDate && <div className="flex justify-between gap-4"><span>Wirksamkeit: {change.originalDate}</span><strong className="rounded bg-red-50 px-2 py-0.5 text-red-700">{change.currentDate}</strong></div>}
+                        {change.originalCost !== change.currentCost && <div className="flex justify-between gap-4"><span>Betrag: {formatCurrency(change.originalCost)}</span><strong className="rounded bg-red-50 px-2 py-0.5 text-red-700">{formatCurrency(change.currentCost)}</strong></div>}
+                        {change.source.zeitpunkt !== change.currentTiming && <div className="flex justify-between gap-4"><span>Planung: {change.source.zeitpunkt === 'SOFORT' ? 'Sofort' : 'Flexibel'}</span><strong className="rounded bg-red-50 px-2 py-0.5 text-red-700">{change.currentTiming === 'SOFORT' ? 'Sofort' : 'Flexibel'}</strong></div>}
+                      </div>
+                    ))}
+                  </div>
+                </details>
+              )}
+              {rentChanges.length > 0 && (
+                <details className="rounded-md border border-border">
+                  <summary className="cursor-pointer px-4 py-3 font-medium">§558-Mieterhöhungen ({rentChanges.length})</summary>
+                  <div className="divide-y divide-border border-t border-border">
+                    {rentChanges.map(([id, change]) => <div key={id} className="flex flex-wrap justify-between gap-3 px-4 py-3"><span>{id}</span><span className="space-x-2">{change.effectiveYyyymm && <strong className="rounded bg-red-50 px-2 py-0.5 text-red-700">{change.effectiveYyyymm}</strong>}{change.monthlyDelta != null && <strong className="rounded bg-red-50 px-2 py-0.5 text-red-700">+{formatCurrency(change.monthlyDelta)} / Monat</strong>}</span></div>)}
+                  </div>
+                </details>
+              )}
+              {(financingChanged || refinancingChanged || equityChanged) && (
+                <details className="rounded-md border border-border" open>
+                  <summary className="cursor-pointer px-4 py-3 font-medium">Finanzierung</summary>
+                  <div className="space-y-2 border-t border-border px-4 py-3">
+                    {financingChanged && <div className="flex justify-between gap-4"><span>Zins: {numberFormatter.format(initialValuesRef.current.financingRate)} %</span><strong className="rounded bg-red-50 px-2 py-0.5 text-red-700">{numberFormatter.format(draftFinancingRate)} %</strong></div>}
+                    {refinancingChanged && <div className="flex justify-between gap-4"><span>Anschlusszins: {numberFormatter.format(initialValuesRef.current.refinancingRate)} %</span><strong className="rounded bg-red-50 px-2 py-0.5 text-red-700">{numberFormatter.format(draftRefinancingRate)} %</strong></div>}
+                    {equityChanged && <div className="flex justify-between gap-4"><span>Eigenkapital: {initialValuesRef.current.equityIncluded ? 'berücksichtigt' : 'nicht berücksichtigt'}</span><strong className="rounded bg-red-50 px-2 py-0.5 text-red-700">{draftEquity ? 'berücksichtigt' : 'nicht berücksichtigt'}</strong></div>}
+                  </div>
+                </details>
+              )}
+              {(taxRateChanged || lossesOffsettableChanged) && (
+                <details className="rounded-md border border-border" open>
+                  <summary className="cursor-pointer px-4 py-3 font-medium">Steuern</summary>
+                  <div className="space-y-2 border-t border-border px-4 py-3">
+                    {taxRateChanged && <div className="flex justify-between gap-4"><span>Grenzsteuersatz: {numberFormatter.format(initialValuesRef.current.taxRate)} %</span><strong className="rounded bg-red-50 px-2 py-0.5 text-red-700">{numberFormatter.format(draftTaxRate)} %</strong></div>}
+                    {lossesOffsettableChanged && <div className="flex justify-between gap-4"><span>Verlustverrechnung: {initialValuesRef.current.taxableLossesOffsettable ? 'An' : 'Aus'}</span><strong className="rounded bg-red-50 px-2 py-0.5 text-red-700">{draftLossesOffsettable ? 'An' : 'Aus'}</strong></div>}
+                  </div>
+                </details>
+              )}
+              <div className="flex justify-between gap-4 rounded-md border border-border px-4 py-3"><span>Break-even nach Änderung</span><strong>{data.breakEven ?? 'nicht erreicht'}</strong></div>
+            </div>
+            <div className="flex justify-end gap-2">
+              <button className="rounded-md border border-border px-3 py-2" onClick={() => setShowApply(false)}>Abbrechen</button>
+              <button
+                className="rounded-md bg-primary px-3 py-2 font-medium text-primary-foreground disabled:opacity-50"
+                disabled={changeCount === 0}
+                onClick={async () => {
+                  await onApply({
+                    modernizationPlacements: effectiveModernizationPlacements,
+                    modernizationCostOverrides: data.params.modernizationCostOverrides ?? {},
+                    renovationTimingOverrides: draftTimingOverrides,
+                    rentIncreaseOverrides: data.params.rentIncreaseOverrides ?? {},
+                    financingInterestRateOverride: draftFinancingRate,
+                    interestRateOverride: draftRefinancingRate,
+                    equityIncluded: draftEquity,
+                    taxRate: draftTaxRate / 100,
+                    taxableLossesOffsettable: draftLossesOffsettable,
+                  });
+                  setShowApply(false);
+                  setMessage('Änderungen übernommen. Detailseiten sind synchronisiert.');
+                }}
+              >
+                Übernehmen
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -255,7 +905,11 @@ function CalculatorContent() {
   const [last559Date, setLast559Date] = useState('');
   const [mode, setMode] = useState<CalculatorMode>('KNOWN');
   const [placementMode, setPlacementMode] = useState<PlacementMode>('DEFAULT');
+  const [interestRate, setInterestRate] = useState(0);
+  const [equityIncluded, setEquityIncluded] = useState(false);
+  const [timelineViewport, setTimelineViewport] = useState<TimelineViewport>({ start: 0, span: 120 });
   const [showRentIndexComparison, setShowRentIndexComparison] = useState(false);
+  const [showImportedDetails, setShowImportedDetails] = useState(false);
   const [openTables, setOpenTables] = useState({
     timeline: false,
     modernization: false,
@@ -265,6 +919,8 @@ function CalculatorContent() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [hasPendingChanges, setHasPendingChanges] = useState(false);
+  const [pendingNavigation, setPendingNavigation] = useState<string | null>(null);
 
   const visibleTimeline = useMemo(() => data?.timeline ?? [], [data]);
   const chartRows = useMemo(() => buildChartRows(visibleTimeline), [visibleTimeline]);
@@ -293,6 +949,8 @@ function CalculatorContent() {
         setLast559Date(loaded.params.last559Date ?? '');
         setMode(loaded.params.mode);
         setPlacementMode(loaded.placementMode ?? loaded.params.placementMode ?? 'DEFAULT');
+        setInterestRate(loaded.params.refinancingInterestRate ?? loaded.params.interestRate ?? 0);
+        setEquityIncluded(loaded.params.equityIncluded === true);
       } catch (loadError) {
         if (!cancelled) setError(loadError instanceof Error ? loadError.message : 'Kalkulator konnte nicht geladen werden.');
       } finally {
@@ -306,7 +964,7 @@ function CalculatorContent() {
     };
   }, [suffix]);
 
-  const recalc = async (nextMode = mode, navigate = false, optimize = false) => {
+  const recalc = async (nextMode = mode, navigate = false, optimize = false, overrides?: Partial<CalculatorOverrides>, apply = false) => {
     if (isSaving) return;
     setIsSaving(true);
     setError(null);
@@ -325,6 +983,16 @@ function CalculatorContent() {
           last559Date: last559Date || null,
           mode: nextMode,
           optimize,
+          financingInterestRateOverride: overrides?.financingInterestRateOverride ?? data?.params.financingInterestRateOverride ?? null,
+          interestRateOverride: overrides?.interestRateOverride ?? (interestRate || null),
+          equityIncluded: overrides?.equityIncluded ?? equityIncluded,
+          taxRate: overrides?.taxRate ?? data?.params.taxRate ?? 0.42,
+          taxableLossesOffsettable: overrides?.taxableLossesOffsettable ?? data?.params.taxableLossesOffsettable ?? false,
+          modernizationPlacements: overrides?.modernizationPlacements ?? data?.params.modernizationPlacements,
+          modernizationCostOverrides: overrides?.modernizationCostOverrides ?? data?.params.modernizationCostOverrides,
+          renovationTimingOverrides: overrides?.renovationTimingOverrides ?? data?.params.renovationTimingOverrides,
+          rentIncreaseOverrides: overrides?.rentIncreaseOverrides ?? data?.params.rentIncreaseOverrides,
+          apply,
         }),
       });
       if (!res.ok) throw new Error(await res.text());
@@ -332,6 +1000,9 @@ function CalculatorContent() {
       setData(updated);
       setMode(updated.params.mode);
       setPlacementMode(updated.placementMode ?? 'DEFAULT');
+      setInterestRate(updated.params.refinancingInterestRate ?? updated.params.interestRate ?? 0);
+      setEquityIncluded(updated.params.equityIncluded === true);
+      setHasPendingChanges(!apply);
       if (navigate) router.push(`/property-valuation/detail-check/macro-location${suffix}`);
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : 'Kalkulation konnte nicht gespeichert werden.');
@@ -346,6 +1017,11 @@ function CalculatorContent() {
     void recalc(nextMode);
   };
 
+  const navigateWithConfirmation = (path: string) => {
+    if (hasPendingChanges) setPendingNavigation(path);
+    else router.push(path);
+  };
+
   return (
     <PropertyValuationLayout
       currentStep={6}
@@ -355,7 +1031,7 @@ function CalculatorContent() {
           label="Überspringen"
           variant="outline"
           hideLabelOnMobile
-          onClick={() => router.push(`/property-valuation/detail-check/macro-location${suffix}`)}
+          onClick={() => navigateWithConfirmation(`/property-valuation/detail-check/macro-location${suffix}`)}
         />
       }
     >
@@ -383,22 +1059,44 @@ function CalculatorContent() {
                 <TextField label="Letzte Mieterhöhung §558" type="month" value={last558Date} onChange={(e) => setLast558Date(e.target.value)} />
                 <TextField label="Letzte §559-Erhöhung" type="month" value={last559Date} onChange={(e) => setLast559Date(e.target.value)} />
                 <TextField label="Mietspiegel Vergleichswert" value={rentIndexPerM2} suffix="€/m²" inputMode="decimal" onChange={(e) => { setRentIndexPerM2(e.target.value); setRentIndexSource('MANUAL'); }} helperText="Automatisch aus Baujahr/Fläche, solange nicht überschrieben." />
-                <ReadOnlyValue label="Größe" value={`${numberFormatter.format(data.params.livingAreaM2)} m²`} />
-                <ReadOnlyValue label="Ort / PLZ" value={`${data.params.city || '-'} ${data.params.postalCode || ''}`.trim()} />
+              </div>
+
+              <div className="mt-5 border-y border-border py-3">
+                <button
+                  type="button"
+                  className="flex w-full items-center justify-between gap-3 text-left font-medium text-foreground"
+                  aria-expanded={showImportedDetails}
+                  onClick={() => setShowImportedDetails((current) => !current)}
+                >
+                  <span>Übernommene Angaben aus den vorherigen Schritten</span>
+                  {showImportedDetails ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+                </button>
+                {showImportedDetails && (
+                  <div className="mt-4 grid gap-4 border-t border-border pt-4 md:grid-cols-2 lg:grid-cols-3">
+                    <ReadOnlyValue label="Größe · Objektdaten" value={`${numberFormatter.format(data.params.livingAreaM2)} m²`} />
+                    <ReadOnlyValue label="Ort / PLZ · Objektdaten" value={`${data.params.city || '-'} ${data.params.postalCode || ''}`.trim()} />
+                    <ReadOnlyValue label="Finanzierungsvariante · Finanzierung" value={data.selectedFinancingVariant === 'INDIVIDUAL' ? 'Individuell' : 'Angebot'} />
+                    <ReadOnlyValue label="Kapitaldienst Monat · Finanzierung" value={formatCurrency(data.params.monthlyDebtService)} />
+                    <ReadOnlyValue label="AfA pro Monat · Abschreibung" value={formatCurrency(data.timeline[0]?.afa ?? 0)} />
+                    <ReadOnlyValue label="Nicht umlagefähige Kosten · Vermietung" value={formatCurrency(data.timeline[0]?.nonAllocableCosts ?? 0)} />
+                  </div>
+                )}
+              </div>
+
+              <div className="mt-5">
+                <h3 className="mb-3 font-medium text-foreground">Berechnete Kennzahlen</h3>
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                 <ReadOnlyValue label="Kappungsgrenze" value={`${data.denseMarket ? 'Ballungsgebiet' : 'Regelfall'} · ${formatPercent(data.capPercent)}`} />
-                <ReadOnlyValue label="Finanzierungsvariante" value={data.selectedFinancingVariant === 'INDIVIDUAL' ? 'Individuell' : 'Angebot'} />
-                <ReadOnlyValue label="Kapitaldienst Monat" value={formatCurrency(data.params.monthlyDebtService)} />
                 <ReadOnlyValue label="§559-Deckel" value={`${formatCurrency(data.capAbs)} / Monat`} />
                 <ReadOnlyValue label="Break Even Point" value={data.breakEven ?? 'nicht erreicht'} />
                 <ReadOnlyValue label="Break Even mit Mietspiegel" value={data.breakEvenWithRentIndex ?? 'nicht erreicht'} />
                 <ReadOnlyValue label="Mietspiegelquelle" value={data.rentIndexSource === 'MANUAL' ? 'Manuelle Eingabe' : 'Automatisch aus Baujahr/Fläche'} />
-                <ReadOnlyValue label="AfA pro Monat" value={formatCurrency(data.timeline[0]?.afa ?? 0)} />
-                <ReadOnlyValue label="Nicht umlagefähige Kosten" value={formatCurrency(data.timeline[0]?.nonAllocableCosts ?? 0)} />
                 <ReadOnlyValue label="Cashflow heute" value={formatCurrency(data.metrics.cashflowToday)} />
                 <ReadOnlyValue label="Nettomietrendite heute" value={formatPercentValue(data.metrics.netYieldToday)} />
                 <ReadOnlyValue label={`Miete nach ${CALCULATION_HORIZON_YEARS} Jahren`} value={formatCurrency(data.metrics.rentAtHorizon)} />
                 <ReadOnlyValue label={`Miete nach ${CALCULATION_HORIZON_YEARS} Jahren mit Mietspiegel`} value={formatCurrency(data.metrics.rentAtHorizonWithRentIndex)} />
                 <ReadOnlyValue label={`Kumulierter Cashflow nach ${CALCULATION_HORIZON_YEARS} Jahren`} value={formatCurrency(data.metrics.endingCashflow)} />
+                </div>
               </div>
 
               <div className="mt-6 grid gap-4 md:grid-cols-[minmax(0,320px)_minmax(0,1fr)] md:items-end">
@@ -450,7 +1148,7 @@ function CalculatorContent() {
             <section>
               <div className="mb-4 flex flex-wrap items-center gap-4">
                 <div>
-                  <h2 className="text-lg font-medium text-foreground">Grafische Entwicklung</h2>
+                  <h2 className="text-lg font-medium text-foreground">Cashflow und Planung</h2>
                   <p className="text-sm text-muted-foreground">Die Tabellen bleiben im Hintergrund vollständig berechnet.</p>
                 </div>
                 <div className="ml-auto">
@@ -464,7 +1162,22 @@ function CalculatorContent() {
                   />
                 </div>
               </div>
-              <CalculatorChart rows={chartRows} showRentIndex={showRentIndexComparison} />
+              <div className="rounded-lg border border-border bg-card p-4 shadow-sm sm:p-6">
+                <div className="relative overflow-hidden">
+                  <TimelineEventConnectors rows={chartRows} viewport={timelineViewport} />
+                  <CalculatorChart rows={chartRows} showRentIndex={showRentIndexComparison} viewport={timelineViewport} />
+                  <PlanEditor
+                    data={data}
+                    startYyyymm={startYyyymm}
+                    equityIncluded={equityIncluded}
+                    viewport={timelineViewport}
+                    isSaving={isSaving}
+                    onViewportChange={setTimelineViewport}
+                    onChange={(overrides) => recalc(mode, false, false, overrides)}
+                    onApply={(overrides) => recalc(mode, false, false, overrides, true)}
+                  />
+                </div>
+              </div>
             </section>
 
             <section className="space-y-4">
@@ -588,9 +1301,11 @@ function CalculatorContent() {
                         <tr>
                           <th className="px-4 py-3 font-medium">Monat</th>
                           <th className="px-4 py-3 text-right font-medium">Einnahmen</th>
-                          <th className="px-4 py-3 text-right font-medium">Ausgaben</th>
+                          <th className="px-4 py-3 text-right font-medium">Ausgaben vor Steuer</th>
+                          <th className="px-4 py-3 text-right font-medium">Steuern</th>
+                          <th className="px-4 py-3 text-right font-medium">Cashflow nach Steuer</th>
                           <th className="px-4 py-3 text-right font-medium">Cum Einnahmen</th>
-                          <th className="px-4 py-3 text-right font-medium">Cum Ausgaben</th>
+                          <th className="px-4 py-3 text-right font-medium">Cum Ausgaben inkl. Steuer</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -599,6 +1314,8 @@ function CalculatorContent() {
                             <td className="px-4 py-3">{row.yyyymm}</td>
                             <td className="px-4 py-3 text-right">{formatCurrency(row.income)}</td>
                             <td className="px-4 py-3 text-right">{formatCurrency(row.expenses)}</td>
+                            <td className="px-4 py-3 text-right">{formatCurrency(row.taxes)}</td>
+                            <td className="px-4 py-3 text-right">{formatCurrency(row.afterTaxCashflow)}</td>
                             <td className="px-4 py-3 text-right">{formatCurrency(row.cumulativeIncome)}</td>
                             <td className="px-4 py-3 text-right">{formatCurrency(row.cumulativeExpenses)}</td>
                           </tr>
@@ -617,12 +1334,13 @@ function CalculatorContent() {
         show
         ghostLabel={BUTTON_DETAILS.Back.label}
         ghostIcon={<BUTTON_DETAILS.Back.icon />}
-        onGhost={() => router.push(`/property-valuation/detail-check/renovation${suffix}`)}
+        onGhost={() => navigateWithConfirmation(`/property-valuation/detail-check/renovation${suffix}`)}
         primaryLabel="Weiter"
         primaryIcon={<BUTTON_DETAILS.Next.icon />}
         primaryDisabled={isLoading || isSaving}
-        onPrimary={() => recalc(mode, true)}
+        onPrimary={() => hasPendingChanges ? setPendingNavigation(`/property-valuation/detail-check/macro-location${suffix}`) : recalc(mode, true, false, undefined, true)}
       />
+      {pendingNavigation && <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4" role="dialog" aria-modal="true"><div className="w-full max-w-lg rounded-lg border border-border bg-card p-6 shadow-xl"><h2 className="text-lg font-medium">Änderungen übernehmen?</h2><p className="mt-1 text-sm text-muted-foreground">Du verlässt den Kalkulator. Diese Werte wurden geändert:</p><ul className="my-4 list-disc space-y-1 pl-5 text-sm"><li>Sanierungs- und Mietzeitpunkte</li><li>Mietanpassungen</li><li>Finanzierungszinssatz und Break-even</li></ul><div className="flex justify-end gap-2"><button className="rounded-md border border-border px-3 py-2" onClick={() => { setPendingNavigation(null); setHasPendingChanges(false); }}>Hier bleiben</button><button className="rounded-md bg-primary px-3 py-2 font-medium text-primary-foreground" onClick={async () => { const nextPath = pendingNavigation; await recalc(mode, false, false, undefined, true); setPendingNavigation(null); setHasPendingChanges(false); if (nextPath) router.push(nextPath); }}>Übernehmen und weiter</button></div></div></div>}
     </PropertyValuationLayout>
   );
 }

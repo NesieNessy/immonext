@@ -37,66 +37,100 @@ function safeCases(value: unknown): RenovationCase[] {
   return Array.isArray(value) ? value as RenovationCase[] : [];
 }
 
+function normalizeTaxRate(value: unknown, fallback = 0.42): number {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return fallback;
+  const clamped = Math.max(0, parsed);
+  if (clamped > 0.42) return 0.45;
+  return Math.min(0.42, clamped);
+}
+
 async function loadContext(userId: string, workflowId: string, quickCheckId: string | null) {
-  const quickCheckRows = quickCheckId
-    ? await db.query(
-        'SELECT quick_check_id, purchase_price, city, postal_code, cold_rent, year_of_construction FROM quick_check WHERE user_id = $1 AND quick_check_id = $2 LIMIT 1',
-        [userId, Number(quickCheckId)],
-      )
-    : { rows: [] };
-  const propertyRows = await db.query(
-    'SELECT city, postal_code, living_area_m2, year_of_construction FROM detail_check_property_data WHERE user_id = $1 AND workflow_id = $2 LIMIT 1',
-    [userId, workflowId],
-  );
-  const rentalRows = await db.query(
-    'SELECT valuation_date, cold_rent, service_charges_allocable, service_charges_non_allocable FROM detail_check_rental WHERE user_id = $1 AND workflow_id = $2 LIMIT 1',
-    [userId, workflowId],
-  );
-  const financingRows = await db.query(
+  const contextRows = await db.query(
     `
-      SELECT *
-      FROM detail_check_financing
-      WHERE user_id = $1 AND workflow_id = $2
-      LIMIT 1
+      SELECT
+        (
+          SELECT row_to_json(item)
+          FROM (
+            SELECT quick_check_id, purchase_price, city, postal_code, cold_rent, year_of_construction
+            FROM quick_check
+            WHERE user_id = $1 AND quick_check_id = $3
+            LIMIT 1
+          ) item
+        ) AS quick_check,
+        (
+          SELECT row_to_json(item)
+          FROM (
+            SELECT city, postal_code, living_area_m2, year_of_construction
+            FROM detail_check_property_data
+            WHERE user_id = $1 AND workflow_id = $2
+            LIMIT 1
+          ) item
+        ) AS property,
+        (
+          SELECT row_to_json(item)
+          FROM (
+            SELECT valuation_date, cold_rent, service_charges_allocable, service_charges_non_allocable
+            FROM detail_check_rental
+            WHERE user_id = $1 AND workflow_id = $2
+            LIMIT 1
+          ) item
+        ) AS rental,
+        (
+          SELECT row_to_json(item)
+          FROM (
+            SELECT *
+            FROM detail_check_financing
+            WHERE user_id = $1 AND workflow_id = $2
+            LIMIT 1
+          ) item
+        ) AS financing,
+        (
+          SELECT row_to_json(item)
+          FROM (
+            SELECT cases, financed_amount
+            FROM detail_check_renovation
+            WHERE user_id = $1 AND workflow_id = $2
+            LIMIT 1
+          ) item
+        ) AS renovation,
+        (
+          SELECT row_to_json(item)
+          FROM (
+            SELECT purchase_price, parking_purchase_price, total_additional_costs,
+                   broker_percent, notary_percent, land_registry_percent,
+                   property_transfer_tax_percent
+            FROM detail_check_acquisition_costs
+            WHERE user_id = $1 AND workflow_id = $2
+            LIMIT 1
+          ) item
+        ) AS acquisition,
+        (
+          SELECT row_to_json(item)
+          FROM (
+            SELECT building_value, afa_percent
+            FROM detail_check_depreciation
+            WHERE user_id = $1 AND workflow_id = $2
+            LIMIT 1
+          ) item
+        ) AS depreciation
     `,
-    [userId, workflowId],
-  );
-  const renovationRows = await db.query(
-    'SELECT cases, financed_amount FROM detail_check_renovation WHERE user_id = $1 AND workflow_id = $2 LIMIT 1',
-    [userId, workflowId],
-  );
-  const acquisitionRows = await db.query(
-    `
-      SELECT purchase_price, parking_purchase_price, total_additional_costs,
-             broker_percent, notary_percent, land_registry_percent,
-             property_transfer_tax_percent
-      FROM detail_check_acquisition_costs
-      WHERE user_id = $1 AND workflow_id = $2
-      LIMIT 1
-    `,
-    [userId, workflowId],
-  );
-  const depreciationRows = await db.query(
-    `
-      SELECT building_value, afa_percent
-      FROM detail_check_depreciation
-      WHERE user_id = $1 AND workflow_id = $2
-      LIMIT 1
-    `,
-    [userId, workflowId],
+    [userId, workflowId, quickCheckId ? Number(quickCheckId) : null],
   );
 
-  const quickCheck = quickCheckRows.rows[0];
-  const property = propertyRows.rows[0];
-  const rental = rentalRows.rows[0];
-  const financing = financingRows.rows[0];
-  const acquisition = acquisitionRows.rows[0];
-  const depreciation = depreciationRows.rows[0];
+  const context = contextRows.rows[0] ?? {};
+  const quickCheck = context.quick_check;
+  const property = context.property;
+  const rental = context.rental;
+  const financing = context.financing;
+  const renovation = context.renovation;
+  const acquisition = context.acquisition;
+  const depreciation = context.depreciation;
   const purchasePrice = toNumber(acquisition?.purchase_price ?? quickCheck?.purchase_price ?? 0);
   const parkingPrice = toNumber(acquisition?.parking_purchase_price ?? 0);
   const additionalCosts = toNumber(acquisition?.total_additional_costs ?? 0);
-  const renovationCases = safeCases(renovationRows.rows[0]?.cases);
-  const renovationFinancedAmount = toNumber(renovationRows.rows[0]?.financed_amount ?? 0);
+  const renovationCases = safeCases(renovation?.cases);
+  const renovationFinancedAmount = toNumber(renovation?.financed_amount ?? 0);
   const selectedVariant = financing?.selected_variant === 'INDIVIDUAL' ? 'INDIVIDUAL' : 'OFFER';
   const individualPurchasePrice = toNumber(financing?.individual_purchase_price ?? purchasePrice);
   const individualParkingPrice = toNumber(financing?.individual_parking_price ?? parkingPrice);
@@ -131,6 +165,9 @@ async function loadContext(userId: string, workflowId: string, quickCheckId: str
     interestAdjustmentFactor: toNumber(financing?.interest_adjustment_factor ?? 1) || 1,
   });
   const selectedFinancing = selectedVariant === 'INDIVIDUAL' ? individualFinancing : offerFinancing;
+  const selectedEquity = selectedVariant === 'INDIVIDUAL'
+    ? toNumber(financing?.individual_equity ?? 0)
+    : toNumber(financing?.offer_equity ?? 0);
   const buildingValue = toNumber(depreciation?.building_value ?? 0);
   const afaPercent = toNumber(depreciation?.afa_percent ?? 0);
   const propertyYear = toNumber(property?.year_of_construction ?? quickCheck?.year_of_construction ?? new Date().getFullYear());
@@ -150,8 +187,11 @@ async function loadContext(userId: string, workflowId: string, quickCheckId: str
     selectedVariant,
     monthlyDebtService: toNumber(financing?.[selectedVariant === 'INDIVIDUAL' ? 'individual_monthly_debt_service' : 'offer_monthly_debt_service']) || selectedFinancing.monthlyDebtService,
     loanAmount: selectedFinancing.loanAmount,
-    interestRate: selectedFinancing.interestRate,
+    interestRate: toNumber(financing?.[selectedVariant === 'INDIVIDUAL' ? 'individual_interest_rate' : 'offer_interest_rate']) || selectedFinancing.interestRate,
+    individualLoanAmount: individualFinancing.loanAmount,
     repaymentRate: toNumber(financing?.repayment_rate ?? 2) || 2,
+    interestPeriodYears: toInterestYears(financing?.[selectedVariant === 'INDIVIDUAL' ? 'individual_interest_period_years' : 'offer_interest_period_years']),
+    equityAmount: selectedEquity,
     monthlyAfa: buildingValue > 0 && afaPercent > 0 ? roundCurrency((buildingValue * (afaPercent / 100)) / 12) : 0,
     purchasePrice,
     totalInvestment: roundCurrency(selectedFinancing.totalCosts),
@@ -165,6 +205,27 @@ function buildParams(saved: Record<string, unknown> | undefined, context: Awaite
   const rentStart = toNumber(saved?.monthly_rent_start ?? context.coldRent);
   const fallbackRentIndex = estimateRentIndexPerM2(context.yearOfConstruction, livingAreaM2)
     ?? (livingAreaM2 > 0 && rentStart > 0 ? (rentStart / livingAreaM2) * 1.02 : null);
+  const savedResult = (saved?.result as Record<string, unknown> | undefined) ?? {};
+  const savedParams = (savedResult.params as Record<string, unknown> | undefined) ?? {};
+  const savedModernizationPlan = Array.isArray(savedResult.modernizationPlan)
+    ? savedResult.modernizationPlan as Array<Record<string, unknown>>
+    : [];
+  const savedPlanPlacements = Object.fromEntries(
+    savedModernizationPlan.flatMap((item) => (
+      typeof item.id === 'string' && typeof item.effectiveYyyymm === 'string'
+        ? [[item.id, item.effectiveYyyymm]]
+        : []
+    )),
+  );
+  const savedFinancingInterestRate = savedParams.financingInterestRateOverride == null
+    ? context.interestRate
+    : Math.max(0, Math.min(25, toNumber(savedParams.financingInterestRateOverride)));
+  const savedRefinancingInterestRate = savedParams.interestRateOverride == null
+    ? context.interestRate
+    : Math.max(0, Math.min(25, toNumber(savedParams.interestRateOverride)));
+  const monthlyDebtService = savedParams.financingInterestRateOverride == null
+    ? context.monthlyDebtService
+    : roundCurrency(context.loanAmount * ((savedFinancingInterestRate + context.repaymentRate) / 100) / 12);
 
   return {
     startYyyymm: normalizeYyyymm(saved?.start_yyyymm as string | undefined, fallbackStart),
@@ -177,18 +238,30 @@ function buildParams(saved: Record<string, unknown> | undefined, context: Awaite
     last559Date: saved?.last_559_date ? normalizeYyyymm(saved.last_559_date as string) : null,
     rentIndexPerM2: saved?.rent_index_per_m2 == null ? fallbackRentIndex : toNumber(saved.rent_index_per_m2),
     rentIndexSource: saved?.rent_index_per_m2 == null ? 'AUTOMATIC' : 'MANUAL',
-    monthlyDebtService: context.monthlyDebtService,
+    monthlyDebtService,
     loanAmount: context.loanAmount,
-    interestRate: context.interestRate,
+    interestRate: savedFinancingInterestRate,
     repaymentRate: context.repaymentRate,
     monthlyAfa: context.monthlyAfa,
     serviceChargesAllocable: context.serviceChargesAllocable,
     serviceChargesNonAllocable: context.serviceChargesNonAllocable,
     purchasePrice: context.purchasePrice,
     totalInvestment: context.totalInvestment,
-    taxRate: 0.42,
+    taxRate: normalizeTaxRate(savedParams.taxRate),
+    taxableLossesOffsettable: savedParams.taxableLossesOffsettable === true,
+    equityAmount: context.equityAmount,
+    equityIncluded: savedParams.equityIncluded === true,
+    financingInterestRateOverride: savedParams.financingInterestRateOverride == null ? null : savedFinancingInterestRate,
+    interestRateOverride: savedParams.interestRateOverride == null ? null : savedRefinancingInterestRate,
+    interestPeriodYears: context.interestPeriodYears,
+    refinancingInterestRate: savedParams.refinancingInterestRate == null ? savedRefinancingInterestRate : toNumber(savedParams.refinancingInterestRate),
+    modernizationPlacements: (savedResult.modernizationPlacements as Record<string, string> | undefined)
+      ?? (Object.keys(savedPlanPlacements).length > 0 ? savedPlanPlacements : undefined),
+    modernizationCostOverrides: (savedResult.modernizationCostOverrides as Record<string, number> | undefined) ?? undefined,
+    renovationTimingOverrides: (savedResult.renovationTimingOverrides as CalculatorParams['renovationTimingOverrides']) ?? undefined,
+    rentIncreaseOverrides: (savedResult.rentIncreaseOverrides as Record<string, { effectiveYyyymm?: string; monthlyDelta?: number }> | undefined) ?? undefined,
     mode: toMode(saved?.mode),
-    placementMode: toPlacementMode((saved?.result as Record<string, unknown> | undefined)?.placementMode),
+    placementMode: toPlacementMode(savedResult.placementMode),
   };
 }
 
@@ -209,6 +282,7 @@ export async function GET(request: Request) {
     workflowId,
     quickCheckId: context.quickCheck?.quick_check_id ?? null,
     selectedFinancingVariant: context.selectedVariant,
+    renovationCases: context.renovationCases,
     ...result,
   });
 }
@@ -220,6 +294,19 @@ export async function POST(request: Request) {
   const workflowId = workflowIdFor(userId, quickCheckId, input.workflowId ? String(input.workflowId) : null);
   const context = await loadContext(userId, workflowId, quickCheckId);
   const savedResult = input.optimize === true ? 'OPTIMIZED' : 'DEFAULT';
+  const requestedInterestRate = input.interestRateOverride == null ? null : toNumber(input.interestRateOverride);
+  const requestedFinancingInterestRate = input.financingInterestRateOverride == null
+    ? null
+    : toNumber(input.financingInterestRateOverride);
+  const interestRate = requestedFinancingInterestRate == null
+    ? context.interestRate
+    : Math.max(0, Math.min(25, requestedFinancingInterestRate));
+  const refinancingInterestRate = requestedInterestRate == null
+    ? context.interestRate
+    : Math.max(0, Math.min(25, requestedInterestRate));
+  const monthlyDebtService = requestedFinancingInterestRate == null
+    ? context.monthlyDebtService
+    : roundCurrency(context.loanAmount * ((interestRate + context.repaymentRate) / 100) / 12);
   const params: CalculatorParams = {
     startYyyymm: normalizeYyyymm(input.startYyyymm, new Date().toISOString().slice(0, 7)),
     monthlyRentStart: toNumber(input.monthlyRentStart),
@@ -235,16 +322,35 @@ export async function POST(request: Request) {
     rentIndexSource: input.rentIndexSource === 'MANUAL' && input.rentIndexPerM2 != null && input.rentIndexPerM2 !== ''
       ? 'MANUAL'
       : 'AUTOMATIC',
-    monthlyDebtService: context.monthlyDebtService,
+    monthlyDebtService,
     loanAmount: context.loanAmount,
-    interestRate: context.interestRate,
+    interestRate,
     repaymentRate: context.repaymentRate,
+    interestPeriodYears: context.interestPeriodYears,
     monthlyAfa: context.monthlyAfa,
     serviceChargesAllocable: context.serviceChargesAllocable,
     serviceChargesNonAllocable: context.serviceChargesNonAllocable,
     purchasePrice: context.purchasePrice,
     totalInvestment: context.totalInvestment,
-    taxRate: 0.42,
+    taxRate: normalizeTaxRate(input.taxRate),
+    taxableLossesOffsettable: input.taxableLossesOffsettable === true,
+    equityAmount: context.equityAmount,
+    equityIncluded: input.equityIncluded === true,
+    financingInterestRateOverride: requestedFinancingInterestRate,
+    interestRateOverride: requestedInterestRate,
+    refinancingInterestRate,
+    modernizationPlacements: input.optimize !== true && input.modernizationPlacements && typeof input.modernizationPlacements === 'object'
+      ? input.modernizationPlacements as Record<string, string>
+      : undefined,
+    modernizationCostOverrides: input.modernizationCostOverrides && typeof input.modernizationCostOverrides === 'object'
+      ? input.modernizationCostOverrides as Record<string, number>
+      : undefined,
+    renovationTimingOverrides: input.renovationTimingOverrides && typeof input.renovationTimingOverrides === 'object'
+      ? input.renovationTimingOverrides as CalculatorParams['renovationTimingOverrides']
+      : undefined,
+    rentIncreaseOverrides: input.rentIncreaseOverrides && typeof input.rentIncreaseOverrides === 'object'
+      ? input.rentIncreaseOverrides as Record<string, { effectiveYyyymm?: string; monthlyDelta?: number }>
+      : undefined,
     mode: toMode(input.mode),
     placementMode: savedResult,
   };
@@ -283,10 +389,55 @@ export async function POST(request: Request) {
     ],
   );
 
+  if (input.apply === true) {
+    const appliedCases = context.renovationCases.map((item) => ({
+      ...item,
+      ...(params.modernizationPlacements?.[item.id]
+        ? { calculator_effective_yyyymm: params.modernizationPlacements[item.id] }
+        : {}),
+      ...(params.modernizationCostOverrides?.[item.id] != null
+        ? { cost_selected: params.modernizationCostOverrides[item.id] }
+        : {}),
+      ...(params.renovationTimingOverrides?.[item.id]
+        ? { zeitpunkt: params.renovationTimingOverrides[item.id] }
+        : {}),
+    }));
+    await db.query(
+      'UPDATE detail_check_renovation SET cases = $1, updated_at = NOW() WHERE user_id = $2 AND workflow_id = $3',
+      [JSON.stringify(appliedCases), userId, workflowId],
+    );
+    const individualMonthlyDebtService = roundCurrency(
+      context.individualLoanAmount * ((params.interestRate + context.repaymentRate) / 100) / 12,
+    );
+    await db.query(
+      `
+        UPDATE detail_check_financing
+        SET individual_interest_rate = $1,
+            individual_monthly_debt_service = $2,
+            updated_at = NOW()
+        WHERE user_id = $3 AND workflow_id = $4
+      `,
+      [params.interestRate, individualMonthlyDebtService, userId, workflowId],
+    );
+    if (context.selectedVariant === 'OFFER') {
+      await db.query(
+        `
+          UPDATE detail_check_financing
+          SET offer_interest_rate = $1,
+              offer_monthly_debt_service = $2,
+              updated_at = NOW()
+          WHERE user_id = $3 AND workflow_id = $4
+        `,
+        [params.interestRate, params.monthlyDebtService, userId, workflowId],
+      );
+    }
+  }
+
   return NextResponse.json({
     status: 'OK',
     next: 'MAKROLAGE',
     selectedFinancingVariant: context.selectedVariant,
+    renovationCases: context.renovationCases,
     ...result,
   });
 }

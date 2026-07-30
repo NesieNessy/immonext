@@ -33,24 +33,17 @@ export function applyServiceChargeSuggestion(
   const nonAllocable = parse(next.nonAllocable);
   const total = parse(next.total);
 
+  if (changed !== 'total') {
+    const sum = roundCurrency(allocable + nonAllocable);
+    next.total = !next.allocable && !next.nonAllocable
+      ? ''
+      : String(sum).replace('.', ',');
+    return next;
+  }
+
   if (changed === 'total' && next.total && !next.allocable && !next.nonAllocable) {
     next.allocable = String(roundCurrency(total * 0.6)).replace('.', ',');
     next.nonAllocable = String(roundCurrency(total * 0.4)).replace('.', ',');
-    return next;
-  }
-
-  if (changed !== 'total' && next.allocable && next.nonAllocable && !next.total) {
-    next.total = String(roundCurrency(allocable + nonAllocable)).replace('.', ',');
-    return next;
-  }
-
-  if (changed === 'allocable' && next.total && next.allocable && !next.nonAllocable) {
-    next.nonAllocable = String(Math.max(0, roundCurrency(total - allocable))).replace('.', ',');
-    return next;
-  }
-
-  if (changed === 'nonAllocable' && next.total && next.nonAllocable && !next.allocable) {
-    next.allocable = String(Math.max(0, roundCurrency(total - nonAllocable))).replace('.', ',');
     return next;
   }
 

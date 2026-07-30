@@ -7,6 +7,7 @@ import { parseDecimalInput } from '@/lib/detailCheck/acquisitionCosts';
 import {
   computeFinancing,
   computeIndividualAdditionalCosts,
+  type FinancingComputed,
   type FinancingVariant,
   type InterestPeriodYears,
 } from '@/lib/detailCheck/financing';
@@ -30,6 +31,7 @@ type ApiColumn = {
   renovationCosts: number;
   equity: number;
   interestPeriodYears: InterestPeriodYears;
+  computed: FinancingComputed;
 };
 
 type ApiPayload = {
@@ -152,6 +154,8 @@ function FinancingContent() {
   const [selectedVariant, setSelectedVariant] = useState<FinancingVariant | ''>('OFFER');
   const [repaymentRate, setRepaymentRate] = useState(2);
   const [interestAdjustmentFactor, setInterestAdjustmentFactor] = useState(1);
+  const [offerInterestRate, setOfferInterestRate] = useState<number | null>(null);
+  const [individualInterestRate, setIndividualInterestRate] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -182,6 +186,8 @@ function FinancingContent() {
         setSelectedVariant(data.selectedVariant);
         setRepaymentRate(data.repaymentRate);
         setInterestAdjustmentFactor(data.interestAdjustmentFactor);
+        setOfferInterestRate(data.offer.computed.interestRate);
+        setIndividualInterestRate(data.individual.computed.interestRate);
         setCostPercentages({
           brokerPercent: acquisition.brokerPercent,
           notaryPercent: acquisition.notaryPercent,
@@ -245,21 +251,37 @@ function FinancingContent() {
     };
   }, [individual, costPercentages]);
 
-  const offerComputed = computeFinancing({
+  const offerBaseComputed = computeFinancing({
     ...offerValues,
     repaymentRate,
     interestAdjustmentFactor,
   });
-  const individualComputed = computeFinancing({
+  const individualBaseComputed = computeFinancing({
     ...individualValues,
     repaymentRate,
     interestAdjustmentFactor,
   });
+  const withInterestRate = (computed: FinancingComputed, rate: number | null): FinancingComputed => {
+    if (rate == null) return computed;
+    return {
+      ...computed,
+      interestRate: rate,
+      monthlyDebtService: Math.round(
+        computed.loanAmount * ((rate + repaymentRate) / 100) / 12 * 100,
+      ) / 100,
+    };
+  };
+  const offerComputed = withInterestRate(offerBaseComputed, offerInterestRate);
+  const individualComputed = withInterestRate(individualBaseComputed, individualInterestRate);
 
-  const updateOffer = (field: keyof ColumnForm, value: string) =>
+  const updateOffer = (field: keyof ColumnForm, value: string) => {
     setOffer((prev) => ({ ...prev, [field]: value }));
-  const updateIndividual = (field: keyof ColumnForm, value: string) =>
+    if (field === 'interestPeriodYears') setOfferInterestRate(null);
+  };
+  const updateIndividual = (field: keyof ColumnForm, value: string) => {
     setIndividual((prev) => ({ ...prev, [field]: value }));
+    if (field === 'interestPeriodYears') setIndividualInterestRate(null);
+  };
 
   const handleNext = async () => {
     if (isSaving) return;
@@ -279,6 +301,7 @@ function FinancingContent() {
             renovationCosts: offerValues.renovationCosts,
             equity: offerValues.equity,
             interestPeriodYears: offerValues.interestPeriodYears,
+            interestRate: offerComputed.interestRate,
           },
           individual: {
             purchasePrice: individualValues.purchasePrice,
@@ -286,6 +309,7 @@ function FinancingContent() {
             renovationCosts: individualValues.renovationCosts,
             equity: individualValues.equity,
             interestPeriodYears: individualValues.interestPeriodYears,
+            interestRate: individualComputed.interestRate,
           },
         }),
       });

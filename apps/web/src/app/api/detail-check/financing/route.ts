@@ -19,6 +19,25 @@ function toInterestYears(value: unknown): InterestPeriodYears {
   return parsed === 15 || parsed === 20 ? parsed : 10;
 }
 
+function effectiveFinancing(
+  computed: ReturnType<typeof computeFinancing>,
+  interestRateValue: unknown,
+  repaymentRate: number,
+) {
+  if (interestRateValue == null) return computed;
+  const parsedRate = Number(interestRateValue);
+  const interestRate = Number.isFinite(parsedRate)
+    ? Math.max(0, Math.min(25, parsedRate))
+    : computed.interestRate;
+  return {
+    ...computed,
+    interestRate,
+    monthlyDebtService: Math.round(
+      computed.loanAmount * ((interestRate + repaymentRate) / 100) / 12 * 100,
+    ) / 100,
+  };
+}
+
 async function loadContext(userId: string, workflowId: string, quickCheckId: string | null) {
   const quickCheckRows = quickCheckId
     ? await db.query(
@@ -96,6 +115,16 @@ function buildPayload(saved: Record<string, unknown> | undefined, context: Await
     equity: toNumber(saved?.individual_equity ?? 0),
     interestPeriodYears: toInterestYears(saved?.individual_interest_period_years ?? 10),
   };
+  const offerComputed = effectiveFinancing(
+    computeFinancing({ ...offer, repaymentRate, interestAdjustmentFactor }),
+    saved?.offer_interest_rate,
+    repaymentRate,
+  );
+  const individualComputed = effectiveFinancing(
+    computeFinancing({ ...individual, repaymentRate, interestAdjustmentFactor }),
+    saved?.individual_interest_rate,
+    repaymentRate,
+  );
 
   return {
     selectedVariant: saved?.selected_variant ?? 'OFFER',
@@ -103,11 +132,11 @@ function buildPayload(saved: Record<string, unknown> | undefined, context: Await
     interestAdjustmentFactor,
     offer: {
       ...offer,
-      computed: computeFinancing({ ...offer, repaymentRate, interestAdjustmentFactor }),
+      computed: offerComputed,
     },
     individual: {
       ...individual,
-      computed: computeFinancing({ ...individual, repaymentRate, interestAdjustmentFactor }),
+      computed: individualComputed,
     },
   };
 }
@@ -154,7 +183,7 @@ export async function POST(request: Request) {
     landRegistryPercent: context.landRegistryPercent,
     propertyTransferTaxPercent: context.propertyTransferTaxPercent,
   });
-  const offerComputed = computeFinancing({
+  const offerComputed = effectiveFinancing(computeFinancing({
     purchasePrice: context.purchasePrice,
     parkingPrice: context.parkingPrice,
     additionalCosts: context.additionalCosts,
@@ -163,8 +192,8 @@ export async function POST(request: Request) {
     interestPeriodYears: offerInterestPeriodYears,
     repaymentRate,
     interestAdjustmentFactor,
-  });
-  const individualComputed = computeFinancing({
+  }), input.offer?.interestRate, repaymentRate);
+  const individualComputed = effectiveFinancing(computeFinancing({
     purchasePrice: individualPurchasePrice,
     parkingPrice: individualParkingPrice,
     additionalCosts: individualAdditionalCosts,
@@ -173,7 +202,7 @@ export async function POST(request: Request) {
     interestPeriodYears: individualInterestPeriodYears,
     repaymentRate,
     interestAdjustmentFactor,
-  });
+  }), input.individual?.interestRate, repaymentRate);
 
   await db.query(
     `

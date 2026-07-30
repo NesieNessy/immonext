@@ -1,4 +1,5 @@
-import { currentMonthDate, serviceChargesMismatch } from '@/lib/detailCheck/rental';
+import { roundCurrency } from '@/lib/detailCheck/acquisitionCosts';
+import { currentMonthDate } from '@/lib/detailCheck/rental';
 import { requireUserId, workflowIdFor } from '@/lib/server/auth';
 import { db } from '@/lib/server/db';
 import { NextResponse } from 'next/server';
@@ -73,7 +74,7 @@ export async function POST(request: Request) {
   const parkingRent = isRented ? toNumber(input.parkingRent) : 0;
   const serviceChargesAllocable = toNumber(input.serviceChargesAllocable);
   const serviceChargesNonAllocable = toNumber(input.serviceChargesNonAllocable);
-  const serviceChargesTotal = toNumber(input.serviceChargesTotal);
+  const serviceChargesTotal = roundCurrency(serviceChargesAllocable + serviceChargesNonAllocable);
   const values = [
     coldRent,
     parkingRent,
@@ -89,11 +90,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Invalid rental payload' }, { status: 400 });
   }
 
-  const plausibilityWarningNk = serviceChargesMismatch(
-    serviceChargesAllocable,
-    serviceChargesNonAllocable,
-    serviceChargesTotal,
-  );
+  const plausibilityWarningNk = false;
 
   await db.query(
     `

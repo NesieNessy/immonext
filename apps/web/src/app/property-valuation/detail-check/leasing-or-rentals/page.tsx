@@ -55,12 +55,14 @@ function MoneyField({
   onChange,
   error,
   disabled,
+  readOnly,
 }: {
   label: string;
   value: string;
   onChange: (value: string) => void;
   error?: string;
   disabled?: boolean;
+  readOnly?: boolean;
 }) {
   return (
     <TextField
@@ -71,6 +73,8 @@ function MoneyField({
       suffix="€"
       error={error}
       disabled={disabled}
+      readOnly={readOnly}
+      className={readOnly ? 'bg-muted' : undefined}
     />
   );
 }
@@ -108,14 +112,21 @@ function RentalContent() {
         if (!res.ok) throw new Error(await res.text());
         const data = await res.json() as RentalResponse;
         if (cancelled) return;
+        const allocable = valueString(data.serviceChargesAllocable);
+        const nonAllocable = valueString(data.serviceChargesNonAllocable);
+        const total = applyServiceChargeSuggestion(
+          { allocable, nonAllocable, total: valueString(data.serviceChargesTotal) },
+          'allocable',
+          parseDecimalInput,
+        ).total;
         setForm({
           valuationMonth: monthFromDate(data.valuationDate),
           isRented: data.isRented,
           coldRent: valueString(data.coldRent),
           parkingRent: valueString(data.parkingRent),
-          serviceChargesAllocable: valueString(data.serviceChargesAllocable),
-          serviceChargesNonAllocable: valueString(data.serviceChargesNonAllocable),
-          serviceChargesTotal: valueString(data.serviceChargesTotal),
+          serviceChargesAllocable: allocable,
+          serviceChargesNonAllocable: nonAllocable,
+          serviceChargesTotal: total,
         });
       } catch (error) {
         if (!cancelled) {
@@ -378,6 +389,7 @@ function RentalContent() {
                   value={form.serviceChargesTotal}
                   error={amountErrors.serviceChargesTotal}
                   onChange={(value) => updateServiceCharge('total', value)}
+                  readOnly
                 />
               </div>
             </section>

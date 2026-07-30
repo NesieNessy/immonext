@@ -1,5 +1,5 @@
 import { roundCurrency } from './acquisitionCosts';
-import { costForCase, type RenovationCase } from './renovation';
+import { costForCase, type RenovationCase, type RenovationTiming } from './renovation';
 
 export type CalculatorMode = 'KNOWN' | 'POTENTIAL';
 export type PlacementMode = 'DEFAULT' | 'OPTIMIZED';
@@ -29,6 +29,17 @@ export type CalculatorParams = {
   purchasePrice: number;
   totalInvestment: number;
   taxRate: number;
+  taxableLossesOffsettable?: boolean;
+  financingInterestRateOverride?: number | null;
+  interestRateOverride?: number | null;
+  interestPeriodYears?: number;
+  refinancingInterestRate?: number | null;
+  equityIncluded?: boolean;
+  equityAmount?: number;
+  modernizationPlacements?: Record<string, string>;
+  modernizationCostOverrides?: Record<string, number>;
+  renovationTimingOverrides?: Record<string, RenovationTiming>;
+  rentIncreaseOverrides?: Record<string, { effectiveYyyymm?: string; monthlyDelta?: number }>;
   mode: CalculatorMode;
   placementMode: PlacementMode;
 };
@@ -46,12 +57,16 @@ export type RentTimelineRow = {
   allocableCosts: number;
   nonAllocableCosts: number;
   taxes: number;
+  taxableIncome: number;
+  taxLossCarryforward: number;
   income: number;
   expenses: number;
   monthlyDelta: number;
   afterTaxCashflow: number;
   cumulativeIncome: number;
   cumulativeExpenses: number;
+  cumulativeTaxes: number;
+  cumulativeCashflowBeforeTax: number;
   cumulativeCashflow: number;
 };
 
@@ -66,6 +81,7 @@ export type ModernizationPlanRow = {
 };
 
 export type RentIncrease558Row = {
+  id?: string;
   effectiveYyyymm: string;
   monthlyDelta: number;
 };
@@ -90,14 +106,19 @@ export function normalizeYyyymm(value?: string | null, fallback?: string): strin
 
 export function addMonths(yyyymm: string, months: number): string {
   const [year, month] = yyyymm.split('-').map(Number);
-  const date = new Date(Date.UTC(year, month - 1 + months, 1));
-  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}`;
+  const monthIndex = year * 12 + month - 1 + months;
+  const resultYear = Math.floor(monthIndex / 12);
+  const resultMonth = monthIndex - resultYear * 12 + 1;
+  return `${resultYear}-${String(resultMonth).padStart(2, '0')}`;
+}
+
+function monthSerial(yyyymm: string): number {
+  const [year, month] = yyyymm.split('-').map(Number);
+  return year * 12 + month - 1;
 }
 
 function monthDiff(from: string, to: string): number {
-  const [fromYear, fromMonth] = from.split('-').map(Number);
-  const [toYear, toMonth] = to.split('-').map(Number);
-  return (toYear - fromYear) * 12 + (toMonth - fromMonth);
+  return monthSerial(to) - monthSerial(from);
 }
 
 function compareMonth(a: string, b: string): number {
@@ -130,8 +151,11 @@ function buildPlanFromPlacements(
   const plan: ModernizationPlanRow[] = [];
 
   for (const { item, index } of relevant) {
-    const allocableCosts = costForCase(item);
-    const effective = addMonths(params.startYyyymm, placements[index] ?? 3);
+    const allocableCosts = params.modernizationCostOverrides?.[item.id] != null
+      ? roundCurrency(Math.max(0, params.modernizationCostOverrides[item.id]))
+      : costForCase(item);
+    const requestedOffset = placements[index] ?? 3;
+    const effective = addMonths(params.startYyyymm, Math.max(3, requestedOffset));
     const wantedDelta = roundCurrency((0.08 * allocableCosts) / 12);
     const monthlyDelta = roundCurrency(Math.min(wantedDelta, capRoomAt(plan, effective, capAbs)));
     if (monthlyDelta <= 0) continue;
@@ -155,14 +179,24 @@ function defaultPlacements(params: CalculatorParams, renovationCases: Renovation
   const earliestAfter559 = last559Offset > -1000 ? Math.max(3, last559Offset + 72) : 3;
 
   return renovationCases.map((item) => {
-    const offset = item.zeitpunkt === 'SOFORT' ? 3 : nextFlexible;
+    const timing = params.renovationTimingOverrides?.[item.id] ?? item.zeitpunkt;
+    const savedOffset = item.calculator_effective_yyyymm
+      ? monthDiff(params.startYyyymm, normalizeYyyymm(item.calculator_effective_yyyymm, params.startYyyymm))
+      : null;
+    const offset = savedOffset == null ? (timing === 'SOFORT' ? 3 : nextFlexible) : savedOffset;
     nextFlexible += 3;
     return Math.max(earliestAfter559, offset);
   });
 }
 
 function placeKnownModernizations(params: CalculatorParams, renovationCases: RenovationCase[], capAbs: number) {
-  return buildPlanFromPlacements(params, renovationCases, defaultPlacements(params, renovationCases), capAbs);
+  const defaults = defaultPlacements(params, renovationCases);
+  const placements = renovationCases.map((item, index) => {
+    const requested = params.modernizationPlacements?.[item.id];
+    if (!requested) return defaults[index];
+    return Math.max(3, monthDiff(params.startYyyymm, normalizeYyyymm(requested, params.startYyyymm)));
+  });
+  return buildPlanFromPlacements(params, renovationCases, placements, capAbs);
 }
 
 function placePotentialModernizations(params: CalculatorParams, capAbs: number) {
@@ -207,7 +241,12 @@ function placePotentialModernizations(params: CalculatorParams, capAbs: number) 
   return plan;
 }
 
-function plan558(params: CalculatorParams, capPercent: number, targetPerM2: number) {
+function plan558(
+  params: CalculatorParams,
+  capPercent: number,
+  targetPerM2: number,
+  modernizations: ModernizationPlanRow[] = [],
+) {
   const steps: RentIncrease558Row[] = [];
   if (params.monthlyRentStart <= 0 || params.livingAreaM2 <= 0) return steps;
 
@@ -215,9 +254,19 @@ function plan558(params: CalculatorParams, capPercent: number, targetPerM2: numb
     ? normalizeYyyymm(params.last558Date, addMonths(params.startYyyymm, -1000))
     : addMonths(params.startYyyymm, -1000);
   let current558Base = params.monthlyRentStart;
+  const sortedModernizations = [...modernizations].sort((a, b) => a.effectiveYyyymm.localeCompare(b.effectiveYyyymm));
+  let modernizationIndex = 0;
+  let active559 = 0;
 
   for (let offset = 0; offset < CALCULATION_HORIZON_MONTHS; offset += 1) {
     const month = addMonths(params.startYyyymm, offset);
+    while (
+      modernizationIndex < sortedModernizations.length
+      && compareMonth(sortedModernizations[modernizationIndex].effectiveYyyymm, month) <= 0
+    ) {
+      active559 = roundCurrency(active559 + sortedModernizations[modernizationIndex].monthlyDelta);
+      modernizationIndex += 1;
+    }
     if (monthDiff(lastEffective, month) < 15) continue;
 
     const target = roundCurrency(targetPerM2 * Math.pow(1.02, Math.floor(offset / 12)) * params.livingAreaM2);
@@ -229,10 +278,10 @@ function plan558(params: CalculatorParams, capPercent: number, targetPerM2: numb
       return sum;
     }, 0);
     const room = roundCurrency(Math.max(0, params.monthlyRentStart * capPercent - usedInWindow));
-    const delta = roundCurrency(clamp(target - current558Base, 0, room));
+    const delta = roundCurrency(clamp(target - current558Base - active559, 0, room));
 
     if (delta > 0) {
-      steps.push({ effectiveYyyymm: month, monthlyDelta: delta });
+      steps.push({ id: `558-${steps.length + 1}`, effectiveYyyymm: month, monthlyDelta: delta });
       current558Base = roundCurrency(current558Base + delta);
       lastEffective = month;
     }
@@ -241,14 +290,90 @@ function plan558(params: CalculatorParams, capPercent: number, targetPerM2: numb
   return steps;
 }
 
-function totalRentAt(month: string, startRent: number, increases: RentIncrease558Row[], modernizations: ModernizationPlanRow[]) {
-  const active558 = increases
-    .filter((item) => compareMonth(item.effectiveYyyymm, month) <= 0)
-    .reduce((sum, item) => sum + item.monthlyDelta, 0);
-  const active559 = modernizations
-    .filter((item) => compareMonth(item.effectiveYyyymm, month) <= 0)
-    .reduce((sum, item) => sum + item.monthlyDelta, 0);
-  return roundCurrency(startRent + active558 + active559);
+function applyRentIncreaseOverrides(
+  params: CalculatorParams,
+  steps: RentIncrease558Row[],
+  capPercent: number,
+): RentIncrease558Row[] {
+  const overrides = params.rentIncreaseOverrides;
+  if (!overrides) return steps;
+  const requested = steps.map((step, index) => {
+    const override = overrides[step.id ?? `558-${index + 1}`];
+    if (!override) return step;
+    const effectiveYyyymm = override.effectiveYyyymm
+      ? normalizeYyyymm(override.effectiveYyyymm, step.effectiveYyyymm)
+      : step.effectiveYyyymm;
+    const monthlyDelta = override.monthlyDelta == null
+      ? step.monthlyDelta
+      : roundCurrency(clamp(override.monthlyDelta, 0, step.monthlyDelta));
+    return { ...step, effectiveYyyymm, monthlyDelta };
+  });
+
+  let previous = params.last558Date ? normalizeYyyymm(params.last558Date) : addMonths(params.startYyyymm, -1000);
+  const accepted: RentIncrease558Row[] = [];
+  const capAmount = params.monthlyRentStart * capPercent;
+
+  return requested.map((step) => {
+    let effectiveYyyymm = [
+      step.effectiveYyyymm,
+      params.startYyyymm,
+      addMonths(previous, 15),
+    ].sort().at(-1) ?? step.effectiveYyyymm;
+
+    // A moved §558 increase keeps its sequence. Later increases follow when
+    // the 15-month interval or the rolling three-year cap requires it.
+    for (let attempt = 0; attempt <= CALCULATION_HORIZON_MONTHS; attempt += 1) {
+      const windowStart = addMonths(effectiveYyyymm, -35);
+      const usedInWindow = accepted
+        .filter((item) => compareMonth(item.effectiveYyyymm, windowStart) >= 0)
+        .reduce((sum, item) => sum + item.monthlyDelta, 0);
+      if (usedInWindow + step.monthlyDelta <= capAmount + 0.01) break;
+      effectiveYyyymm = addMonths(effectiveYyyymm, 1);
+    }
+
+    const scheduled = { ...step, effectiveYyyymm };
+    accepted.push(scheduled);
+    previous = effectiveYyyymm;
+    return scheduled;
+  });
+}
+
+function totalsByMonth<T>(
+  rows: T[],
+  monthFor: (row: T) => string,
+  valueFor: (row: T) => number,
+): Map<string, number> {
+  const totals = new Map<string, number>();
+  for (const row of rows) {
+    const month = monthFor(row);
+    totals.set(month, roundCurrency((totals.get(month) ?? 0) + valueFor(row)));
+  }
+  return totals;
+}
+
+function calculateTaxes(
+  taxableIncome: number,
+  taxRate: number,
+  taxableLossesOffsettable: boolean,
+  lossCarryforward: number,
+) {
+  if (taxableLossesOffsettable) {
+    return {
+      taxes: roundCurrency(taxableIncome * taxRate),
+      lossCarryforward: 0,
+    };
+  }
+  if (taxableIncome <= 0) {
+    return {
+      taxes: 0,
+      lossCarryforward: roundCurrency(lossCarryforward + Math.abs(taxableIncome)),
+    };
+  }
+  const taxableAfterLosses = Math.max(0, roundCurrency(taxableIncome - lossCarryforward));
+  return {
+    taxes: roundCurrency(taxableAfterLosses * taxRate),
+    lossCarryforward: roundCurrency(Math.max(0, lossCarryforward - taxableIncome)),
+  };
 }
 
 function buildTimeline(
@@ -256,82 +381,122 @@ function buildTimeline(
   increases558: RentIncrease558Row[],
   increases558WithRentIndex: RentIncrease558Row[],
   modernizationPlan: ModernizationPlanRow[],
+  includeTimeline = true,
 ) {
   let balance = Math.max(0, params.loanAmount);
   let cumulativeIncome = 0;
-  let cumulativeExpenses = 0;
-  let cumulativeCashflow = 0;
+  let cumulativeExpenses = params.equityIncluded ? roundCurrency(params.equityAmount ?? 0) : 0;
+  let cumulativeTaxes = 0;
+  let cumulativeCashflowBeforeTax = params.equityIncluded ? roundCurrency(-(params.equityAmount ?? 0)) : 0;
+  let cumulativeCashflow = params.equityIncluded ? roundCurrency(-(params.equityAmount ?? 0)) : 0;
+  let taxLossCarryforward = 0;
+  let indexedLossCarryforward = 0;
+  let runningWithRentIndex = params.equityIncluded ? roundCurrency(-(params.equityAmount ?? 0)) : 0;
   let breakEven: string | null = null;
   let breakEvenWithRentIndex: string | null = null;
+  let rentTotal = roundCurrency(params.monthlyRentStart);
+  let rentTotalWithRentIndex = roundCurrency(params.monthlyRentStart);
+  const timeline: RentTimelineRow[] = [];
+  const delta558ByMonth = totalsByMonth(increases558, (item) => item.effectiveYyyymm, (item) => item.monthlyDelta);
+  const indexedDelta558ByMonth = totalsByMonth(increases558WithRentIndex, (item) => item.effectiveYyyymm, (item) => item.monthlyDelta);
+  const delta559ByMonth = totalsByMonth(modernizationPlan, (item) => item.effectiveYyyymm, (item) => item.monthlyDelta);
+  const renovationPaymentsByMonth = totalsByMonth(modernizationPlan, (item) => item.paymentYyyymm, (item) => item.allocableCosts);
+  const fixedPeriodMonths = Math.max(0, (params.interestPeriodYears ?? 10) * 12);
 
-  const timeline: RentTimelineRow[] = Array.from({ length: CALCULATION_HORIZON_MONTHS }, (_, offset) => {
+  for (let offset = 0; offset < CALCULATION_HORIZON_MONTHS; offset += 1) {
     const yyyymm = addMonths(params.startYyyymm, offset);
-    const delta558 = roundCurrency(increases558
-      .filter((item) => item.effectiveYyyymm === yyyymm)
-      .reduce((sum, item) => sum + item.monthlyDelta, 0));
-    const delta559 = roundCurrency(modernizationPlan
-      .filter((item) => item.effectiveYyyymm === yyyymm)
-      .reduce((sum, item) => sum + item.monthlyDelta, 0));
-    const renovationPayment = roundCurrency(modernizationPlan
-      .filter((item) => item.paymentYyyymm === yyyymm)
-      .reduce((sum, item) => sum + item.allocableCosts, 0));
-    const rentTotal = totalRentAt(yyyymm, params.monthlyRentStart, increases558, modernizationPlan);
-    const rentTotalWithRentIndex = totalRentAt(yyyymm, params.monthlyRentStart, increases558WithRentIndex, modernizationPlan);
+    const delta558 = delta558ByMonth.get(yyyymm) ?? 0;
+    const indexedDelta558 = indexedDelta558ByMonth.get(yyyymm) ?? 0;
+    const delta559 = delta559ByMonth.get(yyyymm) ?? 0;
+    const renovationPayment = renovationPaymentsByMonth.get(yyyymm) ?? 0;
+    rentTotal = roundCurrency(rentTotal + delta558 + delta559);
+    rentTotalWithRentIndex = roundCurrency(rentTotalWithRentIndex + indexedDelta558 + delta559);
     const annualCostFactor = Math.pow(1.02, Math.floor(offset / 12));
     const allocableCosts = roundCurrency(params.serviceChargesAllocable * annualCostFactor);
     const nonAllocableCosts = roundCurrency(params.serviceChargesNonAllocable * annualCostFactor);
-    const debtService = roundCurrency(Math.min(params.monthlyDebtService, balance > 0 ? params.monthlyDebtService : 0));
-    const interest = roundCurrency(balance * (params.interestRate / 100) / 12);
+    const activeInterestRate = offset >= fixedPeriodMonths && params.refinancingInterestRate != null
+      ? params.refinancingInterestRate
+      : params.interestRate;
+    const scheduledDebtService = offset >= fixedPeriodMonths
+      ? roundCurrency(balance * ((activeInterestRate + params.repaymentRate) / 100) / 12)
+      : params.monthlyDebtService;
+    const debtService = roundCurrency(Math.min(scheduledDebtService, balance > 0 ? scheduledDebtService : 0));
+    const interest = roundCurrency(balance * (activeInterestRate / 100) / 12);
     const principal = roundCurrency(Math.min(balance, Math.max(0, debtService - interest)));
     balance = roundCurrency(Math.max(0, balance - principal));
     const afa = roundCurrency(params.monthlyAfa);
-    const taxes = roundCurrency((rentTotal - nonAllocableCosts - afa - interest) * params.taxRate);
+    const taxableIncome = roundCurrency(rentTotal - nonAllocableCosts - afa - interest);
+    const taxResult = calculateTaxes(
+      taxableIncome,
+      params.taxRate,
+      params.taxableLossesOffsettable === true,
+      taxLossCarryforward,
+    );
+    const taxes = taxResult.taxes;
+    taxLossCarryforward = taxResult.lossCarryforward;
     const income = rentTotal;
     const expenses = roundCurrency(debtService + nonAllocableCosts + renovationPayment);
     const monthlyDelta = roundCurrency(income - expenses);
     const afterTaxCashflow = roundCurrency(monthlyDelta - taxes);
     cumulativeIncome = roundCurrency(cumulativeIncome + income);
-    cumulativeExpenses = roundCurrency(cumulativeExpenses + expenses);
-    cumulativeCashflow = roundCurrency(cumulativeCashflow + monthlyDelta);
+    cumulativeExpenses = roundCurrency(cumulativeExpenses + expenses + taxes);
+    cumulativeTaxes = roundCurrency(cumulativeTaxes + taxes);
+    cumulativeCashflowBeforeTax = roundCurrency(cumulativeCashflowBeforeTax + monthlyDelta);
+    cumulativeCashflow = roundCurrency(cumulativeCashflow + afterTaxCashflow);
     if (!breakEven && cumulativeCashflow >= 0) breakEven = yyyymm;
 
-    return {
-      yyyymm,
-      rentTotal,
-      rentTotalWithRentIndex,
-      delta558,
-      delta559,
-      renovationPayment,
-      debtService,
-      interest,
-      afa,
-      allocableCosts,
-      nonAllocableCosts,
-      taxes,
-      income,
-      expenses,
-      monthlyDelta,
-      afterTaxCashflow,
-      cumulativeIncome,
-      cumulativeExpenses,
-      cumulativeCashflow,
-    };
-  });
+    const indexedTaxResult = calculateTaxes(
+      roundCurrency(rentTotalWithRentIndex - nonAllocableCosts - afa - interest),
+      params.taxRate,
+      params.taxableLossesOffsettable === true,
+      indexedLossCarryforward,
+    );
+    indexedLossCarryforward = indexedTaxResult.lossCarryforward;
+    runningWithRentIndex = roundCurrency(runningWithRentIndex + rentTotalWithRentIndex - expenses - indexedTaxResult.taxes);
+    if (!breakEvenWithRentIndex && runningWithRentIndex >= 0) breakEvenWithRentIndex = yyyymm;
 
-  let runningWithRentIndex = 0;
-  timeline.forEach((row) => {
-    runningWithRentIndex = roundCurrency(runningWithRentIndex + row.rentTotalWithRentIndex - row.expenses);
-    if (!breakEvenWithRentIndex && runningWithRentIndex >= 0) breakEvenWithRentIndex = row.yyyymm;
-  });
+    if (includeTimeline) {
+      timeline.push({
+        yyyymm,
+        rentTotal,
+        rentTotalWithRentIndex,
+        delta558,
+        delta559,
+        renovationPayment,
+        debtService,
+        interest,
+        afa,
+        allocableCosts,
+        nonAllocableCosts,
+        taxes,
+        taxableIncome,
+        taxLossCarryforward,
+        income,
+        expenses,
+        monthlyDelta,
+        afterTaxCashflow,
+        cumulativeIncome,
+        cumulativeExpenses,
+        cumulativeTaxes,
+        cumulativeCashflowBeforeTax,
+        cumulativeCashflow,
+      });
+    }
+  }
 
-  return { timeline, breakEven, breakEvenWithRentIndex };
+  return {
+    timeline,
+    breakEven,
+    breakEvenWithRentIndex,
+    endingCashflow: cumulativeCashflow,
+    endingCashflowWithRentIndex: runningWithRentIndex,
+  };
 }
 
 function placementScore(params: CalculatorParams, plan: ModernizationPlanRow[], increases558: RentIncrease558Row[], increases558WithRentIndex: RentIncrease558Row[]) {
-  const result = buildTimeline(params, increases558, increases558WithRentIndex, plan);
+  const result = buildTimeline(params, increases558, increases558WithRentIndex, plan, false);
   const breakEvenOffset = result.breakEven ? monthDiff(params.startYyyymm, result.breakEven) : 9999;
-  const last = result.timeline[result.timeline.length - 1];
-  return { ...result, breakEvenOffset, endingCashflow: last?.cumulativeCashflow ?? -Infinity };
+  return { ...result, breakEvenOffset };
 }
 
 function optimizeKnownModernizations(
@@ -347,8 +512,8 @@ function optimizeKnownModernizations(
   type Candidate = { placements: number[]; plan: ModernizationPlanRow[]; breakEvenOffset: number; endingCashflow: number };
   let candidates: Candidate[] = [{ placements: [], plan: [], breakEvenOffset: 9999, endingCashflow: -Infinity }];
   const possibleOffsets = Array.from(
-    { length: Math.floor((CALCULATION_HORIZON_MONTHS - 4) / 3) + 1 },
-    (_, index) => 3 + index * 3,
+    { length: Math.floor((CALCULATION_HORIZON_MONTHS - 4) / 12) + 1 },
+    (_, index) => 3 + index * 12,
   ).filter((value) => value < CALCULATION_HORIZON_MONTHS);
 
   for (let index = 0; index < relevant.length; index += 1) {
@@ -356,16 +521,36 @@ function optimizeKnownModernizations(
     for (const candidate of candidates) {
       for (const offset of possibleOffsets) {
         const placements = [...candidate.placements, offset];
-        const plan = buildPlanFromPlacements(params, relevant, placements, capAbs);
+        const plan = buildPlanFromPlacements(params, relevant.slice(0, index + 1), placements, capAbs);
         const score = placementScore(params, plan, increases558, increases558WithRentIndex);
         next.push({ placements, plan, breakEvenOffset: score.breakEvenOffset, endingCashflow: score.endingCashflow });
       }
     }
     next.sort((a, b) => a.breakEvenOffset - b.breakEvenOffset || b.endingCashflow - a.endingCashflow);
-    candidates = next.slice(0, 24);
+    candidates = next.slice(0, 8);
   }
 
-  return candidates[0]?.plan ?? [];
+  let best = candidates[0];
+  if (!best) return [];
+
+  for (let index = 0; index < relevant.length; index += 1) {
+    const nearbyOffsets = [-9, -6, -3, 0, 3, 6, 9]
+      .map((delta) => best.placements[index] + delta)
+      .filter((offset) => offset >= 3 && offset < CALCULATION_HORIZON_MONTHS);
+    for (const offset of nearbyOffsets) {
+      const placements = best.placements.map((value, placementIndex) => placementIndex === index ? offset : value);
+      const plan = buildPlanFromPlacements(params, relevant, placements, capAbs);
+      const score = placementScore(params, plan, increases558, increases558WithRentIndex);
+      if (
+        score.breakEvenOffset < best.breakEvenOffset
+        || (score.breakEvenOffset === best.breakEvenOffset && score.endingCashflow > best.endingCashflow)
+      ) {
+        best = { placements, plan, breakEvenOffset: score.breakEvenOffset, endingCashflow: score.endingCashflow };
+      }
+    }
+  }
+
+  return best.plan;
 }
 
 export function runRentCalculator(params: CalculatorParams, renovationCases: RenovationCase[]) {
@@ -378,14 +563,26 @@ export function runRentCalculator(params: CalculatorParams, renovationCases: Ren
   const marketRentIndexPerM2 = params.rentIndexPerM2 && params.rentIndexPerM2 > 0
     ? params.rentIndexPerM2
     : conservativeRentIndexPerM2;
-  const increases558 = plan558(params, capPercent, conservativeRentIndexPerM2);
-  const increases558WithRentIndex = plan558(params, capPercent, marketRentIndexPerM2);
+  const provisional558 = applyRentIncreaseOverrides(params, plan558(params, capPercent, conservativeRentIndexPerM2), capPercent);
+  const provisional558WithRentIndex = applyRentIncreaseOverrides(params, plan558(params, capPercent, marketRentIndexPerM2), capPercent);
   const defaultPlan = params.mode === 'POTENTIAL'
     ? placePotentialModernizations(params, capAbs)
     : placeKnownModernizations(params, renovationCases, capAbs);
-  const modernizationPlan = params.placementMode === 'OPTIMIZED' && params.mode === 'KNOWN'
-    ? optimizeKnownModernizations(params, renovationCases, capAbs, increases558, increases558WithRentIndex)
+  const modernizationPlan = params.placementMode === 'OPTIMIZED'
+    && params.mode === 'KNOWN'
+    && !params.modernizationPlacements
+    ? optimizeKnownModernizations(params, renovationCases, capAbs, provisional558, provisional558WithRentIndex)
     : defaultPlan;
+  const increases558 = applyRentIncreaseOverrides(
+    params,
+    plan558(params, capPercent, conservativeRentIndexPerM2, modernizationPlan),
+    capPercent,
+  );
+  const increases558WithRentIndex = applyRentIncreaseOverrides(
+    params,
+    plan558(params, capPercent, marketRentIndexPerM2, modernizationPlan),
+    capPercent,
+  );
   const scenario = buildTimeline(params, increases558, increases558WithRentIndex, modernizationPlan);
 
   const lastRow = scenario.timeline[scenario.timeline.length - 1];
@@ -403,7 +600,7 @@ export function runRentCalculator(params: CalculatorParams, renovationCases: Ren
     rentAtHorizon: lastRow?.rentTotal ?? 0,
     rentAtHorizonWithRentIndex: lastRow?.rentTotalWithRentIndex ?? 0,
     endingCashflow: lastRow?.cumulativeCashflow ?? 0,
-    endingCashflowWithRentIndex: scenario.timeline.reduce((sum, row) => sum + row.rentTotalWithRentIndex - row.expenses, 0),
+    endingCashflowWithRentIndex: scenario.endingCashflowWithRentIndex,
   };
 
   return {

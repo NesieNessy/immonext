@@ -28,6 +28,7 @@ export type RenovationCase = {
   selected: boolean;
   zeitpunkt: RenovationTiming;
   cost_selected?: number;
+  calculator_effective_yyyymm?: string;
   publish_order: boolean;
 };
 
