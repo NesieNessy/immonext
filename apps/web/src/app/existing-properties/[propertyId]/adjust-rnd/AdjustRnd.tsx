@@ -1,6 +1,6 @@
 "use client";
 
-import { PropertyNotFoundPage } from '@/components/features/PropertyDisplay';
+import { PROPERTY_CATEGORY_LABEL, PropertyNotFoundPage } from '@/components/features/PropertyDisplay';
 import { Button, ComingSoonButton, Dropdown, Header, PillOptions, SectionLabel, StickyActionBar, UnsavedChangesModal } from '@/components/ui';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { ExistingPropertiesUseCases } from '@/constants/ExistingPropertiesUseCases';
@@ -15,7 +15,6 @@ import { getPropertyById } from '@/lib/supabase/property.supabase';
 import { createUseCaseMenuItems } from '@/lib/useCaseMenu';
 import { base64ToDataUri, cn, deNumberFormatter } from '@/lib/utils';
 import type { Property, RndMode } from '@immonext/types';
-import { Clock } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 
@@ -156,6 +155,10 @@ export default function AdjustRnd({ propertyId }: { propertyId: string }) {
 
     if (!property) return <PropertyNotFoundPage />;
 
+    const categoryLabel = property.propertyCategory
+        ? PROPERTY_CATEGORY_LABEL[property.propertyCategory] ?? property.propertyCategory
+        : '–';
+
     return (
         <div className="min-h-screen bg-background pb-24">
             <main className="container mx-auto px-4 py-8">
@@ -167,7 +170,7 @@ export default function AdjustRnd({ propertyId }: { propertyId: string }) {
                             onClick: (e) => { if (isEditing) { e.preventDefault(); goTo('/existing-properties'); } },
                         },
                         {
-                            label: `${property.street} ${property.houseNumber}`,
+                            label: `${property.street} ${property.houseNumber}, ${property.postalCode} ${property.city}`,
                             href: `/existing-properties/${propertyId}`,
                             onClick: (e) => { if (isEditing) { e.preventDefault(); goTo(`/existing-properties/${propertyId}`); } },
                         },
@@ -187,21 +190,12 @@ export default function AdjustRnd({ propertyId }: { propertyId: string }) {
 
                 <div className="mt-8 mx-auto max-w-4xl">
                     <div className="space-y-6">
-                        <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                                <Clock className="w-5 h-5 text-primary" />
-                            </div>
-                            <div className="min-w-0">
-                                <h2 className="text-lg font-semibold text-foreground">Restnutzungsdauer (RND)</h2>
-                                <p className="text-sm text-muted-foreground truncate">
-                                    {property.street} {property.houseNumber}, {property.postalCode} {property.city}
-                                </p>
-                            </div>
-                        </div>
-
                         {/* Calculation Mode */}
                         <div>
                             <SectionLabel>Berechnungsmodus</SectionLabel>
+                            <p className="mt-2 text-sm text-muted-foreground">
+                                Baujahr {property.yearOfConstruction} · {categoryLabel}
+                            </p>
                             <div className="pt-3">
                                 <PillOptions
                                     size="md"
@@ -239,7 +233,7 @@ export default function AdjustRnd({ propertyId }: { propertyId: string }) {
                         {rndMode === 'INDIVIDUAL' && (
                             <div className="pt-4 border-t border-border">
                                 <div className="flex items-center justify-between gap-3 mb-3">
-                                    <SectionLabel>Letzte Modernisierung</SectionLabel>
+                                    <SectionLabel>Modernisierungen</SectionLabel>
                                     <ComingSoonButton
                                         label={BUTTON_DETAILS.RequestAppraisal.label}
                                         icon={<BUTTON_DETAILS.RequestAppraisal.icon />}

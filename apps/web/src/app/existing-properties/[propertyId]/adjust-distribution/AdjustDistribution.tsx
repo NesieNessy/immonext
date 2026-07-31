@@ -9,7 +9,7 @@ import { getCityPurchasePriceSplit } from '@/lib/supabase/city_purchase_price_sp
 import { getPropertyOverviewById, type PropertyOverview } from '@/lib/supabase/property.supabase';
 import { createUseCaseMenuItems } from '@/lib/useCaseMenu';
 import { base64ToDataUri, deCurrencyFormatter, deNumberFormatter } from '@/lib/utils';
-import { Info, PieChart } from 'lucide-react';
+import { Info } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 
@@ -117,21 +117,12 @@ export default function AdjustDistribution({ propertyId }: { propertyId: string 
                 />
 
                 <div className="mt-8 mx-auto max-w-4xl space-y-6">
-                    <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                            <PieChart className="w-5 h-5 text-primary" />
-                        </div>
-                        <div className="min-w-0">
-                            <h2 className="text-lg font-semibold text-foreground">Kaufpreisaufteilung</h2>
-                            <p className="text-sm text-muted-foreground truncate">
-                                {property.street} {property.houseNumber}, {property.postalCode} {property.city} · Kaufpreis: {deCurrencyFormatter.format(purchasePrice)} €
-                            </p>
-                        </div>
-                    </div>
-
                     {/* Calculation Mode */}
                     <div>
                         <SectionLabel>Berechnungsmodus</SectionLabel>
+                        <p className="mt-2 text-sm text-muted-foreground">
+                            Kaufpreis {deCurrencyFormatter.format(purchasePrice)} €
+                        </p>
                         <div className="pt-3">
                             <PillOptions
                                 size="md"

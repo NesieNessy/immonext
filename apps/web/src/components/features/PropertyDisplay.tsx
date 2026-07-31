@@ -20,13 +20,13 @@ export const BESTANDSOBJEKTE_BREADCRUMB_ROOT: BreadcrumbItem = {
 };
 
 export function buildPropertyUseCaseBreadcrumb(
-  property: { street: string; houseNumber: string },
+  property: { street: string; houseNumber: string; postalCode: string; city: string },
   propertyId: string,
   currentLabel: string,
 ): BreadcrumbItem[] {
   return [
     BESTANDSOBJEKTE_BREADCRUMB_ROOT,
-    { label: `${property.street} ${property.houseNumber}`, href: `/existing-properties/${propertyId}` },
+    { label: `${property.street} ${property.houseNumber}, ${property.postalCode} ${property.city}`, href: `/existing-properties/${propertyId}` },
     { label: currentLabel },
   ];
 }

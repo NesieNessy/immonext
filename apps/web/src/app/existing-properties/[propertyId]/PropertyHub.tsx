@@ -56,7 +56,7 @@ const OBJEKTVERWALTUNG: HubCard[] = [
   },
   {
     key: 'adjust-distribution',
-    title: 'Aufteilung Grund/Boden & Gebäude',
+    title: 'Kaufpreisaufteilung',
     description: 'Prozentuale Verteilung für die Abschreibung',
     route: 'adjust-distribution',
     icon: PieChart,
