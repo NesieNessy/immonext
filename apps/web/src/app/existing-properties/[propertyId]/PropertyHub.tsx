@@ -1,6 +1,6 @@
 "use client";
 
-import { BESTANDSOBJEKTE_BREADCRUMB_ROOT, PROPERTY_CATEGORY_LABEL } from '@/components/features/PropertyDisplay';
+import { BESTANDSOBJEKTE_BREADCRUMB_ROOT, PROPERTY_CATEGORY_LABEL, PropertyLoadingPage } from '@/components/features/PropertyDisplay';
 import { Button, Header, Modal, SectionLabel, Tag } from '@/components/ui';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { deleteProperty, getPropertyOverviewById, type PropertyOverview } from '@/lib/supabase/property.supabase';
@@ -186,13 +186,7 @@ export default function PropertyHub({ propertyId }: { propertyId: string }) {
     }
   };
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <p className="text-sm text-muted-foreground">Wird geladen…</p>
-      </div>
-    );
-  }
+  if (isLoading) return <PropertyLoadingPage />;
 
   if (!property) {
     return (

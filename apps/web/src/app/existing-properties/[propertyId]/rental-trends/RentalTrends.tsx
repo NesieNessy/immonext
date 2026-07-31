@@ -35,7 +35,7 @@ export default function TenancyTrends({ propertyId }: { propertyId: string }) {
                         <Button
                             label={BUTTON_DETAILS.UseCases.label}
                             icon={<BUTTON_DETAILS.UseCases.icon />}
-                            variant="primary"
+                            variant="outline"
                             hideLabelOnMobile
                             menuItems={useCaseMenuItems}
                         />

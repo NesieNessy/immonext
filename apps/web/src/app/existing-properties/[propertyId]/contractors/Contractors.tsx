@@ -36,7 +36,7 @@ export default function Contractors({ propertyId }: { propertyId: string }) {
                         <Button
                             label={BUTTON_DETAILS.UseCases.label}
                             icon={<Layers />}
-                            variant="primary"
+                            variant="outline"
                             hideLabelOnMobile
                             menuItems={useCaseMenuItems}
                         />

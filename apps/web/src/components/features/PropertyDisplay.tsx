@@ -42,6 +42,15 @@ export function PropertyNotFoundPage() {
   );
 }
 
+/** Shared "still loading" fallback, matching PropertyNotFoundPage's usage. */
+export function PropertyLoadingPage() {
+  return (
+    <div className="min-h-screen bg-background flex items-center justify-center">
+      <p className="text-sm text-muted-foreground">Wird geladen…</p>
+    </div>
+  );
+}
+
 /** property_category is free TEXT, not a DB enum — this is the known set of
  *  values written across the app (detail-check/property-data's form plus
  *  the wider set offered on the property-creation form). An unrecognized

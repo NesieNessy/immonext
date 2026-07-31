@@ -1,7 +1,7 @@
 "use client";
 
 import { buildPropertyUseCaseBreadcrumb, PROPERTY_CATEGORY_CREATE_OPTIONS, PropertyNotFoundPage } from '@/components/features/PropertyDisplay';
-import { Button, CalendarField, Dropdown, Header, NumberField, SectionLabel, StickyActionBar, TextField, UploadButton } from '@/components/ui';
+import { Button, CalendarField, Dropdown, Header, NumberField, PillOptions, SectionLabel, StickyActionBar, TextField, UploadButton } from '@/components/ui';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { ExistingPropertiesUseCases } from '@/constants/ExistingPropertiesUseCases';
 import { createAcquisitionCosts, getAcquisitionCosts, updateAcquisitionCosts } from '@/lib/supabase/acquisition_costs.supabase';
@@ -9,7 +9,7 @@ import { createParkingSpace, deleteParkingSpace, getParkingSpacesByProperty, upd
 import { getPropertyById, updateProperty } from '@/lib/supabase/property.supabase';
 import { getPropertyAcquisitionByProperty, upsertPropertyAcquisition } from '@/lib/supabase/property_acquisition.supabase';
 import { createUseCaseMenuItems } from '@/lib/useCaseMenu';
-import { base64ToDataUri, cn } from '@/lib/utils';
+import { base64ToDataUri } from '@/lib/utils';
 import { EnergyEfficient, type AcquisitionCosts, type ParkingSpace, type Property } from '@immonext/types';
 import { format, parseISO } from 'date-fns';
 import { X } from 'lucide-react';
@@ -136,7 +136,8 @@ export default function PropertyData({ propertyId }: { propertyId: string }) {
         form.ort.trim() !== '' &&
         /^\d{4}$/.test(form.baujahr) && Number(form.baujahr) >= 1800 && Number(form.baujahr) <= currentYear &&
         Number(form.wohnflaeche) > 0 &&
-        form.stellplaetze !== '' && Number(form.stellplaetze) >= 0;
+        form.stellplaetze !== '' && Number(form.stellplaetze) >= 0 &&
+        form.kaufpreis !== '' && Number(form.kaufpreis) > 0;
 
     const handleCancel = () => {
         setForm(original);
@@ -250,7 +251,7 @@ export default function PropertyData({ propertyId }: { propertyId: string }) {
                         <Button
                             label={BUTTON_DETAILS.UseCases.label}
                             icon={<BUTTON_DETAILS.UseCases.icon />}
-                            variant="primary"
+                            variant="outline"
                             hideLabelOnMobile
                             menuItems={useCaseMenuItems}
                         />
@@ -294,40 +295,28 @@ export default function PropertyData({ propertyId }: { propertyId: string }) {
 
                     <div className="flex flex-col gap-2">
                         <SectionLabel>Objektkategorie</SectionLabel>
-                        <div className="flex flex-wrap gap-2">
-                            {PROPERTY_CATEGORY_CREATE_OPTIONS.map((opt) => (
-                                <button
-                                    key={opt.value}
-                                    type="button"
-                                    onClick={() => update({ objektkategorie: opt.value })}
-                                    className={cn(
-                                        "px-3 py-1.5 rounded-full text-sm font-medium border transition-colors",
-                                        form.objektkategorie === opt.value
-                                            ? "bg-primary/10 border-primary text-primary"
-                                            : "border-border text-foreground hover:bg-muted"
-                                    )}
-                                >
-                                    {opt.label}
-                                </button>
-                            ))}
-                        </div>
+                        <PillOptions
+                            options={PROPERTY_CATEGORY_CREATE_OPTIONS}
+                            value={form.objektkategorie}
+                            onChange={(objektkategorie) => update({ objektkategorie })}
+                        />
                     </div>
 
                     <div className="flex flex-col gap-2">
                         <SectionLabel>Kaufinformationen</SectionLabel>
                         <div className="grid grid-cols-2 gap-3 max-w-md">
-                            <CalendarField
-                                label="Kaufdatum (opt.)"
-                                value={form.kaufdatum ? parseISO(form.kaufdatum) : undefined}
-                                onChange={(date) => update({ kaufdatum: date ? format(date, 'yyyy-MM-dd') : '' })}
-                            />
                             <NumberField
-                                label="Kaufpreis (opt.)"
+                                label="Kaufpreis *"
                                 placeholder="450.000"
                                 unit="€"
                                 value={form.kaufpreis}
                                 onChange={(e) => update({ kaufpreis: e.target.value })}
                                 min={0}
+                            />
+                            <CalendarField
+                                label="Kaufdatum (opt.)"
+                                value={form.kaufdatum ? parseISO(form.kaufdatum) : undefined}
+                                onChange={(date) => update({ kaufdatum: date ? format(date, 'yyyy-MM-dd') : '' })}
                             />
                         </div>
                     </div>

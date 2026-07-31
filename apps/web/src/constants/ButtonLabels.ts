@@ -2,7 +2,6 @@
 import {
   ArrowLeft, ArrowRight,
   BookCheck,
-  Briefcase,
   Calculator,
   Check,
   Edit3,
@@ -57,7 +56,7 @@ export const BUTTON_DETAILS: Record<ButtonType, ButtonConfig> = {
   [ButtonType.Next]:             { label: 'Nächstes',                icon: ArrowRight },
   [ButtonType.Back]:             { label: 'Zurück',                  icon: ArrowLeft },
   [ButtonType.Create]:           { label: 'Erstellen',               icon: Plus },
-  [ButtonType.UseCases]:         { label: 'Bearbeiten',              icon: Briefcase },
+  [ButtonType.UseCases]:         { label: 'Bearbeiten',              icon: Edit3 },
   [ButtonType.RequestAppraisal]: { label: 'Gutachten anfordern',     icon: FileText },
   [ButtonType.Start]:            { label: 'Starten',                 icon: Play },
   [ButtonType.ImportData]:       { label: 'Daten importieren',       icon: Upload },

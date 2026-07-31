@@ -1,8 +1,21 @@
 import { clsx, type ClassValue } from "clsx";
+import { format } from "date-fns";
 import { twMerge } from "tailwind-merge";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
+}
+
+/** Plain number, German locale (e.g. "50" or "2,5"). */
+export const deNumberFormatter = new Intl.NumberFormat('de-DE', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+
+/** Whole-euro amount, German locale (e.g. "1.200") — pair with a trailing "€". */
+export const deCurrencyFormatter = new Intl.NumberFormat('de-DE', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+
+/** "dd.MM.yyyy", falling back to "–" for null/undefined. */
+export function formatDeDate(value: string | null | undefined): string {
+  if (!value) return '–';
+  return format(new Date(value), 'dd.MM.yyyy');
 }
 
 /**

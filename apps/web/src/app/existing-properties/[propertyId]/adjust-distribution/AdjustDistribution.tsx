@@ -1,22 +1,19 @@
 "use client";
 
 import { buildPropertyUseCaseBreadcrumb, PropertyNotFoundPage } from '@/components/features/PropertyDisplay';
-import { Button, Header, NumberField, SectionLabel, StickyActionBar } from '@/components/ui';
+import { Button, Header, NumberField, PillOptions, SectionLabel, StickyActionBar } from '@/components/ui';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { ExistingPropertiesUseCases } from '@/constants/ExistingPropertiesUseCases';
 import { computePriceSplitIndividual, computePriceSplitStandard } from '@/lib/detailCheck/depreciation';
 import { getCityPurchasePriceSplit } from '@/lib/supabase/city_purchase_price_split.supabase';
 import { getPropertyOverviewById, type PropertyOverview } from '@/lib/supabase/property.supabase';
 import { createUseCaseMenuItems } from '@/lib/useCaseMenu';
-import { base64ToDataUri, cn } from '@/lib/utils';
+import { base64ToDataUri, deCurrencyFormatter, deNumberFormatter } from '@/lib/utils';
 import { Info, PieChart } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 
 type SplitMode = 'STANDARD' | 'INDIVIDUAL';
-
-const numberFormatter = new Intl.NumberFormat('de-DE', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
-const currencyFormatter = new Intl.NumberFormat('de-DE', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 
 export default function AdjustDistribution({ propertyId }: { propertyId: string }) {
     const router = useRouter();
@@ -112,7 +109,7 @@ export default function AdjustDistribution({ propertyId }: { propertyId: string 
                         <Button
                             label={BUTTON_DETAILS.UseCases.label}
                             icon={<BUTTON_DETAILS.UseCases.icon />}
-                            variant="primary"
+                            variant="outline"
                             hideLabelOnMobile
                             menuItems={useCaseMenuItems}
                         />
@@ -127,7 +124,7 @@ export default function AdjustDistribution({ propertyId }: { propertyId: string 
                         <div className="min-w-0">
                             <h2 className="text-lg font-semibold text-foreground">Kaufpreisaufteilung</h2>
                             <p className="text-sm text-muted-foreground truncate">
-                                {property.street} {property.houseNumber}, {property.postalCode} {property.city} · Kaufpreis: {currencyFormatter.format(purchasePrice)} €
+                                {property.street} {property.houseNumber}, {property.postalCode} {property.city} · Kaufpreis: {deCurrencyFormatter.format(purchasePrice)} €
                             </p>
                         </div>
                     </div>
@@ -135,31 +132,16 @@ export default function AdjustDistribution({ propertyId }: { propertyId: string 
                     {/* Calculation Mode */}
                     <div>
                         <SectionLabel>Berechnungsmodus</SectionLabel>
-                        <div className="flex flex-wrap gap-2 pt-3">
-                            <button
-                                type="button"
-                                onClick={() => setSplitMode('STANDARD')}
-                                className={cn(
-                                    "px-4 py-2 rounded-full text-sm font-medium border transition-colors cursor-pointer",
-                                    splitMode === 'STANDARD'
-                                        ? "bg-primary/10 border-primary text-primary"
-                                        : "border-border text-foreground hover:bg-muted"
-                                )}
-                            >
-                                {`Standard (${numberFormatter.format(standardSplit.buildingSharePercent)} / ${numberFormatter.format(standardSplit.landSharePercent)})`}
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => setSplitMode('INDIVIDUAL')}
-                                className={cn(
-                                    "px-4 py-2 rounded-full text-sm font-medium border transition-colors cursor-pointer",
-                                    splitMode === 'INDIVIDUAL'
-                                        ? "bg-primary/10 border-primary text-primary"
-                                        : "border-border text-foreground hover:bg-muted"
-                                )}
-                            >
-                                Individuell berechnen
-                            </button>
+                        <div className="pt-3">
+                            <PillOptions
+                                size="md"
+                                options={[
+                                    { value: 'STANDARD', label: `Standard (${deNumberFormatter.format(standardSplit.buildingSharePercent)} / ${deNumberFormatter.format(standardSplit.landSharePercent)})` },
+                                    { value: 'INDIVIDUAL', label: 'Individuell berechnen' },
+                                ]}
+                                value={splitMode}
+                                onChange={(value) => setSplitMode(value as SplitMode)}
+                            />
                         </div>
                     </div>
 
@@ -214,20 +196,20 @@ export default function AdjustDistribution({ propertyId }: { propertyId: string 
                                 <p className="text-xs text-muted-foreground uppercase tracking-wide mb-2">Gebäude</p>
                                 <div className="flex items-baseline justify-between gap-2">
                                     <p className="text-2xl font-semibold text-foreground">
-                                        {numberFormatter.format(selectedSplit.buildingSharePercent)}
+                                        {deNumberFormatter.format(selectedSplit.buildingSharePercent)}
                                         <span className="text-sm font-normal text-muted-foreground ml-0.5">%</span>
                                     </p>
-                                    <p className="text-sm text-muted-foreground">{currencyFormatter.format(selectedSplit.buildingValue)} €</p>
+                                    <p className="text-sm text-muted-foreground">{deCurrencyFormatter.format(selectedSplit.buildingValue)} €</p>
                                 </div>
                             </div>
                             <div className="p-4 rounded-lg border border-border bg-card">
                                 <p className="text-xs text-muted-foreground uppercase tracking-wide mb-2">Grund und Boden</p>
                                 <div className="flex items-baseline justify-between gap-2">
                                     <p className="text-2xl font-semibold text-foreground">
-                                        {numberFormatter.format(selectedSplit.landSharePercent)}
+                                        {deNumberFormatter.format(selectedSplit.landSharePercent)}
                                         <span className="text-sm font-normal text-muted-foreground ml-0.5">%</span>
                                     </p>
-                                    <p className="text-sm text-muted-foreground">{currencyFormatter.format(selectedSplit.landValue)} €</p>
+                                    <p className="text-sm text-muted-foreground">{deCurrencyFormatter.format(selectedSplit.landValue)} €</p>
                                 </div>
                             </div>
                         </div>

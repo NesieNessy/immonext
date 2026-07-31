@@ -1,14 +1,14 @@
 "use client";
 
 import { BESTANDSOBJEKTE_BREADCRUMB_ROOT, PROPERTY_CATEGORY_CREATE_OPTIONS } from '@/components/features/PropertyDisplay';
-import { CalendarField, Dropdown, Header, NumberField, SectionLabel, StickyActionBar, TextField, UploadButton } from '@/components/ui';
+import { CalendarField, Dropdown, Header, NumberField, PillOptions, SectionLabel, StickyActionBar, TextField, UploadButton } from '@/components/ui';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
 import { createAcquisitionCosts } from '@/lib/supabase/acquisition_costs.supabase';
 import { createParkingSpace } from '@/lib/supabase/parking_space.supabase';
 import { createProperty } from '@/lib/supabase/property.supabase';
 import { createPropertyAcquisition } from '@/lib/supabase/property_acquisition.supabase';
-import { base64ToDataUri, cn } from '@/lib/utils';
+import { base64ToDataUri } from '@/lib/utils';
 import { EnergyEfficient } from '@immonext/types';
 import { format } from 'date-fns';
 import { X } from 'lucide-react';
@@ -94,6 +94,7 @@ function NewPropertyPageContent() {
         energyEfficient: (energieeffizienz || null) as EnergyEfficient | null,
         propertyCategory: objektkategorie,
         imageUrl: bildBase64,
+        numberOfUnits: 1,
       });
       if (!created) {
         setError('Objekt konnte nicht gespeichert werden.');
@@ -196,33 +197,12 @@ function NewPropertyPageContent() {
 
           <div className="flex flex-col gap-2">
             <SectionLabel>Objektkategorie</SectionLabel>
-            <div className="flex flex-wrap gap-2">
-              {PROPERTY_CATEGORY_CREATE_OPTIONS.map((opt) => (
-                <button
-                  key={opt.value}
-                  type="button"
-                  onClick={() => setObjektkategorie(opt.value)}
-                  className={cn(
-                    "px-3 py-1.5 rounded-full text-sm font-medium border transition-colors",
-                    objektkategorie === opt.value
-                      ? "bg-primary/10 border-primary text-primary"
-                      : "border-border text-foreground hover:bg-muted"
-                  )}
-                >
-                  {opt.label}
-                </button>
-              ))}
-            </div>
+            <PillOptions options={PROPERTY_CATEGORY_CREATE_OPTIONS} value={objektkategorie} onChange={setObjektkategorie} />
           </div>
 
           <div className="flex flex-col gap-2">
             <SectionLabel>Kaufinformationen</SectionLabel>
             <div className="grid grid-cols-2 gap-3 max-w-md">
-              <CalendarField
-                label="Kaufdatum (opt.)"
-                value={kaufdatum}
-                onChange={setKaufdatum}
-              />
               <NumberField
                 label="Kaufpreis (opt.)"
                 placeholder="450.000"
@@ -230,6 +210,11 @@ function NewPropertyPageContent() {
                 value={kaufpreis}
                 onChange={(e) => setKaufpreis(e.target.value)}
                 min={0}
+              />
+              <CalendarField
+                label="Kaufdatum (opt.)"
+                value={kaufdatum}
+                onChange={setKaufdatum}
               />
             </div>
           </div>

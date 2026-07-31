@@ -18,6 +18,7 @@ function toProperty(row: Record<string, unknown>): Property {
     propertyAbbreviation: row.property_abbreviation as string | null,
     propertyCategory: (row.property_category as string | null) ?? null,
     imageUrl: row.image_base64 as string | null,
+    numberOfUnits: row.number_of_units as number,
     createdAt: row.created_at as string,
     updatedAt: row.updated_at as string,
   };
@@ -161,6 +162,7 @@ export async function createProperty(payload: PropertyInsert): Promise<Property 
       energy_efficient: payload.energyEfficient,
       property_abbreviation: payload.propertyAbbreviation,
       property_category: payload.propertyCategory,
+      number_of_units: payload.numberOfUnits,
     })
     .select()
     .single();
@@ -184,6 +186,7 @@ export async function updateProperty(propertyId: number, updates: PropertyUpdate
   if (updates.propertyAbbreviation !== undefined) dbUpdates.property_abbreviation = updates.propertyAbbreviation;
   if (updates.propertyCategory !== undefined) dbUpdates.property_category = updates.propertyCategory;
   if (updates.imageUrl !== undefined) dbUpdates.image_base64 = updates.imageUrl;
+  if (updates.numberOfUnits !== undefined) dbUpdates.number_of_units = updates.numberOfUnits;
 
   const { data, error } = await supabase
     .from('property')

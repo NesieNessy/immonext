@@ -1,7 +1,7 @@
 "use client";
 
 import { PropertyNotFoundPage } from '@/components/features/PropertyDisplay';
-import { Button, Dropdown, Header, SectionLabel, StickyActionBar, UnsavedChangesModal } from '@/components/ui';
+import { Button, ComingSoonButton, Dropdown, Header, PillOptions, SectionLabel, StickyActionBar, UnsavedChangesModal } from '@/components/ui';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { ExistingPropertiesUseCases } from '@/constants/ExistingPropertiesUseCases';
 import {
@@ -13,13 +13,16 @@ import {
 import { getPropertyRndByProperty, upsertPropertyRnd } from '@/lib/supabase/property_rnd.supabase';
 import { getPropertyById } from '@/lib/supabase/property.supabase';
 import { createUseCaseMenuItems } from '@/lib/useCaseMenu';
-import { base64ToDataUri, cn } from '@/lib/utils';
+import { base64ToDataUri, cn, deNumberFormatter } from '@/lib/utils';
 import type { Property, RndMode } from '@immonext/types';
 import { Clock } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 
-const numberFormatter = new Intl.NumberFormat('de-DE', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+const RND_MODE_OPTIONS = [
+    { value: 'STANDARD', label: 'Standard (50 Jahre)' },
+    { value: 'INDIVIDUAL', label: 'Individuell prüfen' },
+];
 
 const EMPTY_MODERNIZATION: ModernizationSelections = {
     modernizationRoof: '',
@@ -175,7 +178,7 @@ export default function AdjustRnd({ propertyId }: { propertyId: string }) {
                         <Button
                             label={BUTTON_DETAILS.UseCases.label}
                             icon={<BUTTON_DETAILS.UseCases.icon />}
-                            variant="primary"
+                            variant="outline"
                             hideLabelOnMobile
                             menuItems={useCaseMenuItems}
                         />
@@ -199,31 +202,13 @@ export default function AdjustRnd({ propertyId }: { propertyId: string }) {
                         {/* Calculation Mode */}
                         <div>
                             <SectionLabel>Berechnungsmodus</SectionLabel>
-                            <div className="flex flex-wrap gap-2 pt-3">
-                                <button
-                                    type="button"
-                                    onClick={() => setRndMode('STANDARD')}
-                                    className={cn(
-                                        "px-4 py-2 rounded-full text-sm font-medium border transition-colors cursor-pointer",
-                                        rndMode === 'STANDARD'
-                                            ? "bg-primary/10 border-primary text-primary"
-                                            : "border-border text-foreground hover:bg-muted"
-                                    )}
-                                >
-                                    Standard (50 Jahre)
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => setRndMode('INDIVIDUAL')}
-                                    className={cn(
-                                        "px-4 py-2 rounded-full text-sm font-medium border transition-colors cursor-pointer",
-                                        rndMode === 'INDIVIDUAL'
-                                            ? "bg-primary/10 border-primary text-primary"
-                                            : "border-border text-foreground hover:bg-muted"
-                                    )}
-                                >
-                                    Individuell prüfen
-                                </button>
+                            <div className="pt-3">
+                                <PillOptions
+                                    size="md"
+                                    options={RND_MODE_OPTIONS}
+                                    value={rndMode}
+                                    onChange={(value) => setRndMode(value as RndMode)}
+                                />
                             </div>
                         </div>
 
@@ -233,13 +218,13 @@ export default function AdjustRnd({ propertyId }: { propertyId: string }) {
                                 <div>
                                     <p className="text-xs text-muted-foreground uppercase tracking-wide">RND</p>
                                     <p className="text-lg font-semibold text-foreground">
-                                        {selectedRnd ? `${numberFormatter.format(selectedRnd.remainingUsefulLifeYears)} Jahre` : '– Jahre'}
+                                        {selectedRnd ? `${deNumberFormatter.format(selectedRnd.remainingUsefulLifeYears)} Jahre` : '– Jahre'}
                                     </p>
                                 </div>
                                 <div>
                                     <p className="text-xs text-muted-foreground uppercase tracking-wide">AfA</p>
                                     <p className="text-lg font-semibold text-foreground">
-                                        {selectedRnd ? `${numberFormatter.format(selectedRnd.afaPercent)}%` : '– %'}
+                                        {selectedRnd ? `${deNumberFormatter.format(selectedRnd.afaPercent)}%` : '– %'}
                                     </p>
                                 </div>
                             </div>
@@ -255,16 +240,13 @@ export default function AdjustRnd({ propertyId }: { propertyId: string }) {
                             <div className="pt-4 border-t border-border">
                                 <div className="flex items-center justify-between gap-3 mb-3">
                                     <SectionLabel>Letzte Modernisierung</SectionLabel>
-                                    <span title="Coming soon">
-                                        <Button
-                                            label={BUTTON_DETAILS.RequestAppraisal.label}
-                                            icon={<BUTTON_DETAILS.RequestAppraisal.icon />}
-                                            variant="outline"
-                                            size="sm"
-                                            hideLabelOnMobile
-                                            disabled
-                                        />
-                                    </span>
+                                    <ComingSoonButton
+                                        label={BUTTON_DETAILS.RequestAppraisal.label}
+                                        icon={<BUTTON_DETAILS.RequestAppraisal.icon />}
+                                        variant="outline"
+                                        size="sm"
+                                        hideLabelOnMobile
+                                    />
                                 </div>
 
                                 <div className="border border-border rounded-lg overflow-hidden">

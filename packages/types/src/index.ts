@@ -142,12 +142,30 @@ export interface Property {
   numberOfRooms: number | null;
   /** Objekttyp, e.g. EIGENTUMSWOHNUNG — free text, no DB enum. */
   propertyCategory: string | null;
+  /** How many rentable Wohneinheiten this property has. */
+  numberOfUnits: number;
   createdAt: string;
   updatedAt: string;
 }
 
 export type PropertyInsert = Omit<Property, 'propertyId' | 'createdAt' | 'updatedAt'>;
 export type PropertyUpdate = Partial<Omit<Property, 'propertyId' | 'userId' | 'createdAt' | 'updatedAt'>>;
+
+// ----------------------------------------------------------------------------
+// PropertyUnit
+// ----------------------------------------------------------------------------
+
+export interface PropertyUnit {
+  propertyUnitId: number;
+  propertyId: number;
+  unitLabel: string;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type PropertyUnitInsert = Omit<PropertyUnit, 'propertyUnitId' | 'createdAt' | 'updatedAt'>;
+export type PropertyUnitUpdate = Partial<Omit<PropertyUnit, 'propertyUnitId' | 'propertyId' | 'createdAt' | 'updatedAt'>>;
 
 export interface PropertyWithCity extends Property {
   cityRel: {
@@ -292,9 +310,10 @@ export enum TenancyTypeValues {
 
 export interface Tenancy {
   tenancyId: number,
-  maintenanceCostsId: number,
-  parkingSpaceId: number,
+  maintenanceCostsId: number | null,
+  parkingSpaceId: number | null,
   propertyId: number,
+  propertyUnitId: number | null,
   isRented: boolean | null,
   tenancyStartDate: string | null,
   tenancyEndDate: string | null,
@@ -314,6 +333,26 @@ export interface Tenancy {
 
 export type TenancyInsert = Omit<Tenancy, 'tenancyId' | 'createdAt' | 'updatedAt'>;
 export type TenancyUpdate = Partial<Omit<Tenancy, 'tenancyId' | 'propertyId' | 'createdAt' | 'updatedAt'>>;
+
+// ----------------------------------------------------------------------------
+// TenancyPerson
+// ----------------------------------------------------------------------------
+
+export interface TenancyPerson {
+  tenancyPersonId: number;
+  tenancyId: number;
+  lastName: string | null;
+  firstName: string | null;
+  /** Steuer-ID (opt.) */
+  taxId: string | null;
+  isPrimary: boolean;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type TenancyPersonInsert = Omit<TenancyPerson, 'tenancyPersonId' | 'createdAt' | 'updatedAt'>;
+export type TenancyPersonUpdate = Partial<Omit<TenancyPerson, 'tenancyPersonId' | 'tenancyId' | 'createdAt' | 'updatedAt'>>;
 
 export enum DataEntryTypeValues {
   ImportFromRealEstatePortal = 'Aus Immobilienportal importieren',
