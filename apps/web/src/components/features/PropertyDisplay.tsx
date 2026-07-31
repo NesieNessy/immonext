@@ -115,3 +115,10 @@ const CARD_COLOR_PALETTE = [
 export function getPropertyCardColor(index: number): string {
   return CARD_COLOR_PALETTE[index % CARD_COLOR_PALETTE.length];
 }
+
+/** "Whg. 1" + "EG" + "links" → "Whg. 1, EG links" — Etage/Lage are optional
+ *  and only appended (comma-separated from the label) when present. */
+export function formatUnitLabel(unitLabel: string, floor?: string | null, locationNote?: string | null): string {
+  const details = [floor, locationNote].filter((v): v is string => !!v && v.trim() !== '').join(' ');
+  return details ? `${unitLabel}, ${details}` : unitLabel;
+}

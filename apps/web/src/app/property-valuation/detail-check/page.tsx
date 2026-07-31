@@ -41,7 +41,7 @@ interface DetailCheckRow extends Record<string, unknown> {
   propertyCategory: string | null;
   parkingSpaces: number;
   energyEfficiency: string | null;
-  status: 'Abgeschlossen' | 'In Bearbeitung';
+  status: 'Abgeschlossen' | 'In Bearbeitung' | 'Nicht begonnen';
   updatedAt: string;
   /** Whether any step beyond property-data has been saved. */
   resumed: boolean;
@@ -54,6 +54,7 @@ interface DetailCheckRow extends Record<string, unknown> {
 const STATUS_FILTER_OPTIONS = [
   { value: 'Abgeschlossen', label: 'Abgeschlossen' },
   { value: 'In Bearbeitung', label: 'In Bearbeitung' },
+  { value: 'Nicht begonnen', label: 'Nicht begonnen' },
 ];
 
 interface DetailCheckApiRow {
@@ -110,6 +111,12 @@ function computeResumeState(row: DetailCheckApiRow): { resumed: boolean; resumeR
   };
 }
 
+function statusTagVariant(status: DetailCheckRow['status']) {
+  if (status === 'Abgeschlossen') return 'success';
+  if (status === 'In Bearbeitung') return 'warning';
+  return 'muted';
+}
+
 export default function DetailCheckOverviewPage() {
   const router = useRouter();
   const { user, isLoading: authLoading } = useRequireAuth();
@@ -133,22 +140,31 @@ export default function DetailCheckOverviewPage() {
         if (!response.ok) throw new Error(await response.text());
         const data = await response.json() as DetailCheckApiRow[];
         if (cancelled) return;
-        setRows(data.map((row) => ({
-          workflowId: row.workflow_id,
-          quickCheckId: row.quick_check_id,
-          address: row.street_house_number || 'Adresse noch nicht erfasst',
-          postalCode: row.postal_code || '',
-          city: row.city,
-          constructionYear: Number(row.year_of_construction),
-          livingAreaM2: Number(row.living_area_m2),
-          purchasePrice: Number(row.purchase_price),
-          propertyCategory: row.property_category,
-          parkingSpaces: row.parking_spaces ?? 0,
-          energyEfficiency: row.energy_efficiency,
-          status: row.recommendation_level ? 'Abgeschlossen' : 'In Bearbeitung',
-          updatedAt: row.updated_at,
-          ...computeResumeState(row),
-        })));
+        setRows(data.map((row) => {
+          const resumeState = computeResumeState(row);
+          const status = row.recommendation_level
+            ? 'Abgeschlossen' as const
+            : resumeState.resumed
+              ? 'In Bearbeitung' as const
+              : 'Nicht begonnen' as const;
+
+          return {
+            workflowId: row.workflow_id,
+            quickCheckId: row.quick_check_id,
+            address: row.street_house_number || 'Adresse noch nicht erfasst',
+            postalCode: row.postal_code || '',
+            city: row.city,
+            constructionYear: Number(row.year_of_construction),
+            livingAreaM2: Number(row.living_area_m2),
+            purchasePrice: Number(row.purchase_price),
+            propertyCategory: row.property_category,
+            parkingSpaces: row.parking_spaces ?? 0,
+            energyEfficiency: row.energy_efficiency,
+            status,
+            updatedAt: row.updated_at,
+            ...resumeState,
+          };
+        }));
       } catch (loadError) {
         if (!cancelled) setError(loadError instanceof Error ? loadError.message : 'Detailbewertungen konnten nicht geladen werden.');
       } finally {
@@ -320,7 +336,7 @@ export default function DetailCheckOverviewPage() {
       filterable: true,
       filterOptions: STATUS_FILTER_OPTIONS,
       renderCell: (value) => (
-        <Tag label={String(value)} variant={value === 'Abgeschlossen' ? 'success' : 'muted'} />
+        <Tag label={String(value)} variant={statusTagVariant(value as DetailCheckRow['status'])} />
       ),
     },
     {
@@ -426,7 +442,7 @@ export default function DetailCheckOverviewPage() {
                   <button type="button" onClick={() => openRow(row)} className="w-full rounded-lg border border-border bg-card p-4 text-left">
                     <div className="flex items-start justify-between gap-3">
                       <div><p className="font-medium text-foreground">{row.address}</p><p className="text-sm text-muted-foreground">{row.postalCode} {row.city}</p></div>
-                      <Tag label={row.status} variant={row.status === 'Abgeschlossen' ? 'success' : 'muted'} />
+                      <Tag label={row.status} variant={statusTagVariant(row.status)} />
                     </div>
                     <div className="mt-3 flex justify-between text-sm text-muted-foreground"><span>{row.livingAreaM2.toLocaleString('de-DE')} m²</span><span>{new Date(row.updatedAt).toLocaleDateString('de-DE')}</span></div>
                   </button>

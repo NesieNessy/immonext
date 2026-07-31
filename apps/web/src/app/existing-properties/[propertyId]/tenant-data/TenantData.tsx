@@ -1,7 +1,7 @@
 "use client";
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
-import { buildPropertyUseCaseBreadcrumb, PropertyLoadingPage, PropertyNotFoundPage } from '@/components/features/PropertyDisplay';
+import { buildPropertyUseCaseBreadcrumb, formatUnitLabel, PropertyLoadingPage, PropertyNotFoundPage } from '@/components/features/PropertyDisplay';
 import { Button, ConfirmDeleteModal, Header, Icons, Table, Tag, TextFieldWithIcon, type MenuItem, type SortDirection, type TableColumn } from '@/components/ui';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { ExistingPropertiesUseCases } from '@/constants/ExistingPropertiesUseCases';
@@ -119,7 +119,7 @@ export default function TenantData({ propertyId }: { propertyId: string }) {
     const tableData = useMemo(() => {
         const raw = unitRows.map((row) => ({
             propertyUnitId: row.unit.propertyUnitId,
-            unitLabel: row.unit.unitLabel,
+            unitLabel: formatUnitLabel(row.unit.unitLabel, row.unit.floor, row.unit.locationNote),
             tenantName: row.tenantName,
             moveInDate: row.moveInDate,
             coldRent: row.coldRent,
@@ -292,7 +292,7 @@ export default function TenantData({ propertyId }: { propertyId: string }) {
                 confirmDisabled={isDeletingUnit}
             >
                 <p className="text-sm text-muted-foreground">
-                    Möchten Sie <span className="font-medium text-foreground">{unitPendingDelete?.unitLabel}</span> wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.
+                    Möchten Sie <span className="font-medium text-foreground">{unitPendingDelete ? formatUnitLabel(unitPendingDelete.unitLabel, unitPendingDelete.floor, unitPendingDelete.locationNote) : ''}</span> wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.
                 </p>
             </ConfirmDeleteModal>
         </div>

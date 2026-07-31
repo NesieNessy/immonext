@@ -1,6 +1,6 @@
 "use client";
 
-import { buildPropertyUseCaseBreadcrumb } from '@/components/features/PropertyDisplay';
+import { buildPropertyUseCaseBreadcrumb, formatUnitLabel } from '@/components/features/PropertyDisplay';
 import { Button, CalendarField, ComingSoonButton, ConfirmDeleteModal, Header, NumberField, SectionLabel, StickyActionBar, Table, Tag, TextField, type SortDirection, type TableColumn } from '@/components/ui';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { ExistingPropertiesUseCases } from '@/constants/ExistingPropertiesUseCases';
@@ -156,7 +156,7 @@ export function TenantUnitDetail({ propertyId, property, unit, hasMultipleUnits 
         ? [
             ...buildPropertyUseCaseBreadcrumb(property, propertyId, ExistingPropertiesUseCases.TenantData).slice(0, 2),
             { label: ExistingPropertiesUseCases.TenantData, href: `/existing-properties/${propertyId}/tenant-data` },
-            { label: unit.unitLabel },
+            { label: formatUnitLabel(unit.unitLabel, unit.floor, unit.locationNote) },
         ]
         : buildPropertyUseCaseBreadcrumb(property, propertyId, ExistingPropertiesUseCases.TenantData);
 

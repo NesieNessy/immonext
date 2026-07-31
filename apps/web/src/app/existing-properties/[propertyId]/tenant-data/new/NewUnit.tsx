@@ -2,13 +2,13 @@
 
 import { useEffect, useState } from 'react';
 
-import { buildPropertyUseCaseBreadcrumb, PropertyLoadingPage, PropertyNotFoundPage } from '@/components/features/PropertyDisplay';
-import { Dropdown, Header, NumberField, PillOptions, SectionLabel, StickyActionBar, TextField } from '@/components/ui';
+import { buildPropertyUseCaseBreadcrumb, formatUnitLabel, PropertyLoadingPage, PropertyNotFoundPage } from '@/components/features/PropertyDisplay';
+import { Header, NumberField, PillOptions, SectionLabel, StickyActionBar, TextField } from '@/components/ui';
 import { ExistingPropertiesUseCases } from '@/constants/ExistingPropertiesUseCases';
 import { getPropertyById } from '@/lib/supabase/property.supabase';
 import { createPropertyUnit, getPropertyUnitsByProperty } from '@/lib/supabase/property_unit.supabase';
-import { base64ToDataUri, deCurrencyFormatter, deNumberFormatter } from '@/lib/utils';
-import { EnergyEfficient, type Property, UnitUsageType } from '@immonext/types';
+import { base64ToDataUri, deNumberFormatter } from '@/lib/utils';
+import { type Property, UnitUsageType } from '@immonext/types';
 import { Archive, Briefcase, Car, Check, DoorOpen, Home, MoreHorizontal, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
@@ -48,10 +48,13 @@ const PARKING_OPTIONS = [
     { value: '4', label: '4+' },
 ];
 
-const ENERGY_OPTIONS = [
-    { value: '', label: '–' },
-    ...Object.values(EnergyEfficient).map((v) => ({ value: v, label: v })),
-];
+// Stellplätze only make sense for units people actually occupy or run a
+// business out of — not for a Stellplatz/Lager/Sonstige unit itself.
+const USAGE_TYPES_WITH_PARKING = new Set<UnitUsageType>([
+    UnitUsageType.Wohnung,
+    UnitUsageType.Einliegerwohnung,
+    UnitUsageType.Gewerbeflaeche,
+]);
 
 function UsageTypeCard({ option, selected, onSelect }: { option: UsageTypeOption; selected: boolean; onSelect: () => void }) {
     const Icon = option.icon;
@@ -82,22 +85,13 @@ export default function NewUnit({ propertyId }: { propertyId: string }) {
     const [locationNote, setLocationNote] = useState('');
     const [livingAreaM2, setLivingAreaM2] = useState('');
     const [numberOfRooms, setNumberOfRooms] = useState('');
-    const [yearOfConstruction, setYearOfConstruction] = useState('');
-    const [energyEfficient, setEnergyEfficient] = useState('');
     const [numberOfParkingSpaces, setNumberOfParkingSpaces] = useState('0');
-    const [targetColdRent, setTargetColdRent] = useState('0');
-    const [targetParkingRent, setTargetParkingRent] = useState('0');
-    const [targetAncillaryCosts, setTargetAncillaryCosts] = useState('0');
 
     useEffect(() => {
         const id = parseInt(propertyId, 10);
         Promise.all([getPropertyById(id), getPropertyUnitsByProperty(id)]).then(([foundProperty, units]) => {
             setProperty(foundProperty);
             setUnitCount(units.length);
-            if (foundProperty) {
-                setYearOfConstruction(String(foundProperty.yearOfConstruction));
-                setEnergyEfficient(foundProperty.energyEfficient ?? '');
-            }
         });
     }, [propertyId]);
 
@@ -114,8 +108,8 @@ export default function NewUnit({ propertyId }: { propertyId: string }) {
 
     const isValid = unitLabel.trim() !== '' && Number(livingAreaM2) > 0;
 
-    const parkingCount = Number(numberOfParkingSpaces);
-    const soll = (Number(targetColdRent) || 0) + (Number(targetParkingRent) || 0);
+    const showParking = USAGE_TYPES_WITH_PARKING.has(usageType);
+    const parkingCount = showParking ? Number(numberOfParkingSpaces) : 0;
 
     const handleSave = async () => {
         if (!isValid) return;
@@ -129,12 +123,12 @@ export default function NewUnit({ propertyId }: { propertyId: string }) {
             locationNote: locationNote.trim() || null,
             livingAreaM2: livingAreaM2 !== '' ? Number(livingAreaM2) : null,
             numberOfRooms: numberOfRooms !== '' ? Number(numberOfRooms) : null,
-            yearOfConstruction: yearOfConstruction !== '' ? Number(yearOfConstruction) : null,
-            energyEfficient: (energyEfficient || null) as EnergyEfficient | null,
+            yearOfConstruction: null,
+            energyEfficient: null,
             numberOfParkingSpaces: parkingCount,
-            targetColdRent: targetColdRent !== '' ? Number(targetColdRent) : null,
-            targetParkingRent: targetParkingRent !== '' ? Number(targetParkingRent) : null,
-            targetAncillaryCosts: targetAncillaryCosts !== '' ? Number(targetAncillaryCosts) : null,
+            targetColdRent: null,
+            targetParkingRent: null,
+            targetAncillaryCosts: null,
         });
         router.push(backHref);
     };
@@ -173,19 +167,19 @@ export default function NewUnit({ propertyId }: { propertyId: string }) {
                         <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-3">
                             <TextField
                                 label="Einheitenbezeichnung *"
-                                placeholder="z.B. Whg. 1, EG links"
+                                placeholder="z.B. Whg. 1"
                                 value={unitLabel}
                                 onChange={(e) => setUnitLabel(e.target.value)}
                             />
                             <TextField
                                 label="Etage (opt.)"
-                                placeholder="–"
+                                placeholder="z.B. EG"
                                 value={floor}
                                 onChange={(e) => setFloor(e.target.value)}
                             />
                             <TextField
                                 label="Lage (opt.)"
-                                placeholder="–"
+                                placeholder="z.B. links"
                                 value={locationNote}
                                 onChange={(e) => setLocationNote(e.target.value)}
                             />
@@ -195,7 +189,7 @@ export default function NewUnit({ propertyId }: { propertyId: string }) {
                     {/* Fläche & Details */}
                     <div>
                         <SectionLabel>Fläche & Details</SectionLabel>
-                        <div className="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-3">
+                        <div className="mt-3 grid grid-cols-2 gap-3">
                             <NumberField
                                 label="Wohnfläche *"
                                 unit="m²"
@@ -210,66 +204,28 @@ export default function NewUnit({ propertyId }: { propertyId: string }) {
                                 onChange={(e) => setNumberOfRooms(e.target.value)}
                                 min={0}
                             />
-                            <NumberField
-                                label="Baujahr (opt.)"
-                                value={yearOfConstruction}
-                                onChange={(e) => setYearOfConstruction(e.target.value.replace(/\D/g, '').slice(0, 4))}
-                            />
-                            <Dropdown
-                                label="Energieeffizienz (opt.)"
-                                options={ENERGY_OPTIONS}
-                                value={energyEfficient}
-                                onChange={(e) => setEnergyEfficient(e.target.value)}
-                            />
                         </div>
                     </div>
 
-                    {/* Stellplätze */}
-                    <div>
-                        <SectionLabel>Stellplätze (opt.)</SectionLabel>
-                        <div className="mt-3">
-                            <PillOptions options={PARKING_OPTIONS} value={numberOfParkingSpaces} onChange={setNumberOfParkingSpaces} />
+                    {/* Stellplätze — only relevant for units people occupy or run a business out of */}
+                    {showParking && (
+                        <div>
+                            <SectionLabel>Stellplätze (opt.)</SectionLabel>
+                            <div className="mt-3">
+                                <PillOptions options={PARKING_OPTIONS} value={numberOfParkingSpaces} onChange={setNumberOfParkingSpaces} />
+                            </div>
                         </div>
-                    </div>
-
-                    {/* Sollmiete */}
-                    <div>
-                        <SectionLabel>Sollmiete (opt. – kann später beim Mieter erfasst werden)</SectionLabel>
-                        <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-3">
-                            <NumberField
-                                label="Nettokaltmiete"
-                                unit="€"
-                                value={targetColdRent}
-                                onChange={(e) => setTargetColdRent(e.target.value)}
-                                min={0}
-                            />
-                            <NumberField
-                                label="Stellplatzmiete"
-                                unit="€"
-                                value={targetParkingRent}
-                                onChange={(e) => setTargetParkingRent(e.target.value)}
-                                min={0}
-                            />
-                            <NumberField
-                                label="Nebenkosten (Vorauszahlung)"
-                                unit="€"
-                                value={targetAncillaryCosts}
-                                onChange={(e) => setTargetAncillaryCosts(e.target.value)}
-                                min={0}
-                            />
-                        </div>
-                    </div>
+                    )}
 
                     {/* Zusammenfassung */}
                     <div>
                         <SectionLabel>Zusammenfassung</SectionLabel>
                         <div className="mt-3 rounded-lg border border-border divide-y divide-border overflow-hidden">
                             {[
-                                ['Bezeichnung', unitLabel.trim() || '–'],
+                                ['Bezeichnung', unitLabel.trim() ? formatUnitLabel(unitLabel.trim(), floor, locationNote) : '–'],
                                 ['Nutzungsart', USAGE_TYPE_LABEL[usageType]],
                                 ['Fläche', livingAreaM2 !== '' ? `${deNumberFormatter.format(Number(livingAreaM2))} m²` : '–'],
-                                ['Stellplätze', parkingCount === 0 ? 'Kein' : parkingCount === 4 ? '4+' : String(parkingCount)],
-                                ['Sollmiete', soll > 0 ? `${deCurrencyFormatter.format(soll)} €` : '–'],
+                                ...(showParking ? [['Stellplätze', parkingCount === 0 ? 'Kein' : parkingCount === 4 ? '4+' : String(parkingCount)]] : []),
                                 ['Status nach Anlage', 'Leerstand (kein Mieter)'],
                             ].map(([label, value], index) => (
                                 <div key={label} className={`flex items-center justify-between px-4 py-2.5 text-sm ${index % 2 === 1 ? 'bg-muted/30' : ''}`}>
