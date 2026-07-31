@@ -231,9 +231,9 @@ export default function AdjustRnd({ propertyId }: { propertyId: string }) {
 
                         {/* Renovation Section */}
                         {rndMode === 'INDIVIDUAL' && (
-                            <div className="pt-4 border-t border-border">
-                                <div className="flex items-center justify-between gap-3 mb-3">
-                                    <SectionLabel>Modernisierungen</SectionLabel>
+                            <div>
+                                <SectionLabel>Modernisierungen</SectionLabel>
+                                <div className="pt-3 flex items-center justify-end">
                                     <ComingSoonButton
                                         label={BUTTON_DETAILS.RequestAppraisal.label}
                                         icon={<BUTTON_DETAILS.RequestAppraisal.icon />}
@@ -243,7 +243,7 @@ export default function AdjustRnd({ propertyId }: { propertyId: string }) {
                                     />
                                 </div>
 
-                                <div className="border border-border rounded-lg overflow-hidden">
+                                <div className="mt-3 border border-border rounded-lg overflow-hidden">
                                     <div className="grid grid-cols-2 gap-4 px-4 py-2 bg-muted/40 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
                                         <span>Maßnahme</span>
                                         <span>Zuletzt erneuert</span>
