@@ -2,14 +2,32 @@
 
 import { NoResult } from '@/components/common';
 import type { MenuItem, SortDirection, TableColumn } from '@/components/ui';
-import { Button, Header, Icons, Table, Tag, TextFieldWithIcon } from '@/components/ui';
+import { Button, ConfirmDeleteModal, Header, Icons, Table, Tag, TextFieldWithIcon } from '@/components/ui';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
 import { authFetch } from '@/lib/api/authFetch';
-import { ExternalLink, MoreVertical } from 'lucide-react';
+import { createAcquisitionCosts } from '@/lib/supabase/acquisition_costs.supabase';
+import { createParkingSpace } from '@/lib/supabase/parking_space.supabase';
+import { createProperty } from '@/lib/supabase/property.supabase';
+import type { EnergyEfficient } from '@immonext/types';
+import { MoreVertical, Building2 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
+
+// Each step after "property-data" is saved to its own table once the user
+// clicks "Weiter" on it — the furthest one with a row is where they paused.
+const STEP_ROUTES = [
+  'property-data',
+  'acquisition-costs',
+  'leasing-or-rentals',
+  'financing',
+  'depreciation',
+  'renovation',
+  'calculator',
+  'macro-location',
+  'comparison',
+];
 
 interface DetailCheckRow extends Record<string, unknown> {
   workflowId: string;
@@ -20,8 +38,17 @@ interface DetailCheckRow extends Record<string, unknown> {
   constructionYear: number;
   livingAreaM2: number;
   purchasePrice: number;
+  propertyCategory: string | null;
+  parkingSpaces: number;
+  energyEfficiency: string | null;
   status: 'Abgeschlossen' | 'In Bearbeitung';
   updatedAt: string;
+  /** Whether any step beyond property-data has been saved. */
+  resumed: boolean;
+  /** Route to jump back into: property-data if never progressed further,
+   *  otherwise the step right after the furthest one completed ("result"
+   *  once every step up to Vergleich is done). */
+  resumeRoute: string;
 }
 
 const STATUS_FILTER_OPTIONS = [
@@ -38,13 +65,55 @@ interface DetailCheckApiRow {
   year_of_construction: number;
   living_area_m2: string | number;
   purchase_price: string | number;
+  property_category: string | null;
+  parking_spaces: number | null;
+  energy_efficiency: string | null;
   recommendation_level: string | null;
   updated_at: string;
+  has_acquisition_costs: boolean;
+  has_rental: boolean;
+  has_financing: boolean;
+  has_depreciation: boolean;
+  has_renovation: boolean;
+  has_calculator: boolean;
+  has_location_score: boolean;
+  has_comparison: boolean;
+}
+
+function computeResumeState(row: DetailCheckApiRow): { resumed: boolean; resumeRoute: string } {
+  const stepDone = [
+    true, // property-data — always true, this row wouldn't exist otherwise
+    row.has_acquisition_costs,
+    row.has_rental,
+    row.has_financing,
+    row.has_depreciation,
+    row.has_renovation,
+    row.has_calculator,
+    row.has_location_score,
+    row.has_comparison,
+  ];
+
+  let furthestIndex = 0;
+  for (let i = 1; i < stepDone.length; i++) {
+    if (stepDone[i]) furthestIndex = i;
+    else break;
+  }
+
+  if (furthestIndex === 0) {
+    return { resumed: false, resumeRoute: STEP_ROUTES[0] };
+  }
+
+  const nextIndex = furthestIndex + 1;
+  return {
+    resumed: true,
+    resumeRoute: nextIndex < STEP_ROUTES.length ? STEP_ROUTES[nextIndex] : 'result',
+  };
 }
 
 export default function DetailCheckOverviewPage() {
   const router = useRouter();
-  const { isLoading: authLoading } = useRequireAuth();
+  const { user, isLoading: authLoading } = useRequireAuth();
+  const [takingOverId, setTakingOverId] = useState<string | null>(null);
   const [rows, setRows] = useState<DetailCheckRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -52,6 +121,8 @@ export default function DetailCheckOverviewPage() {
   const [sortKey, setSortKey] = useState('updatedAt');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [columnFilters, setColumnFilters] = useState<Record<string, string>>({});
+  const [rowPendingDelete, setRowPendingDelete] = useState<DetailCheckRow | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -71,8 +142,12 @@ export default function DetailCheckOverviewPage() {
           constructionYear: Number(row.year_of_construction),
           livingAreaM2: Number(row.living_area_m2),
           purchasePrice: Number(row.purchase_price),
+          propertyCategory: row.property_category,
+          parkingSpaces: row.parking_spaces ?? 0,
+          energyEfficiency: row.energy_efficiency,
           status: row.recommendation_level ? 'Abgeschlossen' : 'In Bearbeitung',
           updatedAt: row.updated_at,
+          ...computeResumeState(row),
         })));
       } catch (loadError) {
         if (!cancelled) setError(loadError instanceof Error ? loadError.message : 'Detailbewertungen konnten nicht geladen werden.');
@@ -85,18 +160,127 @@ export default function DetailCheckOverviewPage() {
     return () => { cancelled = true; };
   }, []);
 
+  const rowSuffix = (row: DetailCheckRow) => row.quickCheckId
+    ? `?quickCheckId=${encodeURIComponent(row.quickCheckId)}`
+    : `?workflowId=${encodeURIComponent(row.workflowId)}`;
+
   const openRow = useCallback((row: DetailCheckRow) => {
-    const suffix = row.quickCheckId
-      ? `?quickCheckId=${encodeURIComponent(row.quickCheckId)}`
-      : `?workflowId=${encodeURIComponent(row.workflowId)}`;
-    router.push(`/property-valuation/detail-check/property-data${suffix}`);
+    router.push(`/property-valuation/detail-check/${row.resumeRoute}${rowSuffix(row)}`);
   }, [router]);
 
-  const menuItems = useCallback((row: DetailCheckRow): MenuItem[] => [{
-    label: BUTTON_DETAILS.OpenDetailCheck.label,
-    icon: <ExternalLink className="h-4 w-4" />,
-    onClick: () => openRow(row),
-  }], [openRow]);
+  const openResult = useCallback((row: DetailCheckRow) => {
+    router.push(`/property-valuation/detail-check/result${rowSuffix(row)}`);
+  }, [router]);
+
+  // Creates the Bestandsobjekt directly from what the detail check already
+  // captured — no intermediate form, matching "In Bestandsobjekte
+  // übernehmen" being a one-click action from the row menu.
+  const takeOverToBestandsobjekte = useCallback(async (row: DetailCheckRow) => {
+    if (!user) return;
+    setTakingOverId(row.workflowId);
+    try {
+      const created = await createProperty({
+        userId: user.id,
+        cityId: null,
+        propertyAbbreviation: null,
+        street: row.address,
+        houseNumber: '',
+        city: row.city,
+        postalCode: row.postalCode,
+        federalState: '',
+        squareMeters: row.livingAreaM2,
+        numberOfRooms: null,
+        yearOfConstruction: row.constructionYear,
+        energyEfficient: (row.energyEfficiency || null) as EnergyEfficient | null,
+        propertyCategory: row.propertyCategory,
+        imageUrl: null,
+        numberOfUnits: 1,
+      });
+      if (!created) {
+        setError('Objekt konnte nicht angelegt werden.');
+        return;
+      }
+
+      if (row.purchasePrice > 0) {
+        await createAcquisitionCosts({
+          propertyId: created.propertyId,
+          parkingSpaceId: null,
+          propertyPurchasePrice: row.purchasePrice,
+          pricePerSqm: null,
+          broker: null,
+          brokerValue: null,
+          notary: null,
+          notaryValue: null,
+          landRegistry: null,
+          landRegistryValue: null,
+          realEstateTax: null,
+          realEstateTaxValue: null,
+          adjustmentVariable: null,
+          adjustmentVariableValue: null,
+          totalAncillaryCostsValue: null,
+          totalAncillaryCosts: null,
+          parkingSpacePurchasePrice: null,
+        });
+      }
+
+      if (row.parkingSpaces > 0) {
+        await createParkingSpace({
+          propertyId: created.propertyId,
+          parkingSpaceType: 'OTHER',
+          numberOfParkingSpaces: row.parkingSpaces,
+        });
+      }
+
+      router.push(`/existing-properties/${created.propertyId}`);
+    } finally {
+      setTakingOverId(null);
+    }
+  }, [router, user]);
+
+  const handleConfirmDelete = async () => {
+    if (!rowPendingDelete) return;
+    setIsDeleting(true);
+    try {
+      const response = await authFetch('/api/detail-checks', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ workflowId: rowPendingDelete.workflowId }),
+      });
+      if (!response.ok) throw new Error(await response.text());
+      setRows((prev) => prev.filter((r) => r.workflowId !== rowPendingDelete.workflowId));
+      setRowPendingDelete(null);
+    } catch (deleteError) {
+      setError(deleteError instanceof Error ? deleteError.message : 'Detailbewertung konnte nicht gelöscht werden.');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const menuItems = useCallback((row: DetailCheckRow): MenuItem[] => [
+    {
+      label: BUTTON_DETAILS.OpenResult.label,
+      icon: <BUTTON_DETAILS.OpenResult.icon />,
+      disabled: row.status !== 'Abgeschlossen',
+      onClick: () => openResult(row),
+    },
+    {
+      label: row.resumed ? 'Detailbewertung fortsetzen' : BUTTON_DETAILS.StartDetailCheck.label,
+      icon: <BUTTON_DETAILS.StartDetailCheck.icon />,
+      onClick: () => openRow(row),
+    },
+    {
+      label: 'In Bestandsobjekte übernehmen',
+      icon: <Building2 className="h-4 w-4" />,
+      disabled: takingOverId === row.workflowId,
+      onClick: () => void takeOverToBestandsobjekte(row),
+    },
+    {
+      label: BUTTON_DETAILS.Delete.label,
+      icon: <BUTTON_DETAILS.Delete.icon />,
+      destructive: true,
+      onClick: () => setRowPendingDelete(row),
+    },
+  ], [openRow, openResult, takeOverToBestandsobjekte, takingOverId]);
 
   const columns: TableColumn<DetailCheckRow>[] = useMemo(() => [
     {
@@ -104,7 +288,9 @@ export default function DetailCheckOverviewPage() {
       label: '',
       width: '48px',
       renderCell: (_value, row) => (
-        <Button iconOnly icon={<MoreVertical className="h-4 w-4" />} variant="ghost" size="sm" menuItems={menuItems(row)} />
+        <div onClick={(e) => e.stopPropagation()}>
+          <Button iconOnly icon={<MoreVertical className="h-4 w-4" />} variant="ghost" size="sm" menuItems={menuItems(row)} />
+        </div>
       ),
     },
     { key: 'address', label: 'Objekt', sortable: true, filterable: true },
@@ -250,6 +436,18 @@ export default function DetailCheckOverviewPage() {
           </div>
         )}
       </main>
+
+      <ConfirmDeleteModal
+        open={rowPendingDelete !== null}
+        onCancel={() => setRowPendingDelete(null)}
+        onConfirm={() => void handleConfirmDelete()}
+        title="Detailbewertung löschen?"
+        confirmDisabled={isDeleting}
+      >
+        <p className="text-sm text-muted-foreground">
+          Möchten Sie <span className="font-medium text-foreground">{rowPendingDelete?.address}</span>, {rowPendingDelete?.postalCode} {rowPendingDelete?.city} wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.
+        </p>
+      </ConfirmDeleteModal>
     </div>
   );
 }
