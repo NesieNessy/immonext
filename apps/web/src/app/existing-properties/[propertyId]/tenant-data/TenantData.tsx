@@ -2,17 +2,17 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { buildPropertyUseCaseBreadcrumb, PropertyLoadingPage, PropertyNotFoundPage } from '@/components/features/PropertyDisplay';
-import { Button, Header, Table, Tag, type SortDirection, type TableColumn } from '@/components/ui';
+import { Button, ConfirmDeleteModal, Header, Icons, Table, Tag, TextFieldWithIcon, type MenuItem, type SortDirection, type TableColumn } from '@/components/ui';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { ExistingPropertiesUseCases } from '@/constants/ExistingPropertiesUseCases';
 import { getPropertyById } from '@/lib/supabase/property.supabase';
-import { createPropertyUnit, getPropertyUnitsByProperty } from '@/lib/supabase/property_unit.supabase';
+import { deletePropertyUnit, getPropertyUnitsByProperty } from '@/lib/supabase/property_unit.supabase';
 import { getCurrentTenancyByUnit } from '@/lib/supabase/tenancy.supabase';
 import { getTenancyPersonsByTenancy } from '@/lib/supabase/tenancy_person.supabase';
 import { createUseCaseMenuItems } from '@/lib/useCaseMenu';
 import { base64ToDataUri, deCurrencyFormatter, formatDeDate } from '@/lib/utils';
 import type { Property, PropertyUnit } from '@immonext/types';
-import { Plus } from 'lucide-react';
+import { ExternalLink, MoreVertical, Plus, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 import { TenantUnitDetail } from './TenantUnitDetail';
@@ -48,7 +48,7 @@ async function loadUnitRow(unit: PropertyUnit): Promise<UnitRow> {
     return {
         unit,
         tenantName: tenantName || '–',
-        moveInDate: tenancy.tenancyStartDate,
+        moveInDate: primary?.moveInDate ?? null,
         coldRent: tenancy.coldRent,
         status: 'Vermietet',
     };
@@ -60,10 +60,12 @@ export default function TenantData({ propertyId }: { propertyId: string }) {
     const [units, setUnits] = useState<PropertyUnit[]>([]);
     const [unitRows, setUnitRows] = useState<UnitRow[]>([]);
     const [isLoading, setIsLoading] = useState(true);
-    const [isAddingUnit, setIsAddingUnit] = useState(false);
     const [sortKey, setSortKey] = useState<string>('unitLabel');
     const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
     const [columnFilters, setColumnFilters] = useState<Record<string, string>>({});
+    const [search, setSearch] = useState('');
+    const [unitPendingDelete, setUnitPendingDelete] = useState<PropertyUnit | null>(null);
+    const [isDeletingUnit, setIsDeletingUnit] = useState(false);
 
     const load = useCallback(async () => {
         const id = parseInt(propertyId, 10);
@@ -85,17 +87,6 @@ export default function TenantData({ propertyId }: { propertyId: string }) {
         void load();
     }, [load]);
 
-    const handleAddUnit = async () => {
-        setIsAddingUnit(true);
-        await createPropertyUnit({
-            propertyId: parseInt(propertyId, 10),
-            unitLabel: `Whg. ${units.length + 1}`,
-            sortOrder: units.length,
-        });
-        await load();
-        setIsAddingUnit(false);
-    };
-
     const handleSort = (key: string) => {
         if (sortKey === key) {
             setSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'));
@@ -107,6 +98,18 @@ export default function TenantData({ propertyId }: { propertyId: string }) {
 
     const handleColumnFilterChange = (key: string, value: string) => {
         setColumnFilters((prev) => ({ ...prev, [key]: value }));
+    };
+
+    const handleConfirmDeleteUnit = async () => {
+        if (!unitPendingDelete) return;
+        setIsDeletingUnit(true);
+        try {
+            await deletePropertyUnit(unitPendingDelete.propertyUnitId);
+            setUnitPendingDelete(null);
+            await load();
+        } finally {
+            setIsDeletingUnit(false);
+        }
     };
 
     const useCaseMenuItems = createUseCaseMenuItems(propertyId, 'TenantData', (route) => {
@@ -123,7 +126,11 @@ export default function TenantData({ propertyId }: { propertyId: string }) {
             status: row.status,
         }));
 
-        let filtered = raw;
+        const query = search.trim().toLowerCase();
+        let filtered = query
+            ? raw.filter((row) => `${row.unitLabel} ${row.tenantName}`.toLowerCase().includes(query))
+            : raw;
+
         for (const [key, val] of Object.entries(columnFilters)) {
             if (!val) continue;
             const lower = val.toLowerCase();
@@ -140,7 +147,7 @@ export default function TenantData({ propertyId }: { propertyId: string }) {
             const cmp = av < bv ? -1 : av > bv ? 1 : 0;
             return sortDirection === 'asc' ? cmp : -cmp;
         });
-    }, [unitRows, columnFilters, sortKey, sortDirection]);
+    }, [unitRows, search, columnFilters, sortKey, sortDirection]);
 
     if (isLoading) return <PropertyLoadingPage />;
 
@@ -153,16 +160,49 @@ export default function TenantData({ propertyId }: { propertyId: string }) {
         return <TenantUnitDetail propertyId={propertyId} property={property} unit={unit} hasMultipleUnits={false} />;
     }
 
+    const buildRowMenuItems = (row: { propertyUnitId: number; unitLabel: string }): MenuItem[] => [
+        {
+            label: 'Öffnen',
+            icon: <ExternalLink className="w-4 h-4" />,
+            onClick: () => router.push(`/existing-properties/${propertyId}/tenant-data/${row.propertyUnitId}`),
+        },
+        {
+            label: 'Löschen',
+            icon: <Trash2 className="w-4 h-4" />,
+            destructive: true,
+            onClick: () => setUnitPendingDelete(units.find((u) => u.propertyUnitId === row.propertyUnitId) ?? null),
+        },
+    ];
+
     const columns: TableColumn<Record<string, unknown>>[] = [
+        {
+            key: 'actions',
+            label: '',
+            width: '48px',
+            renderCell: (_v, row) => (
+                <div onClick={(e) => e.stopPropagation()}>
+                    <Button
+                        iconOnly
+                        icon={<MoreVertical className="w-4 h-4" />}
+                        variant="ghost"
+                        size="sm"
+                        menuItems={buildRowMenuItems(row as { propertyUnitId: number; unitLabel: string })}
+                    />
+                </div>
+            ),
+        },
         {
             key: 'unitLabel',
             label: 'Einheit',
+            width: '24%',
             sortable: true,
+            filterable: true,
             renderCell: (v) => <span className="font-medium text-foreground">{String(v)}</span>,
         },
         {
             key: 'tenantName',
             label: 'Aktueller Mieter',
+            width: '28%',
             sortable: true,
             filterable: true,
         },
@@ -170,12 +210,14 @@ export default function TenantData({ propertyId }: { propertyId: string }) {
             key: 'moveInDate',
             label: 'Einzug',
             sortable: true,
+            filterable: true,
             renderCell: (v) => formatDeDate(v as string | null),
         },
         {
             key: 'coldRent',
             label: 'Nettomiete',
             sortable: true,
+            filterable: true,
             renderCell: (v) => v != null ? `${deCurrencyFormatter.format(v as number)} €` : '–',
         },
         {
@@ -198,27 +240,35 @@ export default function TenantData({ propertyId }: { propertyId: string }) {
                     items={buildPropertyUseCaseBreadcrumb(property, propertyId, ExistingPropertiesUseCases.TenantData)}
                     image={property.imageUrl ? <img src={base64ToDataUri(property.imageUrl)!} alt={`${property.street} ${property.houseNumber}`} className="w-10 h-10 object-cover rounded-lg" /> : undefined}
                     actions={
-                        <div className="flex items-center gap-3">
-                            <Button
-                                label={BUTTON_DETAILS.UseCases.label}
-                                icon={<BUTTON_DETAILS.UseCases.icon />}
-                                variant="outline"
-                                hideLabelOnMobile
-                                menuItems={useCaseMenuItems}
-                            />
-                            <Button
-                                label="Einheit hinzufügen"
-                                icon={<Plus className="w-4 h-4" />}
-                                variant="primary"
-                                hideLabelOnMobile
-                                disabled={isAddingUnit}
-                                onClick={() => void handleAddUnit()}
-                            />
-                        </div>
+                        <Button
+                            label={BUTTON_DETAILS.UseCases.label}
+                            icon={<BUTTON_DETAILS.UseCases.icon />}
+                            variant="outline"
+                            hideLabelOnMobile
+                            menuItems={useCaseMenuItems}
+                        />
                     }
                 />
 
-                <div className="mt-8 mx-auto max-w-5xl space-y-3">
+                <div className="mt-8 space-y-3">
+                    <div className="flex flex-wrap items-center gap-3">
+                        <div className="max-w-sm flex-1 min-w-[220px]">
+                            <TextFieldWithIcon
+                                type="search"
+                                icon={Icons.Search}
+                                placeholder="Einheiten durchsuchen"
+                                value={search}
+                                onChange={(e) => setSearch(e.target.value)}
+                            />
+                        </div>
+                        <Button
+                            label="Einheit hinzufügen"
+                            icon={<Plus className="w-4 h-4" />}
+                            variant="primary"
+                            hideLabelOnMobile
+                            onClick={() => router.push(`/existing-properties/${propertyId}/tenant-data/new`)}
+                        />
+                    </div>
                     <Table
                         columns={columns}
                         data={tableData}
@@ -233,6 +283,18 @@ export default function TenantData({ propertyId }: { propertyId: string }) {
                     />
                 </div>
             </main>
+
+            <ConfirmDeleteModal
+                open={unitPendingDelete !== null}
+                onCancel={() => setUnitPendingDelete(null)}
+                onConfirm={() => void handleConfirmDeleteUnit()}
+                title="Einheit löschen?"
+                confirmDisabled={isDeletingUnit}
+            >
+                <p className="text-sm text-muted-foreground">
+                    Möchten Sie <span className="font-medium text-foreground">{unitPendingDelete?.unitLabel}</span> wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.
+                </p>
+            </ConfirmDeleteModal>
         </div>
     );
 }

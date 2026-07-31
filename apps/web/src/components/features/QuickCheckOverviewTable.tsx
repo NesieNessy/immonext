@@ -247,29 +247,27 @@ export function QuickCheckOverviewTable({
       <main className="container mx-auto px-4 py-8">
 
         {/* ── Page header ─────────────────────────────────────────────── */}
-        <Header
-          items={breadcrumbItems}
-          actions={
-            <Link href={addHref}>
-              <Button
-                label={addLabel}
-                icon={<AddIcon />}
-                variant="primary"
-                hideLabelOnMobile
-              />
-            </Link>
-          }
-        />
+        <Header items={breadcrumbItems} />
 
-        {/* ── Search bar ──────────────────────────────────────────────── */}
-        <div className="mt-6 max-w-sm">
-          <TextFieldWithIcon
-            type="search"
-            icon={Icons.Search}
-            placeholder={FieldLabels.QuickCheck.SearchPlaceholder.de}
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
+        {/* ── Search bar + add button ─────────────────────────────────── */}
+        <div className="mt-6 flex flex-wrap items-center gap-3">
+          <div className="max-w-sm flex-1 min-w-[220px]">
+            <TextFieldWithIcon
+              type="search"
+              icon={Icons.Search}
+              placeholder={FieldLabels.QuickCheck.SearchPlaceholder.de}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+          <Link href={addHref}>
+            <Button
+              label={addLabel}
+              icon={<AddIcon />}
+              variant="primary"
+              hideLabelOnMobile
+            />
+          </Link>
         </div>
 
         {/* ── Status + condition filter pills — mobile only, one scrollable

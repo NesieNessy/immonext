@@ -6,7 +6,7 @@ import { NewPropertyModal } from '@/components/features/NewPropertyModal';
 import { PropertyCard } from '@/components/features/PropertyCard';
 import { PropertyListRow } from '@/components/features/PropertyListRow';
 import type { MenuItem } from '@/components/ui';
-import { Button, Header, Icons, Modal, TextFieldWithIcon } from '@/components/ui';
+import { Button, ConfirmDeleteModal, Header, Icons, TextFieldWithIcon } from '@/components/ui';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { useProperties } from '@/hooks/useProperties';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
@@ -89,14 +89,7 @@ export default function ExistingPropertiesPage() {
     }
   };
 
-  // "Bearbeiten" and "Öffnen" both land on the property hub page, which
-  // links out to every use case (Objektdaten, Mieterdaten, etc.).
   const buildMenuItems = (property: PropertyOverview): MenuItem[] => [
-    {
-      label: BUTTON_DETAILS.Open.label,
-      icon: <BUTTON_DETAILS.Open.icon />,
-      onClick: () => handlePropertyClick(property.propertyId),
-    },
     {
       label: BUTTON_DETAILS.Edit.label,
       icon: <BUTTON_DETAILS.Edit.icon />,
@@ -142,20 +135,9 @@ export default function ExistingPropertiesPage() {
   return (
     <div className="min-h-screen bg-background pb-12">
       <main className="container mx-auto px-4 py-8">
-        <Header
-          items={[BESTANDSOBJEKTE_BREADCRUMB_ROOT]}
-          actions={
-            <Button
-              label={BUTTON_DETAILS.AddProperty.label}
-              icon={<BUTTON_DETAILS.AddProperty.icon />}
-              variant="primary"
-              hideLabelOnMobile
-              onClick={() => setNewPropertyModalOpen(true)}
-            />
-          }
-        />
+        <Header items={[BESTANDSOBJEKTE_BREADCRUMB_ROOT]} />
 
-        {/* ── Search + filter pills + view toggle ─────────────────────────── */}
+        {/* ── Search + filter pills + view toggle + add button ────────────── */}
         <div className="mt-6 flex flex-wrap items-center gap-3">
           <div className="max-w-sm flex-1 min-w-[220px]">
             <TextFieldWithIcon
@@ -166,6 +148,14 @@ export default function ExistingPropertiesPage() {
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
+
+          <Button
+            label={BUTTON_DETAILS.AddProperty.label}
+            icon={<BUTTON_DETAILS.AddProperty.icon />}
+            variant="primary"
+            hideLabelOnMobile
+            onClick={() => setNewPropertyModalOpen(true)}
+          />
 
           <FilterPill
             icon={Building2}
@@ -347,29 +337,12 @@ export default function ExistingPropertiesPage() {
         )}
       </main>
 
-      <Modal
+      <ConfirmDeleteModal
         open={propertyToDelete !== null}
-        onClose={() => setPropertyToDelete(null)}
+        onCancel={() => setPropertyToDelete(null)}
+        onConfirm={() => void handleConfirmDelete()}
         title="Objekt löschen"
-        icon={<BUTTON_DETAILS.Delete.icon />}
-        footer={
-          <>
-            <Button
-              label={BUTTON_DETAILS.Cancel.label}
-              icon={<BUTTON_DETAILS.Cancel.icon />}
-              variant="outline"
-              onClick={() => setPropertyToDelete(null)}
-            />
-            <Button
-              label={BUTTON_DETAILS.Delete.label}
-              icon={<BUTTON_DETAILS.Delete.icon />}
-              variant="primary"
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              disabled={deletingId === propertyToDelete?.propertyId}
-              onClick={() => void handleConfirmDelete()}
-            />
-          </>
-        }
+        confirmDisabled={deletingId === propertyToDelete?.propertyId}
       >
         {propertyToDelete && (
           <p className="text-sm text-muted-foreground">
@@ -377,7 +350,7 @@ export default function ExistingPropertiesPage() {
             {propertyToDelete.postalCode} {propertyToDelete.city} wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.
           </p>
         )}
-      </Modal>
+      </ConfirmDeleteModal>
 
       <NewPropertyModal
         open={newPropertyModalOpen}

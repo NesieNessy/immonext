@@ -1,8 +1,7 @@
 "use client";
 
 import { BESTANDSOBJEKTE_BREADCRUMB_ROOT, PROPERTY_CATEGORY_LABEL, PropertyLoadingPage } from '@/components/features/PropertyDisplay';
-import { Button, Header, Modal, SectionLabel, Tag } from '@/components/ui';
-import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
+import { ConfirmDeleteModal, Header, SectionLabel, Tag } from '@/components/ui';
 import { deleteProperty, getPropertyOverviewById, type PropertyOverview } from '@/lib/supabase/property.supabase';
 import { base64ToDataUri, cn } from '@/lib/utils';
 import {
@@ -287,35 +286,18 @@ export default function PropertyHub({ propertyId }: { propertyId: string }) {
         </div>
       </main>
 
-      <Modal
+      <ConfirmDeleteModal
         open={deleteModalOpen}
-        onClose={() => setDeleteModalOpen(false)}
+        onCancel={() => setDeleteModalOpen(false)}
+        onConfirm={() => void handleConfirmDelete()}
         title="Objekt löschen"
-        icon={<BUTTON_DETAILS.Delete.icon />}
-        footer={
-          <>
-            <Button
-              label={BUTTON_DETAILS.Cancel.label}
-              icon={<BUTTON_DETAILS.Cancel.icon />}
-              variant="outline"
-              onClick={() => setDeleteModalOpen(false)}
-            />
-            <Button
-              label={BUTTON_DETAILS.Delete.label}
-              icon={<BUTTON_DETAILS.Delete.icon />}
-              variant="primary"
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              disabled={isDeleting}
-              onClick={() => void handleConfirmDelete()}
-            />
-          </>
-        }
+        confirmDisabled={isDeleting}
       >
         <p className="text-sm text-muted-foreground">
           Möchten Sie <span className="font-medium text-foreground">{property.street} {property.houseNumber}</span>,{' '}
           {property.postalCode} {property.city} wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.
         </p>
-      </Modal>
+      </ConfirmDeleteModal>
     </div>
   );
 }

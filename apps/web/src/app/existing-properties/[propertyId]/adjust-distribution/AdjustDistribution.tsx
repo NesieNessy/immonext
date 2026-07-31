@@ -7,6 +7,7 @@ import { ExistingPropertiesUseCases } from '@/constants/ExistingPropertiesUseCas
 import { computePriceSplitIndividual, computePriceSplitStandard } from '@/lib/detailCheck/depreciation';
 import { getCityPurchasePriceSplit } from '@/lib/supabase/city_purchase_price_split.supabase';
 import { getPropertyOverviewById, type PropertyOverview } from '@/lib/supabase/property.supabase';
+import { getPropertyPriceSplitByProperty, upsertPropertyPriceSplit } from '@/lib/supabase/property_price_split.supabase';
 import { createUseCaseMenuItems } from '@/lib/useCaseMenu';
 import { base64ToDataUri, deCurrencyFormatter, deNumberFormatter } from '@/lib/utils';
 import { Info } from 'lucide-react';
@@ -32,9 +33,31 @@ export default function AdjustDistribution({ propertyId }: { propertyId: string 
     const [originalLandReferenceValue, setOriginalLandReferenceValue] = useState('');
     const [originalCoOwnershipNumerator, setOriginalCoOwnershipNumerator] = useState('');
     const [originalCoOwnershipDenominator, setOriginalCoOwnershipDenominator] = useState('');
+    const [isSaving, setIsSaving] = useState(false);
 
     useEffect(() => {
         getPropertyOverviewById(parseInt(propertyId, 10)).then((p) => setProperty(p ?? undefined));
+
+        getPropertyPriceSplitByProperty(parseInt(propertyId, 10)).then((saved) => {
+            if (!saved) return;
+            const loadedMode = saved.splitMode;
+            const loadedPlotAreaM2 = saved.plotAreaM2 != null ? String(saved.plotAreaM2) : '';
+            const loadedLandReferenceValue = saved.landReferenceValue != null ? String(saved.landReferenceValue) : '';
+            const loadedCoOwnershipNumerator = saved.coOwnershipNumerator != null ? String(saved.coOwnershipNumerator) : '';
+            const loadedCoOwnershipDenominator = saved.coOwnershipDenominator != null ? String(saved.coOwnershipDenominator) : '';
+
+            setSplitMode(loadedMode);
+            setPlotAreaM2(loadedPlotAreaM2);
+            setLandReferenceValue(loadedLandReferenceValue);
+            setCoOwnershipNumerator(loadedCoOwnershipNumerator);
+            setCoOwnershipDenominator(loadedCoOwnershipDenominator);
+
+            setOriginalSplitMode(loadedMode);
+            setOriginalPlotAreaM2(loadedPlotAreaM2);
+            setOriginalLandReferenceValue(loadedLandReferenceValue);
+            setOriginalCoOwnershipNumerator(loadedCoOwnershipNumerator);
+            setOriginalCoOwnershipDenominator(loadedCoOwnershipDenominator);
+        });
     }, [propertyId]);
 
     useEffect(() => {
@@ -76,17 +99,28 @@ export default function AdjustDistribution({ propertyId }: { propertyId: string 
         [propertyId, router]
     );
 
-    const handleSave = () => {
-        // TODO: Implement save functionality
-        console.log('Saving purchase price split data:', {
-            splitMode, plotAreaM2, landReferenceValue, coOwnershipNumerator, coOwnershipDenominator, selectedSplit,
-        });
+    const handleSave = async () => {
+        setIsSaving(true);
+        try {
+            const saved = await upsertPropertyPriceSplit({
+                propertyId: parseInt(propertyId, 10),
+                splitMode,
+                plotAreaM2: plotAreaM2 !== '' ? Number(plotAreaM2) : null,
+                landReferenceValue: landReferenceValue !== '' ? Number(landReferenceValue) : null,
+                coOwnershipNumerator: coOwnershipNumerator !== '' ? Number(coOwnershipNumerator) : null,
+                coOwnershipDenominator: coOwnershipDenominator !== '' ? Number(coOwnershipDenominator) : null,
+            });
+            if (!saved) return;
 
-        setOriginalSplitMode(splitMode);
-        setOriginalPlotAreaM2(plotAreaM2);
-        setOriginalLandReferenceValue(landReferenceValue);
-        setOriginalCoOwnershipNumerator(coOwnershipNumerator);
-        setOriginalCoOwnershipDenominator(coOwnershipDenominator);
+            setOriginalSplitMode(splitMode);
+            setOriginalPlotAreaM2(plotAreaM2);
+            setOriginalLandReferenceValue(landReferenceValue);
+            setOriginalCoOwnershipNumerator(coOwnershipNumerator);
+            setOriginalCoOwnershipDenominator(coOwnershipDenominator);
+            router.push(`/existing-properties/${propertyId}`);
+        } finally {
+            setIsSaving(false);
+        }
     };
 
     const handleCancel = () => {
@@ -95,6 +129,7 @@ export default function AdjustDistribution({ propertyId }: { propertyId: string 
         setLandReferenceValue(originalLandReferenceValue);
         setCoOwnershipNumerator(originalCoOwnershipNumerator);
         setCoOwnershipDenominator(originalCoOwnershipDenominator);
+        router.push(`/existing-properties/${propertyId}`);
     };
 
     if (!property) return <PropertyNotFoundPage />;
@@ -212,12 +247,12 @@ export default function AdjustDistribution({ propertyId }: { propertyId: string 
             <StickyActionBar
                 show={true}
                 onGhost={handleCancel}
-                onPrimary={handleSave}
+                onPrimary={() => void handleSave()}
                 ghostLabel={BUTTON_DETAILS.Cancel.label}
                 primaryLabel={BUTTON_DETAILS.Save.label}
                 ghostIcon={<BUTTON_DETAILS.Cancel.icon />}
                 primaryIcon={<BUTTON_DETAILS.Save.icon />}
-                primaryDisabled={!isEditing}
+                primaryDisabled={!isEditing || isSaving}
             />
         </div>
     );

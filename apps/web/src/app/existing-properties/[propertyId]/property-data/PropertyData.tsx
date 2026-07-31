@@ -224,6 +224,7 @@ export default function PropertyData({ propertyId }: { propertyId: string }) {
 
             setProperty(updated);
             setOriginal(form);
+            router.push(`/existing-properties/${propertyId}`);
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Unbekannter Fehler');
         } finally {

@@ -1,7 +1,7 @@
 "use client";
 
 import { buildPropertyUseCaseBreadcrumb } from '@/components/features/PropertyDisplay';
-import { Button, ComingSoonButton, Header, NumberField, SectionLabel, StickyActionBar, Table, Tag, TextField, type SortDirection, type TableColumn } from '@/components/ui';
+import { Button, CalendarField, ComingSoonButton, ConfirmDeleteModal, Header, NumberField, SectionLabel, StickyActionBar, Table, Tag, TextField, type SortDirection, type TableColumn } from '@/components/ui';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { ExistingPropertiesUseCases } from '@/constants/ExistingPropertiesUseCases';
 import { createTenancy, getCurrentTenancyByUnit, updateTenancy } from '@/lib/supabase/tenancy.supabase';
@@ -12,10 +12,10 @@ import {
     updateTenancyPerson,
 } from '@/lib/supabase/tenancy_person.supabase';
 import { createUseCaseMenuItems } from '@/lib/useCaseMenu';
-import { base64ToDataUri, formatDeDate } from '@/lib/utils';
+import { base64ToDataUri } from '@/lib/utils';
 import type { Property, PropertyUnit, Tenancy } from '@immonext/types';
 import { format } from 'date-fns';
-import { ArrowLeft, FileText, Plus, RefreshCw, Trash2, Upload, User } from 'lucide-react';
+import { ArrowLeft, FileText, Plus, RefreshCw, Star, Trash2, Upload, User } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 
@@ -25,9 +25,10 @@ interface PersonForm {
     firstName: string;
     taxId: string;
     isPrimary: boolean;
+    moveInDate: Date | undefined;
 }
 
-const EMPTY_PRIMARY_PERSON: PersonForm = { id: null, lastName: '', firstName: '', taxId: '', isPrimary: true };
+const EMPTY_PRIMARY_PERSON: PersonForm = { id: null, lastName: '', firstName: '', taxId: '', isPrimary: true, moveInDate: undefined };
 
 /** Ausweis/Schufa/Bürgschaft are collected per person; Mietvertrag applies to the whole tenancy. */
 const PER_PERSON_DOCUMENTS = ['Ausweis', 'Schufa', 'Bürgschaft'];
@@ -51,6 +52,7 @@ export function TenantUnitDetail({ propertyId, property, unit, hasMultipleUnits 
     const [tenancy, setTenancy] = useState<Tenancy | null>(null);
     const [persons, setPersons] = useState<PersonForm[]>([EMPTY_PRIMARY_PERSON]);
     const [deletedPersonIds, setDeletedPersonIds] = useState<number[]>([]);
+    const [personIndexPendingDelete, setPersonIndexPendingDelete] = useState<number | null>(null);
     const [deposit, setDeposit] = useState('');
     const [startFreshTenancy, setStartFreshTenancy] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
@@ -76,6 +78,7 @@ export function TenantUnitDetail({ propertyId, property, unit, hasMultipleUnits 
                             firstName: p.firstName ?? '',
                             taxId: p.taxId ?? '',
                             isPrimary: p.isPrimary,
+                            moveInDate: p.moveInDate ? new Date(p.moveInDate) : undefined,
                         }))
                         : [EMPTY_PRIMARY_PERSON]
                 );
@@ -162,15 +165,41 @@ export function TenantUnitDetail({ propertyId, property, unit, hasMultipleUnits 
     };
 
     const addPerson = () => {
-        setPersons((prev) => [...prev, { id: null, lastName: '', firstName: '', taxId: '', isPrimary: false }]);
+        setPersons((prev) => [...prev, { id: null, lastName: '', firstName: '', taxId: '', isPrimary: false, moveInDate: undefined }]);
     };
 
     const removePerson = (index: number) => {
-        if (index === 0) return;
         setPersons((prev) => {
             const removed = prev[index];
             if (removed.id) setDeletedPersonIds((ids) => [...ids, removed.id!]);
             return prev.filter((_, i) => i !== index);
+        });
+    };
+
+    // Already-saved persons (id !== null) get a confirmation modal before
+    // removal; drafts that were never persisted can just be dropped.
+    const handleDeletePersonClick = (index: number) => {
+        if (index === 0) return;
+        if (persons[index].id !== null) {
+            setPersonIndexPendingDelete(index);
+        } else {
+            removePerson(index);
+        }
+    };
+
+    const confirmDeletePerson = () => {
+        if (personIndexPendingDelete !== null) removePerson(personIndexPendingDelete);
+        setPersonIndexPendingDelete(null);
+    };
+
+    // The primary tenant is always index 0 (required fields, non-deletable),
+    // so making someone else primary means moving them to the front.
+    const makePrimary = (index: number) => {
+        if (index === 0) return;
+        setPersons((prev) => {
+            const next = prev.map((p, i) => ({ ...p, isPrimary: i === index }));
+            const [newPrimary] = next.splice(index, 1);
+            return [newPrimary, ...next];
         });
     };
 
@@ -251,11 +280,13 @@ export function TenantUnitDetail({ propertyId, property, unit, hasMultipleUnits 
             if (activeTenancyId) {
                 for (let i = 0; i < persons.length; i++) {
                     const p = persons[i];
+                    const moveInDate = p.moveInDate ? format(p.moveInDate, 'yyyy-MM-dd') : null;
                     if (p.id) {
                         await updateTenancyPerson(p.id, {
                             lastName: p.lastName || null,
                             firstName: p.firstName || null,
                             taxId: p.taxId || null,
+                            moveInDate,
                         });
                     } else if (p.lastName.trim() !== '' || p.firstName.trim() !== '') {
                         await createTenancyPerson({
@@ -265,6 +296,7 @@ export function TenantUnitDetail({ propertyId, property, unit, hasMultipleUnits 
                             taxId: p.taxId || null,
                             isPrimary: p.isPrimary,
                             sortOrder: i,
+                            moveInDate,
                         });
                     }
                 }
@@ -341,9 +373,6 @@ export function TenantUnitDetail({ propertyId, property, unit, hasMultipleUnits 
                     <div className="flex items-center justify-between gap-3 flex-wrap">
                                 <div className="flex items-center gap-2">
                                     <Tag label={status} variant={status === 'Vermietet' ? 'success' : 'muted'} />
-                                    {tenancy?.tenancyStartDate && !startFreshTenancy && (
-                                        <span className="text-sm text-muted-foreground">Einzug: {formatDeDate(tenancy.tenancyStartDate)}</span>
-                                    )}
                                 </div>
                                 <div className="flex items-center gap-3">
                                     <Button
@@ -372,17 +401,28 @@ export function TenantUnitDetail({ propertyId, property, unit, hasMultipleUnits 
                                                 {person.isPrimary && <Tag label="Hauptmieter" variant="primary" />}
                                             </div>
                                             {index > 0 && (
-                                                <button
-                                                    type="button"
-                                                    onClick={() => removePerson(index)}
-                                                    aria-label="Person entfernen"
-                                                    className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors cursor-pointer"
-                                                >
-                                                    <Trash2 className="w-4 h-4" />
-                                                </button>
+                                                <div className="flex items-center gap-1">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => makePrimary(index)}
+                                                        aria-label="Zum Hauptmieter machen"
+                                                        title="Zum Hauptmieter machen"
+                                                        className="p-1.5 rounded-md text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors cursor-pointer"
+                                                    >
+                                                        <Star className="w-4 h-4" />
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleDeletePersonClick(index)}
+                                                        aria-label="Person entfernen"
+                                                        className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors cursor-pointer"
+                                                    >
+                                                        <Trash2 className="w-4 h-4" />
+                                                    </button>
+                                                </div>
                                             )}
                                         </div>
-                                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                        <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
                                             <TextField
                                                 label={person.isPrimary ? 'Nachname *' : 'Nachname (opt.)'}
                                                 value={person.lastName}
@@ -398,6 +438,11 @@ export function TenantUnitDetail({ propertyId, property, unit, hasMultipleUnits 
                                                 placeholder="00 000 000 000"
                                                 value={person.taxId}
                                                 onChange={(e) => updatePerson(index, { taxId: e.target.value })}
+                                            />
+                                            <CalendarField
+                                                label="Einzug (opt.)"
+                                                value={person.moveInDate}
+                                                onChange={(date) => updatePerson(index, { moveInDate: date })}
                                             />
                                         </div>
                                     </div>
@@ -465,6 +510,19 @@ export function TenantUnitDetail({ propertyId, property, unit, hasMultipleUnits 
                 primaryIcon={<BUTTON_DETAILS.Save.icon />}
                 primaryDisabled={isSaving}
             />
+
+            <ConfirmDeleteModal
+                open={personIndexPendingDelete !== null}
+                onCancel={() => setPersonIndexPendingDelete(null)}
+                onConfirm={confirmDeletePerson}
+                title="Person löschen?"
+            >
+                <p className="text-sm text-muted-foreground">
+                    {personIndexPendingDelete !== null
+                        ? `Möchten Sie ${personDisplayName(persons[personIndexPendingDelete], personIndexPendingDelete)} wirklich löschen?`
+                        : ''}
+                </p>
+            </ConfirmDeleteModal>
         </div>
     );
 }

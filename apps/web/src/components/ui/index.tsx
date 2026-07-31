@@ -4,6 +4,7 @@ export type { MenuItem } from "./Button";
 export { CalendarField } from "./CalendarField";
 export { Checkbox } from "./Checkbox";
 export { ComingSoonButton } from "./ComingSoonButton";
+export { ConfirmDeleteModal } from "./ConfirmDeleteModal";
 export { Diagram } from "./Diagram";
 export { Dropdown } from "./Dropdown";
 export { Gauge } from "./Gauge";

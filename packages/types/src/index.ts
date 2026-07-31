@@ -155,11 +155,31 @@ export type PropertyUpdate = Partial<Omit<Property, 'propertyId' | 'userId' | 'c
 // PropertyUnit
 // ----------------------------------------------------------------------------
 
+export enum UnitUsageType {
+  Wohnung = 'WOHNUNG',
+  Einliegerwohnung = 'EINLIEGERWOHNUNG',
+  Stellplatz = 'STELLPLATZ',
+  Gewerbeflaeche = 'GEWERBEFLAECHE',
+  Lager = 'LAGER',
+  Sonstige = 'SONSTIGE',
+}
+
 export interface PropertyUnit {
   propertyUnitId: number;
   propertyId: number;
   unitLabel: string;
   sortOrder: number;
+  usageType: UnitUsageType;
+  floor: string | null;
+  locationNote: string | null;
+  livingAreaM2: number | null;
+  numberOfRooms: number | null;
+  yearOfConstruction: number | null;
+  energyEfficient: EnergyEfficient | null;
+  numberOfParkingSpaces: number;
+  targetColdRent: number | null;
+  targetParkingRent: number | null;
+  targetAncillaryCosts: number | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -294,6 +314,27 @@ export type PropertyRndInsert = Omit<PropertyRnd, 'propertyRndId' | 'createdAt' 
 export type PropertyRndUpdate = Partial<Omit<PropertyRnd, 'propertyRndId' | 'propertyId' | 'createdAt' | 'updatedAt'>>;
 
 // ----------------------------------------------------------------------------
+// PropertyPriceSplit
+// ----------------------------------------------------------------------------
+
+export type PriceSplitMode = 'STANDARD' | 'INDIVIDUAL';
+
+export interface PropertyPriceSplit {
+  propertyPriceSplitId: number;
+  propertyId: number;
+  splitMode: PriceSplitMode;
+  plotAreaM2: number | null;
+  landReferenceValue: number | null;
+  coOwnershipNumerator: number | null;
+  coOwnershipDenominator: number | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type PropertyPriceSplitInsert = Omit<PropertyPriceSplit, 'propertyPriceSplitId' | 'createdAt' | 'updatedAt'>;
+export type PropertyPriceSplitUpdate = Partial<Omit<PropertyPriceSplit, 'propertyPriceSplitId' | 'propertyId' | 'createdAt' | 'updatedAt'>>;
+
+// ----------------------------------------------------------------------------
 // Tenancy
 // ----------------------------------------------------------------------------
 
@@ -347,6 +388,8 @@ export interface TenancyPerson {
   taxId: string | null;
   isPrimary: boolean;
   sortOrder: number;
+  /** Einzug — each co-tenant can move in on a different date. */
+  moveInDate: string | null;
   createdAt: string;
   updatedAt: string;
 }

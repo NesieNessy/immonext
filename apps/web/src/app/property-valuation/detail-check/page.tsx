@@ -189,17 +189,15 @@ export default function DetailCheckOverviewPage() {
   return (
     <div className="min-h-screen bg-background">
       <main className="container mx-auto px-4 py-8">
-        <Header
-          items={[{ label: 'Objektbewertung' }, { label: 'Detailbewertungen' }]}
-          actions={(
-            <Link href="/property-valuation/detail-check/property-data?new=true">
-              <Button label={BUTTON_DETAILS.AddDetailCheck.label} icon={<BUTTON_DETAILS.AddDetailCheck.icon />} variant="primary" hideLabelOnMobile />
-            </Link>
-          )}
-        />
+        <Header items={[{ label: 'Objektbewertung' }, { label: 'Detailbewertungen' }]} />
 
-        <div className="mt-6 max-w-sm">
-          <TextFieldWithIcon type="search" icon={Icons.Search} placeholder="Detailbewertungen durchsuchen" value={search} onChange={(event) => setSearch(event.target.value)} />
+        <div className="mt-6 flex flex-wrap items-center gap-3">
+          <div className="max-w-sm flex-1 min-w-[220px]">
+            <TextFieldWithIcon type="search" icon={Icons.Search} placeholder="Detailbewertungen durchsuchen" value={search} onChange={(event) => setSearch(event.target.value)} />
+          </div>
+          <Link href="/property-valuation/detail-check/property-data?new=true">
+            <Button label={BUTTON_DETAILS.AddDetailCheck.label} icon={<BUTTON_DETAILS.AddDetailCheck.icon />} variant="primary" hideLabelOnMobile />
+          </Link>
         </div>
 
         {(authLoading || isLoading) && <p className="mt-8 text-center text-sm text-muted-foreground">Detailbewertungen werden geladen...</p>}
