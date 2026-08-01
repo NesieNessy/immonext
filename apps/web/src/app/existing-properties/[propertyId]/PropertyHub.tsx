@@ -13,6 +13,7 @@ import {
   Home,
   Landmark,
   PieChart,
+  Plus,
   Receipt,
   ShoppingCart,
   Trash2,
@@ -60,6 +61,14 @@ const OBJEKTVERWALTUNG: HubCard[] = [
     route: 'adjust-distribution',
     icon: PieChart,
     colorClass: 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400',
+  },
+  {
+    key: 'tenant-data-new',
+    title: 'Einheit hinzufügen',
+    description: 'Neue Wohn-, Gewerbe- oder sonstige Einheit anlegen',
+    route: 'tenant-data/new',
+    icon: Plus,
+    colorClass: 'bg-primary/10 text-primary',
   },
 ];
 

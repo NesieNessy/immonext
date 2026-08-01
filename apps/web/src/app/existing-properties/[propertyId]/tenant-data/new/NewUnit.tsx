@@ -49,11 +49,12 @@ const PARKING_OPTIONS = [
 ];
 
 // Stellplätze only make sense for units people actually occupy or run a
-// business out of — not for a Stellplatz/Lager/Sonstige unit itself.
+// business out of — not for a Stellplatz/Lager unit itself.
 const USAGE_TYPES_WITH_PARKING = new Set<UnitUsageType>([
     UnitUsageType.Wohnung,
     UnitUsageType.Einliegerwohnung,
     UnitUsageType.Gewerbeflaeche,
+    UnitUsageType.Sonstige,
 ]);
 
 function UsageTypeCard({ option, selected, onSelect }: { option: UsageTypeOption; selected: boolean; onSelect: () => void }) {
@@ -191,7 +192,7 @@ export default function NewUnit({ propertyId }: { propertyId: string }) {
                         <SectionLabel>Fläche & Details</SectionLabel>
                         <div className="mt-3 grid grid-cols-2 gap-3">
                             <NumberField
-                                label="Wohnfläche *"
+                                label="Fläche *"
                                 unit="m²"
                                 value={livingAreaM2}
                                 onChange={(e) => setLivingAreaM2(e.target.value)}
@@ -226,7 +227,6 @@ export default function NewUnit({ propertyId }: { propertyId: string }) {
                                 ['Nutzungsart', USAGE_TYPE_LABEL[usageType]],
                                 ['Fläche', livingAreaM2 !== '' ? `${deNumberFormatter.format(Number(livingAreaM2))} m²` : '–'],
                                 ...(showParking ? [['Stellplätze', parkingCount === 0 ? 'Kein' : parkingCount === 4 ? '4+' : String(parkingCount)]] : []),
-                                ['Status nach Anlage', 'Leerstand (kein Mieter)'],
                             ].map(([label, value], index) => (
                                 <div key={label} className={`flex items-center justify-between px-4 py-2.5 text-sm ${index % 2 === 1 ? 'bg-muted/30' : ''}`}>
                                     <span className="text-muted-foreground">{label}</span>
