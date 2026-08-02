@@ -226,7 +226,7 @@ export default function RentalAgreementPage({ propertyId, unitId }: { propertyId
 
     return (
         <div className="min-h-screen bg-background pb-24">
-            <main className="container mx-auto px-4 py-8 max-w-3xl">
+            <main className="container mx-auto px-4 py-8">
                 <Header items={breadcrumbItems} />
 
                 <div className="mt-6 flex items-center gap-2 p-1 rounded-lg bg-muted/50 w-fit">

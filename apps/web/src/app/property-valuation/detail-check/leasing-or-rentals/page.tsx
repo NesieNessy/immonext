@@ -319,7 +319,7 @@ function RentalContent() {
         {isLoading ? (
           <p className="text-sm text-muted-foreground">Vermietungsdaten werden geladen...</p>
         ) : (
-          <div className="mx-auto max-w-5xl space-y-7">
+          <div className="space-y-7">
             <section className="grid gap-4 md:grid-cols-[minmax(0,220px)_minmax(0,1fr)] md:items-end">
               <TextField
                 label="Bewertungs-Stichtag"

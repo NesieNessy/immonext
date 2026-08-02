@@ -250,7 +250,7 @@ function DepreciationContent() {
         {isLoading || !context || !selectedRnd || !selectedSplit ? (
           <p className="text-sm text-muted-foreground">Abschreibung wird geladen...</p>
         ) : (
-          <div className="mx-auto max-w-6xl space-y-8">
+          <div className="space-y-8">
             <section className="grid gap-4 md:grid-cols-[220px_1fr_1fr] md:items-center">
               <div className="flex gap-3">
                 <ModeButton label="Standard" active={depreciationMode === 'STANDARD'} onClick={() => setDepreciationMode('STANDARD')} />

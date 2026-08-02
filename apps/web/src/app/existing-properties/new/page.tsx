@@ -202,7 +202,7 @@ function NewPropertyPageContent() {
           ]}
         />
 
-        <div className="mt-6 mx-auto flex flex-col gap-6 max-w-2xl">
+        <div className="mt-6 flex flex-col gap-6">
           <p className="text-sm text-muted-foreground">Erfassen Sie die Stammdaten des Bestandsobjekts.</p>
 
           {error && (

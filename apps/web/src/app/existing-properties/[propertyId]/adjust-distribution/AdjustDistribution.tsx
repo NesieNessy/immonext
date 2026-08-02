@@ -176,7 +176,7 @@ export default function AdjustDistribution({ propertyId }: { propertyId: string 
                     }
                 />
 
-                <div className="mt-8 mx-auto max-w-4xl space-y-6">
+                <div className="mt-8 space-y-6">
                     {/* Calculation Mode */}
                     <div>
                         <SectionLabel>Berechnungsmodus</SectionLabel>

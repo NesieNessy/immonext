@@ -33,6 +33,9 @@ interface QuickCheckOverviewTableProps {
   /** Non-delete row actions — delete is generic (wired to useQuickChecks
    *  internally) and always appended after these. */
   buildRowMenuItems: (row: QuickCheckEntry) => MenuItem[];
+  /** Clicking anywhere on a row (or its mobile card) opens it — the row
+   *  menu no longer needs its own "open" entry. */
+  onRowClick: (row: QuickCheckEntry) => void;
   emptyTitle: string;
   emptyMessage: string;
 }
@@ -53,6 +56,7 @@ export function QuickCheckOverviewTable({
   addLabel,
   addIcon: AddIcon,
   buildRowMenuItems,
+  onRowClick,
   emptyTitle,
   emptyMessage,
 }: QuickCheckOverviewTableProps) {
@@ -106,13 +110,15 @@ export function QuickCheckOverviewTable({
       label: '',
       width: '48px',
       renderCell: (_value, row) => (
-        <Button
-          iconOnly
-          icon={<MoreVertical className="w-4 h-4" />}
-          variant="ghost"
-          size="sm"
-          menuItems={rowMenuItems(row)}
-        />
+        <div onClick={(e) => e.stopPropagation()}>
+          <Button
+            iconOnly
+            icon={<MoreVertical className="w-4 h-4" />}
+            variant="ghost"
+            size="sm"
+            menuItems={rowMenuItems(row)}
+          />
+        </div>
       ),
     },
     {
@@ -129,6 +135,7 @@ export function QuickCheckOverviewTable({
             href={url}
             target="_blank"
             rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
             className="text-primary hover:underline"
           >
             {portalId}
@@ -405,6 +412,7 @@ export function QuickCheckOverviewTable({
                 onSort={handleSort}
                 columnFilters={columnFilters}
                 onColumnFilterChange={handleColumnFilterChange}
+                onRowClick={onRowClick}
                 getRowClassName={(row) =>
                   row.status === 'inaktiv' ? 'opacity-40 grayscale' : undefined
                 }
@@ -412,8 +420,9 @@ export function QuickCheckOverviewTable({
                 pageSize={25}
                 renderMobileCard={(row) => (
                   <div
+                    onClick={() => onRowClick(row)}
                     className={cn(
-                      "bg-card border border-border rounded-2xl p-4 flex flex-col gap-3",
+                      "bg-card border border-border rounded-2xl p-4 flex flex-col gap-3 cursor-pointer",
                       row.status === 'inaktiv' && 'opacity-40 grayscale'
                     )}
                   >
@@ -425,6 +434,7 @@ export function QuickCheckOverviewTable({
                             href={url}
                             target="_blank"
                             rel="noopener noreferrer"
+                            onClick={(e) => e.stopPropagation()}
                             className="text-primary hover:underline"
                           >
                             {row.portalId}
@@ -433,13 +443,15 @@ export function QuickCheckOverviewTable({
                           <span className="text-muted-foreground">{row.portalId}</span>
                         );
                       })()}
-                      <Button
-                        iconOnly
-                        icon={<MoreVertical className="w-4 h-4" />}
-                        variant="ghost"
-                        size="sm"
-                        menuItems={rowMenuItems(row)}
-                      />
+                      <div onClick={(e) => e.stopPropagation()}>
+                        <Button
+                          iconOnly
+                          icon={<MoreVertical className="w-4 h-4" />}
+                          variant="ghost"
+                          size="sm"
+                          menuItems={rowMenuItems(row)}
+                        />
+                      </div>
                     </div>
 
                     <div className="grid grid-cols-2 gap-3">

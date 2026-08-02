@@ -15,12 +15,11 @@ export default function QuickCheckOverviewPage() {
     router.push(`/property-valuation/detail-check/property-data?quickCheckId=${id}`);
   };
 
+  const openRow = (row: QuickCheckEntry) => {
+    router.push(`/property-valuation/quick-check/${row.id}`);
+  };
+
   const buildRowMenuItems = (row: QuickCheckEntry): MenuItem[] => [
-    {
-      label: BUTTON_DETAILS.OpenResult.label,
-      icon: <BUTTON_DETAILS.OpenResult.icon />,
-      onClick: () => router.push(`/property-valuation/quick-check/${row.id}`),
-    },
     {
       label: BUTTON_DETAILS.StartDetailCheck.label,
       icon: <BUTTON_DETAILS.StartDetailCheck.icon />,
@@ -37,6 +36,7 @@ export default function QuickCheckOverviewPage() {
       addLabel={BUTTON_DETAILS.AddQuickCheck.label}
       addIcon={BUTTON_DETAILS.AddQuickCheck.icon}
       buildRowMenuItems={buildRowMenuItems}
+      onRowClick={openRow}
       emptyTitle="Noch keine Ersteinschätzungen vorhanden"
       emptyMessage="Fügen Sie Ihr erstes Objekt hinzu, um die Übersicht zu befüllen."
     />

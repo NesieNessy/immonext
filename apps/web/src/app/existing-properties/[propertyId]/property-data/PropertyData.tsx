@@ -288,7 +288,7 @@ export default function PropertyData({ propertyId }: { propertyId: string }) {
                     }
                 />
 
-                <div className="mt-6 mx-auto flex flex-col gap-6 max-w-2xl">
+                <div className="mt-6 flex flex-col gap-6">
                     {error && (
                         <div className="px-3 py-2 rounded-lg bg-destructive/10 border border-destructive/30 text-sm text-destructive">
                             {error}

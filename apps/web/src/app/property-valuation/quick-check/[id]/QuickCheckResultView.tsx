@@ -254,27 +254,25 @@ export function QuickCheckResultView({ id }: Props) {
           <div className="mt-3 flex flex-col gap-4">
             <MobileResultBanner show={canShowResult} resultId="qc-result" formTopId="qc-form-top" />
 
-            <div className="flex flex-col lg:flex-row gap-8 items-stretch">
+            {/* Form */}
+            <div className="flex flex-col gap-3 p-5">
+              <section id="qc-form-top">
+                <h2 className="text-md font-semibold text-foreground mb-2">
+                  Informationen zur Berechnung
+                </h2>
 
-              {/* Left: editable form */}
-              <div className="flex flex-col gap-3 flex-1 p-5">
-                <section id="qc-form-top">
-                  <h2 className="text-md font-semibold text-foreground mb-2">
-                    Informationen zur Berechnung
-                  </h2>
+                <QuickCheckImportSection portalUrl={portalUrl} onPortalUrlChange={setPortalUrl} />
 
-                  <QuickCheckImportSection portalUrl={portalUrl} onPortalUrlChange={setPortalUrl} />
-
-                  <div className="flex flex-col gap-2 pt-1.5">
-                    <TextField
-                      label={FieldLabels.Property.Street.de + ' & ' + FieldLabels.Property.HouseNumber.de}
-                      placeholder="z.B. Hauptstraße 123"
-                      required
-                      value={editForm.street}
-                      onChange={(e) => handleEditField('street', e.target.value)}
-                      error={editErrors.street}
-                    />
-                    <div className="grid grid-cols-2 gap-2">
+                <div className="flex flex-col gap-2 pt-1.5">
+                  <TextField
+                    label={FieldLabels.Property.Street.de + ' & ' + FieldLabels.Property.HouseNumber.de}
+                    placeholder="z.B. Hauptstraße 123"
+                    required
+                    value={editForm.street}
+                    onChange={(e) => handleEditField('street', e.target.value)}
+                    error={editErrors.street}
+                  />
+                  <div className="grid grid-cols-2 gap-2">
                     <TextField
                       label={FieldLabels.Property.PostalCode.de}
                       placeholder="z.B. 10115"
@@ -291,78 +289,72 @@ export function QuickCheckResultView({ id }: Props) {
                       onChange={(e) => handleEditField('city', e.target.value)}
                       error={editErrors.city}
                     />
-                    </div>
                   </div>
-                </section>
-                <section>
-                  <div className="grid grid-cols-2 gap-2">
-                    <NumberField
-                      label={FieldLabels.AcquisitionCosts.PurchasePrice.de}
-                      placeholder="z.B. 450000"
-                      unit="€"
-                      required
-                      value={editForm.purchasePrice}
-                      onChange={(e) => handleEditField('purchasePrice', e.target.value)}
-                      min={0}
-                      error={editErrors.purchasePrice}
-                    />
-                    <NumberField
-                      label={FieldLabels.Tenancy.ColdRent.de}
-                      placeholder="z.B. 1800"
-                      unit="€"
-                      required
-                      value={editForm.coldRent}
-                      onChange={(e) => handleEditField('coldRent', e.target.value)}
-                      min={0}
-                      error={editErrors.coldRent}
-                    />
-                  </div>
-                </section>
-                <section>
-                  <div className="grid grid-cols-2 gap-2">
-                    <Dropdown
-                      label="Zustand"
-                      options={CONDITION_OPTIONS}
-                      required
-                      value={editForm.condition}
-                      onChange={(e) => handleEditField('condition', e.target.value)}
-                    />
-                    <NumberField
-                      label={FieldLabels.Property.YearOfConstruction.de}
-                      placeholder="z.B. 1995"
-                      required
-                      value={editForm.yearOfConstruction}
-                      onChange={(e) => handleEditField('yearOfConstruction', e.target.value)}
-                      min={1850}
-                      max={currentYear}
-                      error={editErrors.yearOfConstruction}
-                    />
-                  </div>
-                </section>
-                <div className="flex-1" />
-              </div>
+                </div>
+              </section>
+              <section>
+                <div className="grid grid-cols-2 gap-2">
+                  <NumberField
+                    label={FieldLabels.AcquisitionCosts.PurchasePrice.de}
+                    placeholder="z.B. 450000"
+                    unit="€"
+                    required
+                    value={editForm.purchasePrice}
+                    onChange={(e) => handleEditField('purchasePrice', e.target.value)}
+                    min={0}
+                    error={editErrors.purchasePrice}
+                  />
+                  <NumberField
+                    label={FieldLabels.Tenancy.ColdRent.de}
+                    placeholder="z.B. 1800"
+                    unit="€"
+                    required
+                    value={editForm.coldRent}
+                    onChange={(e) => handleEditField('coldRent', e.target.value)}
+                    min={0}
+                    error={editErrors.coldRent}
+                  />
+                </div>
+              </section>
+              <section>
+                <div className="grid grid-cols-2 gap-2">
+                  <Dropdown
+                    label="Zustand"
+                    options={CONDITION_OPTIONS}
+                    required
+                    value={editForm.condition}
+                    onChange={(e) => handleEditField('condition', e.target.value)}
+                  />
+                  <NumberField
+                    label={FieldLabels.Property.YearOfConstruction.de}
+                    placeholder="z.B. 1995"
+                    required
+                    value={editForm.yearOfConstruction}
+                    onChange={(e) => handleEditField('yearOfConstruction', e.target.value)}
+                    min={1850}
+                    max={currentYear}
+                    error={editErrors.yearOfConstruction}
+                  />
+                </div>
+              </section>
+            </div>
 
-              {/* Right: live result */}
-              <div id="qc-result" className="flex flex-col flex-1 gap-4 p-5">
-                {!canShowResult ? (
-                  <NoResult className="flex-1" />
-                ) : (
-                  <div className="flex flex-col gap-4 flex-1">
-                    <KpfAssessmentCard
-                      street={editForm.street}
-                      postalCode={editForm.postalCode}
-                      city={editForm.city}
-                      purchasePrice={purchasePrice}
-                      coldRent={coldRent}
-                      condition={condition}
-                      yearOfConstruction={editForm.yearOfConstruction}
-                      kpf={kpf}
-                    />
-                    <div className="flex-1" />
-                  </div>
-                )}
-              </div>
-
+            {/* Result */}
+            <div id="qc-result" className="flex flex-col gap-4 p-5">
+              {!canShowResult ? (
+                <NoResult />
+              ) : (
+                <KpfAssessmentCard
+                  street={editForm.street}
+                  postalCode={editForm.postalCode}
+                  city={editForm.city}
+                  purchasePrice={purchasePrice}
+                  coldRent={coldRent}
+                  condition={condition}
+                  yearOfConstruction={editForm.yearOfConstruction}
+                  kpf={kpf}
+                />
+              )}
             </div>
           </div>
         </main>
