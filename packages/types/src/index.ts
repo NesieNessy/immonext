@@ -747,6 +747,33 @@ export interface Notification {
 export type NotificationInsert = Omit<Notification, 'notificationId' | 'createdAt'>;
 
 // ----------------------------------------------------------------------------
+// Document (global "Dokumente" page — distinct from tenancy_document)
+// ----------------------------------------------------------------------------
+
+export type DocumentCategory = 'Persönlich' | 'Bestandsobjekt' | 'Detailbewertung';
+
+export interface UserDocument {
+  documentId: number;
+  userId: string;
+  category: DocumentCategory;
+  name: string;
+  /** Set when category is "Bestandsobjekt". */
+  propertyId: number | null;
+  /** Set when category is "Detailbewertung". */
+  quickCheckId: number | null;
+  /** Drives the KI-Hinweis "vermutlich zu alt" heuristic. */
+  documentDate: string | null;
+  fileName: string;
+  storagePath: string;
+  contentType: string | null;
+  fileSize: number | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type UserDocumentInsert = Omit<UserDocument, 'documentId' | 'fileName' | 'storagePath' | 'contentType' | 'fileSize' | 'createdAt' | 'updatedAt'>;
+
+// ----------------------------------------------------------------------------
 // API Response types
 // ----------------------------------------------------------------------------
 
