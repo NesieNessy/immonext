@@ -5,8 +5,6 @@ import { Button, CalendarField, ComingSoonButton, ConfirmDeleteModal, Header, Nu
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { ExistingPropertiesUseCases } from '@/constants/ExistingPropertiesUseCases';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
-import { TenantCertificateModal } from './TenantCertificateModal';
-import { RentalAgreementModal } from './RentalAgreementModal';
 import { createTenancy, getCurrentTenancyByUnit, updateTenancy } from '@/lib/supabase/tenancy.supabase';
 import { getPersonalData } from '@/lib/supabase/personal_data.supabase';
 import {
@@ -25,7 +23,7 @@ import { createUseCaseMenuItems } from '@/lib/useCaseMenu';
 import { base64ToDataUri, cn } from '@/lib/utils';
 import type { PersonalData, Property, PropertyUnit, Tenancy, TenancyDocument, TenancyDocumentType } from '@immonext/types';
 import { format } from 'date-fns';
-import { Download, Eye, FileSignature, FileText, Plus, RefreshCw, Star, Trash2, Upload, User, Users } from 'lucide-react';
+import { Download, Eye, FileText, Plus, RefreshCw, Star, Trash2, Upload, User, Users } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 
@@ -89,8 +87,6 @@ export function TenantUnitDetail({ propertyId, property, unit, hasMultipleUnits 
     const [isSaving, setIsSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [landlord, setLandlord] = useState<PersonalData | null | undefined>(undefined);
-    const [showCertificate, setShowCertificate] = useState(false);
-    const [rentalAgreementPersons, setRentalAgreementPersons] = useState<PersonForm[] | null>(null);
     const [docSortKey, setDocSortKey] = useState<string>('document');
     const [docSortDirection, setDocSortDirection] = useState<SortDirection>('asc');
     const [docColumnFilters, setDocColumnFilters] = useState<Record<string, string>>({});
@@ -669,20 +665,25 @@ export function TenantUnitDetail({ propertyId, property, unit, hasMultipleUnits 
                         {generateType && (
                             <Button
                                 iconOnly
-                                icon={generateType === 'Mietvertrag' ? <FileSignature className="w-4 h-4" /> : <FileText className="w-4 h-4" />}
+                                icon={<FileText className="w-4 h-4" />}
                                 variant="outline"
                                 size="sm"
-                                disabled={blockedByLandlord}
-                                title={blockedByLandlord ? 'Bitte zuerst Vermieterdaten in den Einstellungen hinterlegen' : `${generateType} generieren`}
+                                disabled={blockedByLandlord || !row.canUpload}
+                                title={
+                                    blockedByLandlord
+                                        ? 'Bitte zuerst Vermieterdaten in den Einstellungen hinterlegen'
+                                        : !row.canUpload
+                                            ? 'Bitte zuerst speichern'
+                                            : `${generateType} generieren`
+                                }
                                 aria-label={`${generateType} generieren`}
                                 onClick={() => {
+                                    const base = `/existing-properties/${propertyId}/tenant-data/unit/${unit.propertyUnitId}`;
                                     if (generateType === 'Mieterbescheinigung') {
-                                        setShowCertificate(true);
+                                        goTo(`${base}/certificate`);
                                     } else {
-                                        const target = row.tenancyPersonId != null
-                                            ? persons.filter((p) => p.id === row.tenancyPersonId)
-                                            : persons;
-                                        setRentalAgreementPersons(target);
+                                        const query = row.tenancyPersonId != null ? `?personId=${row.tenancyPersonId as number}` : '';
+                                        goTo(`${base}/rental-agreement${query}`);
                                     }
                                 }}
                             />
@@ -873,31 +874,6 @@ export function TenantUnitDetail({ propertyId, property, unit, hasMultipleUnits 
                         : ''}
                 </p>
             </ConfirmDeleteModal>
-
-            {user && (
-                <TenantCertificateModal
-                    open={showCertificate}
-                    onClose={() => setShowCertificate(false)}
-                    userId={user.id}
-                    property={property}
-                    unitLabel={formatUnitLabel(unit.unitLabel, unit.floor, unit.locationNote)}
-                    tenancy={tenancy}
-                    persons={persons}
-                />
-            )}
-
-            {user && (
-                <RentalAgreementModal
-                    open={rentalAgreementPersons !== null}
-                    onClose={() => setRentalAgreementPersons(null)}
-                    userId={user.id}
-                    property={property}
-                    unit={unit}
-                    unitLabel={formatUnitLabel(unit.unitLabel, unit.floor, unit.locationNote)}
-                    tenancy={tenancy}
-                    persons={rentalAgreementPersons ?? []}
-                />
-            )}
 
             <UnsavedChangesModal
                 open={pendingHref !== null}

@@ -1,55 +1,42 @@
 "use client";
 
-import { Button } from '@/components/ui';
-import { getPersonalData } from '@/lib/supabase/personal_data.supabase';
-import { deCurrencyFormatter, formatDeDate } from '@/lib/utils';
-import type { PersonalData, Property, PropertyUnit, Tenancy } from '@immonext/types';
-import { AlertTriangle, ArrowLeft, Eye, FileSignature, FileText, Home, Landmark, Upload, Users, X } from 'lucide-react';
+import { formatUnitLabel, PropertyLoadingPage, PropertyNotFoundPage } from '@/components/features/PropertyDisplay';
+import { Header, StickyActionBar, type BreadcrumbItem } from '@/components/ui';
+import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
+import { ExistingPropertiesUseCases } from '@/constants/ExistingPropertiesUseCases';
+import { useRequireAuth } from '@/hooks/useRequireAuth';
+import { formatDeDate } from '@/lib/utils';
+import { AlertTriangle, Eye, FileText, Landmark, ListChecks, Upload, Users } from 'lucide-react';
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
-import { DataCard, Field, initials, Pill, readFileAsDataUrl } from './DocumentGeneratorParts';
-import type { PersonForCertificate } from './TenantCertificateModal';
-
-interface RentalAgreementModalProps {
-    open: boolean;
-    onClose: () => void;
-    userId: string;
-    property: Property;
-    unit: PropertyUnit;
-    unitLabel: string;
-    tenancy: Tenancy | null;
-    persons: PersonForCertificate[];
-}
+import { useRouter } from 'next/navigation';
+import { useState } from 'react';
+import { DataCard, Field, initials, Pill, readFileAsDataUrl } from '../../../DocumentGeneratorParts';
+import { useUnitDocumentGeneratorData } from '../../../useUnitDocumentGeneratorData';
 
 type View = 'review' | 'preview';
 
-function euro(value: number | null | undefined): string {
-    return value != null ? `${deCurrencyFormatter.format(value)} €` : '–';
+function isPersonComplete(person: { firstName: string; lastName: string; isPrimary: boolean; taxId: string; moveInDate: Date | undefined }): boolean {
+    if (person.firstName.trim() === '' || person.lastName.trim() === '') return false;
+    if (person.isPrimary) return person.taxId.trim() !== '' && person.moveInDate != null;
+    return true;
 }
 
-interface AgreementContent {
+interface CertificateContent {
     landlordName: string;
     landlordStreet: string;
     landlordCity: string;
     propertyAddress: string;
     unitLabel: string;
-    livingArea: string;
-    numberOfRooms: string;
     tenants: { name: string; role: string }[];
     mietbeginn: string;
-    befristet: boolean;
-    mietende: string;
-    coldRent: string;
-    miscRent: string;
-    warmRent: string;
-    parkingRent: string | null;
-    deposit: string;
+    mietvertragAktiv: boolean;
     issuePlace: string;
     issueDate: string;
+    documentNumber: string;
     signatureDataUrl: string | null;
 }
 
-function agreementBodyHtml(c: AgreementContent): string {
+function certificateBodyHtml(c: CertificateContent): string {
     const tenantRows = c.tenants.map((t) => `
         <div style="background:#f4f4f5;border-radius:6px;padding:8px 12px;margin-bottom:6px;">
             <strong>${t.name}</strong> <span style="color:#666;font-size:12px;">— ${t.role}</span>
@@ -66,41 +53,33 @@ function agreementBodyHtml(c: AgreementContent): string {
             </div>
             <div style="font-size:12px;color:#555;text-align:right;line-height:1.6;">
                 Ausgestellt am: ${c.issueDate}<br/>
-                Ausstellungsort: ${c.issuePlace}
+                Ausstellungsort: ${c.issuePlace}<br/>
+                Dokument-Nr.: ${c.documentNumber}
             </div>
         </div>
         <hr style="margin:20px 0;border:none;border-top:1px solid #ccc;" />
-        <h1 style="text-align:center;font-size:22px;margin-bottom:4px;">Mietvertrag für Wohnraum</h1>
-        <p style="text-align:center;color:#666;font-size:13px;margin-bottom:28px;">zwischen dem Vermieter und der/den nachstehend genannten Mietpartei(en)</p>
+        <h1 style="text-align:center;font-size:22px;margin-bottom:4px;">Mieterbescheinigung</h1>
+        <p style="text-align:center;color:#666;font-size:13px;margin-bottom:28px;">Bestätigung eines bestehenden Mietverhältnisses</p>
 
         <h2 style="font-size:13px;text-transform:uppercase;letter-spacing:0.04em;color:#555;border-bottom:1px solid #ddd;padding-bottom:6px;margin-bottom:10px;">Vermieter</h2>
         <p style="margin:4px 0;"><span style="color:#666;">Name:</span> ${c.landlordName}</p>
         <p style="margin:4px 0 20px;"><span style="color:#666;">Adresse:</span> ${c.landlordStreet}, ${c.landlordCity}</p>
 
-        <h2 style="font-size:13px;text-transform:uppercase;letter-spacing:0.04em;color:#555;border-bottom:1px solid #ddd;padding-bottom:6px;margin-bottom:10px;">Mieter</h2>
+        <h2 style="font-size:13px;text-transform:uppercase;letter-spacing:0.04em;color:#555;border-bottom:1px solid #ddd;padding-bottom:6px;margin-bottom:10px;">Mietobjekt</h2>
+        <p style="margin:4px 0;"><span style="color:#666;">Adresse:</span> ${c.propertyAddress}</p>
+        <p style="margin:4px 0 20px;"><span style="color:#666;">Einheit:</span> ${c.unitLabel}</p>
+
+        <h2 style="font-size:13px;text-transform:uppercase;letter-spacing:0.04em;color:#555;border-bottom:1px solid #ddd;padding-bottom:6px;margin-bottom:10px;">Mietpartei(en)</h2>
+        <p style="margin:4px 0 10px;">Folgende Person(en) sind laut Mietvertrag Mieter der oben genannten Wohnung:</p>
         ${tenantRows}
 
-        <h2 style="font-size:13px;text-transform:uppercase;letter-spacing:0.04em;color:#555;border-bottom:1px solid #ddd;padding-bottom:6px;margin:20px 0 10px;">§ 1 Mieträume</h2>
-        <p style="margin:4px 0;"><span style="color:#666;">Adresse:</span> ${c.propertyAddress}</p>
-        <p style="margin:4px 0;"><span style="color:#666;">Einheit:</span> ${c.unitLabel}</p>
-        <p style="margin:4px 0 20px;"><span style="color:#666;">Wohnfläche / Zimmer:</span> ${c.livingArea} / ${c.numberOfRooms}</p>
-
-        <h2 style="font-size:13px;text-transform:uppercase;letter-spacing:0.04em;color:#555;border-bottom:1px solid #ddd;padding-bottom:6px;margin-bottom:10px;">§ 2 Mietzeit</h2>
+        <h2 style="font-size:13px;text-transform:uppercase;letter-spacing:0.04em;color:#555;border-bottom:1px solid #ddd;padding-bottom:6px;margin:20px 0 10px;">Mietverhältnis</h2>
         <p style="margin:4px 0;"><span style="color:#666;">Mietbeginn:</span> ${c.mietbeginn}</p>
-        <p style="margin:4px 0 20px;"><span style="color:#666;">Mietverhältnis:</span> ${c.befristet ? `befristet bis ${c.mietende}` : 'unbefristet'}</p>
+        <p style="margin:4px 0 20px;"><span style="color:#666;">Mietvertrag aktiv:</span> ${c.mietvertragAktiv ? 'Ja' : 'Nein'}</p>
 
-        <h2 style="font-size:13px;text-transform:uppercase;letter-spacing:0.04em;color:#555;border-bottom:1px solid #ddd;padding-bottom:6px;margin-bottom:10px;">§ 3 Miete und Nebenkosten</h2>
-        <p style="margin:4px 0;"><span style="color:#666;">Kaltmiete:</span> ${c.coldRent}</p>
-        <p style="margin:4px 0;"><span style="color:#666;">Nebenkostenvorauszahlung:</span> ${c.miscRent}</p>
-        ${c.parkingRent ? `<p style="margin:4px 0;"><span style="color:#666;">Stellplatzmiete:</span> ${c.parkingRent}</p>` : ''}
-        <p style="margin:4px 0 20px;"><span style="color:#666;">Gesamtmiete (warm):</span> ${c.warmRent}</p>
-
-        <h2 style="font-size:13px;text-transform:uppercase;letter-spacing:0.04em;color:#555;border-bottom:1px solid #ddd;padding-bottom:6px;margin-bottom:10px;">§ 4 Kaution</h2>
-        <p style="margin:4px 0 20px;"><span style="color:#666;">Höhe der Kaution:</span> ${c.deposit}</p>
-
-        <h2 style="font-size:13px;text-transform:uppercase;letter-spacing:0.04em;color:#555;border-bottom:1px solid #ddd;padding-bottom:6px;margin-bottom:10px;">§ 5 Sonstige Vereinbarungen</h2>
+        <h2 style="font-size:13px;text-transform:uppercase;letter-spacing:0.04em;color:#555;border-bottom:1px solid #ddd;padding-bottom:6px;margin-bottom:10px;">Bescheinigung</h2>
         <div style="border-left:3px solid #3b82f6;background:#eff6ff;padding:12px 16px;font-size:13px;margin-bottom:24px;">
-            Es gelten ergänzend die gesetzlichen Bestimmungen des Mietrechts (BGB). Änderungen und Ergänzungen dieses Vertrags bedürfen der Schriftform.
+            Hiermit wird bestätigt, dass die oben genannten Personen derzeit in dem genannten Objekt wohnen und ein gültiger Mietvertrag besteht.
         </div>
 
         <p style="margin:0 0 40px;">${c.issuePlace}, ${c.issueDate}</p>
@@ -111,47 +90,51 @@ function agreementBodyHtml(c: AgreementContent): string {
             <span>Unterschrift Vermieter</span>
         </div>
 
-        <div style="height:60px;"></div>
-        <div style="border-top:1px solid #111;width:260px;"></div>
-        <div style="display:flex;justify-content:space-between;width:260px;font-size:12px;color:#555;margin-top:4px;">
-            <span>Unterschrift Mieter</span>
-        </div>
-
         <hr style="margin:32px 0 12px;border:none;border-top:1px solid #eee;" />
-        <p style="font-size:11px;color:#999;">Mietvertrag · ${c.propertyAddress} · Seite 1 von 1</p>
+        <p style="font-size:11px;color:#999;">Mieterbescheinigung · ${c.propertyAddress} · Seite 1 von 1</p>
     `;
 }
 
-function agreementPrintDocument(c: AgreementContent): string {
+function certificatePrintDocument(c: CertificateContent): string {
     return `<!DOCTYPE html>
 <html lang="de">
 <head>
 <meta charset="utf-8" />
-<title>Mietvertrag</title>
+<title>Mieterbescheinigung</title>
 <style>
     body { font-family: Arial, Helvetica, sans-serif; color: #111; max-width: 700px; margin: 48px auto; line-height: 1.6; }
     h1, h2 { font-family: Arial, Helvetica, sans-serif; }
 </style>
 </head>
-<body>${agreementBodyHtml(c)}</body>
+<body>${certificateBodyHtml(c)}</body>
 </html>`;
 }
 
-export function RentalAgreementModal({ open, onClose, userId, property, unit, unitLabel, tenancy, persons }: RentalAgreementModalProps) {
+export default function TenantCertificatePage({ propertyId, unitId }: { propertyId: string; unitId: string }) {
+    const router = useRouter();
+    const { user } = useRequireAuth();
+    const { isLoading, notFound, property, unit, hasMultipleUnits, tenancy, persons, landlord } =
+        useUnitDocumentGeneratorData(propertyId, unitId, user?.id);
+
     const [view, setView] = useState<View>('review');
-    const [landlord, setLandlord] = useState<PersonalData | null | undefined>(undefined);
     const [signatureDataUrl, setSignatureDataUrl] = useState<string | null>(null);
     const [isUploadingSignature, setIsUploadingSignature] = useState(false);
 
-    useEffect(() => {
-        if (!open) return;
-        setView('review');
-        setLandlord(undefined);
-        setSignatureDataUrl(null);
-        getPersonalData(userId).then((data) => setLandlord(data ?? null));
-    }, [open, userId]);
+    if (notFound) return <PropertyNotFoundPage />;
+    if (isLoading || !property || !unit) return <PropertyLoadingPage />;
 
-    if (!open) return null;
+    const unitLabel = formatUnitLabel(unit.unitLabel, unit.floor, unit.locationNote);
+    const backHref = hasMultipleUnits
+        ? `/existing-properties/${propertyId}/tenant-data/${unit.propertyUnitId}`
+        : `/existing-properties/${propertyId}/tenant-data`;
+
+    const breadcrumbItems: BreadcrumbItem[] = [
+        { label: 'Bestandsobjekte', href: '/existing-properties' },
+        { label: `${property.street} ${property.houseNumber}, ${property.postalCode} ${property.city}`, href: `/existing-properties/${propertyId}` },
+        ...(hasMultipleUnits ? [{ label: ExistingPropertiesUseCases.TenantData, href: `/existing-properties/${propertyId}/tenant-data` }] : []),
+        { label: unitLabel, href: backHref },
+        { label: 'Mieterbescheinigung generieren' },
+    ];
 
     const landlordName = landlord ? `${landlord.firstName} ${landlord.lastName}`.trim() : '';
     const landlordStreet = landlord ? `${landlord.street} ${landlord.houseNumber}` : '';
@@ -159,37 +142,38 @@ export function RentalAgreementModal({ open, onClose, userId, property, unit, un
     const propertyStreet = `${property.street} ${property.houseNumber}`;
     const propertyCity = `${property.postalCode} ${property.city}`;
     const propertyAddress = `${propertyStreet}, ${propertyCity}`;
-    const namedPersons = persons.filter((p) => p.firstName.trim() !== '' || p.lastName.trim() !== '');
+    const namedPersons = persons
+        .filter((p) => (p.firstName ?? '').trim() !== '' || (p.lastName ?? '').trim() !== '')
+        .map((p) => ({
+            firstName: p.firstName ?? '',
+            lastName: p.lastName ?? '',
+            isPrimary: p.isPrimary,
+            taxId: p.taxId ?? '',
+            moveInDate: p.moveInDate ? new Date(p.moveInDate) : undefined,
+        }));
     const tenants = namedPersons.map((p) => ({
         name: `${p.firstName} ${p.lastName}`.trim(),
         role: p.isPrimary ? 'Hauptmieter' : 'Weitere Person',
     }));
     const mietbeginn = tenancy?.tenancyStartDate ? formatDeDate(tenancy.tenancyStartDate) : '–';
-    const befristet = tenancy?.tenancyEndDate != null;
-    const mietende = tenancy?.tenancyEndDate ? formatDeDate(tenancy.tenancyEndDate) : '–';
+    const mietvertragAktiv = tenancy != null && !tenancy.tenancyEndDate;
     const issuePlace = landlord?.city || property.city;
     const issueDate = formatDeDate(new Date().toISOString());
     const canGenerate = landlord != null && tenants.length > 0 && tenancy != null;
+    const documentNumber = `MB-${new Date().getFullYear()}-${String(tenancy?.tenancyId ?? 0).padStart(3, '0')}`;
 
-    const content: AgreementContent = {
+    const content: CertificateContent = {
         landlordName,
         landlordStreet,
         landlordCity,
         propertyAddress,
         unitLabel,
-        livingArea: unit.livingAreaM2 != null ? `${unit.livingAreaM2} m²` : '–',
-        numberOfRooms: unit.numberOfRooms != null ? String(unit.numberOfRooms) : '–',
         tenants,
         mietbeginn,
-        befristet,
-        mietende,
-        coldRent: euro(tenancy?.coldRent),
-        miscRent: euro(tenancy?.miscRent),
-        warmRent: euro(tenancy?.warmRent),
-        parkingRent: tenancy?.parkingSpaceRent ? euro(tenancy.parkingSpaceRent) : null,
-        deposit: euro(tenancy?.deposit),
+        mietvertragAktiv,
         issuePlace,
         issueDate,
+        documentNumber,
         signatureDataUrl,
     };
 
@@ -206,42 +190,47 @@ export function RentalAgreementModal({ open, onClose, userId, property, unit, un
         if (!canGenerate) return;
         const win = window.open('', '_blank', 'width=800,height=1000');
         if (!win) return;
-        win.document.write(agreementPrintDocument(content));
+        win.document.write(certificatePrintDocument(content));
         win.document.close();
         win.focus();
         setTimeout(() => win.print(), 250);
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-            <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} aria-hidden="true" />
+        <div className="min-h-screen bg-background pb-24">
+            <main className="container mx-auto px-4 py-8 max-w-3xl">
+                <Header items={breadcrumbItems} />
 
-            <div className="relative z-10 w-full max-w-3xl mx-4 max-h-[90vh] flex flex-col bg-card border border-border rounded-xl shadow-xl">
-                <div className="flex items-start justify-between gap-4 px-6 pt-6 pb-4 border-b border-border shrink-0">
-                    <div className="min-w-0">
-                        <h2 className="text-lg font-semibold text-foreground">
-                            {view === 'preview' ? 'Vorschau · Mietvertrag' : 'Mietvertrag generieren'}
-                        </h2>
-                        <p className="mt-0.5 text-sm text-muted-foreground truncate">
-                            {unitLabel} · {propertyAddress}
-                        </p>
-                    </div>
+                <div className="mt-6 flex items-center gap-2 p-1 rounded-lg bg-muted/50 w-fit">
                     <button
                         type="button"
-                        onClick={onClose}
-                        aria-label="Schließen"
-                        className="shrink-0 p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                        onClick={() => setView('review')}
+                        className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors cursor-pointer ${
+                            view === 'review' ? 'bg-card shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'
+                        }`}
                     >
-                        <X className="w-5 h-5" />
+                        <ListChecks className="w-4 h-4" />
+                        Daten prüfen
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => canGenerate && setView('preview')}
+                        disabled={!canGenerate}
+                        className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors cursor-pointer disabled:opacity-50 disabled:pointer-events-none ${
+                            view === 'preview' ? 'bg-card shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'
+                        }`}
+                    >
+                        <Eye className="w-4 h-4" />
+                        Vorschau
                     </button>
                 </div>
 
                 {view === 'review' ? (
-                    <div className="px-6 py-5 overflow-y-auto flex flex-col gap-6">
+                    <div className="mt-6 flex flex-col gap-6">
                         <div className="flex items-start gap-2.5 p-3 rounded-lg border border-border bg-muted/30">
                             <FileText className="w-4 h-4 shrink-0 text-primary mt-0.5" />
                             <p className="text-sm text-muted-foreground">
-                                Der Mietvertrag wird automatisch aus den hinterlegten Daten befüllt. Bitte prüfen Sie die Angaben bevor Sie das Dokument generieren.
+                                Die Bescheinigung wird automatisch aus den hinterlegten Daten befüllt. Bitte prüfen Sie die Angaben bevor Sie das Dokument generieren.
                                 Fehlende oder veraltete Daten können in den jeweiligen Bereichen ergänzt werden.
                             </p>
                         </div>
@@ -268,31 +257,33 @@ export function RentalAgreementModal({ open, onClose, userId, property, unit, un
                         </div>
 
                         <div>
-                            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Mieträume</p>
-                            <DataCard icon={Home} title="Objektdaten" source="Bestandsobjekt · Objektdaten">
-                                <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+                            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Mietobjekt</p>
+                            <DataCard icon={FileText} title="Objektdaten" source="Bestandsobjekt · Objektdaten">
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                                     <Field label="Straße & Hausnummer" value={propertyStreet} />
                                     <Field label="PLZ & Ort" value={propertyCity} />
                                     <Field label="Einheit" value={unitLabel} />
-                                    <Field label="Wohnfläche / Zimmer" value={`${content.livingArea} / ${content.numberOfRooms}`} />
                                 </div>
                             </DataCard>
                         </div>
 
                         <div>
-                            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Mieter</p>
+                            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Mietpartei(en)</p>
                             <DataCard icon={Users} title="Mieterdaten" source="Bestandsobjekt · Mieterdaten">
                                 <div className="flex flex-col gap-2">
                                     {namedPersons.length === 0 && <p className="text-sm text-muted-foreground">Keine Mieterdaten hinterlegt.</p>}
                                     {namedPersons.map((person, index) => (
-                                        <div key={index} className="flex items-center gap-3 p-2.5 rounded-lg bg-muted/30">
-                                            <div className="shrink-0 w-9 h-9 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-semibold">
-                                                {initials(person.firstName, person.lastName)}
+                                        <div key={index} className="flex items-center justify-between gap-3 p-2.5 rounded-lg bg-muted/30">
+                                            <div className="flex items-center gap-3 min-w-0">
+                                                <div className="shrink-0 w-9 h-9 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-semibold">
+                                                    {initials(person.firstName, person.lastName)}
+                                                </div>
+                                                <div className="min-w-0">
+                                                    <p className="text-sm font-medium text-foreground truncate">{`${person.firstName} ${person.lastName}`.trim()}</p>
+                                                    <p className="text-xs text-muted-foreground">{person.isPrimary ? 'Hauptmieter' : 'Weitere Person'}</p>
+                                                </div>
                                             </div>
-                                            <div className="min-w-0">
-                                                <p className="text-sm font-medium text-foreground truncate">{`${person.firstName} ${person.lastName}`.trim()}</p>
-                                                <p className="text-xs text-muted-foreground">{person.isPrimary ? 'Hauptmieter' : 'Weitere Person'}</p>
-                                            </div>
+                                            <Pill ok={isPersonComplete(person)} label={isPersonComplete(person) ? 'Vollständig' : 'Unvollständig'} />
                                         </div>
                                     ))}
                                 </div>
@@ -300,18 +291,16 @@ export function RentalAgreementModal({ open, onClose, userId, property, unit, un
                         </div>
 
                         <div>
-                            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Mietzeit, Miete und Kaution</p>
-                            <DataCard icon={FileSignature} title="Mietkonditionen" source="Bestandsobjekt · Mieterdaten">
-                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Mietverhältnis</p>
+                            <DataCard icon={FileText} title="Mietvertrag" source="Bestandsobjekt · Mietvertrag">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                     <Field label="Mietbeginn" value={mietbeginn} />
                                     <div>
-                                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Befristet</p>
-                                        <div className="mt-1"><Pill ok={!befristet} label={befristet ? `bis ${mietende}` : 'Unbefristet'} /></div>
+                                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Mietvertrag aktiv</p>
+                                        <div className="mt-1"><Pill ok={mietvertragAktiv} label={mietvertragAktiv ? 'Ja' : 'Nein'} /></div>
                                     </div>
-                                    <Field label="Kaltmiete" value={content.coldRent} />
-                                    <Field label="Nebenkosten" value={content.miscRent} />
-                                    <Field label="Warmmiete" value={content.warmRent} />
-                                    <Field label="Kaution" value={content.deposit} />
+                                    <Field label="Ausstellungsort" value={issuePlace || '–'} />
+                                    <Field label="Ausstellungsdatum" value={issueDate} />
                                 </div>
                             </DataCard>
                         </div>
@@ -338,7 +327,7 @@ export function RentalAgreementModal({ open, onClose, userId, property, unit, un
                                         </p>
                                     )}
                                     <input
-                                        id="signature-upload-rental"
+                                        id="signature-upload"
                                         type="file"
                                         accept="image/png,image/jpeg"
                                         className="sr-only"
@@ -349,7 +338,7 @@ export function RentalAgreementModal({ open, onClose, userId, property, unit, un
                                             if (file) void handleUploadSignature(file);
                                         }}
                                     />
-                                    <label htmlFor="signature-upload-rental">
+                                    <label htmlFor="signature-upload">
                                         <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border-2 border-primary text-primary text-sm font-medium cursor-pointer transition-colors hover:bg-primary hover:text-primary-foreground">
                                             <Upload className="w-4 h-4" />
                                             Unterschrift hochladen
@@ -360,41 +349,34 @@ export function RentalAgreementModal({ open, onClose, userId, property, unit, un
                         </div>
                     </div>
                 ) : (
-                    <>
-                        <div className="flex items-center justify-center px-6 py-3 border-b border-border shrink-0">
+                    <div className="mt-6">
+                        <div className="flex items-center justify-center px-6 py-3 mb-4 rounded-lg border border-border bg-muted/30">
                             <Pill ok={signatureDataUrl != null} label={signatureDataUrl != null ? 'Unterschrift hinterlegt' : 'Keine Unterschrift hinterlegt'} />
                         </div>
-                        <div className="px-6 py-5 overflow-y-auto">
-                            {canGenerate ? (
-                                <div
-                                    className="bg-white text-black rounded-md shadow-sm p-8 text-sm leading-relaxed"
-                                    dangerouslySetInnerHTML={{ __html: agreementBodyHtml(content) }}
-                                />
-                            ) : (
-                                <p className="text-sm text-muted-foreground">
-                                    Es fehlen noch Angaben (Vermieterdaten oder Mieterdaten), um die Vorschau anzuzeigen.
-                                </p>
-                            )}
-                        </div>
-                    </>
+                        {canGenerate ? (
+                            <div
+                                className="bg-white text-black rounded-md shadow-sm p-8 text-sm leading-relaxed"
+                                dangerouslySetInnerHTML={{ __html: certificateBodyHtml(content) }}
+                            />
+                        ) : (
+                            <p className="text-sm text-muted-foreground">
+                                Es fehlen noch Angaben (Vermieterdaten oder Mieterdaten), um die Vorschau anzuzeigen.
+                            </p>
+                        )}
+                    </div>
                 )}
+            </main>
 
-                <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-border shrink-0">
-                    <Button label="Abbrechen" icon={<X className="w-4 h-4" />} variant="outline" onClick={onClose} />
-                    {view === 'review' ? (
-                        <Button label="Vorschau" icon={<Eye className="w-4 h-4" />} variant="outline" onClick={() => setView('preview')} disabled={!canGenerate} />
-                    ) : (
-                        <Button label="Daten prüfen" icon={<ArrowLeft className="w-4 h-4" />} variant="outline" onClick={() => setView('review')} />
-                    )}
-                    <Button
-                        label="PDF generieren"
-                        icon={<FileText className="w-4 h-4" />}
-                        variant="primary"
-                        disabled={!canGenerate}
-                        onClick={handleGenerate}
-                    />
-                </div>
-            </div>
+            <StickyActionBar
+                show={true}
+                onGhost={() => router.push(backHref)}
+                onPrimary={handleGenerate}
+                ghostLabel={BUTTON_DETAILS.Back.label}
+                ghostIcon={<BUTTON_DETAILS.Back.icon />}
+                primaryLabel="PDF generieren"
+                primaryIcon={<FileText className="w-4 h-4" />}
+                primaryDisabled={!canGenerate}
+            />
         </div>
     );
 }

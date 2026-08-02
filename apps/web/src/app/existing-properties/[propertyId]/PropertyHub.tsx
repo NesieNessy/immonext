@@ -3,12 +3,16 @@
 import { BESTANDSOBJEKTE_BREADCRUMB_ROOT, PROPERTY_CATEGORY_LABEL, PropertyLoadingPage } from '@/components/features/PropertyDisplay';
 import { ConfirmDeleteModal, Header, SectionLabel, Tag } from '@/components/ui';
 import { deleteProperty, getPropertyOverviewById, type PropertyOverview } from '@/lib/supabase/property.supabase';
+import { getPropertyUnitsByProperty } from '@/lib/supabase/property_unit.supabase';
 import { base64ToDataUri, cn } from '@/lib/utils';
+import type { PropertyUnit } from '@immonext/types';
 import {
   BarChart3,
   Clock,
   Database,
   DoorOpen,
+  FileSignature,
+  FileText,
   History,
   Home,
   Landmark,
@@ -174,13 +178,16 @@ function HubCardTile({ card, propertyId }: { card: HubCard; propertyId: string }
 export default function PropertyHub({ propertyId }: { propertyId: string }) {
   const router = useRouter();
   const [property, setProperty] = useState<PropertyOverview | null>(null);
+  const [units, setUnits] = useState<PropertyUnit[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
-    getPropertyOverviewById(parseInt(propertyId, 10)).then((p) => {
+    const id = parseInt(propertyId, 10);
+    Promise.all([getPropertyOverviewById(id), getPropertyUnitsByProperty(id)]).then(([p, foundUnits]) => {
       setProperty(p);
+      setUnits(foundUnits);
       setIsLoading(false);
     });
   }, [propertyId]);
@@ -208,6 +215,31 @@ export default function PropertyHub({ propertyId }: { propertyId: string }) {
   const categoryLabel = property.propertyCategory
     ? PROPERTY_CATEGORY_LABEL[property.propertyCategory] ?? property.propertyCategory
     : null;
+
+  // Generieren shortcuts need a single, unambiguous unit to target — with
+  // several Wohneinheiten the user picks one first via Mieterdaten.
+  const singleUnit = units.length === 1 ? units[0] : null;
+  const miete: HubCard[] = [
+    ...MIETE,
+    ...(singleUnit ? [
+      {
+        key: 'certificate-generate',
+        title: 'Mieterbescheinigung generieren',
+        description: 'Bescheinigung für den aktuellen Mieter erstellen',
+        route: `tenant-data/unit/${singleUnit.propertyUnitId}/certificate`,
+        icon: FileText,
+        colorClass: 'bg-sky-100 text-sky-600 dark:bg-sky-900/30 dark:text-sky-400',
+      },
+      {
+        key: 'rental-agreement-generate',
+        title: 'Mietvertrag generieren',
+        description: 'Mietvertrag für Wohnraum erstellen',
+        route: `tenant-data/unit/${singleUnit.propertyUnitId}/rental-agreement`,
+        icon: FileSignature,
+        colorClass: 'bg-teal-100 text-teal-600 dark:bg-teal-900/30 dark:text-teal-400',
+      },
+    ] : []),
+  ];
 
   const weitereAktionen: HubCard[] = [
     ...WEITERE_AKTIONEN,
@@ -270,7 +302,7 @@ export default function PropertyHub({ propertyId }: { propertyId: string }) {
         <div className="mt-8 flex flex-col gap-3">
           <SectionLabel>Miete</SectionLabel>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {MIETE.map((card) => (
+            {miete.map((card) => (
               <HubCardTile key={card.key} card={card} propertyId={propertyId} />
             ))}
           </div>
