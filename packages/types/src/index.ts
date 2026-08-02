@@ -397,6 +397,28 @@ export interface TenancyPerson {
 export type TenancyPersonInsert = Omit<TenancyPerson, 'tenancyPersonId' | 'createdAt' | 'updatedAt'>;
 export type TenancyPersonUpdate = Partial<Omit<TenancyPerson, 'tenancyPersonId' | 'tenancyId' | 'createdAt' | 'updatedAt'>>;
 
+// ----------------------------------------------------------------------------
+// TenancyDocument
+// ----------------------------------------------------------------------------
+
+export type TenancyDocumentType = 'Ausweis' | 'Schufa' | 'Bürgschaft' | 'Mietvertrag' | 'Mieterbescheinigung';
+
+export interface TenancyDocument {
+  tenancyDocumentId: number;
+  tenancyId: number;
+  /** Null for tenancy-wide documents (Mietvertrag). */
+  tenancyPersonId: number | null;
+  documentType: TenancyDocumentType;
+  fileName: string;
+  storagePath: string;
+  contentType: string | null;
+  fileSize: number | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type TenancyDocumentInsert = Omit<TenancyDocument, 'tenancyDocumentId' | 'createdAt' | 'updatedAt'>;
+
 export enum DataEntryTypeValues {
   ImportFromRealEstatePortal = 'Aus Immobilienportal importieren',
   ManualEntry = 'Manuell erfassen',

@@ -1,7 +1,7 @@
 "use client";
 
 import { BESTANDSOBJEKTE_BREADCRUMB_ROOT, PROPERTY_CATEGORY_CREATE_OPTIONS } from '@/components/features/PropertyDisplay';
-import { CalendarField, Dropdown, Header, NumberField, PillOptions, SectionLabel, StickyActionBar, TextField, UploadButton } from '@/components/ui';
+import { CalendarField, Dropdown, Header, NumberField, PillOptions, SectionLabel, StickyActionBar, TextField, UnsavedChangesModal, UploadButton, useToast, type BreadcrumbItem } from '@/components/ui';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
 import { createAcquisitionCosts } from '@/lib/supabase/acquisition_costs.supabase';
@@ -13,7 +13,7 @@ import { EnergyEfficient } from '@immonext/types';
 import { format } from 'date-fns';
 import { X } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Suspense, useState } from 'react';
+import { Suspense, useRef, useState } from 'react';
 
 /** Strips the "data:image/...;base64," prefix — Property.imageUrl stores
  *  raw base64 only; base64ToDataUri() re-adds the right prefix for display. */
@@ -38,6 +38,7 @@ function NewPropertyPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, isLoading: authLoading } = useRequireAuth();
+  const { showToast } = useToast();
 
   // Prefill comes from NewPropertyModal's "Aus Detailbewertung übernehmen"
   // step via query params — that step already has the full row in memory,
@@ -57,6 +58,15 @@ function NewPropertyPageContent() {
   const [bildBase64, setBildBase64] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [pendingHref, setPendingHref] = useState<string | null>(null);
+
+  // Prefilled values (from query params) count as the starting point, not
+  // as an unsaved edit — only further changes should count as "dirty".
+  const initial = useRef({
+    objektkategorie, strasseHausnummer, plz, ort, bundesland, baujahr,
+    wohnflaeche, anzahlZimmer, stellplaetze, energieeffizienz, kaufpreis,
+    kaufdatum, bildBase64,
+  }).current;
 
   const handleImageSelect = async (files: FileList | null) => {
     const file = files?.[0];
@@ -73,6 +83,36 @@ function NewPropertyPageContent() {
     /^\d{4}$/.test(baujahr) && Number(baujahr) >= 1800 && Number(baujahr) <= currentYear &&
     Number(wohnflaeche) > 0 &&
     stellplaetze !== '' && Number(stellplaetze) >= 0;
+
+  const isEditing =
+    objektkategorie !== initial.objektkategorie ||
+    strasseHausnummer !== initial.strasseHausnummer ||
+    plz !== initial.plz ||
+    ort !== initial.ort ||
+    bundesland !== initial.bundesland ||
+    baujahr !== initial.baujahr ||
+    wohnflaeche !== initial.wohnflaeche ||
+    anzahlZimmer !== initial.anzahlZimmer ||
+    stellplaetze !== initial.stellplaetze ||
+    energieeffizienz !== initial.energieeffizienz ||
+    kaufpreis !== initial.kaufpreis ||
+    kaufdatum !== initial.kaufdatum ||
+    bildBase64 !== initial.bildBase64;
+
+  // Any navigation away from an unsaved draft is routed through here so
+  // it can be confirmed first (breadcrumb links, Zurück).
+  const goTo = (href: string) => {
+    if (isEditing) {
+      setPendingHref(href);
+    } else {
+      router.push(href);
+    }
+  };
+
+  const confirmDiscard = () => {
+    if (pendingHref) router.push(pendingHref);
+    setPendingHref(null);
+  };
 
   const handleSave = async () => {
     if (!isValid || !user) return;
@@ -141,6 +181,7 @@ function NewPropertyPageContent() {
         });
       }
 
+      showToast('Objekt gespeichert.');
       router.push('/existing-properties');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unbekannter Fehler');
@@ -153,7 +194,10 @@ function NewPropertyPageContent() {
       <main className="container mx-auto px-4 pt-8 pb-3">
         <Header
           items={[
-            BESTANDSOBJEKTE_BREADCRUMB_ROOT,
+            {
+              ...BESTANDSOBJEKTE_BREADCRUMB_ROOT,
+              onClick: (e) => { if (isEditing) { e.preventDefault(); goTo('/existing-properties'); } },
+            } satisfies BreadcrumbItem,
             { label: 'Neues Objekt anlegen' },
           ]}
         />
@@ -294,13 +338,20 @@ function NewPropertyPageContent() {
 
       <StickyActionBar
         show={true}
-        ghostLabel={BUTTON_DETAILS.Cancel.label}
-        ghostIcon={<BUTTON_DETAILS.Cancel.icon />}
-        onGhost={() => router.push('/existing-properties')}
-        primaryLabel={BUTTON_DETAILS.Save.label}
+        ghostLabel={BUTTON_DETAILS.Back.label}
+        ghostIcon={<BUTTON_DETAILS.Back.icon />}
+        onGhost={() => goTo('/existing-properties')}
+        primaryLabel="Objekt speichern"
         primaryIcon={<BUTTON_DETAILS.Save.icon />}
-        primaryDisabled={!isValid || isSaving || authLoading}
+        primaryDisabled={!isEditing || !isValid || isSaving || authLoading}
         onPrimary={() => void handleSave()}
+      />
+
+      <UnsavedChangesModal
+        open={pendingHref !== null}
+        onCancel={() => setPendingHref(null)}
+        onDiscard={confirmDiscard}
+        context="am neuen Objekt"
       />
     </div>
   );

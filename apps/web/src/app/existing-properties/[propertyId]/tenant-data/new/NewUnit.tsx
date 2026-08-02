@@ -2,14 +2,14 @@
 
 import { useEffect, useState } from 'react';
 
-import { buildPropertyUseCaseBreadcrumb, formatUnitLabel, PropertyLoadingPage, PropertyNotFoundPage } from '@/components/features/PropertyDisplay';
-import { Header, NumberField, PillOptions, SectionLabel, StickyActionBar, TextField } from '@/components/ui';
-import { ExistingPropertiesUseCases } from '@/constants/ExistingPropertiesUseCases';
+import { formatUnitLabel, PropertyLoadingPage, PropertyNotFoundPage } from '@/components/features/PropertyDisplay';
+import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
+import { Header, NumberField, PillOptions, SectionLabel, StickyActionBar, TextField, UnsavedChangesModal, useToast, type BreadcrumbItem } from '@/components/ui';
 import { getPropertyById } from '@/lib/supabase/property.supabase';
 import { createPropertyUnit, getPropertyUnitsByProperty } from '@/lib/supabase/property_unit.supabase';
 import { base64ToDataUri, deNumberFormatter } from '@/lib/utils';
 import { type Property, UnitUsageType } from '@immonext/types';
-import { Archive, Briefcase, Car, Check, DoorOpen, Home, MoreHorizontal, X } from 'lucide-react';
+import { Archive, Briefcase, Car, Check, DoorOpen, Home, MoreHorizontal } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 interface UsageTypeOption {
@@ -49,11 +49,12 @@ const PARKING_OPTIONS = [
 ];
 
 // Stellplätze only make sense for units people actually occupy or run a
-// business out of — not for a Stellplatz/Lager/Sonstige unit itself.
+// business out of — not for a Stellplatz/Lager unit itself.
 const USAGE_TYPES_WITH_PARKING = new Set<UnitUsageType>([
     UnitUsageType.Wohnung,
     UnitUsageType.Einliegerwohnung,
     UnitUsageType.Gewerbeflaeche,
+    UnitUsageType.Sonstige,
 ]);
 
 function UsageTypeCard({ option, selected, onSelect }: { option: UsageTypeOption; selected: boolean; onSelect: () => void }) {
@@ -75,9 +76,11 @@ function UsageTypeCard({ option, selected, onSelect }: { option: UsageTypeOption
 
 export default function NewUnit({ propertyId }: { propertyId: string }) {
     const router = useRouter();
+    const { showToast } = useToast();
     const [property, setProperty] = useState<Property | null | undefined>(undefined);
     const [unitCount, setUnitCount] = useState(0);
     const [isSaving, setIsSaving] = useState(false);
+    const [pendingHref, setPendingHref] = useState<string | null>(null);
 
     const [usageType, setUsageType] = useState<UnitUsageType>(UnitUsageType.Wohnung);
     const [unitLabel, setUnitLabel] = useState('');
@@ -98,15 +101,41 @@ export default function NewUnit({ propertyId }: { propertyId: string }) {
     if (property === undefined) return <PropertyLoadingPage />;
     if (property === null) return <PropertyNotFoundPage />;
 
-    const breadcrumbItems = [
-        ...buildPropertyUseCaseBreadcrumb(property, propertyId, ExistingPropertiesUseCases.TenantData).slice(0, 2),
-        { label: ExistingPropertiesUseCases.TenantData, href: `/existing-properties/${propertyId}/tenant-data` },
-        { label: 'Einheit hinzufügen' },
-    ];
-
     const backHref = `/existing-properties/${propertyId}/tenant-data`;
 
     const isValid = unitLabel.trim() !== '' && Number(livingAreaM2) > 0;
+    const isEditing =
+        unitLabel !== '' || floor !== '' || locationNote !== '' || livingAreaM2 !== '' ||
+        numberOfRooms !== '' || numberOfParkingSpaces !== '0' || usageType !== UnitUsageType.Wohnung;
+
+    // Any navigation away from an unsaved draft is routed through here so
+    // it can be confirmed first (breadcrumb links, Zurück).
+    const goTo = (href: string) => {
+        if (isEditing) {
+            setPendingHref(href);
+        } else {
+            router.push(href);
+        }
+    };
+
+    const confirmDiscard = () => {
+        if (pendingHref) router.push(pendingHref);
+        setPendingHref(null);
+    };
+
+    const breadcrumbItems: BreadcrumbItem[] = [
+        {
+            label: 'Bestandsobjekte',
+            href: '/existing-properties',
+            onClick: (e) => { if (isEditing) { e.preventDefault(); goTo('/existing-properties'); } },
+        },
+        {
+            label: `${property.street} ${property.houseNumber}, ${property.postalCode} ${property.city}`,
+            href: `/existing-properties/${propertyId}`,
+            onClick: (e) => { if (isEditing) { e.preventDefault(); goTo(`/existing-properties/${propertyId}`); } },
+        },
+        { label: 'Einheit hinzufügen' },
+    ];
 
     const showParking = USAGE_TYPES_WITH_PARKING.has(usageType);
     const parkingCount = showParking ? Number(numberOfParkingSpaces) : 0;
@@ -130,6 +159,7 @@ export default function NewUnit({ propertyId }: { propertyId: string }) {
             targetParkingRent: null,
             targetAncillaryCosts: null,
         });
+        showToast('Einheit gespeichert.');
         router.push(backHref);
     };
 
@@ -191,7 +221,7 @@ export default function NewUnit({ propertyId }: { propertyId: string }) {
                         <SectionLabel>Fläche & Details</SectionLabel>
                         <div className="mt-3 grid grid-cols-2 gap-3">
                             <NumberField
-                                label="Wohnfläche *"
+                                label="Fläche *"
                                 unit="m²"
                                 value={livingAreaM2}
                                 onChange={(e) => setLivingAreaM2(e.target.value)}
@@ -226,7 +256,6 @@ export default function NewUnit({ propertyId }: { propertyId: string }) {
                                 ['Nutzungsart', USAGE_TYPE_LABEL[usageType]],
                                 ['Fläche', livingAreaM2 !== '' ? `${deNumberFormatter.format(Number(livingAreaM2))} m²` : '–'],
                                 ...(showParking ? [['Stellplätze', parkingCount === 0 ? 'Kein' : parkingCount === 4 ? '4+' : String(parkingCount)]] : []),
-                                ['Status nach Anlage', 'Leerstand (kein Mieter)'],
                             ].map(([label, value], index) => (
                                 <div key={label} className={`flex items-center justify-between px-4 py-2.5 text-sm ${index % 2 === 1 ? 'bg-muted/30' : ''}`}>
                                     <span className="text-muted-foreground">{label}</span>
@@ -240,13 +269,20 @@ export default function NewUnit({ propertyId }: { propertyId: string }) {
 
             <StickyActionBar
                 show={true}
-                onGhost={() => router.push(backHref)}
+                onGhost={() => goTo(backHref)}
                 onPrimary={() => void handleSave()}
-                ghostLabel="Abbrechen"
-                ghostIcon={<X className="w-4 h-4" />}
-                primaryLabel="Einheit anlegen"
+                ghostLabel={BUTTON_DETAILS.Back.label}
+                ghostIcon={<BUTTON_DETAILS.Back.icon />}
+                primaryLabel="Einheit speichern"
                 primaryIcon={<Check className="w-4 h-4" />}
-                primaryDisabled={!isValid || isSaving}
+                primaryDisabled={!isEditing || !isValid || isSaving}
+            />
+
+            <UnsavedChangesModal
+                open={pendingHref !== null}
+                onCancel={() => setPendingHref(null)}
+                onDiscard={confirmDiscard}
+                context="an der neuen Einheit"
             />
         </div>
     );

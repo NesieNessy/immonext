@@ -5,7 +5,7 @@ import { KpfAssessmentCard } from '@/components/features/KpfAssessmentCard';
 import { MobileResultBanner } from '@/components/features/MobileResultBanner';
 import { CONDITION_OPTIONS, getQuickCheckFieldErrors } from '@/components/features/QuickCheckDisplay';
 import { QuickCheckImportSection } from '@/components/features/QuickCheckImportSection';
-import { Button, Dropdown, Header, NumberField, StickyActionBar, TextField } from '@/components/ui';
+import { Button, Dropdown, Header, NumberField, StickyActionBar, TextField, UnsavedChangesModal, useToast, type BreadcrumbItem } from '@/components/ui';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { FieldLabels } from '@/constants/FieldLabels';
 import { useQuickCheckById } from '@/hooks/useQuickCheckById';
@@ -45,6 +45,7 @@ interface Props { id: number; }
 export function QuickCheckResultView({ id }: Props) {
   const router = useRouter();
   const { user, isLoading: authLoading } = useRequireAuth();
+  const { showToast } = useToast();
   const { data, isLoading, error } = useQuickCheckById(id);
 
   // Edit form (ACTIVE state)
@@ -55,6 +56,7 @@ export function QuickCheckResultView({ id }: Props) {
 
   // UI state
   const [isBusy, setIsBusy] = useState(false);
+  const [pendingHref, setPendingHref] = useState<string | null>(null);
 
   // Snapshot of the loaded values (to detect whether the user has changed
   // anything since the record was fetched) — a pure function of `data`, so
@@ -115,6 +117,21 @@ export function QuickCheckResultView({ id }: Props) {
       editForm.yearOfConstruction !== initialForm.yearOfConstruction ||
       portalUrl !== initialPortalUrl);
 
+  // Any navigation away from an unsaved edit is routed through here so it
+  // can be confirmed first (breadcrumb links).
+  const goTo = (href: string) => {
+    if (hasChanges) {
+      setPendingHref(href);
+    } else {
+      router.push(href);
+    }
+  };
+
+  const confirmDiscard = () => {
+    if (pendingHref) router.push(pendingHref);
+    setPendingHref(null);
+  };
+
   // Whether the KPF result panel can be shown — independent of street/city,
   // since the calculation itself only needs price, rent, postal code,
   // condition and year. Legacy records can have a missing address.
@@ -155,6 +172,7 @@ export function QuickCheckResultView({ id }: Props) {
         kpfMultiplier:      calcKpf(purchasePrice, coldRent) ?? 0,
       });
       await acceptQuickCheck(id, user.id);
+      showToast('Ersteinschätzung gespeichert.');
       router.push('/property-valuation/quick-check');
     } catch (err) {
       console.error('Übernehmen fehlgeschlagen', err);
@@ -214,7 +232,11 @@ export function QuickCheckResultView({ id }: Props) {
           <Header
             items={[
               { label: 'Objektbewertung' },
-              { label: 'Ersteinschätzungen', href: '/property-valuation/quick-check' },
+              {
+                label: 'Ersteinschätzungen',
+                href: '/property-valuation/quick-check',
+                onClick: (e) => { if (hasChanges) { e.preventDefault(); goTo('/property-valuation/quick-check'); } },
+              } satisfies BreadcrumbItem,
               { label: editForm.street || 'Immobilien-Ersteinschätzung' },
             ]}
             actions={
@@ -347,14 +369,21 @@ export function QuickCheckResultView({ id }: Props) {
 
         <StickyActionBar
           show={true}
-          ghostLabel={BUTTON_DETAILS.Discard.label}
-          ghostIcon={<BUTTON_DETAILS.Discard.icon />}
+          ghostLabel={BUTTON_DETAILS.Back.label}
+          ghostIcon={<BUTTON_DETAILS.Back.icon />}
           ghostDisabled={isBusy}
           onGhost={handleDiscard}
-          primaryLabel={BUTTON_DETAILS.TakeOver.label}
-          primaryIcon={<BUTTON_DETAILS.TakeOver.icon />}
+          primaryLabel="Ersteinschätzung speichern"
+          primaryIcon={<BUTTON_DETAILS.Save.icon />}
           primaryDisabled={!isEditValid || isBusy || !hasChanges}
           onPrimary={() => void handleTakeOver()}
+        />
+
+        <UnsavedChangesModal
+          open={pendingHref !== null}
+          onCancel={() => setPendingHref(null)}
+          onDiscard={confirmDiscard}
+          context="an der Ersteinschätzung"
         />
       </div>
     </>
