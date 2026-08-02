@@ -1,6 +1,6 @@
 "use client";
 
-import { Header, StickyActionBar, TextField, Tile } from '@/components/ui';
+import { Header, StickyActionBar, TextField, Tile, useToast } from '@/components/ui';
 import { authBypassUser, isAuthBypassEnabled } from '@/lib/authBypass';
 import { supabase } from '@/lib/supabase/client.supabase';
 import { getPersonalData, upsertPersonalData } from '@/lib/supabase/personal_data.supabase';
@@ -24,6 +24,7 @@ const emptyForm = {
 type FormData = typeof emptyForm;
 
 function SettingsPageContent() {
+    const { showToast } = useToast();
     const searchParams = useSearchParams();
     const isOnboarding = searchParams.get('onboarding') === '1';
     const [user, setUser] = useState<{ id: string } | null>(null);
@@ -120,6 +121,7 @@ function SettingsPageContent() {
             setSavedData(updated);
             setFormData(updated);
             setIsEditing(false);
+            showToast('Einstellungen gespeichert.');
         } else {
             setError('Fehler beim Speichern. Bitte versuchen Sie es erneut.');
         }
@@ -224,13 +226,14 @@ function SettingsPageContent() {
             </main>
 
             <StickyActionBar
-                show={isEditing}
+                show={true}
                 onGhost={handleCancel}
                 onPrimary={handleSave}
-                ghostLabel="Abbrechen"
-                primaryLabel={isSaving ? 'Speichern...' : 'Speichern'}
+                ghostLabel="Zurück"
+                primaryLabel="Einstellungen speichern"
                 ghostIcon={<X size={20} />}
                 primaryIcon={isSaving ? <Loader2 size={20} className="animate-spin" /> : <Save size={20} />}
+                primaryDisabled={!isEditing || isSaving}
             />
         </div>
     );

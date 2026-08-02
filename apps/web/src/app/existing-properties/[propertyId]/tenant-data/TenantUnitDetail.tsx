@@ -1,11 +1,14 @@
 "use client";
 
-import { buildPropertyUseCaseBreadcrumb, formatUnitLabel } from '@/components/features/PropertyDisplay';
-import { Button, CalendarField, ComingSoonButton, ConfirmDeleteModal, Header, NumberField, SectionLabel, StickyActionBar, Table, Tag, TextField, type SortDirection, type TableColumn } from '@/components/ui';
+import { formatUnitLabel } from '@/components/features/PropertyDisplay';
+import { Button, CalendarField, ComingSoonButton, ConfirmDeleteModal, Header, NumberField, SectionLabel, StickyActionBar, Table, Tag, TextField, UnsavedChangesModal, useToast, type BreadcrumbItem, type SortDirection, type TableColumn } from '@/components/ui';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { ExistingPropertiesUseCases } from '@/constants/ExistingPropertiesUseCases';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
+import { TenantCertificateModal } from './TenantCertificateModal';
+import { RentalAgreementModal } from './RentalAgreementModal';
 import { createTenancy, getCurrentTenancyByUnit, updateTenancy } from '@/lib/supabase/tenancy.supabase';
+import { getPersonalData } from '@/lib/supabase/personal_data.supabase';
 import {
     deleteTenancyDocument,
     getTenancyDocumentsByTenancy,
@@ -20,9 +23,9 @@ import {
 } from '@/lib/supabase/tenancy_person.supabase';
 import { createUseCaseMenuItems } from '@/lib/useCaseMenu';
 import { base64ToDataUri, cn } from '@/lib/utils';
-import type { Property, PropertyUnit, Tenancy, TenancyDocument, TenancyDocumentType } from '@immonext/types';
+import type { PersonalData, Property, PropertyUnit, Tenancy, TenancyDocument, TenancyDocumentType } from '@immonext/types';
 import { format } from 'date-fns';
-import { ArrowLeft, Download, Eye, FileText, Plus, RefreshCw, Star, Trash2, Upload, User, Users } from 'lucide-react';
+import { Download, Eye, FileSignature, FileText, Plus, RefreshCw, Star, Trash2, Upload, User, Users } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 
@@ -43,6 +46,10 @@ const EMPTY_PRIMARY_PERSON: PersonForm = { id: null, lastName: '', firstName: ''
  *  signed a separate contract. */
 const PER_PERSON_DOCUMENTS: TenancyDocumentType[] = ['Ausweis', 'Schufa', 'Bürgschaft'];
 const SHARED_DOCUMENTS: TenancyDocumentType[] = ['Mietvertrag'];
+/** Mieterbescheinigung is always one shared row for the whole tenancy — it
+ *  has no Individuell/Gemeinsam toggle since the certificate always lists
+ *  every tenant. */
+const MIETERBESCHEINIGUNG: TenancyDocumentType = 'Mieterbescheinigung';
 
 function personDisplayName(person: PersonForm, index: number): string {
     const name = `${person.firstName} ${person.lastName}`.trim();
@@ -55,6 +62,12 @@ function allTenantsDisplayName(persons: PersonForm[]): string {
     return `${names.slice(0, -1).join(', ')} & ${names[names.length - 1]}`;
 }
 
+/** Comparable snapshot of the person list — Date fields don't compare
+ *  reliably with JSON.stringify unless normalized to ISO strings first. */
+function serializePersons(persons: PersonForm[]): string {
+    return JSON.stringify(persons.map((p) => ({ ...p, moveInDate: p.moveInDate ? p.moveInDate.toISOString() : null })));
+}
+
 interface TenantUnitDetailProps {
     propertyId: string;
     property: Property;
@@ -65,6 +78,7 @@ interface TenantUnitDetailProps {
 export function TenantUnitDetail({ propertyId, property, unit, hasMultipleUnits }: TenantUnitDetailProps) {
     const router = useRouter();
     const { user } = useRequireAuth();
+    const { showToast } = useToast();
 
     const [tenancy, setTenancy] = useState<Tenancy | null>(null);
     const [persons, setPersons] = useState<PersonForm[]>([EMPTY_PRIMARY_PERSON]);
@@ -74,6 +88,9 @@ export function TenantUnitDetail({ propertyId, property, unit, hasMultipleUnits 
     const [startFreshTenancy, setStartFreshTenancy] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [landlord, setLandlord] = useState<PersonalData | null | undefined>(undefined);
+    const [showCertificate, setShowCertificate] = useState(false);
+    const [rentalAgreementPersons, setRentalAgreementPersons] = useState<PersonForm[] | null>(null);
     const [docSortKey, setDocSortKey] = useState<string>('document');
     const [docSortDirection, setDocSortDirection] = useState<SortDirection>('asc');
     const [docColumnFilters, setDocColumnFilters] = useState<Record<string, string>>({});
@@ -81,44 +98,74 @@ export function TenantUnitDetail({ propertyId, property, unit, hasMultipleUnits 
     const [pendingDocKey, setPendingDocKey] = useState<string | null>(null);
     const [docPendingDelete, setDocPendingDelete] = useState<{ key: string; label: string; doc: TenancyDocument } | null>(null);
     const [mietvertragIndividual, setMietvertragIndividual] = useState(false);
+    const [originalPersonsSnapshot, setOriginalPersonsSnapshot] = useState(() => serializePersons([EMPTY_PRIMARY_PERSON]));
+    const [originalDeposit, setOriginalDeposit] = useState('');
+    const [pendingHref, setPendingHref] = useState<string | null>(null);
 
     useEffect(() => {
         let cancelled = false;
         getCurrentTenancyByUnit(unit.propertyUnitId).then(async (found) => {
             if (cancelled) return;
             setTenancy(found);
-            setDeposit(found?.deposit != null ? String(found.deposit) : '');
+            const loadedDeposit = found?.deposit != null ? String(found.deposit) : '';
+            setDeposit(loadedDeposit);
+            setOriginalDeposit(loadedDeposit);
             if (found) {
                 const [loadedPersons, loadedDocuments] = await Promise.all([
                     getTenancyPersonsByTenancy(found.tenancyId),
                     getTenancyDocumentsByTenancy(found.tenancyId),
                 ]);
                 if (cancelled) return;
-                setPersons(
-                    loadedPersons.length > 0
-                        ? loadedPersons.map((p) => ({
-                            id: p.tenancyPersonId,
-                            lastName: p.lastName ?? '',
-                            firstName: p.firstName ?? '',
-                            taxId: p.taxId ?? '',
-                            isPrimary: p.isPrimary,
-                            moveInDate: p.moveInDate ? new Date(p.moveInDate) : undefined,
-                        }))
-                        : [EMPTY_PRIMARY_PERSON]
-                );
+                const mappedPersons = loadedPersons.length > 0
+                    ? loadedPersons.map((p) => ({
+                        id: p.tenancyPersonId,
+                        lastName: p.lastName ?? '',
+                        firstName: p.firstName ?? '',
+                        taxId: p.taxId ?? '',
+                        isPrimary: p.isPrimary,
+                        moveInDate: p.moveInDate ? new Date(p.moveInDate) : undefined,
+                    }))
+                    : [EMPTY_PRIMARY_PERSON];
+                setPersons(mappedPersons);
+                setOriginalPersonsSnapshot(serializePersons(mappedPersons));
                 setDocuments(loadedDocuments);
             } else {
                 setPersons([EMPTY_PRIMARY_PERSON]);
+                setOriginalPersonsSnapshot(serializePersons([EMPTY_PRIMARY_PERSON]));
                 setDocuments([]);
             }
         });
         return () => { cancelled = true; };
     }, [unit.propertyUnitId]);
 
+    useEffect(() => {
+        if (!user) return;
+        let cancelled = false;
+        getPersonalData(user.id).then((data) => { if (!cancelled) setLandlord(data ?? null); });
+        return () => { cancelled = true; };
+    }, [user]);
+
     const status = useMemo(() => {
         if (!tenancy || startFreshTenancy) return 'Unvermietet' as const;
         return 'Vermietet' as const;
     }, [tenancy, startFreshTenancy]);
+
+    const isEditing = startFreshTenancy || deposit !== originalDeposit || serializePersons(persons) !== originalPersonsSnapshot;
+
+    // Any navigation away from an unsaved edit is routed through here so it
+    // can be confirmed first (breadcrumb links, Zurück, Anwendungsfall).
+    const goTo = (href: string) => {
+        if (isEditing) {
+            setPendingHref(href);
+        } else {
+            router.push(href);
+        }
+    };
+
+    const confirmDiscard = () => {
+        if (pendingHref) router.push(pendingHref);
+        setPendingHref(null);
+    };
 
     // Upload is only possible once the underlying row is actually saved —
     // a draft person (id === null) or a unit with no tenancy yet has
@@ -126,6 +173,11 @@ export function TenantUnitDetail({ propertyId, property, unit, hasMultipleUnits 
     // row (default) or one row per person — never both — toggled via
     // mietvertragIndividual; every Mietvertrag row carries the toggle
     // button so switching modes is reachable from any of them.
+    // Mietvertrag can't meaningfully be generated without the landlord's own
+    // (Vermieter) data, so the whole row — upload, toggle and Generieren —
+    // stays disabled until user-settings has been filled in.
+    const landlordMissing = !landlord;
+
     const documentRows = useMemo(() => {
         const mietvertrag = SHARED_DOCUMENTS[0];
         return [
@@ -136,7 +188,9 @@ export function TenantUnitDetail({ propertyId, property, unit, hasMultipleUnits 
                     tenant: personDisplayName(person, personIndex),
                     tenancyPersonId: person.id,
                     canUpload: tenancy != null && person.id != null,
+                    blockedByLandlord: false,
                     isMietvertrag: false,
+                    generateType: null as TenancyDocumentType | null,
                     doc: person.id != null
                         ? documents.find((d) => d.tenancyPersonId === person.id && d.documentType === document)
                         : undefined,
@@ -149,7 +203,9 @@ export function TenantUnitDetail({ propertyId, property, unit, hasMultipleUnits 
                     tenant: personDisplayName(person, personIndex),
                     tenancyPersonId: person.id,
                     canUpload: tenancy != null && person.id != null,
+                    blockedByLandlord: landlordMissing,
                     isMietvertrag: true,
+                    generateType: mietvertrag,
                     doc: person.id != null
                         ? documents.find((d) => d.tenancyPersonId === person.id && d.documentType === mietvertrag)
                         : undefined,
@@ -160,14 +216,27 @@ export function TenantUnitDetail({ propertyId, property, unit, hasMultipleUnits 
                     tenant: allTenantsDisplayName(persons),
                     tenancyPersonId: null as number | null,
                     canUpload: tenancy != null,
+                    blockedByLandlord: landlordMissing,
                     isMietvertrag: true,
+                    generateType: mietvertrag,
                     doc: documents.find((d) => d.tenancyPersonId === null && d.documentType === mietvertrag),
                 }]),
+            {
+                key: MIETERBESCHEINIGUNG,
+                document: MIETERBESCHEINIGUNG,
+                tenant: allTenantsDisplayName(persons),
+                tenancyPersonId: null as number | null,
+                canUpload: tenancy != null,
+                blockedByLandlord: false,
+                isMietvertrag: false,
+                generateType: MIETERBESCHEINIGUNG,
+                doc: documents.find((d) => d.tenancyPersonId === null && d.documentType === MIETERBESCHEINIGUNG),
+            },
         ];
-    }, [persons, documents, tenancy, mietvertragIndividual]);
+    }, [persons, documents, tenancy, mietvertragIndividual, landlordMissing]);
 
     const documentFilterOptions = useMemo(
-        () => Array.from(new Set([...PER_PERSON_DOCUMENTS, ...SHARED_DOCUMENTS])).map((value) => ({ value, label: value })),
+        () => Array.from(new Set([...PER_PERSON_DOCUMENTS, ...SHARED_DOCUMENTS, MIETERBESCHEINIGUNG])).map((value) => ({ value, label: value })),
         []
     );
 
@@ -206,20 +275,47 @@ export function TenantUnitDetail({ propertyId, property, unit, hasMultipleUnits 
 
     const useCaseMenuItems = useMemo(() =>
         createUseCaseMenuItems(propertyId, 'TenantData', (route) => {
-            router.push(route);
+            goTo(route);
         }),
-        [propertyId, router]
+        [propertyId, isEditing] // eslint-disable-line react-hooks/exhaustive-deps
     );
 
     // With multiple Wohneinheiten, "Mieterdaten" links back to the units
     // overview and the unit label becomes the current breadcrumb segment.
-    const breadcrumbItems = hasMultipleUnits
+    // Every link is routed through goTo() so an in-progress edit is
+    // confirmed before actually navigating away.
+    const breadcrumbItems: BreadcrumbItem[] = hasMultipleUnits
         ? [
-            ...buildPropertyUseCaseBreadcrumb(property, propertyId, ExistingPropertiesUseCases.TenantData).slice(0, 2),
-            { label: ExistingPropertiesUseCases.TenantData, href: `/existing-properties/${propertyId}/tenant-data` },
+            {
+                label: 'Bestandsobjekte',
+                href: '/existing-properties',
+                onClick: (e) => { if (isEditing) { e.preventDefault(); goTo('/existing-properties'); } },
+            },
+            {
+                label: `${property.street} ${property.houseNumber}, ${property.postalCode} ${property.city}`,
+                href: `/existing-properties/${propertyId}`,
+                onClick: (e) => { if (isEditing) { e.preventDefault(); goTo(`/existing-properties/${propertyId}`); } },
+            },
+            {
+                label: ExistingPropertiesUseCases.TenantData,
+                href: `/existing-properties/${propertyId}/tenant-data`,
+                onClick: (e) => { if (isEditing) { e.preventDefault(); goTo(`/existing-properties/${propertyId}/tenant-data`); } },
+            },
             { label: formatUnitLabel(unit.unitLabel, unit.floor, unit.locationNote) },
         ]
-        : buildPropertyUseCaseBreadcrumb(property, propertyId, ExistingPropertiesUseCases.TenantData);
+        : [
+            {
+                label: 'Bestandsobjekte',
+                href: '/existing-properties',
+                onClick: (e) => { if (isEditing) { e.preventDefault(); goTo('/existing-properties'); } },
+            },
+            {
+                label: `${property.street} ${property.houseNumber}, ${property.postalCode} ${property.city}`,
+                href: `/existing-properties/${propertyId}`,
+                onClick: (e) => { if (isEditing) { e.preventDefault(); goTo(`/existing-properties/${propertyId}`); } },
+            },
+            { label: ExistingPropertiesUseCases.TenantData },
+        ];
 
     const updatePerson = (index: number, patch: Partial<PersonForm>) => {
         setPersons((prev) => prev.map((p, i) => i === index ? { ...p, ...patch } : p));
@@ -367,6 +463,7 @@ export function TenantUnitDetail({ propertyId, property, unit, hasMultipleUnits 
                 await deleteTenancyPerson(id);
             }
 
+            showToast('Mieterdaten gespeichert.');
             router.push(backHref);
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Unbekannter Fehler');
@@ -473,6 +570,8 @@ export function TenantUnitDetail({ propertyId, property, unit, hasMultipleUnits 
                 const doc = row.doc as TenancyDocument | undefined;
                 const isPending = pendingDocKey === key;
                 const isMietvertrag = row.isMietvertrag as boolean;
+                const generateType = row.generateType as TenancyDocumentType | null;
+                const blockedByLandlord = row.blockedByLandlord as boolean;
 
                 let primaryAction: React.ReactNode;
 
@@ -506,9 +605,9 @@ export function TenantUnitDetail({ propertyId, property, unit, hasMultipleUnits 
                             </button>
                         </>
                     );
-                } else if (!row.canUpload) {
+                } else if (!row.canUpload || blockedByLandlord) {
                     primaryAction = (
-                        <span title="Bitte zuerst speichern">
+                        <span title={blockedByLandlord ? 'Bitte zuerst Vermieterdaten in den Einstellungen hinterlegen' : 'Bitte zuerst speichern'}>
                             <Button
                                 iconOnly
                                 icon={<Upload className="w-4 h-4" />}
@@ -561,9 +660,31 @@ export function TenantUnitDetail({ propertyId, property, unit, hasMultipleUnits 
                                 icon={mietvertragIndividual ? <Users className="w-4 h-4" /> : <User className="w-4 h-4" />}
                                 variant="outline"
                                 size="sm"
-                                title={mietvertragIndividual ? 'Gemeinsam' : 'Individuell'}
+                                disabled={blockedByLandlord}
+                                title={blockedByLandlord ? 'Bitte zuerst Vermieterdaten in den Einstellungen hinterlegen' : (mietvertragIndividual ? 'Gemeinsam' : 'Individuell')}
                                 aria-label={mietvertragIndividual ? 'Gemeinsam hochladen' : 'Individuell hochladen'}
                                 onClick={() => setMietvertragIndividual((prev) => !prev)}
+                            />
+                        )}
+                        {generateType && (
+                            <Button
+                                iconOnly
+                                icon={generateType === 'Mietvertrag' ? <FileSignature className="w-4 h-4" /> : <FileText className="w-4 h-4" />}
+                                variant="outline"
+                                size="sm"
+                                disabled={blockedByLandlord}
+                                title={blockedByLandlord ? 'Bitte zuerst Vermieterdaten in den Einstellungen hinterlegen' : `${generateType} generieren`}
+                                aria-label={`${generateType} generieren`}
+                                onClick={() => {
+                                    if (generateType === 'Mieterbescheinigung') {
+                                        setShowCertificate(true);
+                                    } else {
+                                        const target = row.tenancyPersonId != null
+                                            ? persons.filter((p) => p.id === row.tenancyPersonId)
+                                            : persons;
+                                        setRentalAgreementPersons(target);
+                                    }
+                                }}
                             />
                         )}
                     </div>
@@ -692,18 +813,6 @@ export function TenantUnitDetail({ propertyId, property, unit, hasMultipleUnits 
                                 </div>
                             </div>
 
-                            {/* Generierte Dokumente */}
-                            <div>
-                                <SectionLabel>Generierte Dokumente</SectionLabel>
-                                <div className="mt-3 flex items-center gap-3">
-                                    <ComingSoonButton
-                                        label="Mieterbescheinigung generieren"
-                                        icon={<FileText className="w-4 h-4" />}
-                                        variant="outline"
-                                    />
-                                </div>
-                            </div>
-
                             {/* Mietkaution */}
                             <div>
                                 <SectionLabel>Mietkaution</SectionLabel>
@@ -729,13 +838,13 @@ export function TenantUnitDetail({ propertyId, property, unit, hasMultipleUnits 
 
             <StickyActionBar
                 show={true}
-                onGhost={() => router.push(backHref)}
+                onGhost={() => goTo(backHref)}
                 onPrimary={() => void handleSave()}
-                ghostLabel="Zurück"
-                ghostIcon={<ArrowLeft className="w-4 h-4" />}
-                primaryLabel={BUTTON_DETAILS.Save.label}
+                ghostLabel={BUTTON_DETAILS.Back.label}
+                ghostIcon={<BUTTON_DETAILS.Back.icon />}
+                primaryLabel="Mieterdaten speichern"
                 primaryIcon={<BUTTON_DETAILS.Save.icon />}
-                primaryDisabled={isSaving}
+                primaryDisabled={!isEditing || isSaving}
             />
 
             <ConfirmDeleteModal
@@ -764,6 +873,38 @@ export function TenantUnitDetail({ propertyId, property, unit, hasMultipleUnits 
                         : ''}
                 </p>
             </ConfirmDeleteModal>
+
+            {user && (
+                <TenantCertificateModal
+                    open={showCertificate}
+                    onClose={() => setShowCertificate(false)}
+                    userId={user.id}
+                    property={property}
+                    unitLabel={formatUnitLabel(unit.unitLabel, unit.floor, unit.locationNote)}
+                    tenancy={tenancy}
+                    persons={persons}
+                />
+            )}
+
+            {user && (
+                <RentalAgreementModal
+                    open={rentalAgreementPersons !== null}
+                    onClose={() => setRentalAgreementPersons(null)}
+                    userId={user.id}
+                    property={property}
+                    unit={unit}
+                    unitLabel={formatUnitLabel(unit.unitLabel, unit.floor, unit.locationNote)}
+                    tenancy={tenancy}
+                    persons={rentalAgreementPersons ?? []}
+                />
+            )}
+
+            <UnsavedChangesModal
+                open={pendingHref !== null}
+                onCancel={() => setPendingHref(null)}
+                onDiscard={confirmDiscard}
+                context="an den Mieterdaten"
+            />
         </div>
     );
 }

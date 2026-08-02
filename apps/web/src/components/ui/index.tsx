@@ -33,6 +33,7 @@ export { TextField } from "./TextField";
 export { TextFieldWithIcon } from "./TextFieldWithIcon";
 export { Tile } from "./Tile";
 export { TileWithImage } from "./TileWithImage";
+export { ToastProvider, useToast } from "./Toast";
 export { UnsavedChangesModal } from "./UnsavedChangesModal";
 export { UploadButton } from "./UploadButton";
 

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { AppNavigation } from '@/components/features/AppNavigation';
+import { ToastProvider } from '@/components/ui';
 import "../styles/index.css";
 
 export const metadata: Metadata = {
@@ -16,15 +17,17 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="antialiased bg-background text-foreground min-h-screen">
-        <div className="min-h-screen bg-background">
-          {/* Navigation Bar */}
-          <AppNavigation />
+        <ToastProvider>
+          <div className="min-h-screen bg-background">
+            {/* Navigation Bar */}
+            <AppNavigation />
 
-          {/* Main Content */}
-          <main className="w-full">
-            {children}
-          </main>
-        </div>
+            {/* Main Content */}
+            <main className="w-full">
+              {children}
+            </main>
+          </div>
+        </ToastProvider>
       </body>
     </html>
   );

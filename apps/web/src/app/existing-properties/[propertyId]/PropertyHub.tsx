@@ -65,7 +65,7 @@ const OBJEKTVERWALTUNG: HubCard[] = [
   {
     key: 'tenant-data-new',
     title: 'Einheit hinzufügen',
-    description: 'Neue Wohn-, Gewerbe- oder sonstige Einheit anlegen',
+    description: 'Untereinheiten für dieses Objekt anlegen',
     route: 'tenant-data/new',
     icon: Plus,
     colorClass: 'bg-primary/10 text-primary',
