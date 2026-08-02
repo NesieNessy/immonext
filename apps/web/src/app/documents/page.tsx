@@ -5,13 +5,32 @@ import { useRequireAuth } from '@/hooks/useRequireAuth';
 import { deleteDocument, getDocumentsByUser, getDocumentUrl, uploadDocument } from '@/lib/supabase/document.supabase';
 import { getProperties } from '@/lib/supabase/property.supabase';
 import { getAllQuickChecks, type QuickCheckOverview } from '@/lib/supabase/quick_check.supabase';
+import { deleteTenancyDocument, getTenancyDocumentsByUser, getTenancyDocumentUrl } from '@/lib/supabase/tenancy_document.supabase';
 import { cn } from '@/lib/utils';
-import type { DocumentCategory, Property, UserDocument } from '@immonext/types';
+import type { DocumentCategory, Property } from '@immonext/types';
 import { format } from 'date-fns';
 import { AlertTriangle, Building2, CheckCircle2, ChevronDown, Download, Eye, File, FileImage, FileSpreadsheet, FileText, List, type LucideIcon, MoreVertical, Search, Tags, Trash2, Upload, X } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 
 type ViewMode = 'list' | 'byObject' | 'byCategory';
+
+/** Unifies rows from the `document` table (uploaded/generated here) and
+ *  `tenancy_document` (uploaded from the Mieterdaten Unterlagen table) into
+ *  one shape so both render in the same list — the storage bucket differs
+ *  per source, so it travels with the row for view/download/delete. */
+interface DisplayDocument {
+    key: string;
+    source: 'document' | 'tenancy';
+    id: number;
+    name: string;
+    category: DocumentCategory;
+    propertyId: number | null;
+    quickCheckId: number | null;
+    documentDate: string | null;
+    fileName: string;
+    storagePath: string;
+    bucket: 'documents' | 'tenancy-documents';
+}
 
 const CATEGORY_OPTIONS: { value: DocumentCategory; label: string }[] = [
     { value: 'Persönlich', label: 'Persönlich' },
@@ -63,7 +82,7 @@ function quickCheckLabel(qc: QuickCheckOverview): string {
 
 export default function DocumentsPage() {
     const { user } = useRequireAuth();
-    const [documents, setDocuments] = useState<UserDocument[]>([]);
+    const [documents, setDocuments] = useState<DisplayDocument[]>([]);
     const [properties, setProperties] = useState<Property[]>([]);
     const [quickChecks, setQuickChecks] = useState<QuickCheckOverview[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -80,17 +99,44 @@ export default function DocumentsPage() {
     const [isUploading, setIsUploading] = useState(false);
     const [uploadError, setUploadError] = useState<string | null>(null);
 
-    const [pendingDelete, setPendingDelete] = useState<UserDocument | null>(null);
+    const [pendingDelete, setPendingDelete] = useState<DisplayDocument | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
 
     useEffect(() => {
         if (!user) return;
         Promise.all([
             getDocumentsByUser(user.id),
+            getTenancyDocumentsByUser(),
             getProperties(user.id),
             getAllQuickChecks(true),
-        ]).then(([docs, props, qcs]) => {
-            setDocuments(docs);
+        ]).then(([docs, tenancyDocs, props, qcs]) => {
+            const fromDocuments: DisplayDocument[] = docs.map((d) => ({
+                key: `document-${d.documentId}`,
+                source: 'document',
+                id: d.documentId,
+                name: d.name,
+                category: d.category,
+                propertyId: d.propertyId,
+                quickCheckId: d.quickCheckId,
+                documentDate: d.documentDate,
+                fileName: d.fileName,
+                storagePath: d.storagePath,
+                bucket: 'documents',
+            }));
+            const fromTenancy: DisplayDocument[] = tenancyDocs.map((d) => ({
+                key: `tenancy-${d.tenancyDocumentId}`,
+                source: 'tenancy',
+                id: d.tenancyDocumentId,
+                name: d.documentType,
+                category: 'Bestandsobjekt',
+                propertyId: d.propertyId,
+                quickCheckId: null,
+                documentDate: d.createdAt,
+                fileName: d.fileName,
+                storagePath: d.storagePath,
+                bucket: 'tenancy-documents',
+            }));
+            setDocuments([...fromDocuments, ...fromTenancy]);
             setProperties(props);
             setQuickChecks(qcs);
             setIsLoading(false);
@@ -103,7 +149,7 @@ export default function DocumentsPage() {
     const resolveObject = useMemo(() => {
         const propertyById = new Map(properties.map((p) => [p.propertyId, p]));
         const quickCheckById = new Map(quickChecks.map((q) => [q.quickCheckId, q]));
-        return (doc: UserDocument): string => {
+        return (doc: DisplayDocument): string => {
             if (doc.category === 'Bestandsobjekt' && doc.propertyId != null) {
                 const p = propertyById.get(doc.propertyId);
                 return p ? propertyLabel(p) : '–';
@@ -118,7 +164,7 @@ export default function DocumentsPage() {
 
     // Group key for the "Nach Objekt" view — Persönlich documents and any
     // document without a resolved object share one bucket each.
-    const objectGroupKey = (doc: UserDocument): string => {
+    const objectGroupKey = (doc: DisplayDocument): string => {
         if (doc.category === 'Persönlich') return 'Persönlich';
         const resolved = resolveObject(doc);
         return resolved !== '–' ? resolved : 'Ohne Objekt';
@@ -140,7 +186,7 @@ export default function DocumentsPage() {
         });
     };
 
-    const openRowMenu = (doc: UserDocument): MenuItem[] => [
+    const openRowMenu = (doc: DisplayDocument): MenuItem[] => [
         {
             label: 'Ansehen',
             icon: <Eye className="w-4 h-4" />,
@@ -159,13 +205,16 @@ export default function DocumentsPage() {
         },
     ];
 
-    const handleView = async (doc: UserDocument) => {
-        const url = await getDocumentUrl(doc.storagePath);
+    const resolveUrl = (doc: DisplayDocument): Promise<string | null> =>
+        doc.source === 'tenancy' ? getTenancyDocumentUrl(doc.storagePath) : getDocumentUrl(doc.storagePath);
+
+    const handleView = async (doc: DisplayDocument) => {
+        const url = await resolveUrl(doc);
         if (url) window.open(url, '_blank', 'noopener,noreferrer');
     };
 
-    const handleDownload = async (doc: UserDocument) => {
-        const url = await getDocumentUrl(doc.storagePath);
+    const handleDownload = async (doc: DisplayDocument) => {
+        const url = await resolveUrl(doc);
         if (!url) return;
         const response = await fetch(url);
         const blob = await response.blob();
@@ -183,9 +232,11 @@ export default function DocumentsPage() {
         if (!pendingDelete) return;
         setIsDeleting(true);
         try {
-            const success = await deleteDocument(pendingDelete.documentId, pendingDelete.storagePath);
+            const success = pendingDelete.source === 'tenancy'
+                ? await deleteTenancyDocument(pendingDelete.id, pendingDelete.storagePath)
+                : await deleteDocument(pendingDelete.id, pendingDelete.storagePath);
             if (success) {
-                setDocuments((prev) => prev.filter((d) => d.documentId !== pendingDelete.documentId));
+                setDocuments((prev) => prev.filter((d) => d.key !== pendingDelete.key));
                 setPendingDelete(null);
             }
         } finally {
@@ -215,7 +266,19 @@ export default function DocumentsPage() {
                 documentDate: format(new Date(), 'yyyy-MM-dd'),
             });
             if (uploaded) {
-                setDocuments((prev) => [uploaded, ...prev]);
+                setDocuments((prev) => [{
+                    key: `document-${uploaded.documentId}`,
+                    source: 'document',
+                    id: uploaded.documentId,
+                    name: uploaded.name,
+                    category: uploaded.category,
+                    propertyId: uploaded.propertyId,
+                    quickCheckId: uploaded.quickCheckId,
+                    documentDate: uploaded.documentDate,
+                    fileName: uploaded.fileName,
+                    storagePath: uploaded.storagePath,
+                    bucket: 'documents',
+                }, ...prev]);
                 setShowUpload(false);
                 resetUploadForm();
             } else {
@@ -232,7 +295,7 @@ export default function DocumentsPage() {
         width: '260px',
         sortable: true,
         renderCell: (v, row) => {
-            const { Icon, className } = documentIcon((row.doc as UserDocument).fileName);
+            const { Icon, className } = documentIcon((row.doc as DisplayDocument).fileName);
             return (
                 <span className="flex items-center gap-2 font-medium text-foreground max-w-[228px]">
                     <Icon className={cn("w-4 h-4 shrink-0", className)} />
@@ -279,13 +342,13 @@ export default function DocumentsPage() {
                 variant="ghost"
                 size="sm"
                 aria-label="Weitere Aktionen"
-                menuItems={openRowMenu(row.doc as UserDocument)}
+                menuItems={openRowMenu(row.doc as DisplayDocument)}
             />
         ),
     };
 
-    const toRowData = (doc: UserDocument) => ({
-        key: doc.documentId,
+    const toRowData = (doc: DisplayDocument) => ({
+        key: doc.key,
         name: doc.name,
         category: doc.category,
         object: resolveObject(doc),
@@ -301,7 +364,7 @@ export default function DocumentsPage() {
             : [];
 
     const groupedByObject = useMemo(() => {
-        const groups = new Map<string, UserDocument[]>();
+        const groups = new Map<string, DisplayDocument[]>();
         for (const doc of filteredDocuments) {
             const key = objectGroupKey(doc);
             groups.set(key, [...(groups.get(key) ?? []), doc]);
@@ -317,7 +380,7 @@ export default function DocumentsPage() {
     }, [filteredDocuments, resolveObject]);
 
     const groupedByCategory = useMemo(() => {
-        const groups = new Map<DocumentCategory, UserDocument[]>();
+        const groups = new Map<DocumentCategory, DisplayDocument[]>();
         for (const doc of filteredDocuments) {
             groups.set(doc.category, [...(groups.get(doc.category) ?? []), doc]);
         }

@@ -2,6 +2,7 @@
 
 import { Button, Modal, StickyActionBar, TextField } from '@/components/ui';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
+import { useRequireAuth } from '@/hooks/useRequireAuth';
 import { authFetch } from '@/lib/api/authFetch';
 import { parseDecimalInput } from '@/lib/detailCheck/acquisitionCosts';
 import {
@@ -12,7 +13,9 @@ import {
   serviceChargesMismatch,
   type RentalField,
 } from '@/lib/detailCheck/rental';
-import { Info } from 'lucide-react';
+import { uploadDocument } from '@/lib/supabase/document.supabase';
+import { format } from 'date-fns';
+import { Info, Upload } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useEffect, useMemo, useState } from 'react';
 import { PropertyValuationLayout } from '../PropertyValuationLayout';
@@ -82,6 +85,7 @@ function MoneyField({
 function RentalContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { user } = useRequireAuth();
   const quickCheckId = searchParams.get('quickCheckId');
   const workflowId = searchParams.get('workflowId');
   const suffix = quickCheckId ? `?quickCheckId=${encodeURIComponent(quickCheckId)}` : workflowId ? `?workflowId=${encodeURIComponent(workflowId)}` : '';
@@ -98,6 +102,9 @@ function RentalContent() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [topError, setTopError] = useState<string | null>(null);
+  const [serviceChargeFileName, setServiceChargeFileName] = useState<string | null>(null);
+  const [isUploadingServiceCharge, setIsUploadingServiceCharge] = useState(false);
+  const [serviceChargeUploadError, setServiceChargeUploadError] = useState<string | null>(null);
   const [infoOpen, setInfoOpen] = useState(false);
   const [warningOpen, setWarningOpen] = useState(false);
 
@@ -220,6 +227,29 @@ function RentalContent() {
       setTopError(error instanceof Error ? error.message : 'Vermietungsdaten konnten nicht gespeichert werden.');
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleUploadServiceCharge = async (file: File) => {
+    if (!user || !quickCheckId) return;
+    setIsUploadingServiceCharge(true);
+    setServiceChargeUploadError(null);
+    try {
+      const { document: uploaded, error } = await uploadDocument(user.id, file, {
+        userId: user.id,
+        category: 'Detailbewertung',
+        name: 'Nebenkostenabrechnung',
+        propertyId: null,
+        quickCheckId: Number(quickCheckId),
+        documentDate: format(new Date(), 'yyyy-MM-dd'),
+      });
+      if (uploaded) {
+        setServiceChargeFileName(uploaded.fileName);
+      } else {
+        setServiceChargeUploadError(error ?? 'Datei konnte nicht hochgeladen werden.');
+      }
+    } finally {
+      setIsUploadingServiceCharge(false);
     }
   };
 
@@ -395,15 +425,44 @@ function RentalContent() {
             </section>
 
             <section className="grid gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,260px)] md:items-center">
-              <p className="text-sm font-medium text-muted-foreground">
-                Falls vorhanden, können Sie hier die letzte Nebenkostenabrechnung zur ersten Schätzung uploaden.
-              </p>
-              <Button
-                label="Upload"
-                variant="outline"
-                disabled
-                title="Upload und Auslesung sind im MVP optional und noch nicht angebunden."
-              />
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">
+                  Falls vorhanden, können Sie hier die letzte Nebenkostenabrechnung hochladen. Sie erscheint anschließend auch auf der Dokumente-Seite.
+                </p>
+                {serviceChargeFileName && (
+                  <p className="mt-1 text-xs text-primary">Hochgeladen: {serviceChargeFileName}</p>
+                )}
+                {serviceChargeUploadError && (
+                  <p className="mt-1 text-xs text-destructive">{serviceChargeUploadError}</p>
+                )}
+              </div>
+              <div>
+                <input
+                  id="service-charge-upload"
+                  type="file"
+                  accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx"
+                  className="sr-only"
+                  disabled={!quickCheckId || isUploadingServiceCharge}
+                  onChange={(event) => {
+                    const file = event.target.files?.[0];
+                    event.target.value = '';
+                    if (file) void handleUploadServiceCharge(file);
+                  }}
+                />
+                <label htmlFor="service-charge-upload">
+                  <span
+                    title={!quickCheckId ? 'Bitte zuerst speichern' : undefined}
+                    className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg border-2 border-primary text-primary text-sm font-medium transition-colors ${
+                      !quickCheckId || isUploadingServiceCharge
+                        ? 'opacity-50 pointer-events-none cursor-not-allowed'
+                        : 'cursor-pointer hover:bg-primary hover:text-primary-foreground'
+                    }`}
+                  >
+                    <Upload className="w-4 h-4" />
+                    Upload
+                  </span>
+                </label>
+              </div>
             </section>
 
             <p className="text-xs text-muted-foreground">

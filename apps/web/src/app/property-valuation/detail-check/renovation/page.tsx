@@ -2,6 +2,7 @@
 
 import { Button, Dropdown, StickyActionBar, TextArea, TextField } from '@/components/ui';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
+import { useRequireAuth } from '@/hooks/useRequireAuth';
 import { authFetch } from '@/lib/api/authFetch';
 import { parseDecimalInput } from '@/lib/detailCheck/acquisitionCosts';
 import {
@@ -15,6 +16,8 @@ import {
   type RenovationFinancingMode,
   type RenovationTiming,
 } from '@/lib/detailCheck/renovation';
+import { uploadDocument } from '@/lib/supabase/document.supabase';
+import { format } from 'date-fns';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useEffect, useMemo, useState } from 'react';
 import { PropertyValuationLayout } from '../PropertyValuationLayout';
@@ -74,6 +77,7 @@ function ReadOnlyPill({ value }: { value: string }) {
 function RenovationContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { user } = useRequireAuth();
   const quickCheckId = searchParams.get('quickCheckId');
   const workflowId = searchParams.get('workflowId');
   const suffix = quickCheckId ? `?quickCheckId=${encodeURIComponent(quickCheckId)}` : workflowId ? `?workflowId=${encodeURIComponent(workflowId)}` : '';
@@ -84,6 +88,8 @@ function RenovationContent() {
   const [measure, setMeasure] = useState('');
   const [description, setDescription] = useState('');
   const [uploadNames, setUploadNames] = useState<string[]>([]);
+  const [isUploadingFiles, setIsUploadingFiles] = useState(false);
+  const [uploadFilesError, setUploadFilesError] = useState<string | null>(null);
   const [sumSelected, setSumSelected] = useState(0);
   const [financingMode, setFinancingMode] = useState<RenovationFinancingMode>('FREMD');
   const [financedAmount, setFinancedAmount] = useState('');
@@ -141,6 +147,30 @@ function RenovationContent() {
     if (financingMode === 'FREMD') setFinancedAmount(String(sumSelected).replace('.', ','));
     if (financingMode === 'EIGEN') setFinancedAmount('');
   }, [financingMode, sumSelected]);
+
+  const handleUploadRenovationFiles = async (files: File[]) => {
+    if (!user || !quickCheckId || files.length === 0) return;
+    setIsUploadingFiles(true);
+    setUploadFilesError(null);
+    try {
+      for (const file of files) {
+        const { error } = await uploadDocument(user.id, file, {
+          userId: user.id,
+          category: 'Detailbewertung',
+          name: file.name.replace(/\.[^/.]+$/, ''),
+          propertyId: null,
+          quickCheckId: Number(quickCheckId),
+          documentDate: format(new Date(), 'yyyy-MM-dd'),
+        });
+        if (error) {
+          setUploadFilesError(error);
+          break;
+        }
+      }
+    } finally {
+      setIsUploadingFiles(false);
+    }
+  };
 
   const addCase = () => {
     if (!category || !measure) {
@@ -308,16 +338,22 @@ function RenovationContent() {
                   <input
                     type="file"
                     multiple
-                    accept=".pdf,.jpg,.jpeg,.png"
+                    accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx"
+                    disabled={!quickCheckId || isUploadingFiles}
                     onChange={(event) => {
-                      const names = Array.from(event.target.files ?? []).map((file) => `local:${file.name}`);
-                      setUploadNames(names);
+                      const files = Array.from(event.target.files ?? []);
+                      setUploadNames(files.map((file) => `local:${file.name}`));
+                      void handleUploadRenovationFiles(files);
                     }}
-                    className="block w-full text-sm text-muted-foreground"
+                    className="block w-full text-sm text-muted-foreground disabled:opacity-50"
                   />
                   <p className="mt-2 text-xs text-muted-foreground">
-                    Lokal werden Dateinamen für die spätere Upload-Anbindung vorgemerkt; eine echte Datei-Auswertung folgt mit dem KI-Service.
+                    {!quickCheckId
+                      ? 'Bitte zuerst speichern, um Dateien hochzuladen.'
+                      : 'Dateien werden hochgeladen und erscheinen anschließend auch auf der Dokumente-Seite; eine automatische Auswertung folgt mit dem KI-Service.'}
                   </p>
+                  {isUploadingFiles && <p className="mt-1 text-xs text-muted-foreground">Lädt hoch…</p>}
+                  {uploadFilesError && <p className="mt-1 text-xs text-destructive">{uploadFilesError}</p>}
                 </div>
                 <div className="flex items-end justify-start md:justify-end">
                   <Button label="Fall hinzufügen" onClick={addCase} />
