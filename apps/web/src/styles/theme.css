@@ -188,6 +188,15 @@
   }
 }
 
+/* Caps the shared `container` utility (used by the nav bar and every page's
+   <main>) so the whole app reads narrower on large screens, instead of
+   Tailwind's default stretching up to 1536px at the 2xl breakpoint. Changing
+   it here — rather than per-page — keeps the nav bar and every page's
+   content edges aligned automatically. */
+.container {
+  max-width: 1152px;
+}
+
 /* Hides the scrollbar on horizontally-scrollable pill/chip rows while
    keeping native scroll (wheel/touch/drag) behaviour intact. */
 .no-scrollbar {

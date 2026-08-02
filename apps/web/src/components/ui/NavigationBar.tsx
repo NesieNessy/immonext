@@ -75,10 +75,10 @@ export function NavigationBar({ items, logo, actions }: NavigationBarProps) {
   }, [mobileMenuOpen, items]);
 
   return (
-    <nav className={cn("w-full bg-card border-b border-border")}>
-      <div className="container mx-auto px-4 py-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-8">
+    <nav className={cn("fixed top-0 inset-x-0 z-40 h-16 flex items-center bg-card border-b border-border")}>
+      <div className="container mx-auto px-4 w-full h-full">
+        <div className="flex items-center justify-between h-full">
+          <div className="flex items-center gap-8 h-full">
             {logo && (
               <Link href={logo.href} className="flex-shrink-0">
                 <div className="flex items-center gap-2">
@@ -87,114 +87,119 @@ export function NavigationBar({ items, logo, actions }: NavigationBarProps) {
                 </div>
               </Link>
             )}
-            <div className="hidden md:flex items-center gap-1">
+            <div className="hidden md:flex items-center gap-1 h-full">
               {items.map((item, index) => {
                 const Icon = item.iconName ? iconMap[item.iconName] : null;
                 const hasSubItems = item.subItems && item.subItems.length > 0;
                 const isOpen = openDropdown === index;
 
                 return (
-                  <div key={index} className="relative">
-                    {hasSubItems || !item.href ? (
-                      <button
-                        onClick={() => {
-                          if (hasSubItems) {
-                            setOpenDropdown(isOpen ? null : index);
-                          } else if (item.onClick) {
-                            item.onClick();
-                          }
-                        }}
-                        onMouseEnter={() => {
-                          if (hasSubItems) {
-                            setOpenDropdown(index);
-                          }
-                        }}
-                        className={cn(
-                          "px-4 py-2 rounded-lg transition-all duration-200 flex items-center gap-2 cursor-pointer",
-                          item.active
-                            ? "text-primary"
-                            : "text-foreground hover:bg-muted"
-                        )}
-                      >
-                        {Icon && <Icon size={20} className="text-primary" />}
-                        <span>{item.label}</span>
-                        {hasSubItems && <ChevronDown size={16} className={cn("transition-transform", isOpen && "rotate-180")} />}
-                      </button>
-                    ) : (
-                      <Link
-                        href={item.href || '#'}
-                        className={cn(
-                          "px-4 py-2 rounded-lg transition-all duration-200 flex items-center gap-2 cursor-pointer",
-                          item.active
-                            ? "text-primary"
-                            : "text-foreground hover:bg-muted"
-                        )}
-                      >
-                        {Icon && <Icon size={20} className="text-primary" />}
-                        <span>{item.label}</span>
-                      </Link>
-                    )}
-
-                    {/* Active indicator — extends through the nav's own bottom
-                        padding so it sits flush on the nav/page separator
-                        line, instead of looking like the button's own edge. */}
-                    {item.active && (
-                      <span className="absolute left-4 right-4 -bottom-4 h-0.5 bg-primary" />
-                    )}
-
-                    {hasSubItems && isOpen && (
-                      <>
-                        <div
-                          className="fixed inset-0 z-10"
-                          onClick={() => setOpenDropdown(null)}
-                        />
-                        <div
-                          className="absolute left-0 top-full mt-2 w-64 bg-card border border-border rounded-lg shadow-lg overflow-hidden z-20"
-                          onMouseLeave={() => setOpenDropdown(null)}
+                  // Outer wrapper spans the nav's full height, so the active
+                  // indicator (bottom-0) lands exactly on the nav/page
+                  // separator line. The inner wrapper stays snug around the
+                  // button itself, so the dropdown (top-full) opens directly
+                  // under the button instead of under the taller outer box.
+                  <div key={index} className="relative h-full flex items-center">
+                    <div className="relative">
+                      {hasSubItems || !item.href ? (
+                        <button
+                          onClick={() => {
+                            if (hasSubItems) {
+                              setOpenDropdown(isOpen ? null : index);
+                            } else if (item.onClick) {
+                              item.onClick();
+                            }
+                          }}
+                          onMouseEnter={() => {
+                            if (hasSubItems) {
+                              setOpenDropdown(index);
+                            }
+                          }}
+                          className={cn(
+                            "px-4 py-2 rounded-lg transition-all duration-200 flex items-center gap-2 cursor-pointer",
+                            item.active
+                              ? "text-primary"
+                              : "text-foreground hover:bg-muted"
+                          )}
                         >
-                          {item.subItems!.map((subItem, subIndex) => {
-                            const SubIcon = subItem.iconName ? iconMap[subItem.iconName] : null;
-                            const SubItemContent = (
-                              <>
-                                {SubIcon && (
-                                  <SubIcon size={20} className="text-primary mt-0.5 flex-shrink-0" />
-                                )}
-                                <div className="flex-1 min-w-0">
-                                  <div className="font-medium text-foreground">{subItem.label}</div>
-                                </div>
-                              </>
-                            );
+                          {Icon && <Icon size={20} className="text-primary" />}
+                          <span>{item.label}</span>
+                          {hasSubItems && <ChevronDown size={16} className={cn("transition-transform", isOpen && "rotate-180")} />}
+                        </button>
+                      ) : (
+                        <Link
+                          href={item.href || '#'}
+                          className={cn(
+                            "px-4 py-2 rounded-lg transition-all duration-200 flex items-center gap-2 cursor-pointer",
+                            item.active
+                              ? "text-primary"
+                              : "text-foreground hover:bg-muted"
+                          )}
+                        >
+                          {Icon && <Icon size={20} className="text-primary" />}
+                          <span>{item.label}</span>
+                        </Link>
+                      )}
 
-                            if (subItem.href) {
+                      {hasSubItems && isOpen && (
+                        <>
+                          <div
+                            className="fixed inset-0 z-10"
+                            onClick={() => setOpenDropdown(null)}
+                          />
+                          <div
+                            className="absolute left-0 top-full mt-2 w-64 bg-card border border-border rounded-lg shadow-lg overflow-hidden z-20"
+                            onMouseLeave={() => setOpenDropdown(null)}
+                          >
+                            {item.subItems!.map((subItem, subIndex) => {
+                              const SubIcon = subItem.iconName ? iconMap[subItem.iconName] : null;
+                              const SubItemContent = (
+                                <>
+                                  {SubIcon && (
+                                    <SubIcon size={20} className="text-primary mt-0.5 flex-shrink-0" />
+                                  )}
+                                  <div className="flex-1 min-w-0">
+                                    <div className="font-medium text-foreground">{subItem.label}</div>
+                                  </div>
+                                </>
+                              );
+
+                              if (subItem.href) {
+                                return (
+                                  <Link
+                                    key={subIndex}
+                                    href={subItem.href}
+                                    onClick={() => setOpenDropdown(null)}
+                                    className="w-full px-4 py-3 flex items-start gap-3 hover:bg-muted transition-colors text-left cursor-pointer"
+                                  >
+                                    {SubItemContent}
+                                  </Link>
+                                );
+                              }
+
                               return (
-                                <Link
+                                <button
                                   key={subIndex}
-                                  href={subItem.href}
-                                  onClick={() => setOpenDropdown(null)}
+                                  onClick={() => {
+                                    if (subItem.onClick) {
+                                      subItem.onClick();
+                                    }
+                                    setOpenDropdown(null);
+                                  }}
                                   className="w-full px-4 py-3 flex items-start gap-3 hover:bg-muted transition-colors text-left cursor-pointer"
                                 >
                                   {SubItemContent}
-                                </Link>
+                                </button>
                               );
-                            }
+                            })}
+                          </div>
+                        </>
+                      )}
+                    </div>
 
-                            return (
-                              <button
-                                key={subIndex}
-                                onClick={() => {
-                                  if (subItem.onClick) {
-                                    subItem.onClick();
-                                  }
-                                  setOpenDropdown(null);
-                                }}
-                                className="w-full px-4 py-3 flex items-start gap-3 hover:bg-muted transition-colors text-left cursor-pointer"
-                              >
-                                {SubItemContent}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </>
+                    {/* Active indicator */}
+                    {item.active && (
+                      <span className="absolute left-4 right-4 bottom-0 h-0.5 bg-primary" />
                     )}
                   </div>
                 );

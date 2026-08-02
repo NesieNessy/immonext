@@ -21,7 +21,7 @@ interface HeaderProps {
   className?: string;
 }
 
-export function Header({ items, actions, image, className }: HeaderProps) {
+function HeaderContent({ items, actions, image, className }: HeaderProps) {
   return (
     <div className={cn("flex items-center justify-between gap-4", className)}>
       <div className="flex items-center gap-3 min-w-0">
@@ -63,5 +63,34 @@ export function Header({ items, actions, image, className }: HeaderProps) {
         </div>
       )}
     </div>
+  );
+}
+
+/**
+ * Pinned right below the (also fixed) nav bar so the breadcrumb never
+ * scrolls away, using the same fixed-positioning approach as
+ * StickyActionBar at the bottom — not `position: sticky`, which depends on
+ * getting the nearest scrolling ancestor exactly right and broke across the
+ * app's varied per-page layouts. The invisible first copy is a spacer: it
+ * reserves the real (content-dependent, possibly wrapped) height of the
+ * bar in normal document flow so page content doesn't start underneath it.
+ */
+export function Header(props: HeaderProps) {
+  return (
+    <>
+      {/* No container/px-4 here — the page's own <main> (also `.container
+          px-4`) already provides that width, and matching it exactly (not
+          nesting another layer of the same padding) keeps this spacer's
+          text-wrapping, and therefore its height, identical to the fixed
+          bar below. */}
+      <div className="invisible pt-3 pb-0" aria-hidden="true">
+        <HeaderContent {...props} />
+      </div>
+      <div className="fixed top-16 inset-x-0 z-30 bg-background">
+        <div className="container mx-auto px-4 pt-3 pb-0">
+          <HeaderContent {...props} />
+        </div>
+      </div>
+    </>
   );
 }

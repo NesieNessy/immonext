@@ -144,18 +144,18 @@ function SettingsPageContent() {
                 />
 
                 {isOnboarding && (
-                    <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg text-blue-700 text-sm mx-auto max-w-6xl">
+                    <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg text-blue-700 text-sm">
                         Bitte vervollständigen Sie zunächst Ihre Benutzereinstellungen, bevor Sie ImmoNext nutzen können.
                     </div>
                 )}
 
                 {error && (
-                    <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm mx-auto max-w-6xl">
+                    <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
                         {error}
                     </div>
                 )}
 
-                <div className="mt-8 mx-auto grid grid-cols-1 lg:grid-cols-2 gap-6 max-w-6xl">
+                <div className="mt-8 grid grid-cols-1 lg:grid-cols-2 gap-6">
                     {/* Personal Information */}
                     <Tile title="Persönliche Informationen">
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4">

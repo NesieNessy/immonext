@@ -174,124 +174,110 @@ export default function QuickCheckPage() {
           <div className="mt-3 flex flex-col gap-4">
             <MobileResultBanner show={isFormValid} resultId="qc-result" formTopId="qc-form-top" />
 
-            <div className="flex flex-col lg:flex-row gap-8 items-stretch">
+            {/* Form */}
+            <div className="flex flex-col gap-3 p-5">
+              {/* Address */}
+              <section id="qc-form-top">
+                <h2 className="text-md font-semibold text-foreground mb-2">Informationen zur Berechnung</h2>
 
-              {/* Left: form — fills full column height */}
-              <div className="flex flex-col gap-3 flex-1 p-5">
+                <QuickCheckImportSection portalUrl={portalUrl} onPortalUrlChange={setPortalUrl} />
 
-                {/* Address */}
-                <section id="qc-form-top">
-                  <h2 className="text-md font-semibold text-foreground mb-2">Informationen zur Berechnung</h2>
-
-                  <QuickCheckImportSection portalUrl={portalUrl} onPortalUrlChange={setPortalUrl} />
-
-                  <div className="flex flex-col gap-2 pt-1.5">
+                <div className="flex flex-col gap-2 pt-1.5">
+                  <TextField
+                    label={FieldLabels.Property.Street.de + ' & ' + FieldLabels.Property.HouseNumber.de}
+                    placeholder="z.B. Hauptstraße 123"
+                    required
+                    value={form.street}
+                    onChange={(e) => handleFieldChange('street', e.target.value)}
+                    error={fieldErrors.street}
+                  />
+                  <div className="grid grid-cols-2 gap-2">
                     <TextField
-                      label={FieldLabels.Property.Street.de + ' & ' + FieldLabels.Property.HouseNumber.de}
-                      placeholder="z.B. Hauptstraße 123"
+                      label={FieldLabels.Property.PostalCode.de}
+                      placeholder="z.B. 10115"
                       required
-                      value={form.street}
-                      onChange={(e) => handleFieldChange('street', e.target.value)}
-                      error={fieldErrors.street}
+                      value={form.postalCode}
+                      onChange={(e) => handleFieldChange('postalCode', e.target.value)}
+                      error={fieldErrors.postalCode}
                     />
-                    <div className="grid grid-cols-2 gap-2">
-                      <TextField
-                        label={FieldLabels.Property.PostalCode.de}
-                        placeholder="z.B. 10115"
-                        required
-                        value={form.postalCode}
-                        onChange={(e) => handleFieldChange('postalCode', e.target.value)}
-                        error={fieldErrors.postalCode}
-                      />
-                      <TextField
-                        label={FieldLabels.Property.City.de}
-                        placeholder="z.B. Berlin"
-                        required
-                        value={form.city}
-                        onChange={(e) => handleFieldChange('city', e.target.value)}
-                        error={fieldErrors.city}
-                      />
-                    </div>
-                  </div>
-                </section>
-
-                {/* Financial */}
-                <section>
-                  <div className="grid grid-cols-2 gap-2">
-                    <NumberField
-                      label={FieldLabels.AcquisitionCosts.PurchasePrice.de}
-                      placeholder="z.B. 450000"
-                      unit="€"
+                    <TextField
+                      label={FieldLabels.Property.City.de}
+                      placeholder="z.B. Berlin"
                       required
-                      value={form.purchasePrice}
-                      onChange={(e) => handleFieldChange('purchasePrice', e.target.value)}
-                      min={0}
-                      error={fieldErrors.purchasePrice}
-                    />
-                    <NumberField
-                      label={FieldLabels.Tenancy.ColdRent.de}
-                      placeholder="z.B. 1800"
-                      unit="€"
-                      required
-                      value={form.coldRent}
-                      onChange={(e) => handleFieldChange('coldRent', e.target.value)}
-                      min={0}
-                      error={fieldErrors.coldRent}
+                      value={form.city}
+                      onChange={(e) => handleFieldChange('city', e.target.value)}
+                      error={fieldErrors.city}
                     />
                   </div>
-                </section>
+                </div>
+              </section>
 
-                {/* Property details */}
-                <section>
-                  <div className="grid grid-cols-2 gap-2">
-                    <Dropdown
-                      label="Zustand"
-                      options={CONDITION_OPTIONS}
-                      required
-                      value={form.condition}
-                      onChange={(e) => handleFieldChange('condition', e.target.value)}
-                    />
-                    <NumberField
-                      label={FieldLabels.Property.YearOfConstruction.de}
-                      placeholder="z.B. 1995"
-                      required
-                      value={form.yearOfConstruction}
-                      onChange={(e) => handleFieldChange('yearOfConstruction', e.target.value)}
-                      min={1850}
-                      max={new Date().getFullYear()}
-                      error={fieldErrors.yearOfConstruction}
-                    />
-                  </div>
-                </section>
+              {/* Financial */}
+              <section>
+                <div className="grid grid-cols-2 gap-2">
+                  <NumberField
+                    label={FieldLabels.AcquisitionCosts.PurchasePrice.de}
+                    placeholder="z.B. 450000"
+                    unit="€"
+                    required
+                    value={form.purchasePrice}
+                    onChange={(e) => handleFieldChange('purchasePrice', e.target.value)}
+                    min={0}
+                    error={fieldErrors.purchasePrice}
+                  />
+                  <NumberField
+                    label={FieldLabels.Tenancy.ColdRent.de}
+                    placeholder="z.B. 1800"
+                    unit="€"
+                    required
+                    value={form.coldRent}
+                    onChange={(e) => handleFieldChange('coldRent', e.target.value)}
+                    min={0}
+                    error={fieldErrors.coldRent}
+                  />
+                </div>
+              </section>
 
-                {/* Push bottom of form to fill column height */}
-                <div className="flex-1" />
+              {/* Property details */}
+              <section>
+                <div className="grid grid-cols-2 gap-2">
+                  <Dropdown
+                    label="Zustand"
+                    options={CONDITION_OPTIONS}
+                    required
+                    value={form.condition}
+                    onChange={(e) => handleFieldChange('condition', e.target.value)}
+                  />
+                  <NumberField
+                    label={FieldLabels.Property.YearOfConstruction.de}
+                    placeholder="z.B. 1995"
+                    required
+                    value={form.yearOfConstruction}
+                    onChange={(e) => handleFieldChange('yearOfConstruction', e.target.value)}
+                    min={1850}
+                    max={new Date().getFullYear()}
+                    error={fieldErrors.yearOfConstruction}
+                  />
+                </div>
+              </section>
+            </div>
 
-              </div>
-
-              {/* Right: result — fills full column height */}
-              <div id="qc-result" className="flex flex-col flex-1 gap-4 p-5">
-                {!isFormValid ? (
-                  <NoResult className="flex-1" />
-                ) : (
-                  <div className="flex flex-col gap-4 flex-1">
-                    <KpfAssessmentCard
-                      street={form.street}
-                      postalCode={form.postalCode}
-                      city={form.city}
-                      purchasePrice={purchasePrice}
-                      coldRent={coldRent}
-                      condition={condition}
-                      yearOfConstruction={form.yearOfConstruction}
-                      kpf={kpf}
-                    />
-
-                    {/* Spacer fills remaining height to match left column bottom */}
-                    <div className="flex-1" />
-                  </div>
-                )}
-              </div>
-
+            {/* Result */}
+            <div id="qc-result" className="flex flex-col gap-4 p-5">
+              {!isFormValid ? (
+                <NoResult />
+              ) : (
+                <KpfAssessmentCard
+                  street={form.street}
+                  postalCode={form.postalCode}
+                  city={form.city}
+                  purchasePrice={purchasePrice}
+                  coldRent={coldRent}
+                  condition={condition}
+                  yearOfConstruction={form.yearOfConstruction}
+                  kpf={kpf}
+                />
+              )}
             </div>
 
             {/* ── Action buttons — sticky bar at the bottom of the viewport ── */}

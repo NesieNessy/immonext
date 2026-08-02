@@ -184,10 +184,6 @@ export default function DetailCheckOverviewPage() {
     router.push(`/property-valuation/detail-check/${row.resumeRoute}${rowSuffix(row)}`);
   }, [router]);
 
-  const openResult = useCallback((row: DetailCheckRow) => {
-    router.push(`/property-valuation/detail-check/result${rowSuffix(row)}`);
-  }, [router]);
-
   // Creates the Bestandsobjekt directly from what the detail check already
   // captured — no intermediate form, matching "In Bestandsobjekte
   // übernehmen" being a one-click action from the row menu.
@@ -274,17 +270,6 @@ export default function DetailCheckOverviewPage() {
 
   const menuItems = useCallback((row: DetailCheckRow): MenuItem[] => [
     {
-      label: BUTTON_DETAILS.OpenResult.label,
-      icon: <BUTTON_DETAILS.OpenResult.icon />,
-      disabled: row.status !== 'Abgeschlossen',
-      onClick: () => openResult(row),
-    },
-    {
-      label: row.resumed ? 'Detailbewertung fortsetzen' : BUTTON_DETAILS.StartDetailCheck.label,
-      icon: <BUTTON_DETAILS.StartDetailCheck.icon />,
-      onClick: () => openRow(row),
-    },
-    {
       label: 'In Bestandsobjekte übernehmen',
       icon: <Building2 className="h-4 w-4" />,
       disabled: takingOverId === row.workflowId,
@@ -296,7 +281,7 @@ export default function DetailCheckOverviewPage() {
       destructive: true,
       onClick: () => setRowPendingDelete(row),
     },
-  ], [openRow, openResult, takeOverToBestandsobjekte, takingOverId]);
+  ], [takeOverToBestandsobjekte, takingOverId]);
 
   const columns: TableColumn<DetailCheckRow>[] = useMemo(() => [
     {

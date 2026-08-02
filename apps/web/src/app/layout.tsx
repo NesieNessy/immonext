@@ -16,17 +16,17 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className="antialiased bg-background text-foreground min-h-screen">
+      <body className="antialiased bg-background text-foreground">
         <ToastProvider>
-          <div className="min-h-screen bg-background">
-            {/* Navigation Bar */}
-            <AppNavigation />
-
-            {/* Main Content */}
-            <main className="w-full">
-              {children}
-            </main>
-          </div>
+          {/* AppNavigation is fixed (see NavigationBar) — this spacer reserves
+              its h-16 height in normal flow so content doesn't start underneath
+              it. The page scrolls normally; nav bar and (per-page) breadcrumb
+              stay pinned via fixed/sticky positioning, not a custom scroll
+              container — the same proven approach StickyActionBar already
+              uses at the bottom. */}
+          <div className="h-16" aria-hidden="true" />
+          <AppNavigation />
+          {children}
         </ToastProvider>
       </body>
     </html>

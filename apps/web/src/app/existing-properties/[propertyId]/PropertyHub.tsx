@@ -44,16 +44,16 @@ interface HubCard {
 const OBJEKTVERWALTUNG: HubCard[] = [
   {
     key: 'property-data',
-    title: 'Objektdaten bearbeiten',
-    description: 'Adresse, Fläche, Baujahr und weitere Stammdaten',
+    title: 'Objektdaten',
+    description: 'Adresse, Fläche, Baujahr und weitere Stammdaten des Objekts pflegen',
     route: 'property-data',
     icon: Database,
     colorClass: 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400',
   },
   {
     key: 'adjust-rnd',
-    title: 'RND anpassen',
-    description: 'Restnutzungsdauer individuell festlegen',
+    title: 'Restnutzungsdauer',
+    description: 'Individuelle Restnutzungsdauer für die Abschreibung festlegen und anpassen',
     route: 'adjust-rnd',
     icon: Clock,
     colorClass: 'bg-cyan-100 text-cyan-600 dark:bg-cyan-900/30 dark:text-cyan-400',
@@ -61,15 +61,15 @@ const OBJEKTVERWALTUNG: HubCard[] = [
   {
     key: 'adjust-distribution',
     title: 'Kaufpreisaufteilung',
-    description: 'Prozentuale Verteilung für die Abschreibung',
+    description: 'Prozentuale Verteilung des Kaufpreises auf Grundstück und Gebäude für die Abschreibung',
     route: 'adjust-distribution',
     icon: PieChart,
     colorClass: 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400',
   },
   {
     key: 'tenant-data-new',
-    title: 'Einheit hinzufügen',
-    description: 'Untereinheiten für dieses Objekt anlegen',
+    title: 'Neue Einheit',
+    description: 'Weitere Wohn-, Gewerbe- oder Stellplatzeinheiten für dieses Objekt anlegen',
     route: 'tenant-data/new',
     icon: Plus,
     colorClass: 'bg-primary/10 text-primary',
@@ -79,8 +79,8 @@ const OBJEKTVERWALTUNG: HubCard[] = [
 const MIETE: HubCard[] = [
   {
     key: 'tenant-data',
-    title: 'Mieterdaten bearbeiten',
-    description: 'Kontaktdaten und Mietvertrag des aktuellen Mieters',
+    title: 'Mieterdaten',
+    description: 'Kontaktdaten, Mietvertrag und Unterlagen des aktuellen Mieters verwalten',
     route: 'tenant-data',
     icon: Users,
     colorClass: 'bg-violet-100 text-violet-600 dark:bg-violet-900/30 dark:text-violet-400',
@@ -88,7 +88,7 @@ const MIETE: HubCard[] = [
   {
     key: 'tenant-history',
     title: 'Mieter-Historie',
-    description: 'Alle bisherigen Mietverhältnisse einsehen',
+    description: 'Übersicht aller bisherigen Mietverhältnisse und Mieterwechsel einsehen',
     route: 'tenant-history',
     icon: History,
     colorClass: 'bg-muted text-muted-foreground',
@@ -96,7 +96,7 @@ const MIETE: HubCard[] = [
   {
     key: 'rental-trends',
     title: 'Mietentwicklung',
-    description: 'Mietpreishistorie und Entwicklung analysieren',
+    description: 'Entwicklung der Mietpreise über die Zeit auswerten und analysieren',
     route: 'rental-trends',
     icon: TrendingUp,
     colorClass: 'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400',
@@ -104,7 +104,7 @@ const MIETE: HubCard[] = [
   {
     key: 'tenant-move-out',
     title: 'Mieterauszug',
-    description: 'Abnahmeprotokoll erstellen und Übergabe dokumentieren',
+    description: 'Abnahmeprotokoll erstellen und die Wohnungsübergabe dokumentieren',
     route: 'tenant-move-out',
     icon: DoorOpen,
     colorClass: 'bg-rose-100 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400',
@@ -115,7 +115,7 @@ const FINANZEN_DOKUMENTE: HubCard[] = [
   {
     key: 'service-charge-settlement',
     title: 'Nebenkostenabrechnung',
-    description: 'Jahresabrechnungen erstellen und verwalten',
+    description: 'Jährliche Nebenkostenabrechnungen erstellen, prüfen und verwalten',
     route: 'service-charge-settlement',
     icon: Receipt,
     colorClass: 'bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400',
@@ -123,23 +123,23 @@ const FINANZEN_DOKUMENTE: HubCard[] = [
   {
     key: 'tax-documents',
     title: 'Steuerunterlagen',
-    description: 'Relevante Dokumente für die Steuererklärung',
+    description: 'Relevante Belege und Dokumente für die Steuererklärung sammeln',
     route: 'tax-documents',
     icon: Landmark,
     colorClass: 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400',
   },
   {
     key: 'key-metrics',
-    title: 'Kennzahlen analysieren',
-    description: 'Rendite, KPF und weitere Kennzahlen im Überblick',
+    title: 'Kennzahlen',
+    description: 'Rendite, KPF und weitere Kennzahlen des Objekts im Überblick auswerten',
     route: 'key-metrics',
     icon: BarChart3,
     colorClass: 'bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400',
   },
   {
     key: 'contractors',
-    title: 'Handwerker beauftragen',
-    description: 'Aufträge verwalten und Angebote einholen',
+    title: 'Handwerker',
+    description: 'Handwerksaufträge verwalten sowie Angebote einholen und vergleichen',
     route: 'contractors',
     icon: Wrench,
     colorClass: 'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400',
@@ -149,8 +149,8 @@ const FINANZEN_DOKUMENTE: HubCard[] = [
 const WEITERE_AKTIONEN: HubCard[] = [
   {
     key: 'sale',
-    title: 'Verkaufen',
-    description: 'Verkaufsprozess einleiten und Unterlagen vorbereiten',
+    title: 'Verkauf',
+    description: 'Verkaufsprozess einleiten und alle nötigen Unterlagen vorbereiten',
     route: 'sale',
     icon: ShoppingCart,
     colorClass: 'bg-muted text-muted-foreground',
@@ -170,7 +170,7 @@ function HubCardTile({ card, propertyId }: { card: HubCard; propertyId: string }
         <Icon className="w-4 h-4" />
       </div>
       <p className="text-sm font-semibold text-foreground">{card.title}</p>
-      <p className="text-xs text-muted-foreground mt-1">{card.description}</p>
+      <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{card.description}</p>
     </button>
   );
 }
@@ -224,16 +224,16 @@ export default function PropertyHub({ propertyId }: { propertyId: string }) {
     ...(singleUnit ? [
       {
         key: 'certificate-generate',
-        title: 'Mieterbescheinigung generieren',
-        description: 'Bescheinigung für den aktuellen Mieter erstellen',
+        title: 'Mieterbescheinigung',
+        description: 'Offizielle Bescheinigung des Mietverhältnisses für den aktuellen Mieter erstellen',
         route: `tenant-data/unit/${singleUnit.propertyUnitId}/certificate`,
         icon: FileText,
         colorClass: 'bg-sky-100 text-sky-600 dark:bg-sky-900/30 dark:text-sky-400',
       },
       {
         key: 'rental-agreement-generate',
-        title: 'Mietvertrag generieren',
-        description: 'Mietvertrag für Wohnraum erstellen',
+        title: 'Mietvertrag',
+        description: 'Standardisierten Mietvertrag für Wohnraum automatisch erstellen',
         route: `tenant-data/unit/${singleUnit.propertyUnitId}/rental-agreement`,
         icon: FileSignature,
         colorClass: 'bg-teal-100 text-teal-600 dark:bg-teal-900/30 dark:text-teal-400',
@@ -245,8 +245,8 @@ export default function PropertyHub({ propertyId }: { propertyId: string }) {
     ...WEITERE_AKTIONEN,
     {
       key: 'delete-property',
-      title: 'Objekt löschen',
-      description: 'Bestandsobjekt endgültig entfernen',
+      title: 'Löschung',
+      description: 'Dieses Bestandsobjekt und alle zugehörigen Daten endgültig entfernen',
       icon: Trash2,
       colorClass: 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400',
       onClick: () => setDeleteModalOpen(true),
@@ -255,7 +255,7 @@ export default function PropertyHub({ propertyId }: { propertyId: string }) {
 
   return (
     <div className="min-h-screen bg-background pb-12">
-      <main className="container mx-auto px-4 py-8 max-w-5xl">
+      <main className="container mx-auto px-4 py-8">
         <Header
           items={[
             BESTANDSOBJEKTE_BREADCRUMB_ROOT,
@@ -276,19 +276,12 @@ export default function PropertyHub({ propertyId }: { propertyId: string }) {
             </div>
           }
         />
-        <p className="mt-2 ml-[3.25rem] text-sm text-muted-foreground flex items-center gap-1.5 flex-wrap">
-          {categoryLabel && (
-            <>
-              <span>{categoryLabel}</span>
-              <span>·</span>
-            </>
-          )}
-          <span>{property.squareMeters} m²</span>
-          <span>·</span>
-          <span>Baujahr {property.yearOfConstruction}</span>
-          <span>·</span>
+        <div className="mt-3 flex items-center gap-2 flex-wrap">
+          {categoryLabel && <Tag label={categoryLabel} variant="muted" />}
+          <Tag label={`${property.squareMeters} m²`} variant="muted" />
+          <Tag label={`Baujahr ${property.yearOfConstruction}`} variant="muted" />
           <Tag label={property.isRented ? 'Vermietet' : 'Unvermietet'} variant={property.isRented ? 'success' : 'warning'} />
-        </p>
+        </div>
 
         <div className="mt-8 flex flex-col gap-3">
           <SectionLabel>Objektverwaltung</SectionLabel>

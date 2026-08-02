@@ -286,7 +286,7 @@ function PropertyDataContent() {
         {isLoading ? (
           <p className="text-sm text-muted-foreground">Objektdaten werden geladen...</p>
         ) : (
-          <div className="mx-auto max-w-5xl space-y-7">
+          <div className="space-y-7">
             <section>
               <h2 className="mb-3 text-lg font-medium text-foreground">Objektkategorisierung</h2>
               <div className="grid gap-4 md:grid-cols-3">

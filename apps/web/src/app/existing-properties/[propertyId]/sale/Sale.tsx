@@ -40,7 +40,7 @@ export default function Sale({ propertyId }: { propertyId: string }) {
                         menuItems={useCaseMenuItems}
                     />
                 } />
-                <div className="mt-8 mx-auto max-w-4xl">
+                <div className="mt-8">
                     <Tile title={ExistingPropertiesUseCases.Sale}>
                         <div className="p-4"><p className="text-muted-foreground">Hier können Sie Verkaufsinformationen für diese Immobilie verwalten.</p></div>
                     </Tile>

@@ -171,7 +171,7 @@ export default function NewUnit({ propertyId }: { propertyId: string }) {
                     image={property.imageUrl ? <img src={base64ToDataUri(property.imageUrl)!} alt="" className="w-10 h-10 object-cover rounded-lg" /> : undefined}
                 />
 
-                <div className="mt-8 mx-auto max-w-3xl space-y-6">
+                <div className="mt-8 space-y-6">
                     {/* Nutzungsart */}
                     <div>
                         <SectionLabel>Nutzungsart</SectionLabel>
