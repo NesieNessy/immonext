@@ -1,7 +1,7 @@
 "use client";
 
-import { buildPropertyUseCaseBreadcrumb, PROPERTY_CATEGORY_CREATE_OPTIONS, PropertyNotFoundPage } from '@/components/features/PropertyDisplay';
-import { Button, CalendarField, Dropdown, Header, NumberField, PillOptions, SectionLabel, StickyActionBar, TextField, UploadButton } from '@/components/ui';
+import { PROPERTY_CATEGORY_CREATE_OPTIONS, PropertyNotFoundPage } from '@/components/features/PropertyDisplay';
+import { Button, CalendarField, Dropdown, Header, NumberField, PillOptions, SectionLabel, StickyActionBar, TextField, UnsavedChangesModal, UploadButton, useToast } from '@/components/ui';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { ExistingPropertiesUseCases } from '@/constants/ExistingPropertiesUseCases';
 import { createAcquisitionCosts, getAcquisitionCosts, updateAcquisitionCosts } from '@/lib/supabase/acquisition_costs.supabase';
@@ -69,6 +69,7 @@ const EMPTY_FORM: FormState = {
 
 export default function PropertyData({ propertyId }: { propertyId: string }) {
     const router = useRouter();
+    const { showToast } = useToast();
 
     const [property, setProperty] = useState<Property | null>(null);
     const [parkingSpace, setParkingSpace] = useState<ParkingSpace | null>(null);
@@ -77,6 +78,7 @@ export default function PropertyData({ propertyId }: { propertyId: string }) {
     const [original, setOriginal] = useState<FormState>(EMPTY_FORM);
     const [isSaving, setIsSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [pendingHref, setPendingHref] = useState<string | null>(null);
 
     useEffect(() => {
         const id = parseInt(propertyId, 10);
@@ -120,6 +122,21 @@ export default function PropertyData({ propertyId }: { propertyId: string }) {
 
     const isEditing = JSON.stringify(form) !== JSON.stringify(original);
 
+    // Any navigation away from an unsaved edit is routed through here so it
+    // can be confirmed first (breadcrumb links, Abbrechen, Anwendungsfall).
+    const goTo = (href: string) => {
+        if (isEditing) {
+            setPendingHref(href);
+        } else {
+            router.push(href);
+        }
+    };
+
+    const confirmDiscard = () => {
+        if (pendingHref) router.push(pendingHref);
+        setPendingHref(null);
+    };
+
     const update = (patch: Partial<FormState>) => setForm((prev) => ({ ...prev, ...patch }));
 
     const handleImageSelect = async (files: FileList | null) => {
@@ -140,8 +157,7 @@ export default function PropertyData({ propertyId }: { propertyId: string }) {
         form.kaufpreis !== '' && Number(form.kaufpreis) > 0;
 
     const handleCancel = () => {
-        setForm(original);
-        setError(null);
+        goTo(`/existing-properties/${propertyId}`);
     };
 
     const handleSave = async () => {
@@ -224,6 +240,7 @@ export default function PropertyData({ propertyId }: { propertyId: string }) {
 
             setProperty(updated);
             setOriginal(form);
+            showToast('Objektdaten gespeichert.');
             router.push(`/existing-properties/${propertyId}`);
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Unbekannter Fehler');
@@ -235,9 +252,9 @@ export default function PropertyData({ propertyId }: { propertyId: string }) {
     // Create menu items for all use cases
     const useCaseMenuItems = useMemo(() =>
         createUseCaseMenuItems(propertyId, 'PropertyData', (route) => {
-            router.push(route);
+            goTo(route);
         }),
-        [propertyId, router]
+        [propertyId, isEditing] // eslint-disable-line react-hooks/exhaustive-deps
     );
 
     if (!property) return <PropertyNotFoundPage />;
@@ -246,7 +263,19 @@ export default function PropertyData({ propertyId }: { propertyId: string }) {
         <div className="min-h-screen bg-background pb-24">
             <main className="container mx-auto px-4 py-8">
                 <Header
-                    items={buildPropertyUseCaseBreadcrumb(property, propertyId, ExistingPropertiesUseCases.PropertyData)}
+                    items={[
+                        {
+                            label: 'Bestandsobjekte',
+                            href: '/existing-properties',
+                            onClick: (e) => { if (isEditing) { e.preventDefault(); goTo('/existing-properties'); } },
+                        },
+                        {
+                            label: `${property.street} ${property.houseNumber}, ${property.postalCode} ${property.city}`,
+                            href: `/existing-properties/${propertyId}`,
+                            onClick: (e) => { if (isEditing) { e.preventDefault(); goTo(`/existing-properties/${propertyId}`); } },
+                        },
+                        { label: ExistingPropertiesUseCases.PropertyData },
+                    ]}
                     image={form.bildBase64 ? <img src={base64ToDataUri(form.bildBase64)!} alt={`${property.street} ${property.houseNumber}`} className="w-10 h-10 object-cover rounded-lg" /> : undefined}
                     actions={
                         <Button
@@ -397,14 +426,21 @@ export default function PropertyData({ propertyId }: { propertyId: string }) {
 
             {/* Sticky Action Bar */}
             <StickyActionBar
-                show={isEditing}
+                show={true}
                 onGhost={handleCancel}
                 onPrimary={() => void handleSave()}
-                ghostLabel={BUTTON_DETAILS.Cancel.label}
-                primaryLabel={BUTTON_DETAILS.Save.label}
-                ghostIcon={<BUTTON_DETAILS.Cancel.icon />}
+                ghostLabel={BUTTON_DETAILS.Back.label}
+                primaryLabel="Objektdaten speichern"
+                ghostIcon={<BUTTON_DETAILS.Back.icon />}
                 primaryIcon={<BUTTON_DETAILS.Save.icon />}
-                primaryDisabled={!isValid || isSaving}
+                primaryDisabled={!isEditing || !isValid || isSaving}
+            />
+
+            <UnsavedChangesModal
+                open={pendingHref !== null}
+                onCancel={() => setPendingHref(null)}
+                onDiscard={confirmDiscard}
+                context="an den Objektdaten"
             />
         </div>
     );

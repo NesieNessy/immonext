@@ -1,7 +1,7 @@
 "use client";
 
 import { PROPERTY_CATEGORY_LABEL, PropertyNotFoundPage } from '@/components/features/PropertyDisplay';
-import { Button, ComingSoonButton, Dropdown, Header, PillOptions, SectionLabel, StickyActionBar, UnsavedChangesModal } from '@/components/ui';
+import { Button, ComingSoonButton, Dropdown, Header, PillOptions, SectionLabel, StickyActionBar, UnsavedChangesModal, useToast } from '@/components/ui';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { ExistingPropertiesUseCases } from '@/constants/ExistingPropertiesUseCases';
 import {
@@ -35,6 +35,7 @@ const EMPTY_MODERNIZATION: ModernizationSelections = {
 
 export default function AdjustRnd({ propertyId }: { propertyId: string }) {
     const router = useRouter();
+    const { showToast } = useToast();
 
     const [rndMode, setRndMode] = useState<RndMode>('STANDARD');
     const [modernization, setModernization] = useState<ModernizationSelections>(EMPTY_MODERNIZATION);
@@ -146,6 +147,7 @@ export default function AdjustRnd({ propertyId }: { propertyId: string }) {
         setOriginalRndMode(rndMode);
         setOriginalModernization(savedModernization);
         setIsEditing(false);
+        showToast('Restnutzungsdauer gespeichert.');
         router.push(`/existing-properties/${propertyId}`);
     };
 
@@ -276,9 +278,9 @@ export default function AdjustRnd({ propertyId }: { propertyId: string }) {
                 show={true}
                 onGhost={handleCancel}
                 onPrimary={handleSave}
-                ghostLabel={BUTTON_DETAILS.Cancel.label}
-                primaryLabel={BUTTON_DETAILS.Save.label}
-                ghostIcon={<BUTTON_DETAILS.Cancel.icon />}
+                ghostLabel={BUTTON_DETAILS.Back.label}
+                primaryLabel="RND speichern"
+                ghostIcon={<BUTTON_DETAILS.Back.icon />}
                 primaryIcon={<BUTTON_DETAILS.Save.icon />}
                 primaryDisabled={!isEditing || isSaving}
             />

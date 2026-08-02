@@ -5,7 +5,7 @@ import { KpfAssessmentCard } from '@/components/features/KpfAssessmentCard';
 import { MobileResultBanner } from '@/components/features/MobileResultBanner';
 import { CONDITION_OPTIONS, getQuickCheckFieldErrors } from '@/components/features/QuickCheckDisplay';
 import { QuickCheckImportSection } from '@/components/features/QuickCheckImportSection';
-import { Button, Dropdown, Header, NumberField, StickyActionBar, TextField } from '@/components/ui';
+import { Button, Dropdown, Header, NumberField, StickyActionBar, TextField, UnsavedChangesModal, useToast, type BreadcrumbItem } from '@/components/ui';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { FieldLabels } from '@/constants/FieldLabels';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
@@ -37,8 +37,10 @@ interface FormData {
 export default function QuickCheckPage() {
   const router = useRouter();
   const { user, isLoading: authLoading } = useRequireAuth();
+  const { showToast } = useToast();
   const [portalUrl, setPortalUrl] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const [pendingHref, setPendingHref] = useState<string | null>(null);
   const [form, setForm] = useState<FormData>({
     street: '',
     postalCode: '',
@@ -75,6 +77,23 @@ export default function QuickCheckPage() {
     form.condition !== '' &&
     isValidConstructionYear(parseInt(form.yearOfConstruction, 10), currentYear);
 
+  const isEditing = portalUrl !== '' || Object.values(form).some((value) => value !== '');
+
+  // Any navigation away from an unsaved draft is routed through here so
+  // it can be confirmed first (breadcrumb links, Zurück).
+  const goTo = (href: string) => {
+    if (isEditing) {
+      setPendingHref(href);
+    } else {
+      router.push(href);
+    }
+  };
+
+  const confirmDiscard = () => {
+    if (pendingHref) router.push(pendingHref);
+    setPendingHref(null);
+  };
+
   // Shared by "Übernehmen" and "Detailbewertung starten" — both need the
   // quick-check saved first; they just navigate somewhere different after.
   const saveQuickCheck = async () => {
@@ -105,6 +124,7 @@ export default function QuickCheckPage() {
     try {
       const created = await saveQuickCheck();
       if (!created) return;
+      showToast('Ersteinschätzung gespeichert.');
       router.push('/property-valuation/quick-check');
     } catch (error) {
       console.error('Speichern fehlgeschlagen', error);
@@ -133,7 +153,11 @@ export default function QuickCheckPage() {
           <Header
             items={[
               { label: 'Objektbewertung' },
-              { label: 'Ersteinschätzungen', href: '/property-valuation/quick-check' },
+              {
+                label: 'Ersteinschätzungen',
+                href: '/property-valuation/quick-check',
+                onClick: (e) => { if (isEditing) { e.preventDefault(); goTo('/property-valuation/quick-check'); } },
+              } satisfies BreadcrumbItem,
               { label: 'Neue Ersteinschätzung' },
             ]}
             actions={
@@ -276,16 +300,20 @@ export default function QuickCheckPage() {
 
         <StickyActionBar
           show={true}
-          ghostLabel={BUTTON_DETAILS.Discard.label}
-          ghostIcon={<BUTTON_DETAILS.Discard.icon />}
-          onGhost={() => {
-            setForm({ street: '', postalCode: '', city: '', purchasePrice: '', coldRent: '', condition: '', yearOfConstruction: '' });
-            router.push('/property-valuation/quick-check');
-          }}
-          primaryLabel={BUTTON_DETAILS.TakeOver.label}
-          primaryIcon={<BUTTON_DETAILS.TakeOver.icon />}
+          ghostLabel={BUTTON_DETAILS.Back.label}
+          ghostIcon={<BUTTON_DETAILS.Back.icon />}
+          onGhost={() => goTo('/property-valuation/quick-check')}
+          primaryLabel="Ersteinschätzung speichern"
+          primaryIcon={<BUTTON_DETAILS.Save.icon />}
           primaryDisabled={!isFormValid || isSaving || authLoading || !user}
           onPrimary={handleTakeOver}
+        />
+
+        <UnsavedChangesModal
+          open={pendingHref !== null}
+          onCancel={() => setPendingHref(null)}
+          onDiscard={confirmDiscard}
+          context="an der Ersteinschätzung"
         />
       </div>
     </>

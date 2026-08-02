@@ -1,7 +1,7 @@
 "use client";
 
-import { buildPropertyUseCaseBreadcrumb, PropertyNotFoundPage } from '@/components/features/PropertyDisplay';
-import { Button, Header, NumberField, PillOptions, SectionLabel, StickyActionBar } from '@/components/ui';
+import { PropertyNotFoundPage } from '@/components/features/PropertyDisplay';
+import { Button, Header, NumberField, PillOptions, SectionLabel, StickyActionBar, UnsavedChangesModal, useToast } from '@/components/ui';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { ExistingPropertiesUseCases } from '@/constants/ExistingPropertiesUseCases';
 import { computePriceSplitIndividual, computePriceSplitStandard } from '@/lib/detailCheck/depreciation';
@@ -18,6 +18,8 @@ type SplitMode = 'STANDARD' | 'INDIVIDUAL';
 
 export default function AdjustDistribution({ propertyId }: { propertyId: string }) {
     const router = useRouter();
+    const { showToast } = useToast();
+    const [pendingHref, setPendingHref] = useState<string | null>(null);
 
     const [property, setProperty] = useState<PropertyOverview | undefined>(undefined);
     const [cityShare, setCityShare] = useState({ buildingSharePercent: 65, landSharePercent: 35 });
@@ -72,6 +74,21 @@ export default function AdjustDistribution({ propertyId }: { propertyId: string 
         coOwnershipNumerator !== originalCoOwnershipNumerator ||
         coOwnershipDenominator !== originalCoOwnershipDenominator;
 
+    // Any navigation away from an unsaved edit is routed through here so it
+    // can be confirmed first (breadcrumb links, Abbrechen, Anwendungsfall).
+    const goTo = (href: string) => {
+        if (isEditing) {
+            setPendingHref(href);
+        } else {
+            router.push(href);
+        }
+    };
+
+    const confirmDiscard = () => {
+        if (pendingHref) router.push(pendingHref);
+        setPendingHref(null);
+    };
+
     const purchasePrice = property?.purchasePrice ?? 0;
 
     const standardSplit = useMemo(
@@ -94,9 +111,9 @@ export default function AdjustDistribution({ propertyId }: { propertyId: string 
 
     const useCaseMenuItems = useMemo(() =>
         createUseCaseMenuItems(propertyId, 'SplitPurchasePrice', (route) => {
-            router.push(route);
+            goTo(route);
         }),
-        [propertyId, router]
+        [propertyId, isEditing] // eslint-disable-line react-hooks/exhaustive-deps
     );
 
     const handleSave = async () => {
@@ -117,6 +134,7 @@ export default function AdjustDistribution({ propertyId }: { propertyId: string 
             setOriginalLandReferenceValue(landReferenceValue);
             setOriginalCoOwnershipNumerator(coOwnershipNumerator);
             setOriginalCoOwnershipDenominator(coOwnershipDenominator);
+            showToast('Kaufpreisaufteilung gespeichert.');
             router.push(`/existing-properties/${propertyId}`);
         } finally {
             setIsSaving(false);
@@ -124,12 +142,7 @@ export default function AdjustDistribution({ propertyId }: { propertyId: string 
     };
 
     const handleCancel = () => {
-        setSplitMode(originalSplitMode);
-        setPlotAreaM2(originalPlotAreaM2);
-        setLandReferenceValue(originalLandReferenceValue);
-        setCoOwnershipNumerator(originalCoOwnershipNumerator);
-        setCoOwnershipDenominator(originalCoOwnershipDenominator);
-        router.push(`/existing-properties/${propertyId}`);
+        goTo(`/existing-properties/${propertyId}`);
     };
 
     if (!property) return <PropertyNotFoundPage />;
@@ -138,7 +151,19 @@ export default function AdjustDistribution({ propertyId }: { propertyId: string 
         <div className="min-h-screen bg-background pb-24">
             <main className="container mx-auto px-4 py-8">
                 <Header
-                    items={buildPropertyUseCaseBreadcrumb(property, propertyId, ExistingPropertiesUseCases.SplitPurchasePrice)}
+                    items={[
+                        {
+                            label: 'Bestandsobjekte',
+                            href: '/existing-properties',
+                            onClick: (e) => { if (isEditing) { e.preventDefault(); goTo('/existing-properties'); } },
+                        },
+                        {
+                            label: `${property.street} ${property.houseNumber}, ${property.postalCode} ${property.city}`,
+                            href: `/existing-properties/${propertyId}`,
+                            onClick: (e) => { if (isEditing) { e.preventDefault(); goTo(`/existing-properties/${propertyId}`); } },
+                        },
+                        { label: ExistingPropertiesUseCases.SplitPurchasePrice },
+                    ]}
                     image={property.imageUrl ? <img src={base64ToDataUri(property.imageUrl)!} alt={`${property.street} ${property.houseNumber}`} className="w-10 h-10 object-cover rounded-lg" /> : undefined}
                     actions={
                         <Button
@@ -248,11 +273,18 @@ export default function AdjustDistribution({ propertyId }: { propertyId: string 
                 show={true}
                 onGhost={handleCancel}
                 onPrimary={() => void handleSave()}
-                ghostLabel={BUTTON_DETAILS.Cancel.label}
-                primaryLabel={BUTTON_DETAILS.Save.label}
-                ghostIcon={<BUTTON_DETAILS.Cancel.icon />}
+                ghostLabel={BUTTON_DETAILS.Back.label}
+                primaryLabel="Kaufpreisaufteilung speichern"
+                ghostIcon={<BUTTON_DETAILS.Back.icon />}
                 primaryIcon={<BUTTON_DETAILS.Save.icon />}
                 primaryDisabled={!isEditing || isSaving}
+            />
+
+            <UnsavedChangesModal
+                open={pendingHref !== null}
+                onCancel={() => setPendingHref(null)}
+                onDiscard={confirmDiscard}
+                context="an der Kaufpreisaufteilung"
             />
         </div>
     );
