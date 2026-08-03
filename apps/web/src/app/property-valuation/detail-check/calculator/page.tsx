@@ -22,6 +22,8 @@ type CalculatorResponse = {
     last558Date: string | null;
     last559Date: string | null;
     last559MonthlyDelta: number;
+    rentIncreaseIntervalMonths: number;
+    rentIncreaseUtilizationPercent: number;
     rentIndexPerM2: number | null;
     rentIndexSource: RentIndexSource;
     monthlyDebtService: number;
@@ -631,8 +633,17 @@ function PlanEditor({
         onPointerCancel={editable ? () => { draggingRef.current = null; setDragging(null); } : undefined}
         title={`${reason} Wirksam ab ${date}. Nach oben oder unten ziehen, um den Wert zu ändern.`}
       >
-        <span className="truncate">{label}</span>
-        <span className="ml-auto whitespace-nowrap">{formatCurrency(displayedAmount)}</span>
+        {kind === 'rent' ? (
+          <>
+            <span className="whitespace-nowrap">+ {formatCurrency(displayedAmount)}</span>
+            <span className="min-w-0 truncate opacity-90">· {label}</span>
+          </>
+        ) : (
+          <>
+            <span className="truncate">{label}</span>
+            <span className="ml-auto whitespace-nowrap">{formatCurrency(displayedAmount)}</span>
+          </>
+        )}
       </div>
     );
   };
@@ -646,8 +657,8 @@ function PlanEditor({
   const displayedRefinancingRate = dragging?.id === 'refinancing-rate' ? dragging.currentAmount : draftRefinancingRate;
   const displayedTaxRate = dragging?.id === 'tax-rate' ? dragging.currentAmount : draftTaxRate;
   const earliest558Month = data.params.last558Date
-    ? addMonths(data.params.last558Date, 15)
-    : addMonths(data.params.rentStartYyyymm, 15);
+    ? addMonths(data.params.last558Date, data.params.rentIncreaseIntervalMonths)
+    : addMonths(data.params.rentStartYyyymm, data.params.rentIncreaseIntervalMonths);
   const earliest558Offset = Math.max(0, monthOffset(startYyyymm, earliest558Month));
   const baselineDateForCase = (item: RenovationCase) => {
     if (item.calculator_effective_yyyymm) return item.calculator_effective_yyyymm;
@@ -698,7 +709,7 @@ function PlanEditor({
         <div className="w-full min-w-0">
           <div className="grid grid-cols-[15%_85%] border-t border-border"><div className="py-4 pr-3 font-medium">Sanierungen</div><div data-gantt-track="true" className="relative h-14 bg-[repeating-linear-gradient(90deg,transparent,transparent_calc(20%-1px),theme(colors.border)_calc(20%-1px),theme(colors.border)_20%)]" onPointerMove={handlePointerMove} onPointerUp={() => void finishDrag()}>{viewport.start === 0 && <div className="absolute inset-y-0 left-0 w-[2.5%] bg-[repeating-linear-gradient(135deg,rgba(100,116,139,.12),rgba(100,116,139,.12)_5px,transparent_5px,transparent_10px)]" title="Vor dem Startmonat gesperrt" />}{data.modernizationPlan.map((item, index) => { const amount = data.params.modernizationCostOverrides?.[item.id] ?? item.allocableCosts; return renderBar(item.id, 'modernization', item.title, planPlacement(item), amount, Math.max(1000, amount * 3, item.allocableCosts * 3), true, index); })}</div></div>
           <div className="grid grid-cols-[15%_85%] border-t border-border"><div className="py-4 pr-3 font-medium">§559 Wirksamkeit</div><div data-gantt-track="true" className="relative h-14 bg-[repeating-linear-gradient(90deg,transparent,transparent_calc(20%-1px),theme(colors.border)_calc(20%-1px),theme(colors.border)_20%)]" onPointerMove={handlePointerMove} onPointerUp={() => void finishDrag()}>{blocked559Width > 0 && <div className={`absolute inset-y-0 left-0 z-10 ${blockedPattern}`} style={{ width: `${blocked559Width}%` }} title="§559-Wirksamkeitsfrist: Die erhöhte Miete wird frühestens ab dem dritten Monat nach Zugang der Erhöhungserklärung geschuldet." />}{data.modernizationPlan.map((item, index) => renderBar(`${item.id}-559`, 'rent', item.title, planPlacement(item), item.monthlyDelta, item.monthlyDelta, false, index))}</div></div>
-          <div className="grid grid-cols-[15%_85%] border-t border-border"><div className="py-4 pr-3 font-medium">§558 Mieterhöhungen</div><div data-gantt-track="true" className="relative h-14 bg-[repeating-linear-gradient(90deg,transparent,transparent_calc(20%-1px),theme(colors.border)_calc(20%-1px),theme(colors.border)_20%)]" onPointerMove={handlePointerMove} onPointerUp={() => void finishDrag()}>{blocked558Width > 0 && <div className={`absolute inset-y-0 left-0 z-10 ${blockedPattern}`} style={{ width: `${blocked558Width}%` }} title={`§558-Sperrfrist: Früheste Wirksamkeit ${earliest558Month}, da die Miete 15 Monate unverändert sein muss.`} />}{data.increases558.map((item, index) => renderBar(item.id ?? `558-${index + 1}`, 'rent', '§558 · Mietspiegel', item.effectiveYyyymm, item.monthlyDelta, item.monthlyDelta, true, index))}</div></div>
+          <div className="grid grid-cols-[15%_85%] border-t border-border"><div className="py-4 pr-3 font-medium">§558 Mieterhöhungen</div><div data-gantt-track="true" className="relative h-14 bg-[repeating-linear-gradient(90deg,transparent,transparent_calc(20%-1px),theme(colors.border)_calc(20%-1px),theme(colors.border)_20%)]" onPointerMove={handlePointerMove} onPointerUp={() => void finishDrag()}>{blocked558Width > 0 && <div className={`absolute inset-y-0 left-0 z-10 ${blockedPattern}`} style={{ width: `${blocked558Width}%` }} title={`§558-Sperrfrist: Früheste Wirksamkeit ${earliest558Month}; gewählter Abstand ${data.params.rentIncreaseIntervalMonths} Monate.`} />}{data.increases558.map((item, index) => renderBar(item.id ?? `558-${index + 1}`, 'rent', '§558 · Mietspiegel', item.effectiveYyyymm, item.monthlyDelta, item.monthlyDelta, true, index))}</div></div>
           <div className="grid grid-cols-[15%_85%] border-t border-border"><div className="py-4 pr-3 font-medium">Finanzierung</div><div data-gantt-track="true" className="relative h-14 bg-[repeating-linear-gradient(90deg,transparent,transparent_calc(20%-1px),theme(colors.border)_calc(20%-1px),theme(colors.border)_20%)]" onPointerMove={handlePointerMove} onPointerUp={() => void finishDrag()}><div className={`absolute top-2 z-10 h-8 touch-none cursor-ns-resize overflow-hidden rounded-md border-2 border-[#9bbbd3] bg-[#245b88] px-2 py-2 text-[11px] font-semibold text-white shadow-sm ${dragging?.id === 'financing-rate' ? 'ring-2 ring-[#d99432] ring-offset-2' : ''}`} style={{ left: `${fixedInterestLeft}%`, width: `${fixedInterestWidth}%` }} onPointerDown={(event) => beginDrag(event, 'financing-rate', 'finance', fixedInterestLeft, draftFinancingRate, 25, false)} onPointerMove={handlePointerMove} onPointerUp={(event) => { event.stopPropagation(); void finishDrag(); }} onPointerCancel={() => { draggingRef.current = null; setDragging(null); }} title="Finanzierungszins: Nach oben ziehen zum Erhöhen, nach unten zum Senken.">Zinsbindung {numberFormatter.format(displayedFinancingRate)} %</div>{refinancingWidth > 0 && refinancingLeft < 100 && <div className={`absolute top-2 z-20 h-8 touch-none cursor-ns-resize overflow-hidden rounded-md border-2 border-[#c2b8df] bg-[#8069bd] px-2 py-2 text-[11px] font-semibold text-white shadow-sm ${dragging?.id === 'refinancing-rate' ? 'ring-2 ring-[#d99432] ring-offset-2' : ''}`} style={{ left: `${refinancingLeft}%`, width: `${refinancingWidth}%` }} onPointerDown={(event) => beginDrag(event, 'refinancing-rate', 'finance', refinancingLeft, draftRefinancingRate, 25, false)} onPointerMove={handlePointerMove} onPointerUp={(event) => { event.stopPropagation(); void finishDrag(); }} onPointerCancel={() => { draggingRef.current = null; setDragging(null); }} title="Anschlussfinanzierung: Nach oben ziehen zum Erhöhen, nach unten zum Senken.">Anschlussfinanzierung {numberFormatter.format(displayedRefinancingRate)} %</div>}</div></div>
           <div className="grid grid-cols-[15%_85%] border-t border-border">
             <div className="py-4 pr-3 font-medium">Steuern</div>
@@ -920,6 +931,8 @@ function CalculatorContent() {
   const [last558Date, setLast558Date] = useState('');
   const [last559Date, setLast559Date] = useState('');
   const [last559MonthlyDelta, setLast559MonthlyDelta] = useState('');
+  const [rentIncreaseIntervalMonths, setRentIncreaseIntervalMonths] = useState(15);
+  const [rentIncreaseUtilizationPercent, setRentIncreaseUtilizationPercent] = useState(100);
   const [mode, setMode] = useState<CalculatorMode>('KNOWN');
   const [placementMode, setPlacementMode] = useState<PlacementMode>('DEFAULT');
   const [interestRate, setInterestRate] = useState(0);
@@ -976,6 +989,8 @@ function CalculatorContent() {
         setLast558Date(loaded.params.last558Date ?? '');
         setLast559Date(loaded.params.last559Date ?? '');
         setLast559MonthlyDelta(valueString(loaded.params.last559MonthlyDelta));
+        setRentIncreaseIntervalMonths(loaded.params.rentIncreaseIntervalMonths ?? 15);
+        setRentIncreaseUtilizationPercent(loaded.params.rentIncreaseUtilizationPercent ?? 100);
         setMode(loaded.params.mode);
         setPlacementMode(loaded.placementMode ?? loaded.params.placementMode ?? 'DEFAULT');
         setInterestRate(loaded.params.refinancingInterestRate ?? loaded.params.interestRate ?? 0);
@@ -988,6 +1003,8 @@ function CalculatorContent() {
           last558Date: loaded.params.last558Date ?? '',
           last559Date: loaded.params.last559Date ?? '',
           last559MonthlyDelta: valueString(loaded.params.last559MonthlyDelta),
+          rentIncreaseIntervalMonths: loaded.params.rentIncreaseIntervalMonths ?? 15,
+          rentIncreaseUtilizationPercent: loaded.params.rentIncreaseUtilizationPercent ?? 100,
         });
       } catch (loadError) {
         if (!cancelled) setError(loadError instanceof Error ? loadError.message : 'Kalkulator konnte nicht geladen werden.');
@@ -1020,6 +1037,8 @@ function CalculatorContent() {
           last558Date: last558Date || null,
           last559Date: last559Date || null,
           last559MonthlyDelta: parseDecimalInput(last559MonthlyDelta),
+          rentIncreaseIntervalMonths,
+          rentIncreaseUtilizationPercent,
           mode: nextMode,
           optimize,
           financingInterestRateOverride: overrides?.financingInterestRateOverride ?? data?.params.financingInterestRateOverride ?? null,
@@ -1054,7 +1073,7 @@ function CalculatorContent() {
   useEffect(() => {
     if (isLoading || isSaving || !data || startMonthError || last558Error || last559Error || !startYyyymm || monthlyRentStart === '') return;
 
-    const signature = JSON.stringify({ startYyyymm, monthlyRentStart, rentIndexPerM2, rentIndexSource, last558Date, last559Date, last559MonthlyDelta });
+    const signature = JSON.stringify({ startYyyymm, monthlyRentStart, rentIndexPerM2, rentIndexSource, last558Date, last559Date, last559MonthlyDelta, rentIncreaseIntervalMonths, rentIncreaseUtilizationPercent });
     if (signature === lastLiveCalculationRef.current) return;
 
     const timer = window.setTimeout(() => {
@@ -1063,7 +1082,7 @@ function CalculatorContent() {
     }, 350);
 
     return () => window.clearTimeout(timer);
-  }, [data, isLoading, isSaving, last558Date, last558Error, last559Date, last559Error, last559MonthlyDelta, mode, monthlyRentStart, rentIndexPerM2, rentIndexSource, startMonthError, startYyyymm]);
+  }, [data, isLoading, isSaving, last558Date, last558Error, last559Date, last559Error, last559MonthlyDelta, mode, monthlyRentStart, rentIndexPerM2, rentIndexSource, rentIncreaseIntervalMonths, rentIncreaseUtilizationPercent, startMonthError, startYyyymm]);
 
   const handleModeChange = (value: string) => {
     const nextMode = value === 'POTENTIAL' ? 'POTENTIAL' : 'KNOWN';
@@ -1118,6 +1137,24 @@ function CalculatorContent() {
                 </div>
               </div>
               <div className="rounded-lg border border-border bg-card p-4 shadow-sm sm:p-6">
+                <div className="mb-5 grid gap-4 border-b border-border pb-5 lg:grid-cols-2">
+                  <label className="block min-w-0">
+                    <span className="mb-2 flex items-center justify-between gap-3 text-sm font-medium text-foreground">
+                      <span>Abstand der §558-Mieterhöhungen</span>
+                      <output className="shrink-0 text-primary">{rentIncreaseIntervalMonths === 15 ? 'Gesetzliches Minimum · 15 Monate' : `${rentIncreaseIntervalMonths} Monate`}</output>
+                    </span>
+                    <input type="range" min={15} max={60} step={1} value={rentIncreaseIntervalMonths} onChange={(event) => setRentIncreaseIntervalMonths(Number(event.target.value))} className="w-full accent-primary" />
+                    <span className="mt-1 flex justify-between text-xs text-muted-foreground"><span>15 Monate</span><span>60 Monate</span></span>
+                  </label>
+                  <label className="block min-w-0">
+                    <span className="mb-2 flex items-center justify-between gap-3 text-sm font-medium text-foreground">
+                      <span>Nutzung des zulässigen Erhöhungsspielraums</span>
+                      <output className="shrink-0 text-primary">{numberFormatter.format(rentIncreaseUtilizationPercent)} %</output>
+                    </span>
+                    <input type="range" min={0} max={100} step={0.1} value={rentIncreaseUtilizationPercent} onChange={(event) => setRentIncreaseUtilizationPercent(Number(event.target.value))} className="w-full accent-primary" />
+                    <span className="mt-1 flex justify-between text-xs text-muted-foreground"><span>0 %</span><span>Gesetzliches Maximum · 100 %</span></span>
+                  </label>
+                </div>
                 <div className="relative overflow-hidden">
                   <TimelineEventConnectors rows={chartRows} viewport={timelineViewport} />
                   <CalculatorChart rows={chartRows} showRentIndex={showRentIndexComparison} viewport={timelineViewport} />

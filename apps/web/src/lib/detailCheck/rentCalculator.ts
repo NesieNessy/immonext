@@ -19,6 +19,8 @@ export type CalculatorParams = {
   last558Date: string | null;
   last559Date: string | null;
   last559MonthlyDelta: number;
+  rentIncreaseIntervalMonths: number;
+  rentIncreaseUtilizationPercent: number;
   rentIndexPerM2: number | null;
   rentIndexSource: RentIndexSource;
   monthlyDebtService: number;
@@ -253,12 +255,14 @@ function plan558(
   if (params.monthlyRentStart <= 0 || params.livingAreaM2 <= 0) return steps;
 
   let lastEffective = params.last558Date
-    ? normalizeYyyymm(params.last558Date, addMonths(params.startYyyymm, -1000))
-    : addMonths(params.startYyyymm, -1000);
+    ? normalizeYyyymm(params.last558Date, params.rentStartYyyymm)
+    : params.rentStartYyyymm;
   let current558Base = params.monthlyRentStart;
   const sortedModernizations = [...modernizations].sort((a, b) => a.effectiveYyyymm.localeCompare(b.effectiveYyyymm));
   let modernizationIndex = 0;
   let active559 = 0;
+  const intervalMonths = Math.round(clamp(params.rentIncreaseIntervalMonths, 15, 60));
+  const utilization = clamp(params.rentIncreaseUtilizationPercent, 0, 100) / 100;
 
   for (let offset = 0; offset < CALCULATION_HORIZON_MONTHS; offset += 1) {
     const month = addMonths(params.startYyyymm, offset);
@@ -270,7 +274,7 @@ function plan558(
       active559 = roundCurrency(active559 + sortedModernizations[modernizationIndex].monthlyDelta);
       modernizationIndex += 1;
     }
-    if (monthDiff(lastEffective, month) < 15) continue;
+    if (monthDiff(lastEffective, month) < intervalMonths) continue;
 
     const target = roundCurrency(targetPerM2 * Math.pow(1.02, Math.floor(offset / 12)) * params.livingAreaM2);
     const windowStart = addMonths(month, -35);
@@ -281,7 +285,8 @@ function plan558(
       return sum;
     }, 0);
     const room = roundCurrency(Math.max(0, params.monthlyRentStart * capPercent - usedInWindow));
-    const delta = roundCurrency(clamp(target - current558Base - active559, 0, room));
+    const legalMaximum = clamp(target - current558Base - active559, 0, room);
+    const delta = roundCurrency(legalMaximum * utilization);
 
     if (delta > 0) {
       steps.push({ id: `558-${steps.length + 1}`, effectiveYyyymm: month, monthlyDelta: delta });
@@ -312,7 +317,7 @@ function applyRentIncreaseOverrides(
     return { ...step, effectiveYyyymm, monthlyDelta };
   });
 
-  let previous = params.last558Date ? normalizeYyyymm(params.last558Date) : addMonths(params.startYyyymm, -1000);
+  let previous = params.last558Date ? normalizeYyyymm(params.last558Date) : params.rentStartYyyymm;
   const accepted: RentIncrease558Row[] = [];
   const capAmount = params.monthlyRentStart * capPercent;
 
@@ -321,11 +326,11 @@ function applyRentIncreaseOverrides(
       step.effectiveYyyymm,
       params.startYyyymm,
       params.rentStartYyyymm,
-      addMonths(previous, 15),
+      addMonths(previous, Math.round(clamp(params.rentIncreaseIntervalMonths, 15, 60))),
     ].sort().at(-1) ?? step.effectiveYyyymm;
 
     // A moved §558 increase keeps its sequence. Later increases follow when
-    // the 15-month interval or the rolling three-year cap requires it.
+    // the selected legal interval or the rolling three-year cap requires it.
     for (let attempt = 0; attempt <= CALCULATION_HORIZON_MONTHS; attempt += 1) {
       const windowStart = addMonths(effectiveYyyymm, -35);
       const usedInWindow = accepted

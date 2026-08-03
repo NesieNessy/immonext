@@ -244,6 +244,8 @@ function buildParams(saved: Record<string, unknown> | undefined, context: Awaite
     last558Date: saved?.last_558_date ? normalizeYyyymm(saved.last_558_date as string) : null,
     last559Date: saved?.last_559_date ? normalizeYyyymm(saved.last_559_date as string) : null,
     last559MonthlyDelta: Math.max(0, toNumber(savedParams.last559MonthlyDelta)),
+    rentIncreaseIntervalMonths: Math.max(15, Math.min(60, Math.round(toNumber(savedParams.rentIncreaseIntervalMonths) || 15))),
+    rentIncreaseUtilizationPercent: Math.max(0, Math.min(100, savedParams.rentIncreaseUtilizationPercent == null ? 100 : toNumber(savedParams.rentIncreaseUtilizationPercent))),
     rentIndexPerM2: saved?.rent_index_per_m2 == null ? fallbackRentIndex : toNumber(saved.rent_index_per_m2),
     rentIndexSource: saved?.rent_index_per_m2 == null ? 'AUTOMATIC' : 'MANUAL',
     monthlyDebtService,
@@ -326,6 +328,8 @@ export async function POST(request: Request) {
     last558Date: input.last558Date ? normalizeYyyymm(input.last558Date) : null,
     last559Date: input.last559Date ? normalizeYyyymm(input.last559Date) : null,
     last559MonthlyDelta: input.last559Date ? Math.max(0, toNumber(input.last559MonthlyDelta)) : 0,
+    rentIncreaseIntervalMonths: Math.max(15, Math.min(60, Math.round(toNumber(input.rentIncreaseIntervalMonths) || 15))),
+    rentIncreaseUtilizationPercent: Math.max(0, Math.min(100, input.rentIncreaseUtilizationPercent == null ? 100 : toNumber(input.rentIncreaseUtilizationPercent))),
     rentIndexPerM2: input.rentIndexSource !== 'MANUAL' || input.rentIndexPerM2 == null || input.rentIndexPerM2 === ''
       ? estimateRentIndexPerM2(context.yearOfConstruction, context.livingAreaM2)
       : toNumber(input.rentIndexPerM2),
