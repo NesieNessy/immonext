@@ -19,6 +19,11 @@ function toNumber(value: unknown): number {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
+function normalizeSavedBrokerPercent(value: unknown): number {
+  const parsed = toNumber(value);
+  return parsed > 20 && parsed <= 2000 ? parsed / 100 : parsed;
+}
+
 async function loadDefaults(state: string | null) {
   if (!state) return { ...DEFAULTS, propertyTransferTaxPercent: null };
 
@@ -98,7 +103,8 @@ export async function GET(request: Request) {
   const saved = rows[0];
   const purchasePrice = toNumber(saved?.purchase_price ?? quickCheck?.purchase_price ?? 0);
   const parkingPurchasePrice = toNumber(saved?.parking_purchase_price ?? 0);
-  const brokerPercent = toNumber(saved?.broker_percent ?? defaults.brokerPercent);
+  const rawSavedBrokerPercent = saved ? toNumber(saved.broker_percent) : null;
+  const brokerPercent = normalizeSavedBrokerPercent(saved?.broker_percent ?? defaults.brokerPercent);
   const notaryPercent = toNumber(saved?.notary_percent ?? defaults.notaryPercent);
   const landRegistryPercent = toNumber(saved?.land_registry_percent ?? defaults.landRegistryPercent);
   const propertyTransferTaxPercent = saved?.property_transfer_tax_percent == null
@@ -118,6 +124,34 @@ export async function GET(request: Request) {
     landRegistryPercent,
     propertyTransferTaxPercent,
   });
+
+  if (saved && rawSavedBrokerPercent !== brokerPercent) {
+    await db.query(
+      `
+        UPDATE detail_check_acquisition_costs
+        SET broker_percent = $3,
+            broker_amount = $4,
+            notary_amount = $5,
+            land_registry_amount = $6,
+            property_transfer_tax_amount = $7,
+            total_additional_costs = $8,
+            total_costs = $9,
+            updated_at = NOW()
+        WHERE user_id = $1 AND workflow_id = $2
+      `,
+      [
+        userId,
+        workflowId,
+        brokerPercent,
+        computed.brokerAmount,
+        computed.notaryAmount,
+        computed.landRegistryAmount,
+        computed.propertyTransferTaxAmount,
+        computed.totalAdditionalCosts,
+        computed.totalCosts,
+      ],
+    );
+  }
 
   return NextResponse.json({
     workflowId,

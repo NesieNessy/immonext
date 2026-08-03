@@ -206,3 +206,138 @@
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }
+
+@keyframes detail-step-enter-forward {
+  from {
+    opacity: 0;
+    transform: translateX(48px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes detail-step-enter-backward {
+  from {
+    opacity: 0;
+    transform: translateX(-48px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes detail-step-enter-initial {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes stepper-segment-fill-forward {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+
+@keyframes stepper-segment-fill-backward {
+  from { transform: scaleX(1); }
+  to { transform: scaleX(0); }
+}
+
+@keyframes stepper-point-arrive-forward {
+  from {
+    color: var(--muted-foreground);
+    background-color: var(--muted);
+    box-shadow: 0 0 0 0 transparent;
+  }
+  to {
+    color: var(--primary-foreground);
+    background-color: var(--primary);
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--primary) 20%, transparent);
+  }
+}
+
+@keyframes stepper-point-arrive-backward {
+  from {
+    color: var(--secondary-foreground);
+    background-color: var(--secondary);
+    box-shadow: 0 0 0 0 transparent;
+  }
+  to {
+    color: var(--primary-foreground);
+    background-color: var(--primary);
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--primary) 20%, transparent);
+  }
+}
+
+.stepper-segment-fill-forward,
+.stepper-segment-fill-backward {
+  will-change: transform;
+  animation-duration: 1000ms;
+  animation-timing-function: cubic-bezier(.4, 0, .2, 1);
+  animation-fill-mode: both;
+}
+
+.stepper-segment-fill-forward {
+  animation-name: stepper-segment-fill-forward;
+}
+
+.stepper-segment-fill-backward {
+  animation-name: stepper-segment-fill-backward;
+}
+
+.stepper-point-arrive-forward,
+.stepper-point-arrive-backward {
+  will-change: color, background-color, box-shadow;
+  animation-duration: 220ms;
+  animation-timing-function: ease-out;
+  animation-fill-mode: both;
+}
+
+.stepper-point-arrive-forward {
+  animation-name: stepper-point-arrive-forward;
+}
+
+.stepper-point-arrive-backward {
+  animation-name: stepper-point-arrive-backward;
+}
+
+.detail-step-enter-forward,
+.detail-step-enter-backward,
+.detail-step-enter-initial {
+  will-change: transform, opacity;
+  animation-duration: 500ms;
+  animation-timing-function: cubic-bezier(.22, 1, .36, 1);
+  animation-fill-mode: both;
+}
+
+.detail-step-enter-forward {
+  animation-name: detail-step-enter-forward;
+}
+
+.detail-step-enter-backward {
+  animation-name: detail-step-enter-backward;
+}
+
+.detail-step-enter-initial {
+  animation-name: detail-step-enter-initial;
+  animation-duration: 180ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stepper-segment-fill-forward,
+  .stepper-segment-fill-backward,
+  .stepper-point-arrive-forward,
+  .stepper-point-arrive-backward {
+    animation-duration: 1ms;
+    animation-delay: 0ms !important;
+  }
+
+  .detail-step-enter-forward,
+  .detail-step-enter-backward,
+  .detail-step-enter-initial {
+    animation-name: detail-step-enter-initial;
+    animation-duration: 160ms;
+    transform: none;
+  }
+}

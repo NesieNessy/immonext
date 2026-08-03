@@ -1,6 +1,6 @@
 "use client";
 
-import { Button, StickyActionBar, Tag } from '@/components/ui';
+import { Button, ReadOnlyField, StickyActionBar, Tag } from '@/components/ui';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { authFetch } from '@/lib/api/authFetch';
 import { type ReferenceProperty, type SubjectProperty } from '@/lib/detailCheck/comparison';
@@ -36,9 +36,7 @@ function InfoRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="grid grid-cols-[140px_minmax(0,1fr)] items-center gap-3">
       <span className="text-sm text-muted-foreground">{label}</span>
-      <div className="rounded-lg border border-border bg-muted px-3 py-2 text-right font-medium text-foreground">
-        {value || '-'}
-      </div>
+      <ReadOnlyField value={value || '-'} align="right" emphasis />
     </div>
   );
 }

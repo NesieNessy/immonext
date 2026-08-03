@@ -35,7 +35,7 @@ export type RenovationCase = {
 export const RENOVATION_CATEGORIES: { value: RenovationCategory; label: string }[] = [
   { value: 'ENERGETISCH', label: 'Energetisch' },
   { value: 'SANITAER', label: 'Sanitär' },
-  { value: 'WOHNWERT', label: 'Wohnwert' },
+  { value: 'WOHNWERT', label: 'Wohnraum' },
   { value: 'BARRIEREFREIHEIT', label: 'Barrierefreiheit' },
   { value: 'TECHNIK_SICHERHEIT', label: 'Technik / Sicherheit' },
   { value: 'AUSSEN', label: 'Außen' },
@@ -211,6 +211,31 @@ export function aggregateRenovationPricing(cases: RenovationCase[]) {
     sum_max: sumMax,
     sum_mid: roundCurrency((sumMin + sumMax) / 2),
   };
+}
+
+export function allocateSelectedRenovationCosts(
+  cases: RenovationCase[],
+  selectedTotal: number,
+): RenovationCase[] {
+  const selected = cases.filter((item) => item.selected && item.ai);
+  const midpointTotal = selected.reduce((sum, item) => {
+    if (!item.ai) return sum;
+    return sum + (item.ai.price_min + item.ai.price_max) / 2;
+  }, 0);
+  let allocated = 0;
+
+  return cases.map((item) => {
+    if (!item.selected || !item.ai || midpointTotal <= 0) {
+      return { ...item, cost_selected: 0 };
+    }
+    const isLast = selected[selected.length - 1]?.id === item.id;
+    const proportional = roundCurrency(
+      selectedTotal * (((item.ai.price_min + item.ai.price_max) / 2) / midpointTotal),
+    );
+    const costSelected = isLast ? roundCurrency(selectedTotal - allocated) : proportional;
+    allocated = roundCurrency(allocated + costSelected);
+    return { ...item, cost_selected: Math.max(0, costSelected) };
+  });
 }
 
 export function costForCase(item: RenovationCase): number {

@@ -1,6 +1,6 @@
 "use client";
 
-import { Button, Dropdown, StickyActionBar, TextField } from '@/components/ui';
+import { Button, Dropdown, ReadOnlyField, StickyActionBar, TextField } from '@/components/ui';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { authFetch } from '@/lib/api/authFetch';
 import { parseDecimalInput } from '@/lib/detailCheck/acquisitionCosts';
@@ -54,22 +54,15 @@ const numberFormatter = new Intl.NumberFormat('de-DE', {
   maximumFractionDigits: 2,
 });
 
+const residentialTypeOptions = [
+  { value: 'EIGENTUMSWOHNUNG', label: 'Eigentumswohnung (= Mehrfamilienhaus)' },
+  { value: 'HOLZBAUWEISE', label: 'Holzbauweise / minderer Standard' },
+  { value: 'DENKMALGESCHUETZT', label: 'Denkmalgeschütztes Gebäude (Einzelfall)' },
+];
+
 function valueString(value: number | string | null | undefined): string {
   if (value == null) return '';
   return String(value).replace('.', ',');
-}
-
-function ReadOnlyField({ value, unit }: { value: string; unit: string }) {
-  return (
-    <div className="relative">
-      <input
-        readOnly
-        value={value}
-        className="w-full rounded-lg border border-border bg-muted px-4 py-2 pr-14 text-right"
-      />
-      <span className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground">{unit}</span>
-    </div>
-  );
 }
 
 function ModeButton({
@@ -117,6 +110,7 @@ function DepreciationContent() {
   const [plotAreaM2, setPlotAreaM2] = useState('');
   const [coOwnershipNumerator, setCoOwnershipNumerator] = useState('');
   const [coOwnershipDenominator, setCoOwnershipDenominator] = useState('');
+  const [propertyCategory, setPropertyCategory] = useState('EIGENTUMSWOHNUNG');
   const [context, setContext] = useState<DepreciationResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -141,6 +135,7 @@ function DepreciationContent() {
         setPlotAreaM2(valueString(data.plotAreaM2));
         setCoOwnershipNumerator(valueString(data.coOwnershipNumerator));
         setCoOwnershipDenominator(valueString(data.coOwnershipDenominator));
+        setPropertyCategory(data.propertyCategory || 'EIGENTUMSWOHNUNG');
       } catch (loadError) {
         if (!cancelled) {
           setError(loadError instanceof Error ? loadError.message : 'Abschreibung konnte nicht geladen werden.');
@@ -158,12 +153,13 @@ function DepreciationContent() {
 
   const individualRnd = useMemo(() => {
     if (!context) return null;
+    if (!propertyCategory || MODERNIZATION_FIELDS.some(([field]) => !modernization[field])) return null;
     return computeRemainingUsefulLife({
-      category: context.propertyCategory,
+      category: propertyCategory,
       yearOfConstruction: context.yearOfConstruction,
       selections: modernization,
     });
-  }, [context, modernization]);
+  }, [context, modernization, propertyCategory]);
 
   const individualSplit = useMemo(() => {
     if (!context) return null;
@@ -185,21 +181,10 @@ function DepreciationContent() {
 
   const setMode = (mode: DepreciationMode) => {
     setDepreciationMode(mode);
-    if (mode === 'INDIVIDUAL') {
-      setModernization({
-        modernizationRoof: '',
-        modernizationWindows: '',
-        modernizationLines: '',
-        modernizationHeating: '',
-        modernizationFacade: '',
-        modernizationBathrooms: '',
-        modernizationInterior: '',
-      });
-    }
   };
 
-  const handleNext = async () => {
-    if (isSaving) return;
+  const persist = async (): Promise<boolean> => {
+    if (isSaving) return false;
     setIsSaving(true);
     setError(null);
     try {
@@ -209,6 +194,7 @@ function DepreciationContent() {
         body: JSON.stringify({
           quickCheckId,
           workflowId,
+          propertyCategory,
           depreciationMode,
           priceSplitMode,
           modernization,
@@ -219,18 +205,24 @@ function DepreciationContent() {
         }),
       });
       if (!res.ok) throw new Error(await res.text());
-      router.push(`/property-valuation/detail-check/renovation${suffix}`);
+      return true;
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : 'Abschreibung konnte nicht gespeichert werden.');
+      return false;
     } finally {
       setIsSaving(false);
     }
+  };
+
+  const saveAndNavigate = async (path: string) => {
+    if (await persist()) router.push(`${path}${suffix}`);
   };
 
   return (
     <PropertyValuationLayout
       currentStep={4}
       title="Restnutzungsdauer in Jahren"
+      beforeStepChange={persist}
       actions={
         <Button
           label="Überspringen"
@@ -247,10 +239,20 @@ function DepreciationContent() {
           </div>
         )}
 
-        {isLoading || !context || !selectedRnd || !selectedSplit ? (
+        {isLoading || !context || !selectedSplit ? (
           <p className="text-sm text-muted-foreground">Abschreibung wird geladen...</p>
         ) : (
           <div className="space-y-8">
+            <section className="max-w-xl">
+              <Dropdown
+                label="Wohnart"
+                options={residentialTypeOptions}
+                value={propertyCategory}
+                onChange={(event) => setPropertyCategory(event.target.value)}
+                helperText="Die Wohnart beeinflusst die individuelle Restnutzungsdauer."
+              />
+            </section>
+
             <section className="grid gap-4 md:grid-cols-[220px_1fr_1fr] md:items-center">
               <div className="flex gap-3">
                 <ModeButton label="Standard" active={depreciationMode === 'STANDARD'} onClick={() => setDepreciationMode('STANDARD')} />
@@ -258,11 +260,16 @@ function DepreciationContent() {
               </div>
               <div className="grid grid-cols-[80px_minmax(0,1fr)] items-center gap-3">
                 <span>RND:</span>
-                <ReadOnlyField value={numberFormatter.format(selectedRnd.remainingUsefulLifeYears)} unit="Jahre" />
+                <ReadOnlyField
+                  value={selectedRnd ? numberFormatter.format(selectedRnd.remainingUsefulLifeYears) : '-'}
+                  suffix="Jahre"
+                  align="right"
+                  helperText={!selectedRnd ? 'Bitte zunächst alle Modernisierungsangaben auswählen.' : undefined}
+                />
               </div>
               <div className="grid grid-cols-[80px_minmax(0,1fr)] items-center gap-3">
                 <span>AfA:</span>
-                <ReadOnlyField value={numberFormatter.format(selectedRnd.afaPercent)} unit="%" />
+                <ReadOnlyField value={selectedRnd ? numberFormatter.format(selectedRnd.afaPercent) : '-'} suffix="%" align="right" />
               </div>
             </section>
 
@@ -325,11 +332,11 @@ function DepreciationContent() {
               </p>
               <div className="grid max-w-3xl gap-4 md:grid-cols-[220px_160px_220px] md:items-center">
                 <div className="text-lg font-medium">Gebäude</div>
-                <ReadOnlyField value={numberFormatter.format(selectedSplit.buildingSharePercent)} unit="%" />
-                <ReadOnlyField value={currencyFormatter.format(selectedSplit.buildingValue)} unit="€" />
+                <ReadOnlyField value={numberFormatter.format(selectedSplit.buildingSharePercent)} suffix="%" align="right" />
+                <ReadOnlyField value={currencyFormatter.format(selectedSplit.buildingValue)} suffix="€" align="right" />
                 <div className="text-lg font-medium">Grund und Boden</div>
-                <ReadOnlyField value={numberFormatter.format(selectedSplit.landSharePercent)} unit="%" />
-                <ReadOnlyField value={currencyFormatter.format(selectedSplit.landValue)} unit="€" />
+                <ReadOnlyField value={numberFormatter.format(selectedSplit.landSharePercent)} suffix="%" align="right" />
+                <ReadOnlyField value={currencyFormatter.format(selectedSplit.landValue)} suffix="€" align="right" />
               </div>
             </section>
           </div>
@@ -340,11 +347,11 @@ function DepreciationContent() {
         show
         ghostLabel={BUTTON_DETAILS.Back.label}
         ghostIcon={<BUTTON_DETAILS.Back.icon />}
-        onGhost={() => router.push(`/property-valuation/detail-check/financing${suffix}`)}
+        onGhost={() => void saveAndNavigate('/property-valuation/detail-check/financing')}
         primaryLabel="Weiter"
         primaryIcon={<BUTTON_DETAILS.Next.icon />}
         primaryDisabled={isLoading || isSaving}
-        onPrimary={handleNext}
+        onPrimary={() => void saveAndNavigate('/property-valuation/detail-check/renovation')}
       />
     </PropertyValuationLayout>
   );

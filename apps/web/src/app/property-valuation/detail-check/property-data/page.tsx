@@ -31,8 +31,16 @@ type PropertyDataResponse = FormState & {
   yearOfConstruction: number | string;
 };
 
+type PostalCodeLookupResponse = {
+  postalCode: string;
+  cities: string[];
+  federalState: { key: string; name: string } | null;
+};
+
+type PostalLookupStatus = 'idle' | 'loading' | 'resolved' | 'empty' | 'error';
+
 const EMPTY_FORM: FormState = {
-  propertyCategory: '',
+  propertyCategory: 'EIGENTUMSWOHNUNG',
   dataEntrySource: '',
   tenancyType: '',
   sourceUrl: '',
@@ -45,15 +53,6 @@ const EMPTY_FORM: FormState = {
   energyEfficiency: '',
 };
 
-const propertyCategoryOptions = [
-  { value: '', label: 'Bitte wählen...' },
-  { value: 'EIGENTUMSWOHNUNG', label: 'Eigentumswohnung' },
-  { value: 'EINFAMILIENHAUS', label: 'Einfamilienhaus (Ausbaustufe)', disabled: true },
-  { value: 'MEHRFAMILIENHAUS', label: 'Mehrfamilienhaus (Ausbaustufe)', disabled: true },
-  { value: 'HOLZBAUWEISE', label: 'Holzbauweise' },
-  { value: 'DENKMALGESCHUETZT', label: 'Denkmalgeschützte Gebäude' },
-];
-
 const dataEntrySourceOptions = [
   { value: '', label: 'Bitte wählen...' },
   { value: 'PORTAL_IMPORT', label: 'Aus Immobilienportal importieren' },
@@ -64,7 +63,7 @@ const dataEntrySourceOptions = [
 const tenancyTypeOptions = [
   { value: '', label: 'Bitte wählen...' },
   { value: 'STANDARD', label: 'Standard' },
-  { value: 'INDEXMIETE', label: 'Indexmiete' },
+  { value: 'INDEXMIETE', label: 'Indexmiete (Ausbaustufe)', disabled: true },
   { value: 'NIESSBRAUCH', label: 'Nießbrauch (Ausbaustufe)', disabled: true },
   { value: 'ERBPACHT', label: 'Erbpacht (Ausbaustufe)', disabled: true },
   { value: 'SONDERVERMIETUNG', label: 'Sondervermietung (Ausbaustufe)', disabled: true },
@@ -105,6 +104,9 @@ function PropertyDataContent() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [hasDetailCheckData, setHasDetailCheckData] = useState(false);
+  const [postalCodeWasEdited, setPostalCodeWasEdited] = useState(false);
+  const [postalLookupStatus, setPostalLookupStatus] = useState<PostalLookupStatus>('idle');
+  const [cityOptions, setCityOptions] = useState<string[]>([]);
 
   useEffect(() => {
     let cancelled = false;
@@ -118,8 +120,9 @@ function PropertyDataContent() {
         const data = await res.json() as PropertyDataResponse;
         if (cancelled) return;
         setHasDetailCheckData(data.hasDetailCheckData);
+        setPostalCodeWasEdited(false);
         setForm({
-          propertyCategory: data.propertyCategory || '',
+          propertyCategory: data.propertyCategory || 'EIGENTUMSWOHNUNG',
           dataEntrySource: data.dataEntrySource || '',
           tenancyType: data.tenancyType || '',
           sourceUrl: data.sourceUrl || '',
@@ -145,6 +148,57 @@ function PropertyDataContent() {
       cancelled = true;
     };
   }, [suffix]);
+
+  useEffect(() => {
+    const postalCode = form.postalCode;
+    if (isLoading || !/^\d{5}$/.test(postalCode)) {
+      setPostalLookupStatus('idle');
+      setCityOptions([]);
+      return;
+    }
+
+    const controller = new AbortController();
+    const timer = window.setTimeout(async () => {
+      setPostalLookupStatus('loading');
+      try {
+        const response = await authFetch(
+          `/api/address/postal-code?postalCode=${encodeURIComponent(postalCode)}`,
+          { cache: 'force-cache', signal: controller.signal },
+        );
+        if (!response.ok) throw new Error(await response.text());
+
+        const payload = await response.json() as PostalCodeLookupResponse;
+        if (controller.signal.aborted || payload.postalCode !== postalCode) return;
+
+        setCityOptions(payload.cities);
+        setPostalLookupStatus(payload.cities.length > 0 ? 'resolved' : 'empty');
+        setForm((previous) => {
+          if (previous.postalCode !== postalCode) return previous;
+          if (payload.cities.length === 1 && (postalCodeWasEdited || !previous.city.trim())) {
+            return { ...previous, city: payload.cities[0] };
+          }
+          if (
+            payload.cities.length > 1
+            && postalCodeWasEdited
+            && !payload.cities.includes(previous.city)
+          ) {
+            return { ...previous, city: '' };
+          }
+          return previous;
+        });
+      } catch (error) {
+        if (controller.signal.aborted) return;
+        console.error('Postal-code lookup failed:', error);
+        setCityOptions([]);
+        setPostalLookupStatus('error');
+      }
+    }, 250);
+
+    return () => {
+      window.clearTimeout(timer);
+      controller.abort();
+    };
+  }, [form.postalCode, isLoading, postalCodeWasEdited]);
 
   const currentYear = new Date().getFullYear();
   const liveErrors = useMemo(() => {
@@ -174,12 +228,13 @@ function PropertyDataContent() {
       return next;
     });
 
+    if (field === 'postalCode') {
+      setPostalCodeWasEdited(true);
+      setPostalLookupStatus('idle');
+      setCityOptions([]);
+    }
+
     setForm((prev) => {
-      if (field === 'propertyCategory') {
-        return value
-          ? { ...prev, propertyCategory: value }
-          : { ...prev, propertyCategory: '', dataEntrySource: '', tenancyType: '', sourceUrl: '' };
-      }
       if (field === 'dataEntrySource') {
         return { ...prev, dataEntrySource: value, tenancyType: '', sourceUrl: value === 'PORTAL_IMPORT' ? prev.sourceUrl : '' };
       }
@@ -187,12 +242,23 @@ function PropertyDataContent() {
     });
   };
 
+  const cityHelperText = postalLookupStatus === 'loading'
+    ? 'Ort wird automatisch ermittelt...'
+    : postalLookupStatus === 'resolved' && cityOptions.length === 1
+      ? 'Automatisch aus der Postleitzahl ermittelt. Der Ort bleibt änderbar.'
+      : postalLookupStatus === 'resolved'
+        ? 'Mehrere Orte gefunden. Bitte einen Vorschlag auswählen.'
+        : postalLookupStatus === 'empty'
+          ? 'Zu dieser Postleitzahl wurde kein Ort gefunden. Bitte manuell eingeben.'
+          : postalLookupStatus === 'error'
+            ? 'Automatische Ortssuche derzeit nicht verfügbar. Bitte manuell eingeben.'
+            : undefined;
+
   const validateBeforeSave = () => {
     const errors: Record<string, string> = { ...liveErrors };
     const year = Number(form.yearOfConstruction);
     const livingArea = parseDecimalInput(form.livingAreaM2);
 
-    if (!form.propertyCategory) errors.propertyCategory = 'Bitte wählen Sie eine Objektkategorie.';
     if (!form.dataEntrySource) errors.dataEntrySource = 'Bitte wählen Sie eine Erfassungsquelle.';
     if (!form.tenancyType) errors.tenancyType = 'Bitte wählen Sie eine Miet-/Nutzungsart.';
     if (form.dataEntrySource === 'PORTAL_IMPORT' && form.sourceUrl) {
@@ -214,8 +280,8 @@ function PropertyDataContent() {
     return Object.keys(errors).length === 0;
   };
 
-  const handleNext = async () => {
-    if (isSaving || !validateBeforeSave()) return;
+  const persist = async (): Promise<boolean> => {
+    if (isSaving || !validateBeforeSave()) return false;
 
     setIsSaving(true);
     setTopError(null);
@@ -251,21 +317,33 @@ function PropertyDataContent() {
         if (payload?.fieldErrors) {
           setFieldErrors(payload.fieldErrors);
           setTopError('Bitte prüfen Sie die markierten Felder.');
-          return;
+          return false;
         }
         throw new Error(payload?.error ?? responseText);
       }
 
       const payload = await res.json() as { workflowId: string };
-      const nextSuffix = quickCheckId
-        ? suffix
-        : `?workflowId=${encodeURIComponent(payload.workflowId)}`;
-      router.push(`/property-valuation/detail-check/acquisition-costs${nextSuffix}`);
+      if (!quickCheckId && !workflowId) {
+        window.history.replaceState(null, '', `${window.location.pathname}?workflowId=${encodeURIComponent(payload.workflowId)}`);
+      }
+      return true;
     } catch (error) {
       setTopError(error instanceof Error ? error.message : 'Objektdaten konnten nicht gespeichert werden.');
+      return false;
     } finally {
       setIsSaving(false);
     }
+  };
+
+  const handleNext = async () => {
+    if (!(await persist())) return;
+    const currentWorkflowId = new URLSearchParams(window.location.search).get('workflowId');
+    const nextSuffix = quickCheckId
+      ? suffix
+      : currentWorkflowId
+        ? `?workflowId=${encodeURIComponent(currentWorkflowId)}`
+        : suffix;
+    router.push(`/property-valuation/detail-check/acquisition-costs${nextSuffix}`);
   };
 
   const handleBack = () => {
@@ -275,7 +353,7 @@ function PropertyDataContent() {
   };
 
   return (
-    <PropertyValuationLayout currentStep={0} title="Objektdaten">
+    <PropertyValuationLayout currentStep={0} title="Objektdaten" beforeStepChange={persist}>
       <div className="pb-24">
         {topError && (
           <div aria-live="assertive" className="mb-4 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
@@ -288,21 +366,13 @@ function PropertyDataContent() {
         ) : (
           <div className="space-y-7">
             <section>
-              <h2 className="mb-3 text-lg font-medium text-foreground">Objektkategorisierung</h2>
-              <div className="grid gap-4 md:grid-cols-3">
-                <Dropdown
-                  label="Objektkategorisierung"
-                  options={propertyCategoryOptions}
-                  value={form.propertyCategory}
-                  onChange={(event) => updateForm('propertyCategory', event.target.value)}
-                  error={displayErrors.propertyCategory}
-                />
+              <h2 className="mb-3 text-lg font-medium text-foreground">Erfassung</h2>
+              <div className="grid gap-4 md:grid-cols-2">
                 <Dropdown
                   label="Erfassungsquelle"
                   options={dataEntrySourceOptions}
                   value={form.dataEntrySource}
                   onChange={(event) => updateForm('dataEntrySource', event.target.value)}
-                  disabled={!form.propertyCategory}
                   error={displayErrors.dataEntrySource}
                 />
                 <Dropdown
@@ -335,6 +405,7 @@ function PropertyDataContent() {
                 <TextField
                   label="Straße + Hausnummer"
                   placeholder="Straße"
+                  autoComplete="street-address"
                   value={form.streetHouseNumber}
                   onChange={(event) => updateForm('streetHouseNumber', event.target.value)}
                   error={displayErrors.streetHouseNumber}
@@ -343,6 +414,7 @@ function PropertyDataContent() {
                   label="Postleitzahl"
                   placeholder="Postleitzahl"
                   inputMode="numeric"
+                  autoComplete="postal-code"
                   value={form.postalCode}
                   onChange={(event) => updateForm('postalCode', event.target.value.replace(/\D/g, '').slice(0, 5))}
                   error={displayErrors.postalCode}
@@ -350,10 +422,19 @@ function PropertyDataContent() {
                 <TextField
                   label="Ort"
                   placeholder="Ort"
+                  autoComplete="address-level2"
+                  list={cityOptions.length > 1 ? 'detail-check-city-options' : undefined}
+                  aria-busy={postalLookupStatus === 'loading'}
                   value={form.city}
                   onChange={(event) => updateForm('city', event.target.value)}
                   error={displayErrors.city}
+                  helperText={cityHelperText}
                 />
+                {cityOptions.length > 1 && (
+                  <datalist id="detail-check-city-options">
+                    {cityOptions.map((city) => <option key={city} value={city} />)}
+                  </datalist>
+                )}
               </div>
             </section>
 

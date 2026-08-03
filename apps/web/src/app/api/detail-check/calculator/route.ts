@@ -200,7 +200,7 @@ async function loadContext(userId: string, workflowId: string, quickCheckId: str
 }
 
 function buildParams(saved: Record<string, unknown> | undefined, context: Awaited<ReturnType<typeof loadContext>>): CalculatorParams {
-  const fallbackStart = normalizeYyyymm(context.valuationDate, new Date().toISOString().slice(0, 7));
+  const fallbackStart = new Date().toISOString().slice(0, 7);
   const livingAreaM2 = context.livingAreaM2;
   const rentStart = toNumber(saved?.monthly_rent_start ?? context.coldRent);
   const fallbackRentIndex = estimateRentIndexPerM2(context.yearOfConstruction, livingAreaM2)
@@ -229,6 +229,7 @@ function buildParams(saved: Record<string, unknown> | undefined, context: Awaite
 
   return {
     startYyyymm: normalizeYyyymm(saved?.start_yyyymm as string | undefined, fallbackStart),
+    rentStartYyyymm: normalizeYyyymm(context.valuationDate, fallbackStart),
     monthlyRentStart: rentStart,
     livingAreaM2,
     yearOfConstruction: context.yearOfConstruction,
@@ -309,6 +310,7 @@ export async function POST(request: Request) {
     : roundCurrency(context.loanAmount * ((interestRate + context.repaymentRate) / 100) / 12);
   const params: CalculatorParams = {
     startYyyymm: normalizeYyyymm(input.startYyyymm, new Date().toISOString().slice(0, 7)),
+    rentStartYyyymm: normalizeYyyymm(context.valuationDate, new Date().toISOString().slice(0, 7)),
     monthlyRentStart: toNumber(input.monthlyRentStart),
     livingAreaM2: context.livingAreaM2,
     yearOfConstruction: context.yearOfConstruction,

@@ -45,6 +45,10 @@ export async function GET(request: Request) {
   );
 
   const saved = rows[0];
+  const propertyRows = await db.query(
+    'SELECT parking_spaces FROM detail_check_property_data WHERE user_id = $1 AND workflow_id = $2 LIMIT 1',
+    [userId, workflowId],
+  );
 
   return NextResponse.json({
     workflowId,
@@ -57,6 +61,7 @@ export async function GET(request: Request) {
     serviceChargesAllocable: toNumber(saved?.service_charges_allocable ?? 0),
     serviceChargesNonAllocable: toNumber(saved?.service_charges_non_allocable ?? 0),
     serviceChargesTotal: toNumber(saved?.service_charges_total ?? 0),
+    parkingSpaces: toNumber(propertyRows.rows[0]?.parking_spaces ?? 0),
     plausibilityWarningNk: saved?.plausibility_warning_nk ?? false,
   });
 }

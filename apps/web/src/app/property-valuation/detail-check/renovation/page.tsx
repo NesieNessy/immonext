@@ -1,10 +1,10 @@
 "use client";
 
-import { Button, Dropdown, StickyActionBar, TextArea, TextField } from '@/components/ui';
+import { Button, Dropdown, ReadOnlyField, StickyActionBar, TextArea, TextField } from '@/components/ui';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
 import { authFetch } from '@/lib/api/authFetch';
-import { parseDecimalInput } from '@/lib/detailCheck/acquisitionCosts';
+import { formatDecimalInput, parseDecimalInput } from '@/lib/detailCheck/acquisitionCosts';
 import {
   aggregateRenovationPricing,
   categoryLabel,
@@ -18,6 +18,7 @@ import {
 } from '@/lib/detailCheck/renovation';
 import { uploadDocument } from '@/lib/supabase/document.supabase';
 import { format } from 'date-fns';
+import { Upload } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useEffect, useMemo, useState } from 'react';
 import { PropertyValuationLayout } from '../PropertyValuationLayout';
@@ -67,11 +68,7 @@ function measureOptions(category: RenovationCategory | '') {
 }
 
 function ReadOnlyPill({ value }: { value: string }) {
-  return (
-    <div className="rounded-lg border border-border bg-muted px-4 py-2 text-right font-medium text-foreground">
-      {value}
-    </div>
-  );
+  return <ReadOnlyField value={value} align="right" emphasis />;
 }
 
 function RenovationContent() {
@@ -113,7 +110,7 @@ function RenovationContent() {
         setContext(data.context);
         setSumSelected(data.pricing.sum_selected);
         setFinancingMode(data.financing.mode);
-        setFinancedAmount(String(data.financing.financedAmount || '').replace('.', ','));
+        setFinancedAmount(formatDecimalInput(String(data.financing.financedAmount || '')));
         if (data.cases.length > 0) setStage('PRICING');
       } catch (loadError) {
         if (!cancelled) {
@@ -144,27 +141,30 @@ function RenovationContent() {
   }, [totals.sum_min, totals.sum_mid, totals.sum_max]);
 
   useEffect(() => {
-    if (financingMode === 'FREMD') setFinancedAmount(String(sumSelected).replace('.', ','));
+    if (financingMode === 'FREMD') setFinancedAmount(formatDecimalInput(String(sumSelected)));
     if (financingMode === 'EIGEN') setFinancedAmount('');
   }, [financingMode, sumSelected]);
 
   const handleUploadRenovationFiles = async (files: File[]) => {
-    if (!user || !quickCheckId || files.length === 0) return;
+    if (!user || files.length === 0) return;
     setIsUploadingFiles(true);
     setUploadFilesError(null);
     try {
       for (const file of files) {
-        const { error } = await uploadDocument(user.id, file, {
+        const { document: uploaded, error } = await uploadDocument(user.id, file, {
           userId: user.id,
           category: 'Detailbewertung',
           name: file.name.replace(/\.[^/.]+$/, ''),
           propertyId: null,
-          quickCheckId: Number(quickCheckId),
+          quickCheckId: quickCheckId ? Number(quickCheckId) : null,
           documentDate: format(new Date(), 'yyyy-MM-dd'),
         });
         if (error) {
           setUploadFilesError(error);
           break;
+        }
+        if (uploaded) {
+          setUploadNames((prev) => [...prev.filter((name) => name !== `local:${file.name}`), uploaded.fileName]);
         }
       }
     } finally {
@@ -223,7 +223,7 @@ function RenovationContent() {
       setCases(data.cases);
       setSumSelected(data.pricing.sum_selected);
       setFinancingMode(data.financing.mode);
-      setFinancedAmount(String(data.financing.financedAmount || '').replace('.', ','));
+      setFinancedAmount(formatDecimalInput(String(data.financing.financedAmount || '')));
       setStage('PRICING');
       return true;
     } catch (saveError) {
@@ -239,8 +239,8 @@ function RenovationContent() {
     if (ok && stage === 'PRICING') router.push(`/property-valuation/detail-check/calculator${suffix}`);
   };
 
-  const continueWithoutRenovations = async () => {
-    if (isSaving) return;
+  const continueWithoutRenovations = async (navigate = true): Promise<boolean> => {
+    if (isSaving) return false;
 
     setIsSaving(true);
     setError(null);
@@ -257,12 +257,22 @@ function RenovationContent() {
         }),
       });
       if (!res.ok) throw new Error(await res.text());
-      router.push(`/property-valuation/detail-check/calculator${suffix}`);
+      if (navigate) router.push(`/property-valuation/detail-check/calculator${suffix}`);
+      return true;
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : 'Sanierung konnte nicht übersprungen werden.');
+      return false;
     } finally {
       setIsSaving(false);
     }
+  };
+
+  const persistCurrent = async (): Promise<boolean> => cases.length > 0
+    ? evaluateCases()
+    : continueWithoutRenovations(false);
+
+  const handleBack = async () => {
+    if (await persistCurrent()) router.push(`/property-valuation/detail-check/depreciation${suffix}`);
   };
 
   const updateCase = (id: string, patch: Partial<RenovationCase>) => {
@@ -276,13 +286,14 @@ function RenovationContent() {
     <PropertyValuationLayout
       currentStep={5}
       title="Sanierungskosten"
+      beforeStepChange={persistCurrent}
       actions={
         <Button
           label="Überspringen"
           variant="outline"
           hideLabelOnMobile
           disabled={isLoading || isSaving || cases.length > 0}
-          onClick={() => void continueWithoutRenovations()}
+          onClick={() => void continueWithoutRenovations(true)}
         />
       }
     >
@@ -334,12 +345,18 @@ function RenovationContent() {
                   className="md:col-span-2"
                 />
                 <div className="rounded-lg border border-dashed border-border bg-card px-4 py-3">
-                  <label className="mb-2 block text-sm text-foreground">Bilder aus Exposé oder Besichtigung</label>
+                    <div className="mb-3 flex items-start gap-3">
+                      <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary"><Upload size={18} /></span>
+                      <div>
+                        <h3 className="font-medium text-foreground">Bilder und Unterlagen hochladen</h3>
+                        <p className="text-xs text-muted-foreground">Exposé, Besichtigungsfotos oder vorhandene Kostendokumente</p>
+                      </div>
+                    </div>
                   <input
                     type="file"
                     multiple
                     accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx"
-                    disabled={!quickCheckId || isUploadingFiles}
+                    disabled={!user || isUploadingFiles}
                     onChange={(event) => {
                       const files = Array.from(event.target.files ?? []);
                       setUploadNames(files.map((file) => `local:${file.name}`));
@@ -348,10 +365,9 @@ function RenovationContent() {
                     className="block w-full text-sm text-muted-foreground disabled:opacity-50"
                   />
                   <p className="mt-2 text-xs text-muted-foreground">
-                    {!quickCheckId
-                      ? 'Bitte zuerst speichern, um Dateien hochzuladen.'
-                      : 'Dateien werden hochgeladen und erscheinen anschließend auch auf der Dokumente-Seite; eine automatische Auswertung folgt mit dem KI-Service.'}
+                    Dateien werden gespeichert und erscheinen auf der Dokumente-Seite. Die Preisindikation verwendet derzeit Kategorie, Wohnfläche und PLZ; eine KI-Bildauswertung ist noch nicht angebunden.
                   </p>
+                  {uploadNames.length > 0 && <p className="mt-2 text-xs font-medium text-primary">Ausgewählt: {uploadNames.map((name) => name.replace(/^local:/, '')).join(', ')}</p>}
                   {isUploadingFiles && <p className="mt-1 text-xs text-muted-foreground">Lädt hoch…</p>}
                   {uploadFilesError && <p className="mt-1 text-xs text-destructive">{uploadFilesError}</p>}
                 </div>
@@ -481,7 +497,10 @@ function RenovationContent() {
                               <div className="font-medium">{item.massnahme}</div>
                               <div className="text-xs text-muted-foreground">{categoryLabel(item.kategorie)}</div>
                             </td>
-                            <td className="px-4 py-3 text-right">{formatCurrency(costForCase(item))}</td>
+                            <td className="px-4 py-3 text-right">
+                              <div>{formatCurrency(costForCase(item))}</div>
+                              <div className="text-xs font-normal text-muted-foreground">Aus dem gewählten Gesamtwert anteilig auf diese Maßnahme verteilt</div>
+                            </td>
                             <td className="px-4 py-3">
                               <Dropdown
                                 aria-label={`${item.massnahme} Zeitpunkt`}
@@ -521,11 +540,13 @@ function RenovationContent() {
                               />
                               {financingMode === 'TEILWEISE' && (
                                 <TextField
+                                  label="Fremdkapitalanteil"
                                   value={financedAmount}
                                   onChange={(event) => setFinancedAmount(event.target.value)}
                                   inputMode="decimal"
                                   suffix="€"
                                   aria-label="Fremdfinanzierter Anteil"
+                                  helperText="Der verbleibende Betrag wird als Eigenkapital behandelt."
                                 />
                               )}
                             </div>
@@ -548,12 +569,12 @@ function RenovationContent() {
         show
         ghostLabel={BUTTON_DETAILS.Back.label}
         ghostIcon={<BUTTON_DETAILS.Back.icon />}
-        onGhost={() => router.push(`/property-valuation/detail-check/depreciation${suffix}`)}
+        onGhost={() => void handleBack()}
         primaryLabel={primaryLabel}
         primaryIcon={<BUTTON_DETAILS.Next.icon />}
         primaryDisabled={isLoading || isSaving}
         onPrimary={stage === 'ENTRY'
-          ? (cases.length === 0 ? () => void continueWithoutRenovations() : evaluateCases)
+          ? (cases.length === 0 ? () => void continueWithoutRenovations(true) : evaluateCases)
           : saveAndNext}
       />
     </PropertyValuationLayout>

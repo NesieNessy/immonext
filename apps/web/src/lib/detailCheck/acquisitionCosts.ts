@@ -28,9 +28,28 @@ export function roundCurrency(value: number): number {
 }
 
 export function parseDecimalInput(value: string): number {
-  const normalized = value.replace(/\./g, '').replace(',', '.');
+  const trimmed = value.trim().replace(/\s/g, '');
+  let normalized: string;
+
+  if (trimmed.includes(',')) {
+    normalized = trimmed.replace(/\./g, '').replace(',', '.');
+  } else {
+    const dotParts = trimmed.split('.');
+    const hasGermanThousandsGrouping = dotParts.length > 1
+      && dotParts.slice(1).every((part) => /^\d{3}$/.test(part));
+    normalized = hasGermanThousandsGrouping ? dotParts.join('') : trimmed;
+  }
+
   const parsed = Number(normalized);
   return Number.isFinite(parsed) ? parsed : 0;
+}
+
+export function formatDecimalInput(value: string, maximumFractionDigits = 2): string {
+  if (!value.trim()) return '';
+  return new Intl.NumberFormat('de-DE', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits,
+  }).format(parseDecimalInput(value));
 }
 
 export function resolveStateFromPostalCode(postalCode?: string | null): StateCode | null {

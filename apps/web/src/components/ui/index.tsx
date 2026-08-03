@@ -6,6 +6,7 @@ export { Checkbox } from "./Checkbox";
 export { ComingSoonButton } from "./ComingSoonButton";
 export { ConfirmDeleteModal } from "./ConfirmDeleteModal";
 export { Diagram } from "./Diagram";
+export { CalculatedPanel, DetailFieldLegend, MetricCard, ReadOnlyField } from "./DetailValue";
 export { Dropdown } from "./Dropdown";
 export { Gauge } from "./Gauge";
 export { Header } from "./Header";
@@ -30,6 +31,7 @@ export { Tag } from "./Tag";
 export type { TagSize, TagVariant } from "./Tag";
 export { TextArea } from "./TextArea";
 export { TextField } from "./TextField";
+export { MonthField } from "./MonthField";
 export { TextFieldWithIcon } from "./TextFieldWithIcon";
 export { Tile } from "./Tile";
 export { TileWithImage } from "./TileWithImage";
@@ -39,4 +41,3 @@ export { UploadButton } from "./UploadButton";
 
 // Re-export common components for convenience
 export { Icons, Typography } from "../common";
-

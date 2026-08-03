@@ -1,9 +1,9 @@
 "use client";
 
-import { Dropdown, StickyActionBar, TextField } from '@/components/ui';
+import { Dropdown, ReadOnlyField, StickyActionBar, TextField } from '@/components/ui';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { authFetch } from '@/lib/api/authFetch';
-import { parseDecimalInput } from '@/lib/detailCheck/acquisitionCosts';
+import { formatDecimalInput, parseDecimalInput } from '@/lib/detailCheck/acquisitionCosts';
 import {
   computeFinancing,
   computeIndividualAdditionalCosts,
@@ -66,7 +66,7 @@ const variantOptions = [
 
 function valueString(value: number | string | null | undefined): string {
   if (value == null) return '';
-  return String(value).replace('.', ',');
+  return formatDecimalInput(String(value));
 }
 
 function money(value: number): string {
@@ -78,29 +78,11 @@ function percent(value: number): string {
 }
 
 function ReadOnlyMoney({ value, bold = false }: { value: number; bold?: boolean }) {
-  return (
-    <div className="relative">
-      <input
-        readOnly
-        value={money(value)}
-        className={`w-full rounded-lg border border-border bg-muted px-4 py-2 pr-10 text-right ${bold ? 'font-semibold' : ''}`}
-      />
-      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">€</span>
-    </div>
-  );
+  return <ReadOnlyField value={money(value)} suffix="€" align="right" emphasis={bold} />;
 }
 
 function ReadOnlyPercent({ value }: { value: number }) {
-  return (
-    <div className="relative">
-      <input
-        readOnly
-        value={percent(value)}
-        className="w-full rounded-lg border border-border bg-muted px-4 py-2 pr-10 text-right"
-      />
-      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">%</span>
-    </div>
-  );
+  return <ReadOnlyField value={percent(value)} suffix="%" align="right" />;
 }
 
 function MoneyInput({
@@ -118,6 +100,7 @@ function MoneyInput({
       inputMode="decimal"
       suffix="€"
       onChange={(event) => onChange(event.target.value)}
+      onBlur={() => onChange(formatDecimalInput(value))}
       readOnly={readOnly}
       className={readOnly ? 'bg-muted text-right' : 'text-right'}
     />
@@ -152,7 +135,7 @@ function FinancingContent() {
     interestPeriodYears: '10',
   });
   const [selectedVariant, setSelectedVariant] = useState<FinancingVariant | ''>('OFFER');
-  const [repaymentRate, setRepaymentRate] = useState(2);
+  const [repaymentRateInput, setRepaymentRateInput] = useState('2');
   const [interestAdjustmentFactor, setInterestAdjustmentFactor] = useState(1);
   const [offerInterestRate, setOfferInterestRate] = useState<number | null>(null);
   const [individualInterestRate, setIndividualInterestRate] = useState<number | null>(null);
@@ -184,7 +167,7 @@ function FinancingContent() {
         if (cancelled) return;
 
         setSelectedVariant(data.selectedVariant);
-        setRepaymentRate(data.repaymentRate);
+        setRepaymentRateInput(valueString(data.repaymentRate));
         setInterestAdjustmentFactor(data.interestAdjustmentFactor);
         setOfferInterestRate(data.offer.computed.interestRate);
         setIndividualInterestRate(data.individual.computed.interestRate);
@@ -224,6 +207,11 @@ function FinancingContent() {
       cancelled = true;
     };
   }, [suffix]);
+
+  const repaymentRate = Math.max(0, Math.min(20, parseDecimalInput(repaymentRateInput)));
+  const repaymentRateError = parseDecimalInput(repaymentRateInput) < 0 || parseDecimalInput(repaymentRateInput) > 20
+    ? 'Bitte einen Tilgungssatz zwischen 0 und 20 % eingeben.'
+    : '';
 
   const offerValues = useMemo(() => ({
     purchasePrice: parseDecimalInput(offer.purchasePrice),
@@ -283,8 +271,8 @@ function FinancingContent() {
     if (field === 'interestPeriodYears') setIndividualInterestRate(null);
   };
 
-  const handleNext = async () => {
-    if (isSaving) return;
+  const persist = async (): Promise<boolean> => {
+    if (isSaving || repaymentRateError) return false;
     setIsSaving(true);
     setError(null);
     try {
@@ -314,16 +302,21 @@ function FinancingContent() {
         }),
       });
       if (!res.ok) throw new Error(await res.text());
-      router.push(`/property-valuation/detail-check/depreciation${suffix}`);
+      return true;
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : 'Finanzierung konnte nicht gespeichert werden.');
+      return false;
     } finally {
       setIsSaving(false);
     }
   };
 
+  const saveAndNavigate = async (path: string) => {
+    if (await persist()) router.push(`${path}${suffix}`);
+  };
+
   return (
-    <PropertyValuationLayout currentStep={3} title="Finanzierung">
+    <PropertyValuationLayout currentStep={3} title="Finanzierung" beforeStepChange={persist}>
       <div className="pb-24">
 
         {error && (
@@ -397,6 +390,15 @@ function FinancingContent() {
             </div>
 
             <aside className="space-y-4">
+              <TextField
+                label="Tilgungssatz p.a."
+                value={repaymentRateInput}
+                inputMode="decimal"
+                suffix="%"
+                error={repaymentRateError}
+                helperText="Gemeinsame Annahme für Angebot und individuelle Finanzierung."
+                onChange={(event) => setRepaymentRateInput(event.target.value)}
+              />
               <Dropdown
                 label="Womit möchten Sie weiter kalkulieren?"
                 options={variantOptions}
@@ -407,7 +409,7 @@ function FinancingContent() {
                 Die gewählte Spalte wird in den Folgeschritten für Gesamtkosten, Eigenkapital, Darlehen, Zins und Kapitaldienst verwendet.
               </div>
               <div className="rounded-lg border border-border px-4 py-3 text-sm text-muted-foreground">
-                Technische Annahme: Tilgungssatz {percent(repaymentRate)} % p.a.; Zinsfaktor {interestAdjustmentFactor.toFixed(2)}.
+                Kapitaldienst pro Monat = Darlehenssumme × (Zins + Tilgungssatz) / 12.
               </div>
             </aside>
           </div>
@@ -418,11 +420,11 @@ function FinancingContent() {
         show
         ghostLabel={BUTTON_DETAILS.Back.label}
         ghostIcon={<BUTTON_DETAILS.Back.icon />}
-        onGhost={() => router.push(`/property-valuation/detail-check/leasing-or-rentals${suffix}`)}
+        onGhost={() => void saveAndNavigate('/property-valuation/detail-check/leasing-or-rentals')}
         primaryLabel="Weiter"
         primaryIcon={<BUTTON_DETAILS.Next.icon />}
-        primaryDisabled={isLoading || isSaving || !selectedVariant}
-        onPrimary={handleNext}
+        primaryDisabled={isLoading || isSaving || !selectedVariant || Boolean(repaymentRateError)}
+        onPrimary={() => void saveAndNavigate('/property-valuation/detail-check/depreciation')}
       />
     </PropertyValuationLayout>
   );

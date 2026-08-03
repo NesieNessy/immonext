@@ -12,6 +12,8 @@ import { NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
 
+const PROPERTY_CATEGORIES = new Set(['EIGENTUMSWOHNUNG', 'HOLZBAUWEISE', 'DENKMALGESCHUETZT']);
+
 function toNumber(value: unknown): number {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : 0;
@@ -135,6 +137,10 @@ export async function POST(request: Request) {
   const quickCheckId = input.quickCheckId ? String(input.quickCheckId) : null;
   const workflowId = workflowIdFor(userId, quickCheckId, input.workflowId ? String(input.workflowId) : null);
   const context = await loadContext(userId, workflowId, quickCheckId);
+  const requestedPropertyCategory = String(input.propertyCategory ?? context.propertyCategory);
+  const propertyCategory = PROPERTY_CATEGORIES.has(requestedPropertyCategory)
+    ? requestedPropertyCategory
+    : 'EIGENTUMSWOHNUNG';
   const depreciationMode: DepreciationMode = input.depreciationMode === 'INDIVIDUAL' ? 'INDIVIDUAL' : 'STANDARD';
   const priceSplitMode: PriceSplitMode = input.priceSplitMode === 'INDIVIDUAL' ? 'INDIVIDUAL' : 'STANDARD';
   const modernization: ModernizationSelections = { ...emptyModernization(), ...(input.modernization ?? {}) };
@@ -145,7 +151,7 @@ export async function POST(request: Request) {
   const rnd = depreciationMode === 'STANDARD'
     ? { remainingUsefulLifeYears: 50, afaPercent: 2 }
     : computeRemainingUsefulLife({
-        category: context.propertyCategory,
+        category: propertyCategory,
         yearOfConstruction: context.yearOfConstruction,
         selections: modernization,
       });
@@ -218,6 +224,13 @@ export async function POST(request: Request) {
       split.landValue,
       split.landSharePercent,
     ],
+  );
+
+  await db.query(
+    `UPDATE detail_check_property_data
+     SET property_category = $3, updated_at = NOW()
+     WHERE user_id = $1 AND workflow_id = $2`,
+    [userId, workflowId, propertyCategory],
   );
 
   return NextResponse.json({ status: 'OK', next: 'SANIERUNG', rnd, split });

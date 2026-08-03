@@ -10,6 +10,7 @@ export const CALCULATION_HORIZON_MONTHS = CALCULATION_HORIZON_YEARS * 12;
 
 export type CalculatorParams = {
   startYyyymm: string;
+  rentStartYyyymm: string;
   monthlyRentStart: number;
   livingAreaM2: number;
   yearOfConstruction: number;
@@ -260,6 +261,7 @@ function plan558(
 
   for (let offset = 0; offset < CALCULATION_HORIZON_MONTHS; offset += 1) {
     const month = addMonths(params.startYyyymm, offset);
+    if (compareMonth(month, params.rentStartYyyymm) < 0) continue;
     while (
       modernizationIndex < sortedModernizations.length
       && compareMonth(sortedModernizations[modernizationIndex].effectiveYyyymm, month) <= 0
@@ -317,6 +319,7 @@ function applyRentIncreaseOverrides(
     let effectiveYyyymm = [
       step.effectiveYyyymm,
       params.startYyyymm,
+      params.rentStartYyyymm,
       addMonths(previous, 15),
     ].sort().at(-1) ?? step.effectiveYyyymm;
 
@@ -405,6 +408,7 @@ function buildTimeline(
 
   for (let offset = 0; offset < CALCULATION_HORIZON_MONTHS; offset += 1) {
     const yyyymm = addMonths(params.startYyyymm, offset);
+    const rentalHasStarted = compareMonth(yyyymm, params.rentStartYyyymm) >= 0;
     const delta558 = delta558ByMonth.get(yyyymm) ?? 0;
     const indexedDelta558 = indexedDelta558ByMonth.get(yyyymm) ?? 0;
     const delta559 = delta559ByMonth.get(yyyymm) ?? 0;
@@ -425,7 +429,9 @@ function buildTimeline(
     const principal = roundCurrency(Math.min(balance, Math.max(0, debtService - interest)));
     balance = roundCurrency(Math.max(0, balance - principal));
     const afa = roundCurrency(params.monthlyAfa);
-    const taxableIncome = roundCurrency(rentTotal - nonAllocableCosts - afa - interest);
+    const income = rentalHasStarted ? rentTotal : 0;
+    const indexedIncome = rentalHasStarted ? rentTotalWithRentIndex : 0;
+    const taxableIncome = roundCurrency(income - nonAllocableCosts - afa - interest);
     const taxResult = calculateTaxes(
       taxableIncome,
       params.taxRate,
@@ -434,7 +440,6 @@ function buildTimeline(
     );
     const taxes = taxResult.taxes;
     taxLossCarryforward = taxResult.lossCarryforward;
-    const income = rentTotal;
     const expenses = roundCurrency(debtService + nonAllocableCosts + renovationPayment);
     const monthlyDelta = roundCurrency(income - expenses);
     const afterTaxCashflow = roundCurrency(monthlyDelta - taxes);
@@ -446,20 +451,20 @@ function buildTimeline(
     if (!breakEven && cumulativeCashflow >= 0) breakEven = yyyymm;
 
     const indexedTaxResult = calculateTaxes(
-      roundCurrency(rentTotalWithRentIndex - nonAllocableCosts - afa - interest),
+      roundCurrency(indexedIncome - nonAllocableCosts - afa - interest),
       params.taxRate,
       params.taxableLossesOffsettable === true,
       indexedLossCarryforward,
     );
     indexedLossCarryforward = indexedTaxResult.lossCarryforward;
-    runningWithRentIndex = roundCurrency(runningWithRentIndex + rentTotalWithRentIndex - expenses - indexedTaxResult.taxes);
+    runningWithRentIndex = roundCurrency(runningWithRentIndex + indexedIncome - expenses - indexedTaxResult.taxes);
     if (!breakEvenWithRentIndex && runningWithRentIndex >= 0) breakEvenWithRentIndex = yyyymm;
 
     if (includeTimeline) {
       timeline.push({
         yyyymm,
-        rentTotal,
-        rentTotalWithRentIndex,
+        rentTotal: income,
+        rentTotalWithRentIndex: indexedIncome,
         delta558,
         delta559,
         renovationPayment,

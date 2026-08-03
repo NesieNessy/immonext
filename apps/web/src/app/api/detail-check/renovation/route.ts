@@ -1,9 +1,11 @@
 import {
+  allocateSelectedRenovationCosts,
   aggregateRenovationPricing,
   evaluateRenovationCases,
   type RenovationCase,
   type RenovationFinancingMode,
 } from '@/lib/detailCheck/renovation';
+import { computeFinancing, computeIndividualAdditionalCosts, type InterestPeriodYears } from '@/lib/detailCheck/financing';
 import { requireUserId, workflowIdFor } from '@/lib/server/auth';
 import { db } from '@/lib/server/db';
 import { NextResponse } from 'next/server';
@@ -24,10 +26,15 @@ function normalizeFinancingMode(value: unknown): RenovationFinancingMode {
   return 'FREMD';
 }
 
+function interestYears(value: unknown): InterestPeriodYears {
+  const parsed = Number(value);
+  return parsed === 15 || parsed === 20 ? parsed : 10;
+}
+
 async function loadContext(userId: string, workflowId: string, quickCheckId: string | null) {
   const quickCheckRows = quickCheckId
     ? await db.query(
-        'SELECT quick_check_id, postal_code, year_of_construction FROM quick_check WHERE user_id = $1 AND quick_check_id = $2 LIMIT 1',
+        'SELECT quick_check_id, postal_code, year_of_construction, purchase_price FROM quick_check WHERE user_id = $1 AND quick_check_id = $2 LIMIT 1',
         [userId, Number(quickCheckId)],
       )
     : { rows: [] };
@@ -35,9 +42,17 @@ async function loadContext(userId: string, workflowId: string, quickCheckId: str
     'SELECT postal_code, living_area_m2, year_of_construction, property_category FROM detail_check_property_data WHERE user_id = $1 AND workflow_id = $2 LIMIT 1',
     [userId, workflowId],
   );
+  const acquisitionRows = await db.query(
+    `SELECT purchase_price, parking_purchase_price, broker_percent, notary_percent,
+            land_registry_percent, property_transfer_tax_percent, total_additional_costs
+     FROM detail_check_acquisition_costs
+     WHERE user_id = $1 AND workflow_id = $2 LIMIT 1`,
+    [userId, workflowId],
+  );
 
   const quickCheck = quickCheckRows.rows[0];
   const property = propertyRows.rows[0];
+  const acquisition = acquisitionRows.rows[0];
 
   return {
     quickCheck,
@@ -45,7 +60,89 @@ async function loadContext(userId: string, workflowId: string, quickCheckId: str
     livingAreaM2: toNumber(property?.living_area_m2 ?? 0),
     yearOfConstruction: toNumber(property?.year_of_construction ?? quickCheck?.year_of_construction ?? 0),
     propertyCategory: property?.property_category ?? 'EIGENTUMSWOHNUNG',
+    purchasePrice: toNumber(acquisition?.purchase_price ?? quickCheck?.purchase_price ?? 0),
+    parkingPrice: toNumber(acquisition?.parking_purchase_price ?? 0),
+    additionalCosts: toNumber(acquisition?.total_additional_costs ?? 0),
+    brokerPercent: toNumber(acquisition?.broker_percent ?? 3.57),
+    notaryPercent: toNumber(acquisition?.notary_percent ?? 1.5),
+    landRegistryPercent: toNumber(acquisition?.land_registry_percent ?? 0.5),
+    propertyTransferTaxPercent: acquisition?.property_transfer_tax_percent == null
+      ? null
+      : toNumber(acquisition.property_transfer_tax_percent),
   };
+}
+
+async function syncFinancingRenovation(args: {
+  userId: string;
+  workflowId: string;
+  financedAmount: number;
+  previousFinancedAmount: number;
+  context: Awaited<ReturnType<typeof loadContext>>;
+}) {
+  const { rows } = await db.query(
+    'SELECT * FROM detail_check_financing WHERE user_id = $1 AND workflow_id = $2 LIMIT 1',
+    [args.userId, args.workflowId],
+  );
+  const saved = rows[0];
+  if (!saved) return;
+
+  const previousOffer = toNumber(saved.offer_renovation_costs);
+  const previousIndividual = toNumber(saved.individual_renovation_costs);
+  const offerRenovation = previousOffer === 0
+    || Math.abs(previousOffer - args.previousFinancedAmount) < 0.01
+    ? args.financedAmount
+    : previousOffer;
+  const individualRenovation = previousIndividual === 0
+    || Math.abs(previousIndividual - args.previousFinancedAmount) < 0.01
+    ? args.financedAmount
+    : previousIndividual;
+  const repaymentRate = toNumber(saved.repayment_rate ?? 2) || 2;
+  const interestAdjustmentFactor = toNumber(saved.interest_adjustment_factor ?? 1) || 1;
+  const offerComputed = computeFinancing({
+    purchasePrice: args.context.purchasePrice,
+    parkingPrice: args.context.parkingPrice,
+    additionalCosts: args.context.additionalCosts,
+    renovationCosts: offerRenovation,
+    equity: toNumber(saved.offer_equity),
+    interestPeriodYears: interestYears(saved.offer_interest_period_years),
+    repaymentRate,
+    interestAdjustmentFactor,
+  });
+  const individualPurchasePrice = toNumber(saved.individual_purchase_price ?? args.context.purchasePrice);
+  const individualParkingPrice = toNumber(saved.individual_parking_price ?? args.context.parkingPrice);
+  const individualAdditionalCosts = computeIndividualAdditionalCosts({
+    purchasePrice: individualPurchasePrice,
+    parkingPrice: individualParkingPrice,
+    brokerPercent: args.context.brokerPercent,
+    notaryPercent: args.context.notaryPercent,
+    landRegistryPercent: args.context.landRegistryPercent,
+    propertyTransferTaxPercent: args.context.propertyTransferTaxPercent,
+  });
+  const individualComputed = computeFinancing({
+    purchasePrice: individualPurchasePrice,
+    parkingPrice: individualParkingPrice,
+    additionalCosts: individualAdditionalCosts,
+    renovationCosts: individualRenovation,
+    equity: toNumber(saved.individual_equity),
+    interestPeriodYears: interestYears(saved.individual_interest_period_years),
+    repaymentRate,
+    interestAdjustmentFactor,
+  });
+  const offerRate = toNumber(saved.offer_interest_rate ?? offerComputed.interestRate);
+  const individualRate = toNumber(saved.individual_interest_rate ?? individualComputed.interestRate);
+  const offerDebtService = Math.round(offerComputed.loanAmount * ((offerRate + repaymentRate) / 100) / 12 * 100) / 100;
+  const individualDebtService = Math.round(individualComputed.loanAmount * ((individualRate + repaymentRate) / 100) / 12 * 100) / 100;
+
+  await db.query(
+    `UPDATE detail_check_financing
+     SET offer_renovation_costs = $3,
+         individual_renovation_costs = $4,
+         offer_monthly_debt_service = $5,
+         individual_monthly_debt_service = $6,
+         updated_at = NOW()
+     WHERE user_id = $1 AND workflow_id = $2`,
+    [args.userId, args.workflowId, offerRenovation, individualRenovation, offerDebtService, individualDebtService],
+  );
 }
 
 function buildResponse(saved: Record<string, unknown> | undefined, context: Awaited<ReturnType<typeof loadContext>>) {
@@ -109,12 +206,17 @@ export async function POST(request: Request) {
   const quickCheckId = input.quickCheckId ? String(input.quickCheckId) : null;
   const workflowId = workflowIdFor(userId, quickCheckId, input.workflowId ? String(input.workflowId) : null);
   const context = await loadContext(userId, workflowId, quickCheckId);
-  const cases = evaluateRenovationCases({
+  const previousRows = await db.query(
+    'SELECT financed_amount FROM detail_check_renovation WHERE user_id = $1 AND workflow_id = $2 LIMIT 1',
+    [userId, workflowId],
+  );
+  const previousFinancedAmount = toNumber(previousRows.rows[0]?.financed_amount ?? 0);
+  const evaluatedCases = evaluateRenovationCases({
     cases: safeCases(input.cases),
     postalCode: context.postalCode,
     livingAreaM2: context.livingAreaM2,
   });
-  const aggregate = aggregateRenovationPricing(cases);
+  const aggregate = aggregateRenovationPricing(evaluatedCases);
   const requestedSelected = toNumber(input.pricing?.sum_selected ?? aggregate.sum_mid);
   const sumSelected = Math.max(aggregate.sum_min, Math.min(aggregate.sum_max || requestedSelected, requestedSelected));
   const financingMode = normalizeFinancingMode(input.financing?.mode);
@@ -130,6 +232,7 @@ export async function POST(request: Request) {
     sum_mid: aggregate.sum_mid,
     sum_selected: sumSelected,
   };
+  const cases = allocateSelectedRenovationCosts(evaluatedCases, sumSelected);
 
   await db.query(
     `
@@ -155,6 +258,14 @@ export async function POST(request: Request) {
       financedAmount,
     ],
   );
+
+  await syncFinancingRenovation({
+    userId,
+    workflowId,
+    financedAmount,
+    previousFinancedAmount,
+    context,
+  });
 
   return NextResponse.json({
     status: 'OK',

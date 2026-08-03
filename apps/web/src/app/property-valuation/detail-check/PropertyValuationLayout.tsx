@@ -1,9 +1,9 @@
 "use client";
 
-import { Header, Stepper } from '@/components/ui';
+import { DetailFieldLegend, Header, Stepper, StickyActionBar } from '@/components/ui';
 import { PropertyValuationSteps } from '@/constants/PropertyValuationUseCases';
 import { useRouter } from 'next/navigation';
-import { useEffect, useMemo, useState } from 'react';
+import { Children, isValidElement, useEffect, useMemo, useState } from 'react';
 
 interface PropertyValuationLayoutProps {
   children: React.ReactNode;
@@ -13,11 +13,24 @@ interface PropertyValuationLayoutProps {
   title: string;
   /** Optional action(s) shown next to the breadcrumb, e.g. a "Überspringen" button. */
   actions?: React.ReactNode;
+  /** Persists the current step before direct navigation through the stepper. */
+  beforeStepChange?: () => Promise<boolean>;
 }
 
-export function PropertyValuationLayout({ children, currentStep, title, actions }: PropertyValuationLayoutProps) {
+export function PropertyValuationLayout({
+  children,
+  currentStep,
+  title,
+  actions,
+  beforeStepChange,
+}: PropertyValuationLayoutProps) {
   const router = useRouter();
   const [maxReachedStep, setMaxReachedStep] = useState(currentStep);
+  const [isChangingStep, setIsChangingStep] = useState(false);
+  const [previousStep, setPreviousStep] = useState(currentStep);
+  const [motionDirection, setMotionDirection] = useState<'forward' | 'backward' | 'none'>('none');
+  const [motionReady, setMotionReady] = useState(false);
+  const [motionKey, setMotionKey] = useState(0);
 
   // Convert steps to stepper format
   const stepperSteps = PropertyValuationSteps.map((step) => ({
@@ -39,12 +52,51 @@ export function PropertyValuationLayout({ children, currentStep, title, actions 
     setMaxReachedStep(nextMax);
   }, [currentStep, storageKey]);
 
-  const navigateToStep = (stepIndex: number) => {
-    if (stepIndex > maxReachedStep) return;
+  useEffect(() => {
+    const navigationKey = `${storageKey}:last-visible-step`;
+    const storedStep = Number(window.sessionStorage.getItem(navigationKey));
+    const previousStep = Number.isInteger(storedStep) ? storedStep : currentStep;
+    const direction = previousStep < currentStep
+      ? 'forward'
+      : previousStep > currentStep
+        ? 'backward'
+        : 'none';
+
+    setMotionReady(false);
+    setMotionDirection(direction);
+    setPreviousStep(previousStep);
+    setMotionKey((value) => value + 1);
+    window.sessionStorage.setItem(navigationKey, String(currentStep));
+
+    const revealFrame = window.requestAnimationFrame(() => {
+      setMotionReady(true);
+    });
+
+    return () => window.cancelAnimationFrame(revealFrame);
+  }, [currentStep, storageKey]);
+
+  const pageChildren: React.ReactNode[] = [];
+  const fixedChildren: React.ReactNode[] = [];
+  Children.forEach(children, (child) => {
+    if (isValidElement(child) && child.type === StickyActionBar) {
+      fixedChildren.push(child);
+    } else {
+      pageChildren.push(child);
+    }
+  });
+
+  const navigateToStep = async (stepIndex: number) => {
+    if (stepIndex > maxReachedStep || stepIndex === currentStep || isChangingStep) return;
     const target = PropertyValuationSteps[stepIndex];
     if (!target?.path) return;
-    const suffix = typeof window === 'undefined' ? '' : window.location.search;
-    router.push(`${target.path}${suffix}`);
+    setIsChangingStep(true);
+    try {
+      if (beforeStepChange && !(await beforeStepChange())) return;
+      const suffix = typeof window === 'undefined' ? '' : window.location.search;
+      router.push(`${target.path}${suffix}`);
+    } finally {
+      setIsChangingStep(false);
+    }
   };
 
   return (
@@ -65,13 +117,34 @@ export function PropertyValuationLayout({ children, currentStep, title, actions 
           <Stepper
             steps={stepperSteps}
             currentStep={currentStep}
+            previousStep={previousStep}
+            progressStep={motionReady ? currentStep : previousStep}
+            progressDirection={motionReady ? motionDirection : 'none'}
             maxClickableStep={maxReachedStep}
-            onStepClick={navigateToStep}
+            onStepClick={(stepIndex) => void navigateToStep(stepIndex)}
           />
         </div>
 
+        {currentStep <= 6 && (
+          <div className="mb-7">
+            <DetailFieldLegend />
+          </div>
+        )}
+
         {/* Page Content */}
-        {children}
+        <div
+          key={`${currentStep}-${motionKey}`}
+          className={motionReady
+            ? motionDirection === 'forward'
+              ? 'detail-step-enter-forward'
+              : motionDirection === 'backward'
+                ? 'detail-step-enter-backward'
+                : 'detail-step-enter-initial'
+            : 'opacity-0'}
+        >
+          {pageChildren}
+        </div>
+        {fixedChildren}
       </main>
     </div>
   );

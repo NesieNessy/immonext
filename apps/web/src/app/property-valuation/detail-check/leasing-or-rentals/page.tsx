@@ -1,10 +1,10 @@
 "use client";
 
-import { Button, Modal, StickyActionBar, TextField } from '@/components/ui';
+import { Button, Modal, MonthField, StickyActionBar, TextField } from '@/components/ui';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
 import { authFetch } from '@/lib/api/authFetch';
-import { parseDecimalInput } from '@/lib/detailCheck/acquisitionCosts';
+import { formatDecimalInput, parseDecimalInput } from '@/lib/detailCheck/acquisitionCosts';
 import {
   applyServiceChargeSuggestion,
   currentMonthDate,
@@ -38,7 +38,11 @@ type RentalResponse = {
   serviceChargesAllocable: number;
   serviceChargesNonAllocable: number;
   serviceChargesTotal: number;
+  parkingSpaces: number;
 };
+
+type ServiceChargeMode = 'TOTAL' | 'SPLIT';
+type AmountPeriod = 'MONTH' | 'YEAR';
 
 const currencyFormatter = new Intl.NumberFormat('de-DE', {
   minimumFractionDigits: 2,
@@ -49,7 +53,7 @@ function valueString(value: number | string | null | undefined): string {
   if (value == null) return '';
   const num = Number(value);
   if (!Number.isFinite(num) || num === 0) return value === 0 ? '' : String(value);
-  return String(value).replace('.', ',');
+  return formatDecimalInput(String(value));
 }
 
 function MoneyField({
@@ -59,6 +63,8 @@ function MoneyField({
   error,
   disabled,
   readOnly,
+  suffix = '€',
+  helperText,
 }: {
   label: string;
   value: string;
@@ -66,15 +72,19 @@ function MoneyField({
   error?: string;
   disabled?: boolean;
   readOnly?: boolean;
+  suffix?: string;
+  helperText?: string;
 }) {
   return (
     <TextField
       label={label}
       value={value}
       onChange={(event) => onChange(event.target.value)}
+      onBlur={() => onChange(formatDecimalInput(value))}
       inputMode="decimal"
-      suffix="€"
+      suffix={suffix}
       error={error}
+      helperText={helperText}
       disabled={disabled}
       readOnly={readOnly}
       className={readOnly ? 'bg-muted' : undefined}
@@ -107,6 +117,9 @@ function RentalContent() {
   const [serviceChargeUploadError, setServiceChargeUploadError] = useState<string | null>(null);
   const [infoOpen, setInfoOpen] = useState(false);
   const [warningOpen, setWarningOpen] = useState(false);
+  const [parkingSpaces, setParkingSpaces] = useState(0);
+  const [serviceChargeMode, setServiceChargeMode] = useState<ServiceChargeMode>('SPLIT');
+  const [amountPeriod, setAmountPeriod] = useState<AmountPeriod>('MONTH');
 
   useEffect(() => {
     let cancelled = false;
@@ -128,13 +141,14 @@ function RentalContent() {
         ).total;
         setForm({
           valuationMonth: monthFromDate(data.valuationDate),
-          isRented: data.isRented,
+          isRented: true,
           coldRent: valueString(data.coldRent),
           parkingRent: valueString(data.parkingRent),
           serviceChargesAllocable: allocable,
           serviceChargesNonAllocable: nonAllocable,
           serviceChargesTotal: total,
         });
+        setParkingSpaces(data.parkingSpaces);
       } catch (error) {
         if (!cancelled) {
           setTopError(error instanceof Error ? error.message : 'Vermietungsdaten konnten nicht geladen werden.');
@@ -150,13 +164,14 @@ function RentalContent() {
     };
   }, [suffix]);
 
+  const periodDivisor = amountPeriod === 'YEAR' ? 12 : 1;
   const values = useMemo(() => ({
-    coldRent: parseDecimalInput(form.coldRent),
-    parkingRent: parseDecimalInput(form.parkingRent),
-    serviceChargesAllocable: parseDecimalInput(form.serviceChargesAllocable),
-    serviceChargesNonAllocable: parseDecimalInput(form.serviceChargesNonAllocable),
-    serviceChargesTotal: parseDecimalInput(form.serviceChargesTotal),
-  }), [form]);
+    coldRent: parseDecimalInput(form.coldRent) / periodDivisor,
+    parkingRent: parseDecimalInput(form.parkingRent) / periodDivisor,
+    serviceChargesAllocable: parseDecimalInput(form.serviceChargesAllocable) / periodDivisor,
+    serviceChargesNonAllocable: parseDecimalInput(form.serviceChargesNonAllocable) / periodDivisor,
+    serviceChargesTotal: parseDecimalInput(form.serviceChargesTotal) / periodDivisor,
+  }), [form, periodDivisor]);
 
   const amountErrors = {
     coldRent: values.coldRent < 0 || values.coldRent > 1_000_000_000 ? 'Bitte einen Betrag >= 0 eingeben.' : '',
@@ -179,6 +194,15 @@ function RentalContent() {
 
   const updateServiceCharge = (field: RentalField, value: string) => {
     setForm((prev) => {
+      if (field === 'total') {
+        const total = parseDecimalInput(value);
+        return {
+          ...prev,
+          serviceChargesTotal: value,
+          serviceChargesAllocable: value ? String(Math.round(total * 60) / 100).replace('.', ',') : '',
+          serviceChargesNonAllocable: value ? String(Math.round(total * 40) / 100).replace('.', ',') : '',
+        };
+      }
       const mapped = {
         allocable: prev.serviceChargesAllocable,
         nonAllocable: prev.serviceChargesNonAllocable,
@@ -195,11 +219,46 @@ function RentalContent() {
     });
   };
 
-  const persist = async (ignoreMismatch: boolean) => {
-    if (hasAmountError || isSaving) return;
+  const changeAmountPeriod = (nextPeriod: AmountPeriod) => {
+    if (nextPeriod === amountPeriod) return;
+    const factor = nextPeriod === 'YEAR' ? 12 : 1 / 12;
+    const convert = (value: string) => value
+      ? String(Math.round(parseDecimalInput(value) * factor * 100) / 100).replace('.', ',')
+      : '';
+    setForm((prev) => ({
+      ...prev,
+      coldRent: convert(prev.coldRent),
+      parkingRent: convert(prev.parkingRent),
+      serviceChargesAllocable: convert(prev.serviceChargesAllocable),
+      serviceChargesNonAllocable: convert(prev.serviceChargesNonAllocable),
+      serviceChargesTotal: convert(prev.serviceChargesTotal),
+    }));
+    setAmountPeriod(nextPeriod);
+  };
+
+  const changeServiceChargeMode = (nextMode: ServiceChargeMode) => {
+    if (nextMode === serviceChargeMode) return;
+    setServiceChargeMode(nextMode);
+    setForm((prev) => {
+      const total = parseDecimalInput(prev.serviceChargesTotal)
+        || parseDecimalInput(prev.serviceChargesAllocable) + parseDecimalInput(prev.serviceChargesNonAllocable);
+      if (nextMode === 'TOTAL') {
+        return {
+          ...prev,
+          serviceChargesTotal: total ? String(total).replace('.', ',') : '',
+          serviceChargesAllocable: total ? String(Math.round(total * 60) / 100).replace('.', ',') : '',
+          serviceChargesNonAllocable: total ? String(Math.round(total * 40) / 100).replace('.', ',') : '',
+        };
+      }
+      return { ...prev, serviceChargesTotal: total ? String(total).replace('.', ',') : '' };
+    });
+  };
+
+  const persist = async (ignoreMismatch = false): Promise<boolean> => {
+    if (hasAmountError || isSaving) return false;
     if (!ignoreMismatch && nkMismatch) {
       setWarningOpen(true);
-      return;
+      return false;
     }
 
     setIsSaving(true);
@@ -222,12 +281,17 @@ function RentalContent() {
         }),
       });
       if (!res.ok) throw new Error(await res.text());
-      router.push(`/property-valuation/detail-check/financing${suffix}`);
+      return true;
     } catch (error) {
       setTopError(error instanceof Error ? error.message : 'Vermietungsdaten konnten nicht gespeichert werden.');
+      return false;
     } finally {
       setIsSaving(false);
     }
+  };
+
+  const saveAndNavigate = async (path: string, ignoreMismatch = false) => {
+    if (await persist(ignoreMismatch)) router.push(`${path}${suffix}`);
   };
 
   const handleUploadServiceCharge = async (file: File) => {
@@ -254,7 +318,7 @@ function RentalContent() {
   };
 
   return (
-    <PropertyValuationLayout currentStep={2} title="Vermietung">
+    <PropertyValuationLayout currentStep={2} title="Vermietung" beforeStepChange={() => persist(false)}>
       <Modal
         open={infoOpen}
         onClose={() => setInfoOpen(false)}
@@ -297,7 +361,7 @@ function RentalContent() {
               label="Weiter trotz Abweichung"
               onClick={() => {
                 setWarningOpen(false);
-                persist(true);
+                void saveAndNavigate('/property-valuation/detail-check/financing', true);
               }}
             />
           </>
@@ -320,67 +384,39 @@ function RentalContent() {
           <p className="text-sm text-muted-foreground">Vermietungsdaten werden geladen...</p>
         ) : (
           <div className="space-y-7">
-            <section className="grid gap-4 md:grid-cols-[minmax(0,220px)_minmax(0,1fr)] md:items-end">
-              <TextField
-                label="Bewertungs-Stichtag"
-                type="month"
+            <section className="grid gap-4 md:grid-cols-[minmax(0,260px)_minmax(0,1fr)] md:items-end">
+              <MonthField
+                label="Mieteinnahmen Bewertungs-Stichtag"
                 value={form.valuationMonth}
-                onChange={(event) => setForm((prev) => ({ ...prev, valuationMonth: event.target.value }))}
+                helperText="* Erste Vermietung ab Kauf"
+                onChange={(value) => setForm((prev) => ({ ...prev, valuationMonth: value }))}
               />
-              <div className="inline-flex w-fit rounded-lg bg-primary/10 px-3 py-2 text-sm text-primary">
-                Alle Angaben pro Monat in €
+              <div className="inline-flex w-fit rounded-md border border-border bg-muted p-1">
+                <button type="button" className={`rounded px-3 py-1.5 text-sm ${amountPeriod === 'MONTH' ? 'bg-card font-semibold shadow-sm' : 'text-muted-foreground'}`} onClick={() => changeAmountPeriod('MONTH')}>Monatlich</button>
+                <button type="button" className={`rounded px-3 py-1.5 text-sm ${amountPeriod === 'YEAR' ? 'bg-card font-semibold shadow-sm' : 'text-muted-foreground'}`} onClick={() => changeAmountPeriod('YEAR')}>Jährlich</button>
               </div>
             </section>
 
             <section>
-              <div className="flex flex-wrap gap-3">
-                <button
-                  type="button"
-                  aria-pressed={form.isRented}
-                  onClick={() => setForm((prev) => ({ ...prev, isRented: true }))}
-                  className={`rounded-lg border px-4 py-2 text-sm transition-colors ${
-                    form.isRented ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-card text-foreground'
-                  }`}
-                >
-                  Vermietet
-                </button>
-                <button
-                  type="button"
-                  aria-pressed={!form.isRented}
-                  onClick={() => setForm((prev) => ({ ...prev, isRented: false }))}
-                  className={`rounded-lg border px-4 py-2 text-sm transition-colors ${
-                    !form.isRented ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-card text-foreground'
-                  }`}
-                >
-                  Unvermietet
-                </button>
-              </div>
-            </section>
-
-            {form.isRented && (
-              <section>
-                <div className="grid gap-4 md:grid-cols-2">
+              <div className="grid gap-4 md:grid-cols-2">
                   <MoneyField
                     label="Kaltmiete"
                     value={form.coldRent}
                     error={amountErrors.coldRent}
                     onChange={(value) => updateMoney('coldRent', value)}
+                    suffix={amountPeriod === 'YEAR' ? '€/Jahr' : '€/Monat'}
                   />
                   <MoneyField
                     label="Stellplatz"
                     value={form.parkingRent}
                     error={amountErrors.parkingRent}
                     onChange={(value) => updateMoney('parkingRent', value)}
+                    disabled={parkingSpaces === 0}
+                    suffix={amountPeriod === 'YEAR' ? '€/Jahr' : '€/Monat'}
+                    helperText={parkingSpaces === 0 ? 'In den Objektdaten sind keine Stellplätze erfasst.' : undefined}
                   />
-                </div>
-              </section>
-            )}
-
-            {!form.isRented && (
-              <div className="rounded-lg border border-border bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
-                Bei unvermieteten Objekten werden Kaltmiete und Stellplatzmiete mit 0 € gespeichert.
               </div>
-            )}
+            </section>
 
             <section>
               <div className="mb-3 flex items-center gap-2">
@@ -395,6 +431,11 @@ function RentalContent() {
                 </button>
               </div>
 
+              <div className="mb-4 inline-flex rounded-md border border-border bg-muted p-1">
+                <button type="button" className={`rounded px-3 py-1.5 text-sm ${serviceChargeMode === 'TOTAL' ? 'bg-card font-semibold shadow-sm' : 'text-muted-foreground'}`} onClick={() => changeServiceChargeMode('TOTAL')}>NK gesamt</button>
+                <button type="button" className={`rounded px-3 py-1.5 text-sm ${serviceChargeMode === 'SPLIT' ? 'bg-card font-semibold shadow-sm' : 'text-muted-foreground'}`} onClick={() => changeServiceChargeMode('SPLIT')}>NK-Aufteilung bekannt</button>
+              </div>
+
               {nkMismatch && (
                 <div className="mb-4 rounded-lg border border-yellow-300 bg-yellow-50 px-4 py-3 text-sm text-yellow-800">
                   Ihre eingetragenen Werte unter Nebenkosten sind nicht plausibel. Sie können trotzdem weiter bewerten.
@@ -402,25 +443,42 @@ function RentalContent() {
               )}
 
               <div className="grid gap-4 md:grid-cols-3">
+                {serviceChargeMode === 'TOTAL' && (
+                  <MoneyField
+                    label="NK gesamt"
+                    value={form.serviceChargesTotal}
+                    error={amountErrors.serviceChargesTotal}
+                    onChange={(value) => updateServiceCharge('total', value)}
+                    suffix={amountPeriod === 'YEAR' ? '€/Jahr' : '€/Monat'}
+                    helperText="Umlagefähig und nicht umlagefähig werden automatisch im Verhältnis 60/40 aufgeteilt."
+                  />
+                )}
                 <MoneyField
                   label="NK umlagefähig"
                   value={form.serviceChargesAllocable}
                   error={amountErrors.serviceChargesAllocable}
                   onChange={(value) => updateServiceCharge('allocable', value)}
+                  readOnly={serviceChargeMode === 'TOTAL'}
+                  suffix={amountPeriod === 'YEAR' ? '€/Jahr' : '€/Monat'}
                 />
                 <MoneyField
                   label="NK nicht umlagefähig"
                   value={form.serviceChargesNonAllocable}
                   error={amountErrors.serviceChargesNonAllocable}
                   onChange={(value) => updateServiceCharge('nonAllocable', value)}
+                  readOnly={serviceChargeMode === 'TOTAL'}
+                  suffix={amountPeriod === 'YEAR' ? '€/Jahr' : '€/Monat'}
                 />
-                <MoneyField
-                  label="NK gesamt"
-                  value={form.serviceChargesTotal}
-                  error={amountErrors.serviceChargesTotal}
-                  onChange={(value) => updateServiceCharge('total', value)}
-                  readOnly
-                />
+                {serviceChargeMode === 'SPLIT' && (
+                  <MoneyField
+                    label="NK gesamt"
+                    value={form.serviceChargesTotal}
+                    error={amountErrors.serviceChargesTotal}
+                    onChange={(value) => updateServiceCharge('total', value)}
+                    readOnly
+                    suffix={amountPeriod === 'YEAR' ? '€/Jahr' : '€/Monat'}
+                  />
+                )}
               </div>
             </section>
 
@@ -476,11 +534,11 @@ function RentalContent() {
         show
         ghostLabel={BUTTON_DETAILS.Back.label}
         ghostIcon={<BUTTON_DETAILS.Back.icon />}
-        onGhost={() => router.push(`/property-valuation/detail-check/acquisition-costs${suffix}`)}
+        onGhost={() => void saveAndNavigate('/property-valuation/detail-check/acquisition-costs')}
         primaryLabel="Weiter"
         primaryIcon={<BUTTON_DETAILS.Next.icon />}
         primaryDisabled={isLoading || isSaving || hasAmountError}
-        onPrimary={() => persist(false)}
+        onPrimary={() => void saveAndNavigate('/property-valuation/detail-check/financing')}
       />
     </PropertyValuationLayout>
   );

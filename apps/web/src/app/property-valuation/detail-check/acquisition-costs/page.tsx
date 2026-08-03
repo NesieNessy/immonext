@@ -1,10 +1,11 @@
 "use client";
 
-import { StickyActionBar } from '@/components/ui';
+import { CalculatedPanel, ReadOnlyField, StickyActionBar, TextField } from '@/components/ui';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { authFetch } from '@/lib/api/authFetch';
 import {
   computeAcquisitionCosts,
+  formatDecimalInput,
   parseDecimalInput,
   resolveStateFromPostalCode,
 } from '@/lib/detailCheck/acquisitionCosts';
@@ -43,36 +44,7 @@ const percentFormatter = new Intl.NumberFormat('de-DE', {
 
 function decimalString(value: number | null | undefined): string {
   if (value == null || Number.isNaN(value)) return '';
-  return String(value).replace('.', ',');
-}
-
-function ReadOnlyField({
-  label,
-  value,
-  unit,
-  hint,
-}: {
-  label: string;
-  value: string;
-  unit: string;
-  hint?: string;
-}) {
-  return (
-    <div className="w-full">
-      <label className="block mb-2 text-sm text-foreground">{label}</label>
-      <div className="relative">
-        <input
-          value={value}
-          readOnly
-          className="w-full rounded-lg border border-border bg-muted px-4 py-2 pr-12 text-foreground"
-        />
-        <span className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground">
-          {unit}
-        </span>
-      </div>
-      {hint && <p className="mt-1 text-xs text-muted-foreground">{hint}</p>}
-    </div>
-  );
+  return formatDecimalInput(String(value));
 }
 
 function DecimalField({
@@ -88,25 +60,7 @@ function DecimalField({
   onChange: (value: string) => void;
   error?: string;
 }) {
-  return (
-    <div className="w-full">
-      <label className="block mb-2 text-sm text-foreground">{label}</label>
-      <div className="relative">
-        <input
-          inputMode="decimal"
-          value={value}
-          onChange={(event) => onChange(event.target.value)}
-          className={`w-full rounded-lg border bg-input-background px-4 py-2 pr-12 transition-all duration-200 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/50 ${
-            error ? 'border-destructive focus:ring-destructive/50' : 'border-border'
-          }`}
-        />
-        <span className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground">
-          {unit}
-        </span>
-      </div>
-      {error && <p className="mt-1 text-sm text-destructive">{error}</p>}
-    </div>
-  );
+  return <TextField label={label} inputMode="decimal" value={value} suffix={unit} error={error} onBlur={() => onChange(formatDecimalInput(value))} onChange={(event) => onChange(event.target.value)} />;
 }
 
 function AcquisitionCostsContent() {
@@ -211,8 +165,8 @@ function AcquisitionCostsContent() {
   const formatPercent = (value: number | null | undefined) =>
     value == null ? '-' : percentFormatter.format(value);
 
-  const handleSaveAndNext = async () => {
-    if (!isValid || isSaving) return;
+  const persist = async (): Promise<boolean> => {
+    if (!isValid || isSaving) return false;
 
     setIsSaving(true);
     setError(null);
@@ -230,16 +184,25 @@ function AcquisitionCostsContent() {
         }),
       });
       if (!res.ok) throw new Error(await res.text());
-      router.push(`/property-valuation/detail-check/leasing-or-rentals${suffix}`);
+      return true;
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : 'Kaufkosten konnten nicht gespeichert werden.');
+      return false;
     } finally {
       setIsSaving(false);
     }
   };
 
+  const handleSaveAndNext = async () => {
+    if (await persist()) router.push(`/property-valuation/detail-check/leasing-or-rentals${suffix}`);
+  };
+
+  const handleBack = async () => {
+    if (await persist()) router.push(`/property-valuation/detail-check/property-data${suffix}`);
+  };
+
   return (
-    <PropertyValuationLayout currentStep={1} title="Kaufkosten">
+    <PropertyValuationLayout currentStep={1} title="Kaufkosten" beforeStepChange={persist}>
       <div className="pb-24">
 
         {error && (
@@ -265,8 +228,8 @@ function AcquisitionCostsContent() {
                 <ReadOnlyField
                   label="Kaufpreis pro m²"
                   value={formatCurrency(computed.purchasePricePerM2)}
-                  unit="€"
-                  hint={computed.purchasePricePerM2 == null ? 'Wohnfläche fehlt noch.' : undefined}
+                  suffix="€"
+                  helperText={computed.purchasePricePerM2 == null ? 'Wohnfläche fehlt noch.' : 'Aus Kaufpreis und Wohnfläche berechnet.'}
                 />
                 <DecimalField
                   label="Kaufkosten Stellplatz/Stellplätze"
@@ -289,50 +252,51 @@ function AcquisitionCostsContent() {
                     error={errors.brokerPercent}
                     onChange={(brokerPercent) => setForm((prev) => ({ ...prev, brokerPercent }))}
                   />
-                  <ReadOnlyField label="Maklerkosten" value={formatCurrency(computed.brokerAmount)} unit="€" />
+                  <ReadOnlyField label="Maklerkosten" value={formatCurrency(computed.brokerAmount)} suffix="€" />
                 </div>
 
                 <div className="space-y-3">
-                  <ReadOnlyField label="Notar" value={formatPercent(notaryPercent)} unit="%" />
-                  <ReadOnlyField label="Notarkosten" value={formatCurrency(computed.notaryAmount)} unit="€" />
+                  <ReadOnlyField label="Notar" value={formatPercent(notaryPercent)} suffix="%" />
+                  <ReadOnlyField label="Notarkosten" value={formatCurrency(computed.notaryAmount)} suffix="€" />
                 </div>
 
                 <div className="space-y-3">
-                  <ReadOnlyField label="Grundbuchamt" value={formatPercent(landRegistryPercent)} unit="%" />
-                  <ReadOnlyField label="Grundbuchamtkosten" value={formatCurrency(computed.landRegistryAmount)} unit="€" />
+                  <ReadOnlyField label="Grundbuchamt" value={formatPercent(landRegistryPercent)} suffix="%" />
+                  <ReadOnlyField label="Grundbuchamtkosten" value={formatCurrency(computed.landRegistryAmount)} suffix="€" />
                 </div>
 
                 <div className="space-y-3">
                   <ReadOnlyField
                     label="Grunderwerbsteuer"
                     value={formatPercent(propertyTransferTaxPercent)}
-                    unit="%"
-                    hint={propertyTransferTaxPercent == null ? 'PLZ prüfen' : `${state ?? ''}${apiData?.postalCode ? ` aus PLZ ${apiData.postalCode}` : ''}`}
+                    suffix="%"
+                    helperText={propertyTransferTaxPercent == null ? 'PLZ prüfen' : `${state ?? ''}${apiData?.postalCode ? ` aus PLZ ${apiData.postalCode}` : ''}`}
                   />
                   <ReadOnlyField
                     label="Grunderwerbsteuerkosten"
                     value={formatCurrency(computed.propertyTransferTaxAmount)}
-                    unit="€"
+                    suffix="€"
                   />
                 </div>
               </div>
             </section>
 
-            <section>
-              <h2 className="mb-3 text-lg font-medium text-foreground">Gesamtkosten</h2>
+            <CalculatedPanel title="Gesamtkosten" description="Aus Kaufpreis und Kaufnebenkosten automatisch ermittelt">
               <div className="grid gap-4 md:grid-cols-2">
                 <ReadOnlyField
                   label="Gesamtnebenkosten"
                   value={formatCurrency(computed.totalAdditionalCosts)}
-                  unit="€"
+                  suffix="€"
+                  emphasis
                 />
                 <ReadOnlyField
                   label="Gesamt"
                   value={formatCurrency(computed.totalCosts)}
-                  unit="€"
+                  suffix="€"
+                  emphasis
                 />
               </div>
-            </section>
+            </CalculatedPanel>
           </div>
         )}
       </div>
@@ -341,7 +305,7 @@ function AcquisitionCostsContent() {
         show
         ghostLabel={BUTTON_DETAILS.Back.label}
         ghostIcon={<BUTTON_DETAILS.Back.icon />}
-        onGhost={() => router.push(`/property-valuation/detail-check/property-data${suffix}`)}
+        onGhost={() => void handleBack()}
         primaryLabel="Weiter"
         primaryIcon={<BUTTON_DETAILS.Next.icon />}
         primaryDisabled={!isValid || isSaving || isLoading}

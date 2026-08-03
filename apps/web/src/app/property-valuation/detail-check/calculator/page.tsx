@@ -1,6 +1,6 @@
 "use client";
 
-import { Button, Dropdown, StickyActionBar, TextField } from '@/components/ui';
+import { Button, CalculatedPanel, Dropdown, MetricCard, MonthField, ReadOnlyField, StickyActionBar, TextField } from '@/components/ui';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { authFetch } from '@/lib/api/authFetch';
 import { parseDecimalInput } from '@/lib/detailCheck/acquisitionCosts';
@@ -14,6 +14,7 @@ import { PropertyValuationLayout } from '../PropertyValuationLayout';
 type CalculatorResponse = {
   params: {
     startYyyymm: string;
+    rentStartYyyymm: string;
     monthlyRentStart: number;
     livingAreaM2: number;
     city: string;
@@ -90,13 +91,10 @@ function valueString(value: number | null | undefined): string {
   return String(value).replace('.', ',');
 }
 
-function ReadOnlyValue({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <div className="mb-1 text-xs text-muted-foreground">{label}</div>
-      <div className="rounded-lg border border-border bg-muted px-4 py-2 font-medium text-foreground">{value}</div>
-    </div>
-  );
+function formatMonth(value: string | null): string {
+  if (!value) return 'nicht erreicht';
+  const [year, month] = value.split('-');
+  return `${month} / ${year}`;
 }
 
 type ChartRow = RentTimelineRow & { afterTaxCumulative: number };
@@ -921,9 +919,24 @@ function CalculatorContent() {
   const [error, setError] = useState<string | null>(null);
   const [hasPendingChanges, setHasPendingChanges] = useState(false);
   const [pendingNavigation, setPendingNavigation] = useState<string | null>(null);
+  const lastLiveCalculationRef = useRef('');
+  const recalcRef = useRef<(nextMode?: CalculatorMode) => Promise<void>>(async () => undefined);
 
   const visibleTimeline = useMemo(() => data?.timeline ?? [], [data]);
   const chartRows = useMemo(() => buildChartRows(visibleTimeline), [visibleTimeline]);
+  const startMonthError = startYyyymm && !/^\d{4}-(0[1-9]|1[0-2])$/.test(startYyyymm)
+    ? 'Bitte einen gültigen Monat wählen.'
+    : undefined;
+  const monthlyRentValue = parseDecimalInput(monthlyRentStart);
+  const monthlyRentError = monthlyRentStart !== '' && (!Number.isFinite(monthlyRentValue) || monthlyRentValue < 0)
+    ? 'Bitte einen gültigen Betrag eingeben.'
+    : undefined;
+  const last558Error = last558Date && !/^\d{4}-(0[1-9]|1[0-2])$/.test(last558Date)
+    ? 'Bitte einen gültigen Monat wählen.'
+    : undefined;
+  const last559Error = last559Date && !/^\d{4}-(0[1-9]|1[0-2])$/.test(last559Date)
+    ? 'Bitte einen gültigen Monat wählen.'
+    : undefined;
 
   const toggleTable = (table: keyof typeof openTables) => {
     setOpenTables((current) => ({ ...current, [table]: !current[table] }));
@@ -951,6 +964,14 @@ function CalculatorContent() {
         setPlacementMode(loaded.placementMode ?? loaded.params.placementMode ?? 'DEFAULT');
         setInterestRate(loaded.params.refinancingInterestRate ?? loaded.params.interestRate ?? 0);
         setEquityIncluded(loaded.params.equityIncluded === true);
+        lastLiveCalculationRef.current = JSON.stringify({
+          startYyyymm: loaded.params.startYyyymm,
+          monthlyRentStart: valueString(loaded.params.monthlyRentStart),
+          rentIndexPerM2: valueString(loaded.params.rentIndexPerM2),
+          rentIndexSource: loaded.params.rentIndexSource ?? loaded.rentIndexSource ?? 'AUTOMATIC',
+          last558Date: loaded.params.last558Date ?? '',
+          last559Date: loaded.params.last559Date ?? '',
+        });
       } catch (loadError) {
         if (!cancelled) setError(loadError instanceof Error ? loadError.message : 'Kalkulator konnte nicht geladen werden.');
       } finally {
@@ -1010,6 +1031,21 @@ function CalculatorContent() {
       setIsSaving(false);
     }
   };
+  recalcRef.current = recalc;
+
+  useEffect(() => {
+    if (isLoading || isSaving || !data || startMonthError || monthlyRentError || last558Error || last559Error || !startYyyymm || monthlyRentStart === '') return;
+
+    const signature = JSON.stringify({ startYyyymm, monthlyRentStart, rentIndexPerM2, rentIndexSource, last558Date, last559Date });
+    if (signature === lastLiveCalculationRef.current) return;
+
+    const timer = window.setTimeout(() => {
+      lastLiveCalculationRef.current = signature;
+      void recalcRef.current(mode);
+    }, 350);
+
+    return () => window.clearTimeout(timer);
+  }, [data, isLoading, isSaving, last558Date, last558Error, last559Date, last559Error, mode, monthlyRentError, monthlyRentStart, rentIndexPerM2, rentIndexSource, startMonthError, startYyyymm]);
 
   const handleModeChange = (value: string) => {
     const nextMode = value === 'POTENTIAL' ? 'POTENTIAL' : 'KNOWN';
@@ -1047,6 +1083,41 @@ function CalculatorContent() {
         ) : (
           <div className="space-y-8">
             <section>
+              <div className="mb-4 flex flex-wrap items-center gap-4">
+                <div>
+                  <h2 className="text-lg font-medium text-foreground">Cashflow und Planung</h2>
+                  <p className="text-sm text-muted-foreground">Die Tabellen bleiben im Hintergrund vollständig berechnet.</p>
+                </div>
+                <div className="ml-auto">
+                  <Button
+                    label={showRentIndexComparison ? 'Mietspiegel ausblenden' : 'Mietspiegel vergleichen'}
+                    variant="outline"
+                    size="sm"
+                    icon={<LineChart />}
+                    aria-pressed={showRentIndexComparison}
+                    onClick={() => setShowRentIndexComparison((current) => !current)}
+                  />
+                </div>
+              </div>
+              <div className="rounded-lg border border-border bg-card p-4 shadow-sm sm:p-6">
+                <div className="relative overflow-hidden">
+                  <TimelineEventConnectors rows={chartRows} viewport={timelineViewport} />
+                  <CalculatorChart rows={chartRows} showRentIndex={showRentIndexComparison} viewport={timelineViewport} />
+                  <PlanEditor
+                    data={data}
+                    startYyyymm={startYyyymm}
+                    equityIncluded={equityIncluded}
+                    viewport={timelineViewport}
+                    isSaving={isSaving}
+                    onViewportChange={setTimelineViewport}
+                    onChange={(overrides) => recalc(mode, false, false, overrides)}
+                    onApply={(overrides) => recalc(mode, false, false, overrides, true)}
+                  />
+                </div>
+              </div>
+            </section>
+
+            <section>
               <div className="mb-4 flex items-center gap-4">
                 <h2 className="rounded-lg border border-border bg-card px-4 py-2 text-lg font-medium text-foreground">
                   Parameter
@@ -1054,10 +1125,10 @@ function CalculatorContent() {
                 <div className="h-px flex-1 bg-border" />
               </div>
               <div className="grid gap-4 lg:grid-cols-4 md:grid-cols-2">
-                <TextField label="Start in Jahr/Monat" type="month" value={startYyyymm} onChange={(e) => setStartYyyymm(e.target.value)} />
-                <TextField label="Ausgangsmiete bei Kauf" value={monthlyRentStart} suffix="€" inputMode="decimal" onChange={(e) => setMonthlyRentStart(e.target.value)} />
-                <TextField label="Letzte Mieterhöhung §558" type="month" value={last558Date} onChange={(e) => setLast558Date(e.target.value)} />
-                <TextField label="Letzte §559-Erhöhung" type="month" value={last559Date} onChange={(e) => setLast559Date(e.target.value)} />
+                <MonthField label="Start in Jahr/Monat" value={startYyyymm} error={startMonthError} onChange={setStartYyyymm} />
+                <TextField label="Ausgangsmiete bei Kauf" value={monthlyRentStart} suffix="€" inputMode="decimal" error={monthlyRentError} onChange={(e) => setMonthlyRentStart(e.target.value)} />
+                <MonthField label="Letzte Mieterhöhung §558" value={last558Date} error={last558Error} optional onChange={setLast558Date} />
+                <MonthField label="Letzte §559-Erhöhung" value={last559Date} error={last559Error} optional onChange={setLast559Date} />
                 <TextField label="Mietspiegel Vergleichswert" value={rentIndexPerM2} suffix="€/m²" inputMode="decimal" onChange={(e) => { setRentIndexPerM2(e.target.value); setRentIndexSource('MANUAL'); }} helperText="Automatisch aus Baujahr/Fläche, solange nicht überschrieben." />
               </div>
 
@@ -1073,31 +1144,59 @@ function CalculatorContent() {
                 </button>
                 {showImportedDetails && (
                   <div className="mt-4 grid gap-4 border-t border-border pt-4 md:grid-cols-2 lg:grid-cols-3">
-                    <ReadOnlyValue label="Größe · Objektdaten" value={`${numberFormatter.format(data.params.livingAreaM2)} m²`} />
-                    <ReadOnlyValue label="Ort / PLZ · Objektdaten" value={`${data.params.city || '-'} ${data.params.postalCode || ''}`.trim()} />
-                    <ReadOnlyValue label="Finanzierungsvariante · Finanzierung" value={data.selectedFinancingVariant === 'INDIVIDUAL' ? 'Individuell' : 'Angebot'} />
-                    <ReadOnlyValue label="Kapitaldienst Monat · Finanzierung" value={formatCurrency(data.params.monthlyDebtService)} />
-                    <ReadOnlyValue label="AfA pro Monat · Abschreibung" value={formatCurrency(data.timeline[0]?.afa ?? 0)} />
-                    <ReadOnlyValue label="Nicht umlagefähige Kosten · Vermietung" value={formatCurrency(data.timeline[0]?.nonAllocableCosts ?? 0)} />
+                    <ReadOnlyField label="Größe · Objektdaten" value={`${numberFormatter.format(data.params.livingAreaM2)} m²`} />
+                    <ReadOnlyField label="Ort / PLZ · Objektdaten" value={`${data.params.city || '-'} ${data.params.postalCode || ''}`.trim()} />
+                    <ReadOnlyField label="Finanzierungsvariante · Finanzierung" value={data.selectedFinancingVariant === 'INDIVIDUAL' ? 'Individuell' : 'Angebot'} />
+                    <ReadOnlyField label="Kapitaldienst Monat · Finanzierung" value={formatCurrency(data.params.monthlyDebtService)} />
+                    <ReadOnlyField label="AfA pro Monat · Abschreibung" value={formatCurrency(data.timeline[0]?.afa ?? 0)} />
+                    <ReadOnlyField label="Nicht umlagefähige Kosten · Vermietung" value={formatCurrency(data.timeline[0]?.nonAllocableCosts ?? 0)} />
+                    <ReadOnlyField label="Erste Vermietung ab Kauf · Vermietung" value={formatMonth(data.params.rentStartYyyymm)} />
                   </div>
                 )}
               </div>
 
-              <div className="mt-5">
-                <h3 className="mb-3 font-medium text-foreground">Berechnete Kennzahlen</h3>
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                <ReadOnlyValue label="Kappungsgrenze" value={`${data.denseMarket ? 'Ballungsgebiet' : 'Regelfall'} · ${formatPercent(data.capPercent)}`} />
-                <ReadOnlyValue label="§559-Deckel" value={`${formatCurrency(data.capAbs)} / Monat`} />
-                <ReadOnlyValue label="Break Even Point" value={data.breakEven ?? 'nicht erreicht'} />
-                <ReadOnlyValue label="Break Even mit Mietspiegel" value={data.breakEvenWithRentIndex ?? 'nicht erreicht'} />
-                <ReadOnlyValue label="Mietspiegelquelle" value={data.rentIndexSource === 'MANUAL' ? 'Manuelle Eingabe' : 'Automatisch aus Baujahr/Fläche'} />
-                <ReadOnlyValue label="Cashflow heute" value={formatCurrency(data.metrics.cashflowToday)} />
-                <ReadOnlyValue label="Nettomietrendite heute" value={formatPercentValue(data.metrics.netYieldToday)} />
-                <ReadOnlyValue label={`Miete nach ${CALCULATION_HORIZON_YEARS} Jahren`} value={formatCurrency(data.metrics.rentAtHorizon)} />
-                <ReadOnlyValue label={`Miete nach ${CALCULATION_HORIZON_YEARS} Jahren mit Mietspiegel`} value={formatCurrency(data.metrics.rentAtHorizonWithRentIndex)} />
-                <ReadOnlyValue label={`Kumulierter Cashflow nach ${CALCULATION_HORIZON_YEARS} Jahren`} value={formatCurrency(data.metrics.endingCashflow)} />
-                </div>
+              <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                <MetricCard
+                  label="Kaltmiete heute"
+                  value={formatCurrency(data.params.monthlyRentStart)}
+                  detail="Aus der Vermietung übernommen"
+                />
+                <MetricCard
+                  label="Break-even nach Steuern"
+                  value={formatMonth(data.breakEven)}
+                  detail="Wird live aus der Planung berechnet"
+                  tone={data.breakEven ? 'positive' : 'warning'}
+                />
+                <MetricCard
+                  label={`Miete in ${CALCULATION_HORIZON_YEARS} Jahren`}
+                  value={formatCurrency(data.metrics.rentAtHorizon)}
+                  detail="Basisszenario der aktuellen Planung"
+                />
+                <MetricCard
+                  label="Planstatus"
+                  value="regelkonform"
+                  detail={`${data.modernizationPlan.length} Sanierungen · ${data.increases558.length} §558-Erhöhungen`}
+                  tone="positive"
+                />
               </div>
+
+              <div className="mt-5">
+                <CalculatedPanel
+                  title="Berechnete Kennzahlen"
+                  description="Automatisch aus Parametern, Finanzierung, Steuern und Zeitplanung ermittelt"
+                >
+                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                    <ReadOnlyField label="Kappungsgrenze" value={`${data.denseMarket ? 'Ballungsgebiet' : 'Regelfall'} · ${formatPercent(data.capPercent)}`} />
+                    <ReadOnlyField label="§559-Deckel" value={`${formatCurrency(data.capAbs)} / Monat`} />
+                    <ReadOnlyField label="Break-even mit Mietspiegel" value={formatMonth(data.breakEvenWithRentIndex)} />
+                    <ReadOnlyField label="Mietspiegelquelle" value={data.rentIndexSource === 'MANUAL' ? 'Manuelle Eingabe' : 'Automatisch aus Baujahr/Fläche'} />
+                    <ReadOnlyField label="Cashflow heute" value={formatCurrency(data.metrics.cashflowToday)} />
+                    <ReadOnlyField label="Nettomietrendite heute" value={formatPercentValue(data.metrics.netYieldToday)} />
+                    <ReadOnlyField label={`Miete nach ${CALCULATION_HORIZON_YEARS} Jahren mit Mietspiegel`} value={formatCurrency(data.metrics.rentAtHorizonWithRentIndex)} />
+                    <ReadOnlyField label={`Kumulierter Cashflow nach ${CALCULATION_HORIZON_YEARS} Jahren`} value={formatCurrency(data.metrics.endingCashflow)} />
+                  </div>
+                </CalculatedPanel>
+                </div>
 
               <div className="mt-6 grid gap-4 md:grid-cols-[minmax(0,320px)_minmax(0,1fr)] md:items-end">
                 <Dropdown
@@ -1143,41 +1242,6 @@ function CalculatorContent() {
                   Die angezeigten Sanierungszeitpunkte sind auf den frühestmöglichen Break-even optimiert.
                 </p>
               )}
-            </section>
-
-            <section>
-              <div className="mb-4 flex flex-wrap items-center gap-4">
-                <div>
-                  <h2 className="text-lg font-medium text-foreground">Cashflow und Planung</h2>
-                  <p className="text-sm text-muted-foreground">Die Tabellen bleiben im Hintergrund vollständig berechnet.</p>
-                </div>
-                <div className="ml-auto">
-                  <Button
-                    label={showRentIndexComparison ? 'Mietspiegel ausblenden' : 'Mietspiegel vergleichen'}
-                    variant="outline"
-                    size="sm"
-                    icon={<LineChart />}
-                    aria-pressed={showRentIndexComparison}
-                    onClick={() => setShowRentIndexComparison((current) => !current)}
-                  />
-                </div>
-              </div>
-              <div className="rounded-lg border border-border bg-card p-4 shadow-sm sm:p-6">
-                <div className="relative overflow-hidden">
-                  <TimelineEventConnectors rows={chartRows} viewport={timelineViewport} />
-                  <CalculatorChart rows={chartRows} showRentIndex={showRentIndexComparison} viewport={timelineViewport} />
-                  <PlanEditor
-                    data={data}
-                    startYyyymm={startYyyymm}
-                    equityIncluded={equityIncluded}
-                    viewport={timelineViewport}
-                    isSaving={isSaving}
-                    onViewportChange={setTimelineViewport}
-                    onChange={(overrides) => recalc(mode, false, false, overrides)}
-                    onApply={(overrides) => recalc(mode, false, false, overrides, true)}
-                  />
-                </div>
-              </div>
             </section>
 
             <section className="space-y-4">

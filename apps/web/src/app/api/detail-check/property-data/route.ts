@@ -57,7 +57,7 @@ export async function GET(request: Request) {
     workflowId,
     quickCheckId: quickCheck?.quick_check_id ?? null,
     hasDetailCheckData: Boolean(saved),
-    propertyCategory: saved?.property_category ?? '',
+    propertyCategory: saved?.property_category ?? 'EIGENTUMSWOHNUNG',
     dataEntrySource: saved?.data_entry_source ?? quickCheck?.data_entry_source ?? '',
     tenancyType: saved?.tenancy_type ?? '',
     sourceUrl: saved?.source_url ?? '',
