@@ -16,9 +16,10 @@ import {
   type RenovationFinancingMode,
   type RenovationTiming,
 } from '@/lib/detailCheck/renovation';
-import { uploadDocument } from '@/lib/supabase/document.supabase';
+import { getDocumentsByUser, getDocumentUrl, uploadDocument } from '@/lib/supabase/document.supabase';
+import type { UserDocument } from '@immonext/types';
 import { format } from 'date-fns';
-import { Upload } from 'lucide-react';
+import { Eye, FileText, Image as ImageIcon, Upload } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useEffect, useMemo, useState } from 'react';
 import { PropertyValuationLayout } from '../PropertyValuationLayout';
@@ -85,6 +86,8 @@ function RenovationContent() {
   const [measure, setMeasure] = useState('');
   const [description, setDescription] = useState('');
   const [uploadNames, setUploadNames] = useState<string[]>([]);
+  const [documentsById, setDocumentsById] = useState<Record<number, UserDocument>>({});
+  const [previewUrls, setPreviewUrls] = useState<Record<number, string>>({});
   const [isUploadingFiles, setIsUploadingFiles] = useState(false);
   const [uploadFilesError, setUploadFilesError] = useState<string | null>(null);
   const [sumSelected, setSumSelected] = useState(0);
@@ -127,6 +130,16 @@ function RenovationContent() {
     };
   }, [suffix]);
 
+  useEffect(() => {
+    if (!user) return;
+    getDocumentsByUser(user.id).then(async (documents) => {
+      setDocumentsById(Object.fromEntries(documents.map((document) => [document.documentId, document])));
+      const imageDocuments = documents.filter((document) => document.contentType?.startsWith('image/'));
+      const urls = await Promise.all(imageDocuments.map(async (document) => [document.documentId, await getDocumentUrl(document.storagePath)] as const));
+      setPreviewUrls(Object.fromEntries(urls.filter((entry): entry is readonly [number, string] => Boolean(entry[1]))));
+    });
+  }, [user]);
+
   const totals = useMemo(() => aggregateRenovationPricing(cases), [cases]);
 
   useEffect(() => {
@@ -164,12 +177,30 @@ function RenovationContent() {
           break;
         }
         if (uploaded) {
-          setUploadNames((prev) => [...prev.filter((name) => name !== `local:${file.name}`), uploaded.fileName]);
+          setUploadNames((prev) => [...prev.filter((name) => name !== `local:${file.name}`), `document:${uploaded.documentId}`]);
+          setDocumentsById((prev) => ({ ...prev, [uploaded.documentId]: uploaded }));
+          if (uploaded.contentType?.startsWith('image/')) {
+            const url = await getDocumentUrl(uploaded.storagePath);
+            if (url) setPreviewUrls((prev) => ({ ...prev, [uploaded.documentId]: url }));
+          }
         }
       }
     } finally {
       setIsUploadingFiles(false);
     }
+  };
+
+  const openUpload = async (reference: string) => {
+    const documentId = Number(reference.replace(/^document:/, ''));
+    const document = documentsById[documentId];
+    if (!document) return;
+    const url = await getDocumentUrl(document.storagePath);
+    if (url) window.open(url, '_blank', 'noopener,noreferrer');
+  };
+
+  const uploadLabel = (reference: string) => {
+    if (!reference.startsWith('document:')) return reference.replace(/^local:/, '');
+    return documentsById[Number(reference.slice('document:'.length))]?.fileName ?? 'Datei';
   };
 
   const addCase = () => {
@@ -367,7 +398,7 @@ function RenovationContent() {
                   <p className="mt-2 text-xs text-muted-foreground">
                     Dateien werden gespeichert und erscheinen auf der Dokumente-Seite. Die Preisindikation verwendet derzeit Kategorie, Wohnfläche und PLZ; eine KI-Bildauswertung ist noch nicht angebunden.
                   </p>
-                  {uploadNames.length > 0 && <p className="mt-2 text-xs font-medium text-primary">Ausgewählt: {uploadNames.map((name) => name.replace(/^local:/, '')).join(', ')}</p>}
+                  {uploadNames.length > 0 && <p className="mt-2 text-xs font-medium text-primary">Ausgewählt: {uploadNames.map(uploadLabel).join(', ')}</p>}
                   {isUploadingFiles && <p className="mt-1 text-xs text-muted-foreground">Lädt hoch…</p>}
                   {uploadFilesError && <p className="mt-1 text-xs text-destructive">{uploadFilesError}</p>}
                 </div>
@@ -384,6 +415,7 @@ function RenovationContent() {
                         <th className="px-4 py-3 font-medium">Kategorie</th>
                         <th className="px-4 py-3 font-medium">Maßnahme</th>
                         <th className="px-4 py-3 font-medium">Beschreibung</th>
+                        <th className="px-4 py-3 font-medium">Bilder und Unterlagen</th>
                         <th className="px-4 py-3 font-medium">Aktion</th>
                       </tr>
                     </thead>
@@ -393,6 +425,31 @@ function RenovationContent() {
                           <td className="px-4 py-3">{categoryLabel(item.kategorie)}</td>
                           <td className="px-4 py-3">{item.massnahme}</td>
                           <td className="px-4 py-3 text-muted-foreground">{item.beschreibung || '-'}</td>
+                          <td className="px-4 py-3">
+                            {item.uploads?.length ? (
+                              <div className="flex flex-wrap gap-2">
+                                {item.uploads.map((reference) => {
+                                  const documentId = reference.startsWith('document:') ? Number(reference.slice('document:'.length)) : 0;
+                                  const document = documentsById[documentId];
+                                  const previewUrl = previewUrls[documentId];
+                                  return (
+                                    <button
+                                      key={reference}
+                                      type="button"
+                                      onClick={() => void openUpload(reference)}
+                                      disabled={!document}
+                                      className="group flex max-w-48 items-center gap-2 rounded-md border border-border bg-card p-1.5 text-left text-xs hover:border-primary disabled:cursor-default"
+                                      title={document ? `${document.fileName} öffnen` : uploadLabel(reference)}
+                                    >
+                                      {previewUrl ? <img src={previewUrl} alt="" className="h-10 w-12 rounded object-cover" /> : document?.contentType?.startsWith('image/') ? <ImageIcon size={18} /> : <FileText size={18} />}
+                                      <span className="min-w-0 truncate">{uploadLabel(reference)}</span>
+                                      {document && <Eye size={14} className="shrink-0 text-muted-foreground group-hover:text-primary" />}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            ) : '-'}
+                          </td>
                           <td className="px-4 py-3">
                             <button
                               type="button"

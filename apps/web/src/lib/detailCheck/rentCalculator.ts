@@ -18,6 +18,7 @@ export type CalculatorParams = {
   postalCode: string;
   last558Date: string | null;
   last559Date: string | null;
+  last559MonthlyDelta: number;
   rentIndexPerM2: number | null;
   rentIndexSource: RentIndexSource;
   monthlyDebtService: number;
@@ -130,10 +131,12 @@ function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
 }
 
-function capRoomAt(planned: ModernizationPlanRow[], effectiveYyyymm: string, capAbs: number): number {
-  const used = planned.reduce((sum, item) => {
-    const diff = Math.abs(monthDiff(item.effectiveYyyymm, effectiveYyyymm));
-    return diff < 72 ? sum + item.monthlyDelta : sum;
+function capRoomAt(params: CalculatorParams, planned: ModernizationPlanRow[], effectiveYyyymm: string, capAbs: number): number {
+  const previousDiff = params.last559Date ? monthDiff(params.last559Date, effectiveYyyymm) : -1;
+  const previousUsed = previousDiff >= 0 && previousDiff < 72 ? Math.max(0, params.last559MonthlyDelta) : 0;
+  const used = previousUsed + planned.reduce((sum, item) => {
+    const diff = monthDiff(item.effectiveYyyymm, effectiveYyyymm);
+    return diff >= 0 && diff < 72 ? sum + item.monthlyDelta : sum;
   }, 0);
   return roundCurrency(Math.max(0, capAbs - used));
 }
@@ -158,7 +161,7 @@ function buildPlanFromPlacements(
     const requestedOffset = placements[index] ?? 3;
     const effective = addMonths(params.startYyyymm, Math.max(3, requestedOffset));
     const wantedDelta = roundCurrency((0.08 * allocableCosts) / 12);
-    const monthlyDelta = roundCurrency(Math.min(wantedDelta, capRoomAt(plan, effective, capAbs)));
+    const monthlyDelta = roundCurrency(Math.min(wantedDelta, capRoomAt(params, plan, effective, capAbs)));
     if (monthlyDelta <= 0) continue;
     plan.push({
       id: item.id,
@@ -176,8 +179,6 @@ function buildPlanFromPlacements(
 
 function defaultPlacements(params: CalculatorParams, renovationCases: RenovationCase[]): number[] {
   let nextFlexible = 6;
-  const last559Offset = params.last559Date ? Math.max(0, monthDiff(params.startYyyymm, normalizeYyyymm(params.last559Date))) : -1000;
-  const earliestAfter559 = last559Offset > -1000 ? Math.max(3, last559Offset + 72) : 3;
 
   return renovationCases.map((item) => {
     const timing = params.renovationTimingOverrides?.[item.id] ?? item.zeitpunkt;
@@ -186,7 +187,7 @@ function defaultPlacements(params: CalculatorParams, renovationCases: Renovation
       : null;
     const offset = savedOffset == null ? (timing === 'SOFORT' ? 3 : nextFlexible) : savedOffset;
     nextFlexible += 3;
-    return Math.max(earliestAfter559, offset);
+    return Math.max(3, offset);
   });
 }
 
@@ -226,7 +227,7 @@ function placePotentialModernizations(params: CalculatorParams, capAbs: number) 
   const plan: ModernizationPlanRow[] = [];
   for (const [index, offset] of [firstEffective, secondEffective].entries()) {
     if (offset >= CALCULATION_HORIZON_MONTHS) continue;
-    const room = capRoomAt(plan, addMonths(params.startYyyymm, offset), capAbs);
+    const room = capRoomAt(params, plan, addMonths(params.startYyyymm, offset), capAbs);
     if (room <= 0) continue;
     const effectiveYyyymm = addMonths(params.startYyyymm, offset);
     plan.push({
@@ -564,6 +565,11 @@ export function runRentCalculator(params: CalculatorParams, renovationCases: Ren
   const rentPerM2 = params.livingAreaM2 > 0 ? params.monthlyRentStart / params.livingAreaM2 : 0;
   const capPerM2 = rentPerM2 < 7 ? 2 : 3;
   const capAbs = roundCurrency(capPerM2 * Math.max(0, params.livingAreaM2));
+  const previous559Diff = params.last559Date ? monthDiff(params.last559Date, params.startYyyymm) : -1;
+  const previous559Used = previous559Diff >= 0 && previous559Diff < 72
+    ? roundCurrency(Math.max(0, params.last559MonthlyDelta))
+    : 0;
+  const remaining559Room = roundCurrency(Math.max(0, capAbs - previous559Used));
   const conservativeRentIndexPerM2 = rentPerM2 > 0 ? roundCurrency(rentPerM2 * 1.02) : 0;
   const marketRentIndexPerM2 = params.rentIndexPerM2 && params.rentIndexPerM2 > 0
     ? params.rentIndexPerM2
@@ -614,6 +620,8 @@ export function runRentCalculator(params: CalculatorParams, renovationCases: Ren
     capPercent,
     capPerM2,
     capAbs,
+    previous559Used,
+    remaining559Room,
     rentIndexPerM2: marketRentIndexPerM2,
     rentIndexSource: params.rentIndexSource,
     timeline: scenario.timeline,

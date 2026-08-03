@@ -21,6 +21,7 @@ type CalculatorResponse = {
     postalCode: string;
     last558Date: string | null;
     last559Date: string | null;
+    last559MonthlyDelta: number;
     rentIndexPerM2: number | null;
     rentIndexSource: RentIndexSource;
     monthlyDebtService: number;
@@ -45,6 +46,8 @@ type CalculatorResponse = {
   capPercent: number;
   capPerM2: number;
   capAbs: number;
+  previous559Used: number;
+  remaining559Room: number;
   timeline: RentTimelineRow[];
   modernizationPlan: ModernizationPlanRow[];
   renovationCases: RenovationCase[];
@@ -543,6 +546,12 @@ function PlanEditor({
         setMessage('Zeitpunkt nicht übernommen: Eine Erhöhung oder Modernisierung kann frühestens ab dem 3. Monat wirksam werden.');
         return;
       }
+      if (completedDrag.kind === 'rent' && completedDrag.id.startsWith('558-') && offset < earliest558Offset) {
+        draggingRef.current = null;
+        setDragging(null);
+        setMessage(`Zeitpunkt nicht übernommen: Eine §558-Erhöhung kann frühestens ab ${addMonths(startYyyymm, earliest558Offset)} wirksam werden.`);
+        return;
+      }
       const date = monthFromOffset(startYyyymm, offset);
       if (completedDrag.kind === 'modernization') placements[completedDrag.id] = date;
       if (completedDrag.kind === 'rent') rentOverrides[completedDrag.id] = { ...rentOverrides[completedDrag.id], effectiveYyyymm: date };
@@ -636,14 +645,15 @@ function PlanEditor({
   const displayedFinancingRate = dragging?.id === 'financing-rate' ? dragging.currentAmount : draftFinancingRate;
   const displayedRefinancingRate = dragging?.id === 'refinancing-rate' ? dragging.currentAmount : draftRefinancingRate;
   const displayedTaxRate = dragging?.id === 'tax-rate' ? dragging.currentAmount : draftTaxRate;
-  const earliest559Offset = data.params.last559Date
-    ? Math.max(3, monthOffset(startYyyymm, data.params.last559Date) + 72)
-    : 3;
+  const earliest558Month = data.params.last558Date
+    ? addMonths(data.params.last558Date, 15)
+    : addMonths(data.params.rentStartYyyymm, 15);
+  const earliest558Offset = Math.max(0, monthOffset(startYyyymm, earliest558Month));
   const baselineDateForCase = (item: RenovationCase) => {
     if (item.calculator_effective_yyyymm) return item.calculator_effective_yyyymm;
     const index = data.renovationCases.findIndex((candidate) => candidate.id === item.id);
     const offset = item.zeitpunkt === 'SOFORT' ? 3 : 6 + Math.max(0, index) * 3;
-    return addMonths(startYyyymm, Math.max(earliest559Offset, offset));
+    return addMonths(startYyyymm, Math.max(3, offset));
   };
   const renovationChanges = data.modernizationPlan.flatMap((planItem) => {
     const source = data.renovationCases.find((item) => item.id === planItem.id);
@@ -672,6 +682,14 @@ function PlanEditor({
     + Number(equityChanged)
     + Number(taxRateChanged)
     + Number(lossesOffsettableChanged);
+  const blockedWidth = (endOffset: number) => {
+    const visibleEnd = Math.min(viewport.start + viewport.span, endOffset);
+    if (visibleEnd <= viewport.start) return 0;
+    return Math.max(0, Math.min(100, ((visibleEnd - viewport.start) / viewport.span) * 100));
+  };
+  const blocked559Width = blockedWidth(3);
+  const blocked558Width = blockedWidth(earliest558Offset);
+  const blockedPattern = 'bg-[repeating-linear-gradient(135deg,rgba(100,116,139,.16),rgba(100,116,139,.16)_5px,transparent_5px,transparent_10px)]';
 
   return (
     <div className="relative border-t border-border pt-5">
@@ -679,8 +697,8 @@ function PlanEditor({
       <div className="overflow-hidden">
         <div className="w-full min-w-0">
           <div className="grid grid-cols-[15%_85%] border-t border-border"><div className="py-4 pr-3 font-medium">Sanierungen</div><div data-gantt-track="true" className="relative h-14 bg-[repeating-linear-gradient(90deg,transparent,transparent_calc(20%-1px),theme(colors.border)_calc(20%-1px),theme(colors.border)_20%)]" onPointerMove={handlePointerMove} onPointerUp={() => void finishDrag()}>{viewport.start === 0 && <div className="absolute inset-y-0 left-0 w-[2.5%] bg-[repeating-linear-gradient(135deg,rgba(100,116,139,.12),rgba(100,116,139,.12)_5px,transparent_5px,transparent_10px)]" title="Vor dem Startmonat gesperrt" />}{data.modernizationPlan.map((item, index) => { const amount = data.params.modernizationCostOverrides?.[item.id] ?? item.allocableCosts; return renderBar(item.id, 'modernization', item.title, planPlacement(item), amount, Math.max(1000, amount * 3, item.allocableCosts * 3), true, index); })}</div></div>
-          <div className="grid grid-cols-[15%_85%] border-t border-border"><div className="py-4 pr-3 font-medium">§559 Wirksamkeit</div><div data-gantt-track="true" className="relative h-14 bg-[repeating-linear-gradient(90deg,transparent,transparent_calc(20%-1px),theme(colors.border)_calc(20%-1px),theme(colors.border)_20%)]" onPointerMove={handlePointerMove} onPointerUp={() => void finishDrag()}>{data.modernizationPlan.map((item, index) => renderBar(`${item.id}-559`, 'rent', item.title, planPlacement(item), item.monthlyDelta, item.monthlyDelta, false, index))}</div></div>
-          <div className="grid grid-cols-[15%_85%] border-t border-border"><div className="py-4 pr-3 font-medium">§558 Mieterhöhungen</div><div data-gantt-track="true" className="relative h-14 bg-[repeating-linear-gradient(90deg,transparent,transparent_calc(20%-1px),theme(colors.border)_calc(20%-1px),theme(colors.border)_20%)]" onPointerMove={handlePointerMove} onPointerUp={() => void finishDrag()}>{data.increases558.map((item, index) => renderBar(item.id ?? `558-${index + 1}`, 'rent', '§558 · Mietspiegel', item.effectiveYyyymm, item.monthlyDelta, item.monthlyDelta, true, index))}</div></div>
+          <div className="grid grid-cols-[15%_85%] border-t border-border"><div className="py-4 pr-3 font-medium">§559 Wirksamkeit</div><div data-gantt-track="true" className="relative h-14 bg-[repeating-linear-gradient(90deg,transparent,transparent_calc(20%-1px),theme(colors.border)_calc(20%-1px),theme(colors.border)_20%)]" onPointerMove={handlePointerMove} onPointerUp={() => void finishDrag()}>{blocked559Width > 0 && <div className={`absolute inset-y-0 left-0 z-10 ${blockedPattern}`} style={{ width: `${blocked559Width}%` }} title="§559-Wirksamkeitsfrist: Die erhöhte Miete wird frühestens ab dem dritten Monat nach Zugang der Erhöhungserklärung geschuldet." />}{data.modernizationPlan.map((item, index) => renderBar(`${item.id}-559`, 'rent', item.title, planPlacement(item), item.monthlyDelta, item.monthlyDelta, false, index))}</div></div>
+          <div className="grid grid-cols-[15%_85%] border-t border-border"><div className="py-4 pr-3 font-medium">§558 Mieterhöhungen</div><div data-gantt-track="true" className="relative h-14 bg-[repeating-linear-gradient(90deg,transparent,transparent_calc(20%-1px),theme(colors.border)_calc(20%-1px),theme(colors.border)_20%)]" onPointerMove={handlePointerMove} onPointerUp={() => void finishDrag()}>{blocked558Width > 0 && <div className={`absolute inset-y-0 left-0 z-10 ${blockedPattern}`} style={{ width: `${blocked558Width}%` }} title={`§558-Sperrfrist: Früheste Wirksamkeit ${earliest558Month}, da die Miete 15 Monate unverändert sein muss.`} />}{data.increases558.map((item, index) => renderBar(item.id ?? `558-${index + 1}`, 'rent', '§558 · Mietspiegel', item.effectiveYyyymm, item.monthlyDelta, item.monthlyDelta, true, index))}</div></div>
           <div className="grid grid-cols-[15%_85%] border-t border-border"><div className="py-4 pr-3 font-medium">Finanzierung</div><div data-gantt-track="true" className="relative h-14 bg-[repeating-linear-gradient(90deg,transparent,transparent_calc(20%-1px),theme(colors.border)_calc(20%-1px),theme(colors.border)_20%)]" onPointerMove={handlePointerMove} onPointerUp={() => void finishDrag()}><div className={`absolute top-2 z-10 h-8 touch-none cursor-ns-resize overflow-hidden rounded-md border-2 border-[#9bbbd3] bg-[#245b88] px-2 py-2 text-[11px] font-semibold text-white shadow-sm ${dragging?.id === 'financing-rate' ? 'ring-2 ring-[#d99432] ring-offset-2' : ''}`} style={{ left: `${fixedInterestLeft}%`, width: `${fixedInterestWidth}%` }} onPointerDown={(event) => beginDrag(event, 'financing-rate', 'finance', fixedInterestLeft, draftFinancingRate, 25, false)} onPointerMove={handlePointerMove} onPointerUp={(event) => { event.stopPropagation(); void finishDrag(); }} onPointerCancel={() => { draggingRef.current = null; setDragging(null); }} title="Finanzierungszins: Nach oben ziehen zum Erhöhen, nach unten zum Senken.">Zinsbindung {numberFormatter.format(displayedFinancingRate)} %</div>{refinancingWidth > 0 && refinancingLeft < 100 && <div className={`absolute top-2 z-20 h-8 touch-none cursor-ns-resize overflow-hidden rounded-md border-2 border-[#c2b8df] bg-[#8069bd] px-2 py-2 text-[11px] font-semibold text-white shadow-sm ${dragging?.id === 'refinancing-rate' ? 'ring-2 ring-[#d99432] ring-offset-2' : ''}`} style={{ left: `${refinancingLeft}%`, width: `${refinancingWidth}%` }} onPointerDown={(event) => beginDrag(event, 'refinancing-rate', 'finance', refinancingLeft, draftRefinancingRate, 25, false)} onPointerMove={handlePointerMove} onPointerUp={(event) => { event.stopPropagation(); void finishDrag(); }} onPointerCancel={() => { draggingRef.current = null; setDragging(null); }} title="Anschlussfinanzierung: Nach oben ziehen zum Erhöhen, nach unten zum Senken.">Anschlussfinanzierung {numberFormatter.format(displayedRefinancingRate)} %</div>}</div></div>
           <div className="grid grid-cols-[15%_85%] border-t border-border">
             <div className="py-4 pr-3 font-medium">Steuern</div>
@@ -901,6 +919,7 @@ function CalculatorContent() {
   const [rentIndexSource, setRentIndexSource] = useState<RentIndexSource>('AUTOMATIC');
   const [last558Date, setLast558Date] = useState('');
   const [last559Date, setLast559Date] = useState('');
+  const [last559MonthlyDelta, setLast559MonthlyDelta] = useState('');
   const [mode, setMode] = useState<CalculatorMode>('KNOWN');
   const [placementMode, setPlacementMode] = useState<PlacementMode>('DEFAULT');
   const [interestRate, setInterestRate] = useState(0);
@@ -956,6 +975,7 @@ function CalculatorContent() {
         setRentIndexSource(loaded.params.rentIndexSource ?? loaded.rentIndexSource ?? 'AUTOMATIC');
         setLast558Date(loaded.params.last558Date ?? '');
         setLast559Date(loaded.params.last559Date ?? '');
+        setLast559MonthlyDelta(valueString(loaded.params.last559MonthlyDelta));
         setMode(loaded.params.mode);
         setPlacementMode(loaded.placementMode ?? loaded.params.placementMode ?? 'DEFAULT');
         setInterestRate(loaded.params.refinancingInterestRate ?? loaded.params.interestRate ?? 0);
@@ -967,6 +987,7 @@ function CalculatorContent() {
           rentIndexSource: loaded.params.rentIndexSource ?? loaded.rentIndexSource ?? 'AUTOMATIC',
           last558Date: loaded.params.last558Date ?? '',
           last559Date: loaded.params.last559Date ?? '',
+          last559MonthlyDelta: valueString(loaded.params.last559MonthlyDelta),
         });
       } catch (loadError) {
         if (!cancelled) setError(loadError instanceof Error ? loadError.message : 'Kalkulator konnte nicht geladen werden.');
@@ -998,6 +1019,7 @@ function CalculatorContent() {
           rentIndexSource,
           last558Date: last558Date || null,
           last559Date: last559Date || null,
+          last559MonthlyDelta: parseDecimalInput(last559MonthlyDelta),
           mode: nextMode,
           optimize,
           financingInterestRateOverride: overrides?.financingInterestRateOverride ?? data?.params.financingInterestRateOverride ?? null,
@@ -1032,7 +1054,7 @@ function CalculatorContent() {
   useEffect(() => {
     if (isLoading || isSaving || !data || startMonthError || last558Error || last559Error || !startYyyymm || monthlyRentStart === '') return;
 
-    const signature = JSON.stringify({ startYyyymm, monthlyRentStart, rentIndexPerM2, rentIndexSource, last558Date, last559Date });
+    const signature = JSON.stringify({ startYyyymm, monthlyRentStart, rentIndexPerM2, rentIndexSource, last558Date, last559Date, last559MonthlyDelta });
     if (signature === lastLiveCalculationRef.current) return;
 
     const timer = window.setTimeout(() => {
@@ -1041,7 +1063,7 @@ function CalculatorContent() {
     }, 350);
 
     return () => window.clearTimeout(timer);
-  }, [data, isLoading, isSaving, last558Date, last558Error, last559Date, last559Error, mode, monthlyRentStart, rentIndexPerM2, rentIndexSource, startMonthError, startYyyymm]);
+  }, [data, isLoading, isSaving, last558Date, last558Error, last559Date, last559Error, last559MonthlyDelta, mode, monthlyRentStart, rentIndexPerM2, rentIndexSource, startMonthError, startYyyymm]);
 
   const handleModeChange = (value: string) => {
     const nextMode = value === 'POTENTIAL' ? 'POTENTIAL' : 'KNOWN';
@@ -1124,6 +1146,7 @@ function CalculatorContent() {
                 <MonthField label="Start in Jahr/Monat" value={startYyyymm} error={startMonthError} onChange={setStartYyyymm} />
                 <MonthField label="Letzte Mieterhöhung §558" value={last558Date} error={last558Error} optional onChange={setLast558Date} />
                 <MonthField label="Letzte §559-Erhöhung" value={last559Date} error={last559Error} optional onChange={setLast559Date} />
+                <TextField label="Betrag der letzten §559-Erhöhung" value={last559MonthlyDelta} suffix="€/Monat" inputMode="decimal" disabled={!last559Date} onChange={(event) => setLast559MonthlyDelta(event.target.value)} helperText="Wird auf den gesetzlichen Sechsjahres-Deckel angerechnet." />
                 <TextField label="Mietspiegel Vergleichswert" value={rentIndexPerM2} suffix="€/m²" inputMode="decimal" onChange={(e) => { setRentIndexPerM2(e.target.value); setRentIndexSource('MANUAL'); }} helperText="Automatisch aus Baujahr/Fläche, solange nicht überschrieben." />
               </div>
 
@@ -1183,6 +1206,7 @@ function CalculatorContent() {
                   <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                     <ReadOnlyField label="Kappungsgrenze" value={`${data.denseMarket ? 'Ballungsgebiet' : 'Regelfall'} · ${formatPercent(data.capPercent)}`} />
                     <ReadOnlyField label="§559-Deckel" value={`${formatCurrency(data.capAbs)} / Monat`} />
+                    <ReadOnlyField label="Verfügbarer §559-Spielraum" value={`${formatCurrency(data.remaining559Room)} / Monat`} helperText={data.previous559Used > 0 ? `${formatCurrency(data.previous559Used)} aus früherer Erhöhung berücksichtigt` : 'Keine frühere §559-Erhöhung im Sechsjahresfenster'} />
                     <ReadOnlyField label="Break-even mit Mietspiegel" value={formatMonth(data.breakEvenWithRentIndex)} />
                     <ReadOnlyField label="Mietspiegelquelle" value={data.rentIndexSource === 'MANUAL' ? 'Manuelle Eingabe' : 'Automatisch aus Baujahr/Fläche'} />
                     <ReadOnlyField label="Cashflow heute" value={formatCurrency(data.metrics.cashflowToday)} />

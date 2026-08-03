@@ -61,7 +61,7 @@ async function loadContext(userId: string, workflowId: string, quickCheckId: str
         (
           SELECT row_to_json(item)
           FROM (
-            SELECT city, postal_code, living_area_m2, year_of_construction
+            SELECT city, postal_code, living_area_m2, year_of_construction, updated_at
             FROM detail_check_property_data
             WHERE user_id = $1 AND workflow_id = $2
             LIMIT 1
@@ -70,7 +70,7 @@ async function loadContext(userId: string, workflowId: string, quickCheckId: str
         (
           SELECT row_to_json(item)
           FROM (
-            SELECT valuation_date, cold_rent, service_charges_allocable, service_charges_non_allocable
+            SELECT valuation_date, cold_rent, service_charges_allocable, service_charges_non_allocable, updated_at
             FROM detail_check_rental
             WHERE user_id = $1 AND workflow_id = $2
             LIMIT 1
@@ -88,7 +88,7 @@ async function loadContext(userId: string, workflowId: string, quickCheckId: str
         (
           SELECT row_to_json(item)
           FROM (
-            SELECT cases, financed_amount
+            SELECT cases, financed_amount, updated_at
             FROM detail_check_renovation
             WHERE user_id = $1 AND workflow_id = $2
             LIMIT 1
@@ -99,7 +99,7 @@ async function loadContext(userId: string, workflowId: string, quickCheckId: str
           FROM (
             SELECT purchase_price, parking_purchase_price, total_additional_costs,
                    broker_percent, notary_percent, land_registry_percent,
-                   property_transfer_tax_percent
+                   property_transfer_tax_percent, updated_at
             FROM detail_check_acquisition_costs
             WHERE user_id = $1 AND workflow_id = $2
             LIMIT 1
@@ -108,7 +108,7 @@ async function loadContext(userId: string, workflowId: string, quickCheckId: str
         (
           SELECT row_to_json(item)
           FROM (
-            SELECT building_value, afa_percent
+            SELECT building_value, afa_percent, updated_at
             FROM detail_check_depreciation
             WHERE user_id = $1 AND workflow_id = $2
             LIMIT 1
@@ -174,6 +174,9 @@ async function loadContext(userId: string, workflowId: string, quickCheckId: str
   const livingAreaM2 = toNumber(property?.living_area_m2 ?? 0);
   const serviceChargesAllocable = toNumber(rental?.service_charges_allocable ?? 0);
   const serviceChargesNonAllocable = toNumber(rental?.service_charges_non_allocable ?? 0);
+  const upstreamUpdatedAt = [property, rental, financing, renovation, acquisition, depreciation]
+    .map((item) => item?.updated_at ? Date.parse(String(item.updated_at)) : 0)
+    .reduce((latest, value) => Math.max(latest, Number.isFinite(value) ? value : 0), 0);
   return {
     quickCheck,
     city: property?.city ?? quickCheck?.city ?? '',
@@ -196,13 +199,16 @@ async function loadContext(userId: string, workflowId: string, quickCheckId: str
     purchasePrice,
     totalInvestment: roundCurrency(selectedFinancing.totalCosts),
     renovationCases,
+    upstreamUpdatedAt,
   };
 }
 
 function buildParams(saved: Record<string, unknown> | undefined, context: Awaited<ReturnType<typeof loadContext>>): CalculatorParams {
   const fallbackStart = new Date().toISOString().slice(0, 7);
   const livingAreaM2 = context.livingAreaM2;
-  const rentStart = toNumber(saved?.monthly_rent_start ?? context.coldRent);
+  const rentStart = context.coldRent;
+  const calculatorUpdatedAt = saved?.updated_at ? Date.parse(String(saved.updated_at)) : 0;
+  const upstreamIsNewer = context.upstreamUpdatedAt > (Number.isFinite(calculatorUpdatedAt) ? calculatorUpdatedAt : 0);
   const fallbackRentIndex = estimateRentIndexPerM2(context.yearOfConstruction, livingAreaM2)
     ?? (livingAreaM2 > 0 && rentStart > 0 ? (rentStart / livingAreaM2) * 1.02 : null);
   const savedResult = (saved?.result as Record<string, unknown> | undefined) ?? {};
@@ -217,13 +223,13 @@ function buildParams(saved: Record<string, unknown> | undefined, context: Awaite
         : []
     )),
   );
-  const savedFinancingInterestRate = savedParams.financingInterestRateOverride == null
+  const savedFinancingInterestRate = upstreamIsNewer || savedParams.financingInterestRateOverride == null
     ? context.interestRate
     : Math.max(0, Math.min(25, toNumber(savedParams.financingInterestRateOverride)));
-  const savedRefinancingInterestRate = savedParams.interestRateOverride == null
+  const savedRefinancingInterestRate = upstreamIsNewer || savedParams.interestRateOverride == null
     ? context.interestRate
     : Math.max(0, Math.min(25, toNumber(savedParams.interestRateOverride)));
-  const monthlyDebtService = savedParams.financingInterestRateOverride == null
+  const monthlyDebtService = upstreamIsNewer || savedParams.financingInterestRateOverride == null
     ? context.monthlyDebtService
     : roundCurrency(context.loanAmount * ((savedFinancingInterestRate + context.repaymentRate) / 100) / 12);
 
@@ -237,6 +243,7 @@ function buildParams(saved: Record<string, unknown> | undefined, context: Awaite
     postalCode: context.postalCode,
     last558Date: saved?.last_558_date ? normalizeYyyymm(saved.last_558_date as string) : null,
     last559Date: saved?.last_559_date ? normalizeYyyymm(saved.last_559_date as string) : null,
+    last559MonthlyDelta: Math.max(0, toNumber(savedParams.last559MonthlyDelta)),
     rentIndexPerM2: saved?.rent_index_per_m2 == null ? fallbackRentIndex : toNumber(saved.rent_index_per_m2),
     rentIndexSource: saved?.rent_index_per_m2 == null ? 'AUTOMATIC' : 'MANUAL',
     monthlyDebtService,
@@ -252,15 +259,15 @@ function buildParams(saved: Record<string, unknown> | undefined, context: Awaite
     taxableLossesOffsettable: savedParams.taxableLossesOffsettable === true,
     equityAmount: context.equityAmount,
     equityIncluded: savedParams.equityIncluded === true,
-    financingInterestRateOverride: savedParams.financingInterestRateOverride == null ? null : savedFinancingInterestRate,
-    interestRateOverride: savedParams.interestRateOverride == null ? null : savedRefinancingInterestRate,
+    financingInterestRateOverride: upstreamIsNewer || savedParams.financingInterestRateOverride == null ? null : savedFinancingInterestRate,
+    interestRateOverride: upstreamIsNewer || savedParams.interestRateOverride == null ? null : savedRefinancingInterestRate,
     interestPeriodYears: context.interestPeriodYears,
     refinancingInterestRate: savedParams.refinancingInterestRate == null ? savedRefinancingInterestRate : toNumber(savedParams.refinancingInterestRate),
-    modernizationPlacements: (savedResult.modernizationPlacements as Record<string, string> | undefined)
-      ?? (Object.keys(savedPlanPlacements).length > 0 ? savedPlanPlacements : undefined),
-    modernizationCostOverrides: (savedResult.modernizationCostOverrides as Record<string, number> | undefined) ?? undefined,
-    renovationTimingOverrides: (savedResult.renovationTimingOverrides as CalculatorParams['renovationTimingOverrides']) ?? undefined,
-    rentIncreaseOverrides: (savedResult.rentIncreaseOverrides as Record<string, { effectiveYyyymm?: string; monthlyDelta?: number }> | undefined) ?? undefined,
+    modernizationPlacements: upstreamIsNewer ? undefined : ((savedResult.modernizationPlacements as Record<string, string> | undefined)
+      ?? (Object.keys(savedPlanPlacements).length > 0 ? savedPlanPlacements : undefined)),
+    modernizationCostOverrides: upstreamIsNewer ? undefined : (savedResult.modernizationCostOverrides as Record<string, number> | undefined) ?? undefined,
+    renovationTimingOverrides: upstreamIsNewer ? undefined : (savedResult.renovationTimingOverrides as CalculatorParams['renovationTimingOverrides']) ?? undefined,
+    rentIncreaseOverrides: upstreamIsNewer ? undefined : (savedResult.rentIncreaseOverrides as Record<string, { effectiveYyyymm?: string; monthlyDelta?: number }> | undefined) ?? undefined,
     mode: toMode(saved?.mode),
     placementMode: toPlacementMode(savedResult.placementMode),
   };
@@ -311,13 +318,14 @@ export async function POST(request: Request) {
   const params: CalculatorParams = {
     startYyyymm: normalizeYyyymm(input.startYyyymm, new Date().toISOString().slice(0, 7)),
     rentStartYyyymm: normalizeYyyymm(context.valuationDate, new Date().toISOString().slice(0, 7)),
-    monthlyRentStart: toNumber(input.monthlyRentStart),
+    monthlyRentStart: context.coldRent,
     livingAreaM2: context.livingAreaM2,
     yearOfConstruction: context.yearOfConstruction,
     city: context.city,
     postalCode: context.postalCode,
     last558Date: input.last558Date ? normalizeYyyymm(input.last558Date) : null,
     last559Date: input.last559Date ? normalizeYyyymm(input.last559Date) : null,
+    last559MonthlyDelta: input.last559Date ? Math.max(0, toNumber(input.last559MonthlyDelta)) : 0,
     rentIndexPerM2: input.rentIndexSource !== 'MANUAL' || input.rentIndexPerM2 == null || input.rentIndexPerM2 === ''
       ? estimateRentIndexPerM2(context.yearOfConstruction, context.livingAreaM2)
       : toNumber(input.rentIndexPerM2),
