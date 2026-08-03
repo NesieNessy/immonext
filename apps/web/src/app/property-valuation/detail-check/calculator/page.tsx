@@ -927,10 +927,6 @@ function CalculatorContent() {
   const startMonthError = startYyyymm && !/^\d{4}-(0[1-9]|1[0-2])$/.test(startYyyymm)
     ? 'Bitte einen gültigen Monat wählen.'
     : undefined;
-  const monthlyRentValue = parseDecimalInput(monthlyRentStart);
-  const monthlyRentError = monthlyRentStart !== '' && (!Number.isFinite(monthlyRentValue) || monthlyRentValue < 0)
-    ? 'Bitte einen gültigen Betrag eingeben.'
-    : undefined;
   const last558Error = last558Date && !/^\d{4}-(0[1-9]|1[0-2])$/.test(last558Date)
     ? 'Bitte einen gültigen Monat wählen.'
     : undefined;
@@ -1034,7 +1030,7 @@ function CalculatorContent() {
   recalcRef.current = recalc;
 
   useEffect(() => {
-    if (isLoading || isSaving || !data || startMonthError || monthlyRentError || last558Error || last559Error || !startYyyymm || monthlyRentStart === '') return;
+    if (isLoading || isSaving || !data || startMonthError || last558Error || last559Error || !startYyyymm || monthlyRentStart === '') return;
 
     const signature = JSON.stringify({ startYyyymm, monthlyRentStart, rentIndexPerM2, rentIndexSource, last558Date, last559Date });
     if (signature === lastLiveCalculationRef.current) return;
@@ -1045,7 +1041,7 @@ function CalculatorContent() {
     }, 350);
 
     return () => window.clearTimeout(timer);
-  }, [data, isLoading, isSaving, last558Date, last558Error, last559Date, last559Error, mode, monthlyRentError, monthlyRentStart, rentIndexPerM2, rentIndexSource, startMonthError, startYyyymm]);
+  }, [data, isLoading, isSaving, last558Date, last558Error, last559Date, last559Error, mode, monthlyRentStart, rentIndexPerM2, rentIndexSource, startMonthError, startYyyymm]);
 
   const handleModeChange = (value: string) => {
     const nextMode = value === 'POTENTIAL' ? 'POTENTIAL' : 'KNOWN';
@@ -1126,7 +1122,6 @@ function CalculatorContent() {
               </div>
               <div className="grid gap-4 lg:grid-cols-4 md:grid-cols-2">
                 <MonthField label="Start in Jahr/Monat" value={startYyyymm} error={startMonthError} onChange={setStartYyyymm} />
-                <TextField label="Ausgangsmiete bei Kauf" value={monthlyRentStart} suffix="€" inputMode="decimal" error={monthlyRentError} onChange={(e) => setMonthlyRentStart(e.target.value)} />
                 <MonthField label="Letzte Mieterhöhung §558" value={last558Date} error={last558Error} optional onChange={setLast558Date} />
                 <MonthField label="Letzte §559-Erhöhung" value={last559Date} error={last559Error} optional onChange={setLast559Date} />
                 <TextField label="Mietspiegel Vergleichswert" value={rentIndexPerM2} suffix="€/m²" inputMode="decimal" onChange={(e) => { setRentIndexPerM2(e.target.value); setRentIndexSource('MANUAL'); }} helperText="Automatisch aus Baujahr/Fläche, solange nicht überschrieben." />

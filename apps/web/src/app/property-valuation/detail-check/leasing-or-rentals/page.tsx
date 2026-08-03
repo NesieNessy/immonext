@@ -384,14 +384,14 @@ function RentalContent() {
           <p className="text-sm text-muted-foreground">Vermietungsdaten werden geladen...</p>
         ) : (
           <div className="space-y-7">
-            <section className="grid gap-4 md:grid-cols-[minmax(0,260px)_minmax(0,1fr)] md:items-end">
+            <section className="grid gap-4 md:grid-cols-[minmax(0,260px)_auto] md:items-start md:justify-start">
               <MonthField
                 label="Mieteinnahmen Bewertungs-Stichtag"
                 value={form.valuationMonth}
                 helperText="* Erste Vermietung ab Kauf"
                 onChange={(value) => setForm((prev) => ({ ...prev, valuationMonth: value }))}
               />
-              <div className="inline-flex w-fit rounded-md border border-border bg-muted p-1">
+              <div className="inline-flex w-fit rounded-md border border-border bg-muted p-1 md:mt-7">
                 <button type="button" className={`rounded px-3 py-1.5 text-sm ${amountPeriod === 'MONTH' ? 'bg-card font-semibold shadow-sm' : 'text-muted-foreground'}`} onClick={() => changeAmountPeriod('MONTH')}>Monatlich</button>
                 <button type="button" className={`rounded px-3 py-1.5 text-sm ${amountPeriod === 'YEAR' ? 'bg-card font-semibold shadow-sm' : 'text-muted-foreground'}`} onClick={() => changeAmountPeriod('YEAR')}>Jährlich</button>
               </div>
