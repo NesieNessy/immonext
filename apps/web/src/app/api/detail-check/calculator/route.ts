@@ -4,6 +4,7 @@ import {
   type CalculatorMode,
   type CalculatorParams,
   type PlacementMode,
+  type RentIncreasePlanRow,
 } from '@/lib/detailCheck/rentCalculator';
 import { type RenovationCase } from '@/lib/detailCheck/renovation';
 import { computeIndividualAdditionalCosts, computeFinancing, type InterestPeriodYears } from '@/lib/detailCheck/financing';
@@ -43,6 +44,177 @@ function normalizeTaxRate(value: unknown, fallback = 0.42): number {
   const clamped = Math.max(0, parsed);
   if (clamped > 0.42) return 0.45;
   return Math.min(0.42, clamped);
+}
+
+function normalizeRecentMonth(value: unknown, previousYears: number): string | null {
+  if (typeof value !== 'string' || !/^\d{4}-(0[1-9]|1[0-2])$/.test(value)) return null;
+  const year = Number(value.slice(0, 4));
+  const currentYear = new Date().getFullYear();
+  return year >= currentYear - previousYears && year <= currentYear ? value : null;
+}
+
+async function loadRentIncreasePlan(userId: string, workflowId: string): Promise<RentIncreasePlanRow[]> {
+  const rows = await db.query(
+    `
+      SELECT rent_increase_id, legal_basis, source_type, source_id,
+             sequence_number, effective_yyyymm, monthly_amount
+      FROM detail_check_rent_increases
+      WHERE user_id = $1 AND workflow_id = $2
+      ORDER BY legal_basis, sequence_number
+    `,
+    [userId, workflowId],
+  );
+  return rows.rows.map((row) => ({
+    id: String(row.rent_increase_id),
+    legalBasis: row.legal_basis === '559' ? '559' : '558',
+    sourceType: row.source_type === 'RENOVATION' || row.source_type === 'MANUAL' ? row.source_type : 'RENT_INDEX',
+    sourceId: row.source_id == null ? null : String(row.source_id),
+    sequenceNumber: Number(row.sequence_number),
+    effectiveYyyymm: String(row.effective_yyyymm),
+    monthlyAmount: toNumber(row.monthly_amount),
+  }));
+}
+
+type CalculatorResult = ReturnType<typeof runRentCalculator>;
+
+function rentIncreasePlanNeedsSync(plan: RentIncreasePlanRow[], result: CalculatorResult): boolean {
+  const stored558 = plan.filter((item) => item.legalBasis === '558').sort((a, b) => a.sequenceNumber - b.sequenceNumber);
+  const stored559 = plan.filter((item) => item.legalBasis === '559').sort((a, b) => a.sequenceNumber - b.sequenceNumber);
+  if (stored558.length !== result.increases558.length || stored559.length !== result.modernizationPlan.length) return true;
+  const changed558 = result.increases558.some((item, index) => {
+    const stored = stored558[index];
+    return !stored
+      || stored.effectiveYyyymm !== item.effectiveYyyymm
+      || stored.sourceType !== item.sourceType
+      || Math.abs(stored.monthlyAmount - item.monthlyDelta) > 0.009;
+  });
+  if (changed558) return true;
+  return result.modernizationPlan.some((item, index) => {
+    const stored = stored559[index];
+    return !stored
+      || stored.sourceId !== item.id
+      || stored.effectiveYyyymm !== item.effectiveYyyymm
+      || Math.abs(stored.monthlyAmount - item.monthlyDelta) > 0.009;
+  });
+}
+
+async function syncRentIncreasePlan(
+  userId: string,
+  workflowId: string,
+  result: CalculatorResult,
+): Promise<RentIncreasePlanRow[]> {
+  const client = await db.connect();
+  try {
+    await client.query('BEGIN');
+    const existingRows = await client.query(
+      `
+        SELECT rent_increase_id, legal_basis, source_id, sequence_number
+        FROM detail_check_rent_increases
+        WHERE user_id = $1 AND workflow_id = $2
+      `,
+      [userId, workflowId],
+    );
+    const existing558 = new Map<number, string>();
+    const existing559 = new Map<string, string>();
+    for (const row of existingRows.rows) {
+      if (row.legal_basis === '558') existing558.set(Number(row.sequence_number), String(row.rent_increase_id));
+      if (row.legal_basis === '559' && row.source_id != null) existing559.set(String(row.source_id), String(row.rent_increase_id));
+    }
+
+    await client.query(
+      `UPDATE detail_check_rent_increases
+       SET sequence_number = sequence_number + 10000
+       WHERE user_id = $1 AND workflow_id = $2`,
+      [userId, workflowId],
+    );
+
+    const retainedIds: string[] = [];
+    for (const [index, increase] of result.increases558.entries()) {
+      const sequence = index + 1;
+      const existingId = existing558.get(sequence);
+      if (existingId) {
+        await client.query(
+          `
+            UPDATE detail_check_rent_increases
+            SET legal_basis = '558', source_type = $1, source_id = NULL,
+                sequence_number = $2, effective_yyyymm = $3, monthly_amount = $4
+            WHERE rent_increase_id = $5 AND user_id = $6 AND workflow_id = $7
+          `,
+          [increase.sourceType, sequence, increase.effectiveYyyymm, increase.monthlyDelta, existingId, userId, workflowId],
+        );
+        retainedIds.push(existingId);
+      } else {
+        const inserted = await client.query(
+          `
+            INSERT INTO detail_check_rent_increases (
+              user_id, workflow_id, legal_basis, source_type, source_id,
+              sequence_number, effective_yyyymm, monthly_amount
+            ) VALUES ($1,$2,'558',$3,NULL,$4,$5,$6)
+            RETURNING rent_increase_id
+          `,
+          [userId, workflowId, increase.sourceType, sequence, increase.effectiveYyyymm, increase.monthlyDelta],
+        );
+        retainedIds.push(String(inserted.rows[0].rent_increase_id));
+      }
+    }
+
+    for (const [index, increase] of result.modernizationPlan.entries()) {
+      const sequence = index + 1;
+      const existingId = existing559.get(increase.id);
+      if (existingId) {
+        await client.query(
+          `
+            UPDATE detail_check_rent_increases
+            SET legal_basis = '559', source_type = 'RENOVATION', source_id = $1,
+                sequence_number = $2, effective_yyyymm = $3, monthly_amount = $4
+            WHERE rent_increase_id = $5 AND user_id = $6 AND workflow_id = $7
+          `,
+          [increase.id, sequence, increase.effectiveYyyymm, increase.monthlyDelta, existingId, userId, workflowId],
+        );
+        retainedIds.push(existingId);
+      } else {
+        const inserted = await client.query(
+          `
+            INSERT INTO detail_check_rent_increases (
+              user_id, workflow_id, legal_basis, source_type, source_id,
+              sequence_number, effective_yyyymm, monthly_amount
+            ) VALUES ($1,$2,'559','RENOVATION',$3,$4,$5,$6)
+            RETURNING rent_increase_id
+          `,
+          [userId, workflowId, increase.id, sequence, increase.effectiveYyyymm, increase.monthlyDelta],
+        );
+        retainedIds.push(String(inserted.rows[0].rent_increase_id));
+      }
+    }
+
+    if (retainedIds.length === 0) {
+      await client.query(
+        'DELETE FROM detail_check_rent_increases WHERE user_id = $1 AND workflow_id = $2',
+        [userId, workflowId],
+      );
+    } else {
+      await client.query(
+        `DELETE FROM detail_check_rent_increases
+         WHERE user_id = $1 AND workflow_id = $2
+           AND NOT (rent_increase_id = ANY($3::bigint[]))`,
+        [userId, workflowId, retainedIds],
+      );
+    }
+    await client.query('COMMIT');
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
+  return loadRentIncreasePlan(userId, workflowId);
+}
+
+function resultForStorage(result: CalculatorResult) {
+  const storedParams = { ...result.params };
+  delete storedParams.rentIncreasePlan;
+  delete storedParams.rentIncreaseOverrides;
+  return { ...result, params: storedParams };
 }
 
 async function loadContext(userId: string, workflowId: string, quickCheckId: string | null) {
@@ -203,7 +375,11 @@ async function loadContext(userId: string, workflowId: string, quickCheckId: str
   };
 }
 
-function buildParams(saved: Record<string, unknown> | undefined, context: Awaited<ReturnType<typeof loadContext>>): CalculatorParams {
+function buildParams(
+  saved: Record<string, unknown> | undefined,
+  context: Awaited<ReturnType<typeof loadContext>>,
+  rentIncreasePlan: RentIncreasePlanRow[],
+): CalculatorParams {
   const fallbackStart = new Date().toISOString().slice(0, 7);
   const livingAreaM2 = context.livingAreaM2;
   const rentStart = context.coldRent;
@@ -241,8 +417,8 @@ function buildParams(saved: Record<string, unknown> | undefined, context: Awaite
     yearOfConstruction: context.yearOfConstruction,
     city: context.city,
     postalCode: context.postalCode,
-    last558Date: saved?.last_558_date ? normalizeYyyymm(saved.last_558_date as string) : null,
-    last559Date: saved?.last_559_date ? normalizeYyyymm(saved.last_559_date as string) : null,
+    last558Date: normalizeRecentMonth(saved?.last_558_date, 1),
+    last559Date: normalizeRecentMonth(saved?.last_559_date, 5),
     last559MonthlyDelta: Math.max(0, toNumber(savedParams.last559MonthlyDelta)),
     rentIncreaseIntervalMonths: Math.max(15, Math.min(60, Math.round(toNumber(savedParams.rentIncreaseIntervalMonths) || 15))),
     rentIncreaseUtilizationPercent: Math.max(0, Math.min(100, savedParams.rentIncreaseUtilizationPercent == null ? 100 : toNumber(savedParams.rentIncreaseUtilizationPercent))),
@@ -265,11 +441,14 @@ function buildParams(saved: Record<string, unknown> | undefined, context: Awaite
     interestRateOverride: upstreamIsNewer || savedParams.interestRateOverride == null ? null : savedRefinancingInterestRate,
     interestPeriodYears: context.interestPeriodYears,
     refinancingInterestRate: savedParams.refinancingInterestRate == null ? savedRefinancingInterestRate : toNumber(savedParams.refinancingInterestRate),
-    modernizationPlacements: upstreamIsNewer ? undefined : ((savedResult.modernizationPlacements as Record<string, string> | undefined)
+    modernizationPlacements: upstreamIsNewer ? undefined : ((savedParams.modernizationPlacements as Record<string, string> | undefined)
       ?? (Object.keys(savedPlanPlacements).length > 0 ? savedPlanPlacements : undefined)),
-    modernizationCostOverrides: upstreamIsNewer ? undefined : (savedResult.modernizationCostOverrides as Record<string, number> | undefined) ?? undefined,
-    renovationTimingOverrides: upstreamIsNewer ? undefined : (savedResult.renovationTimingOverrides as CalculatorParams['renovationTimingOverrides']) ?? undefined,
-    rentIncreaseOverrides: upstreamIsNewer ? undefined : (savedResult.rentIncreaseOverrides as Record<string, { effectiveYyyymm?: string; monthlyDelta?: number }> | undefined) ?? undefined,
+    modernizationCostOverrides: upstreamIsNewer ? undefined : (savedParams.modernizationCostOverrides as Record<string, number> | undefined) ?? undefined,
+    renovationTimingOverrides: upstreamIsNewer ? undefined : (savedParams.renovationTimingOverrides as CalculatorParams['renovationTimingOverrides']) ?? undefined,
+    rentIncreasePlan,
+    rentIncreaseOverrides: rentIncreasePlan.length > 0 || upstreamIsNewer
+      ? undefined
+      : (savedParams.rentIncreaseOverrides as Record<string, { effectiveYyyymm?: string; monthlyDelta?: number }> | undefined) ?? undefined,
     mode: toMode(saved?.mode),
     placementMode: toPlacementMode(savedResult.placementMode),
   };
@@ -285,8 +464,14 @@ export async function GET(request: Request) {
     'SELECT * FROM detail_check_rent_calculator WHERE user_id = $1 AND workflow_id = $2 LIMIT 1',
     [userId, workflowId],
   );
-  const params = buildParams(savedRows.rows[0], context);
-  const result = runRentCalculator(params, context.renovationCases);
+  let rentIncreasePlan = await loadRentIncreasePlan(userId, workflowId);
+  let params = buildParams(savedRows.rows[0], context, rentIncreasePlan);
+  let result = runRentCalculator(params, context.renovationCases);
+  if (rentIncreasePlanNeedsSync(rentIncreasePlan, result)) {
+    rentIncreasePlan = await syncRentIncreasePlan(userId, workflowId, result);
+    params = { ...params, rentIncreasePlan, rentIncreaseOverrides: undefined };
+    result = runRentCalculator(params, context.renovationCases);
+  }
 
   return NextResponse.json({
     workflowId,
@@ -303,6 +488,8 @@ export async function POST(request: Request) {
   const quickCheckId = input.quickCheckId ? String(input.quickCheckId) : null;
   const workflowId = workflowIdFor(userId, quickCheckId, input.workflowId ? String(input.workflowId) : null);
   const context = await loadContext(userId, workflowId, quickCheckId);
+  const storedRentIncreasePlan = await loadRentIncreasePlan(userId, workflowId);
+  const resetRentIncreasePlan = input.optimize === true || input.resetRentIncreasePlan === true;
   const savedResult = input.optimize === true ? 'OPTIMIZED' : 'DEFAULT';
   const requestedInterestRate = input.interestRateOverride == null ? null : toNumber(input.interestRateOverride);
   const requestedFinancingInterestRate = input.financingInterestRateOverride == null
@@ -317,7 +504,7 @@ export async function POST(request: Request) {
   const monthlyDebtService = requestedFinancingInterestRate == null
     ? context.monthlyDebtService
     : roundCurrency(context.loanAmount * ((interestRate + context.repaymentRate) / 100) / 12);
-  const params: CalculatorParams = {
+  let params: CalculatorParams = {
     startYyyymm: normalizeYyyymm(input.startYyyymm, new Date().toISOString().slice(0, 7)),
     rentStartYyyymm: normalizeYyyymm(context.valuationDate, new Date().toISOString().slice(0, 7)),
     monthlyRentStart: context.coldRent,
@@ -325,9 +512,9 @@ export async function POST(request: Request) {
     yearOfConstruction: context.yearOfConstruction,
     city: context.city,
     postalCode: context.postalCode,
-    last558Date: input.last558Date ? normalizeYyyymm(input.last558Date) : null,
-    last559Date: input.last559Date ? normalizeYyyymm(input.last559Date) : null,
-    last559MonthlyDelta: input.last559Date ? Math.max(0, toNumber(input.last559MonthlyDelta)) : 0,
+    last558Date: normalizeRecentMonth(input.last558Date, 1),
+    last559Date: normalizeRecentMonth(input.last559Date, 5),
+    last559MonthlyDelta: normalizeRecentMonth(input.last559Date, 5) ? Math.max(0, toNumber(input.last559MonthlyDelta)) : 0,
     rentIncreaseIntervalMonths: Math.max(15, Math.min(60, Math.round(toNumber(input.rentIncreaseIntervalMonths) || 15))),
     rentIncreaseUtilizationPercent: Math.max(0, Math.min(100, input.rentIncreaseUtilizationPercent == null ? 100 : toNumber(input.rentIncreaseUtilizationPercent))),
     rentIndexPerM2: input.rentIndexSource !== 'MANUAL' || input.rentIndexPerM2 == null || input.rentIndexPerM2 === ''
@@ -362,14 +549,18 @@ export async function POST(request: Request) {
     renovationTimingOverrides: input.renovationTimingOverrides && typeof input.renovationTimingOverrides === 'object'
       ? input.renovationTimingOverrides as CalculatorParams['renovationTimingOverrides']
       : undefined,
-    rentIncreaseOverrides: input.rentIncreaseOverrides && typeof input.rentIncreaseOverrides === 'object'
+    rentIncreasePlan: resetRentIncreasePlan ? undefined : storedRentIncreasePlan,
+    rentIncreaseOverrides: input.optimize !== true && input.rentIncreaseOverrides && typeof input.rentIncreaseOverrides === 'object'
       ? input.rentIncreaseOverrides as Record<string, { effectiveYyyymm?: string; monthlyDelta?: number }>
       : undefined,
     mode: toMode(input.mode),
     placementMode: savedResult,
   };
 
-  const result = runRentCalculator(params, context.renovationCases);
+  let result = runRentCalculator(params, context.renovationCases);
+  const rentIncreasePlan = await syncRentIncreasePlan(userId, workflowId, result);
+  params = { ...params, rentIncreasePlan, rentIncreaseOverrides: undefined };
+  result = runRentCalculator(params, context.renovationCases);
 
   await db.query(
     `
@@ -399,7 +590,7 @@ export async function POST(request: Request) {
       params.last558Date,
       params.last559Date,
       params.mode,
-      JSON.stringify(result),
+      JSON.stringify(resultForStorage(result)),
     ],
   );
 
@@ -445,6 +636,10 @@ export async function POST(request: Request) {
         [params.interestRate, params.monthlyDebtService, userId, workflowId],
       );
     }
+    await db.query(
+      'UPDATE detail_check_rent_calculator SET updated_at = NOW() WHERE user_id = $1 AND workflow_id = $2',
+      [userId, workflowId],
+    );
   }
 
   return NextResponse.json({

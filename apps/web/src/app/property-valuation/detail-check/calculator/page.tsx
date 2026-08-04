@@ -78,6 +78,9 @@ const numberFormatter = new Intl.NumberFormat('de-DE', {
   minimumFractionDigits: 0,
   maximumFractionDigits: 2,
 });
+const CURRENT_YEAR = new Date().getFullYear();
+const LAST_558_YEARS = [CURRENT_YEAR, CURRENT_YEAR - 1];
+const LAST_559_YEARS = Array.from({ length: 6 }, (_, index) => CURRENT_YEAR - index);
 
 function formatCurrency(value: number): string {
   return `${currencyFormatter.format(value)} €`;
@@ -709,7 +712,7 @@ function PlanEditor({
         <div className="w-full min-w-0">
           <div className="grid grid-cols-[15%_85%] border-t border-border"><div className="py-4 pr-3 font-medium">Sanierungen</div><div data-gantt-track="true" className="relative h-14 bg-[repeating-linear-gradient(90deg,transparent,transparent_calc(20%-1px),theme(colors.border)_calc(20%-1px),theme(colors.border)_20%)]" onPointerMove={handlePointerMove} onPointerUp={() => void finishDrag()}>{viewport.start === 0 && <div className="absolute inset-y-0 left-0 w-[2.5%] bg-[repeating-linear-gradient(135deg,rgba(100,116,139,.12),rgba(100,116,139,.12)_5px,transparent_5px,transparent_10px)]" title="Vor dem Startmonat gesperrt" />}{data.modernizationPlan.map((item, index) => { const amount = data.params.modernizationCostOverrides?.[item.id] ?? item.allocableCosts; return renderBar(item.id, 'modernization', item.title, planPlacement(item), amount, Math.max(1000, amount * 3, item.allocableCosts * 3), true, index); })}</div></div>
           <div className="grid grid-cols-[15%_85%] border-t border-border"><div className="py-4 pr-3 font-medium">§559 Wirksamkeit</div><div data-gantt-track="true" className="relative h-14 bg-[repeating-linear-gradient(90deg,transparent,transparent_calc(20%-1px),theme(colors.border)_calc(20%-1px),theme(colors.border)_20%)]" onPointerMove={handlePointerMove} onPointerUp={() => void finishDrag()}>{blocked559Width > 0 && <div className={`absolute inset-y-0 left-0 z-10 ${blockedPattern}`} style={{ width: `${blocked559Width}%` }} title="§559-Wirksamkeitsfrist: Die erhöhte Miete wird frühestens ab dem dritten Monat nach Zugang der Erhöhungserklärung geschuldet." />}{data.modernizationPlan.map((item, index) => renderBar(`${item.id}-559`, 'rent', item.title, planPlacement(item), item.monthlyDelta, item.monthlyDelta, false, index))}</div></div>
-          <div className="grid grid-cols-[15%_85%] border-t border-border"><div className="py-4 pr-3 font-medium">§558 Mieterhöhungen</div><div data-gantt-track="true" className="relative h-14 bg-[repeating-linear-gradient(90deg,transparent,transparent_calc(20%-1px),theme(colors.border)_calc(20%-1px),theme(colors.border)_20%)]" onPointerMove={handlePointerMove} onPointerUp={() => void finishDrag()}>{blocked558Width > 0 && <div className={`absolute inset-y-0 left-0 z-10 ${blockedPattern}`} style={{ width: `${blocked558Width}%` }} title={`§558-Sperrfrist: Früheste Wirksamkeit ${earliest558Month}; gewählter Abstand ${data.params.rentIncreaseIntervalMonths} Monate.`} />}{data.increases558.map((item, index) => renderBar(item.id ?? `558-${index + 1}`, 'rent', '§558 · Mietspiegel', item.effectiveYyyymm, item.monthlyDelta, item.monthlyDelta, true, index))}</div></div>
+          <div className="grid grid-cols-[15%_85%] border-t border-border"><div className="py-4 pr-3 font-medium">§558 Mieterhöhungen</div><div data-gantt-track="true" className="relative h-14 bg-[repeating-linear-gradient(90deg,transparent,transparent_calc(20%-1px),theme(colors.border)_calc(20%-1px),theme(colors.border)_20%)]" onPointerMove={handlePointerMove} onPointerUp={() => void finishDrag()}>{blocked558Width > 0 && <div className={`absolute inset-y-0 left-0 z-10 ${blockedPattern}`} style={{ width: `${blocked558Width}%` }} title={`§558-Sperrfrist: Früheste Wirksamkeit ${earliest558Month}; gewählter Abstand ${data.params.rentIncreaseIntervalMonths} Monate.`} />}{data.increases558.map((item, index) => renderBar(item.id ?? `558-${index + 1}`, 'rent', item.sourceType === 'MANUAL' ? '§558 · Manuell' : '§558 · Mietspiegel', item.effectiveYyyymm, item.monthlyDelta, item.legalMaximum, true, index))}</div></div>
           <div className="grid grid-cols-[15%_85%] border-t border-border"><div className="py-4 pr-3 font-medium">Finanzierung</div><div data-gantt-track="true" className="relative h-14 bg-[repeating-linear-gradient(90deg,transparent,transparent_calc(20%-1px),theme(colors.border)_calc(20%-1px),theme(colors.border)_20%)]" onPointerMove={handlePointerMove} onPointerUp={() => void finishDrag()}><div className={`absolute top-2 z-10 h-8 touch-none cursor-ns-resize overflow-hidden rounded-md border-2 border-[#9bbbd3] bg-[#245b88] px-2 py-2 text-[11px] font-semibold text-white shadow-sm ${dragging?.id === 'financing-rate' ? 'ring-2 ring-[#d99432] ring-offset-2' : ''}`} style={{ left: `${fixedInterestLeft}%`, width: `${fixedInterestWidth}%` }} onPointerDown={(event) => beginDrag(event, 'financing-rate', 'finance', fixedInterestLeft, draftFinancingRate, 25, false)} onPointerMove={handlePointerMove} onPointerUp={(event) => { event.stopPropagation(); void finishDrag(); }} onPointerCancel={() => { draggingRef.current = null; setDragging(null); }} title="Finanzierungszins: Nach oben ziehen zum Erhöhen, nach unten zum Senken.">Zinsbindung {numberFormatter.format(displayedFinancingRate)} %</div>{refinancingWidth > 0 && refinancingLeft < 100 && <div className={`absolute top-2 z-20 h-8 touch-none cursor-ns-resize overflow-hidden rounded-md border-2 border-[#c2b8df] bg-[#8069bd] px-2 py-2 text-[11px] font-semibold text-white shadow-sm ${dragging?.id === 'refinancing-rate' ? 'ring-2 ring-[#d99432] ring-offset-2' : ''}`} style={{ left: `${refinancingLeft}%`, width: `${refinancingWidth}%` }} onPointerDown={(event) => beginDrag(event, 'refinancing-rate', 'finance', refinancingLeft, draftRefinancingRate, 25, false)} onPointerMove={handlePointerMove} onPointerUp={(event) => { event.stopPropagation(); void finishDrag(); }} onPointerCancel={() => { draggingRef.current = null; setDragging(null); }} title="Anschlussfinanzierung: Nach oben ziehen zum Erhöhen, nach unten zum Senken.">Anschlussfinanzierung {numberFormatter.format(displayedRefinancingRate)} %</div>}</div></div>
           <div className="grid grid-cols-[15%_85%] border-t border-border">
             <div className="py-4 pr-3 font-medium">Steuern</div>
@@ -952,6 +955,7 @@ function CalculatorContent() {
   const [hasPendingChanges, setHasPendingChanges] = useState(false);
   const [pendingNavigation, setPendingNavigation] = useState<string | null>(null);
   const lastLiveCalculationRef = useRef('');
+  const resetRentPlanRef = useRef(false);
   const recalcRef = useRef<(nextMode?: CalculatorMode) => Promise<void>>(async () => undefined);
 
   const visibleTimeline = useMemo(() => data?.timeline ?? [], [data]);
@@ -1049,7 +1053,8 @@ function CalculatorContent() {
           modernizationPlacements: overrides?.modernizationPlacements ?? data?.params.modernizationPlacements,
           modernizationCostOverrides: overrides?.modernizationCostOverrides ?? data?.params.modernizationCostOverrides,
           renovationTimingOverrides: overrides?.renovationTimingOverrides ?? data?.params.renovationTimingOverrides,
-          rentIncreaseOverrides: overrides?.rentIncreaseOverrides ?? data?.params.rentIncreaseOverrides,
+          resetRentIncreasePlan: optimize || resetRentPlanRef.current,
+          rentIncreaseOverrides: optimize || resetRentPlanRef.current ? {} : (overrides?.rentIncreaseOverrides ?? data?.params.rentIncreaseOverrides),
           apply,
         }),
       });
@@ -1060,6 +1065,7 @@ function CalculatorContent() {
       setPlacementMode(updated.placementMode ?? 'DEFAULT');
       setInterestRate(updated.params.refinancingInterestRate ?? updated.params.interestRate ?? 0);
       setEquityIncluded(updated.params.equityIncluded === true);
+      resetRentPlanRef.current = false;
       setHasPendingChanges(!apply);
       if (navigate) router.push(`/property-valuation/detail-check/macro-location${suffix}`);
     } catch (saveError) {
@@ -1118,8 +1124,8 @@ function CalculatorContent() {
         {isLoading || !data ? (
           <p className="text-sm text-muted-foreground">Kalkulator wird geladen...</p>
         ) : (
-          <div className="space-y-8">
-            <section>
+          <div className="flex flex-col gap-8">
+            <section className="order-1">
               <div className="mb-4 flex flex-wrap items-center gap-4">
                 <div>
                   <h2 className="text-lg font-medium text-foreground">Cashflow und Planung</h2>
@@ -1137,24 +1143,6 @@ function CalculatorContent() {
                 </div>
               </div>
               <div className="rounded-lg border border-border bg-card p-4 shadow-sm sm:p-6">
-                <div className="mb-5 grid gap-4 border-b border-border pb-5 lg:grid-cols-2">
-                  <label className="block min-w-0">
-                    <span className="mb-2 flex items-center justify-between gap-3 text-sm font-medium text-foreground">
-                      <span>Abstand der §558-Mieterhöhungen</span>
-                      <output className="shrink-0 text-primary">{rentIncreaseIntervalMonths === 15 ? 'Gesetzliches Minimum · 15 Monate' : `${rentIncreaseIntervalMonths} Monate`}</output>
-                    </span>
-                    <input type="range" min={15} max={60} step={1} value={rentIncreaseIntervalMonths} onChange={(event) => setRentIncreaseIntervalMonths(Number(event.target.value))} className="w-full accent-primary" />
-                    <span className="mt-1 flex justify-between text-xs text-muted-foreground"><span>15 Monate</span><span>60 Monate</span></span>
-                  </label>
-                  <label className="block min-w-0">
-                    <span className="mb-2 flex items-center justify-between gap-3 text-sm font-medium text-foreground">
-                      <span>Nutzung des zulässigen Erhöhungsspielraums</span>
-                      <output className="shrink-0 text-primary">{numberFormatter.format(rentIncreaseUtilizationPercent)} %</output>
-                    </span>
-                    <input type="range" min={0} max={100} step={0.1} value={rentIncreaseUtilizationPercent} onChange={(event) => setRentIncreaseUtilizationPercent(Number(event.target.value))} className="w-full accent-primary" />
-                    <span className="mt-1 flex justify-between text-xs text-muted-foreground"><span>0 %</span><span>Gesetzliches Maximum · 100 %</span></span>
-                  </label>
-                </div>
                 <div className="relative overflow-hidden">
                   <TimelineEventConnectors rows={chartRows} viewport={timelineViewport} />
                   <CalculatorChart rows={chartRows} showRentIndex={showRentIndexComparison} viewport={timelineViewport} />
@@ -1172,22 +1160,22 @@ function CalculatorContent() {
               </div>
             </section>
 
-            <section>
-              <div className="mb-4 flex items-center gap-4">
+            <section className="order-2 flex flex-col">
+              <div className="order-1 mb-4 flex items-center gap-4">
                 <h2 className="rounded-lg border border-border bg-card px-4 py-2 text-lg font-medium text-foreground">
                   Parameter
                 </h2>
                 <div className="h-px flex-1 bg-border" />
               </div>
-              <div className="grid gap-4 lg:grid-cols-4 md:grid-cols-2">
+              <div className="order-2 grid gap-4 lg:grid-cols-4 md:grid-cols-2">
                 <MonthField label="Start in Jahr/Monat" value={startYyyymm} error={startMonthError} onChange={setStartYyyymm} />
-                <MonthField label="Letzte Mieterhöhung §558" value={last558Date} error={last558Error} optional onChange={setLast558Date} />
-                <MonthField label="Letzte §559-Erhöhung" value={last559Date} error={last559Error} optional onChange={setLast559Date} />
+                <MonthField label="Letzte Mieterhöhung §558" value={last558Date} error={last558Error} optional years={LAST_558_YEARS} onChange={setLast558Date} />
+                <MonthField label="Letzte §559-Erhöhung" value={last559Date} error={last559Error} optional years={LAST_559_YEARS} onChange={setLast559Date} />
                 <TextField label="Betrag der letzten §559-Erhöhung" value={last559MonthlyDelta} suffix="€/Monat" inputMode="decimal" disabled={!last559Date} onChange={(event) => setLast559MonthlyDelta(event.target.value)} helperText="Wird auf den gesetzlichen Sechsjahres-Deckel angerechnet." />
                 <TextField label="Mietspiegel Vergleichswert" value={rentIndexPerM2} suffix="€/m²" inputMode="decimal" onChange={(e) => { setRentIndexPerM2(e.target.value); setRentIndexSource('MANUAL'); }} helperText="Automatisch aus Baujahr/Fläche, solange nicht überschrieben." />
               </div>
 
-              <div className="mt-5 border-y border-border py-3">
+              <div className="order-3 mt-5 border-y border-border py-3">
                 <button
                   type="button"
                   className="flex w-full items-center justify-between gap-3 text-left font-medium text-foreground"
@@ -1210,7 +1198,26 @@ function CalculatorContent() {
                 )}
               </div>
 
-              <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+              <div className="order-4 mt-5 grid gap-4 border-y border-border py-5 lg:grid-cols-2">
+                <label className="block min-w-0">
+                  <span className="mb-2 flex items-center justify-between gap-3 text-sm font-medium text-foreground">
+                    <span>Abstand der §558-Mieterhöhungen</span>
+                    <output className="shrink-0 text-primary">{rentIncreaseIntervalMonths === 15 ? 'Gesetzliches Minimum · 15 Monate' : `${rentIncreaseIntervalMonths} Monate`}</output>
+                  </span>
+                  <input type="range" min={15} max={60} step={1} value={rentIncreaseIntervalMonths} onChange={(event) => { resetRentPlanRef.current = true; setRentIncreaseIntervalMonths(Number(event.target.value)); }} className="w-full accent-primary" />
+                  <span className="mt-1 flex justify-between text-xs text-muted-foreground"><span>15 Monate</span><span>60 Monate</span></span>
+                </label>
+                <label className="block min-w-0">
+                  <span className="mb-2 flex items-center justify-between gap-3 text-sm font-medium text-foreground">
+                    <span>Nutzung des zulässigen Erhöhungsspielraums</span>
+                    <output className="shrink-0 text-primary">{numberFormatter.format(rentIncreaseUtilizationPercent)} %</output>
+                  </span>
+                  <input type="range" min={0} max={100} step={0.1} value={rentIncreaseUtilizationPercent} onChange={(event) => { resetRentPlanRef.current = true; setRentIncreaseUtilizationPercent(Number(event.target.value)); }} className="w-full accent-primary" />
+                  <span className="mt-1 flex justify-between text-xs text-muted-foreground"><span>0 %</span><span>Gesetzliches Maximum · 100 %</span></span>
+                </label>
+              </div>
+
+              <div className="order-7 mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
                 <MetricCard
                   label="Kaltmiete heute"
                   value={formatCurrency(data.params.monthlyRentStart)}
@@ -1235,7 +1242,7 @@ function CalculatorContent() {
                 />
               </div>
 
-              <div className="mt-5">
+              <div className="order-8 mt-5">
                 <CalculatedPanel
                   title="Berechnete Kennzahlen"
                   description="Automatisch aus Parametern, Finanzierung, Steuern und Zeitplanung ermittelt"
@@ -1254,7 +1261,7 @@ function CalculatorContent() {
                 </CalculatedPanel>
                 </div>
 
-              <div className="mt-6 grid gap-4 md:grid-cols-[minmax(0,320px)_minmax(0,1fr)] md:items-end">
+              <div className="order-5 mt-6 grid gap-4 md:grid-cols-[minmax(0,320px)_minmax(0,1fr)] md:items-end">
                 <Dropdown
                   label="Szenario"
                   value={mode}
@@ -1279,14 +1286,14 @@ function CalculatorContent() {
                 </div>
               </div>
 
-              <div className="mt-4 flex flex-wrap gap-3">
+              <div className="order-6 mt-4 flex flex-wrap gap-3">
                 <Button
                   label="Neu berechnen"
-                  onClick={() => recalc(mode)}
+                  onClick={() => { resetRentPlanRef.current = true; void recalc(mode); }}
                   disabled={isSaving}
                 />
                 <Button
-                  label="Sanierungen optimal platzieren"
+                  label="Sanierungen und Mieterhöhungen optimieren"
                   variant="outline"
                   icon={<Sparkles />}
                   onClick={() => recalc(mode, false, true)}
@@ -1294,13 +1301,13 @@ function CalculatorContent() {
                 />
               </div>
               {placementMode === 'OPTIMIZED' && (
-                <p className="mt-3 text-sm text-muted-foreground">
-                  Die angezeigten Sanierungszeitpunkte sind auf den frühestmöglichen Break-even optimiert.
+                <p className="order-6 mt-3 text-sm text-muted-foreground">
+                  Sanierungen und daraus folgende §558-Mieterhöhungen sind anhand der Regler auf den frühestmöglichen Break-even optimiert.
                 </p>
               )}
             </section>
 
-            <section className="space-y-4">
+            <section className="order-3 space-y-4">
               <div className="flex flex-wrap items-center gap-3">
                 <h2 className="text-lg font-medium text-foreground">Detailtabellen</h2>
                 <span className="text-sm text-muted-foreground">Standardmäßig eingeklappt</span>

@@ -16,6 +16,7 @@ interface MonthFieldProps {
   error?: string;
   helperText?: string;
   optional?: boolean;
+  years?: number[];
 }
 
 export function MonthField({
@@ -25,6 +26,7 @@ export function MonthField({
   error,
   helperText,
   optional = false,
+  years = MONTH_FIELD_YEARS,
 }: MonthFieldProps) {
   const [selectedYear = "", selectedMonth = ""] = value.split("-");
   const updatePart = (part: "month" | "year", nextValue: string) => {
@@ -56,12 +58,12 @@ export function MonthField({
         <div className="h-6 w-px bg-border" aria-hidden="true" />
         <select
           aria-label={`${label}: Jahr`}
-          className="w-20 appearance-none bg-transparent px-2 py-2 text-foreground outline-none"
+          className={`${optional ? "w-28" : "w-20"} appearance-none bg-transparent px-2 py-2 text-foreground outline-none`}
           value={selectedYear}
           onChange={(event) => updatePart("year", event.target.value)}
         >
-          <option value="">Jahr</option>
-          {MONTH_FIELD_YEARS.map((year) => <option key={year} value={year}>{year}</option>)}
+          <option value="">{optional ? "Nicht relevant" : "Jahr"}</option>
+          {years.map((year) => <option key={year} value={year}>{year}</option>)}
         </select>
         {optional && value && (
           <button

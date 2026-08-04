@@ -14,6 +14,7 @@ const DETAIL_CHECK_TABLES = [
   'detail_check_financing',
   'detail_check_depreciation',
   'detail_check_renovation',
+  'detail_check_rent_increases',
   'detail_check_rent_calculator',
   'detail_check_location_score',
   'detail_check_comparison',

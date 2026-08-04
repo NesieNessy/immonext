@@ -4,6 +4,18 @@ import { costForCase, type RenovationCase, type RenovationTiming } from './renov
 export type CalculatorMode = 'KNOWN' | 'POTENTIAL';
 export type PlacementMode = 'DEFAULT' | 'OPTIMIZED';
 export type RentIndexSource = 'MANUAL' | 'AUTOMATIC';
+export type RentIncreaseLegalBasis = '558' | '559';
+export type RentIncreaseSourceType = 'RENT_INDEX' | 'RENOVATION' | 'MANUAL';
+
+export type RentIncreasePlanRow = {
+  id: string;
+  legalBasis: RentIncreaseLegalBasis;
+  sourceType: RentIncreaseSourceType;
+  sourceId: string | null;
+  sequenceNumber: number;
+  effectiveYyyymm: string;
+  monthlyAmount: number;
+};
 
 export const CALCULATION_HORIZON_YEARS = 50;
 export const CALCULATION_HORIZON_MONTHS = CALCULATION_HORIZON_YEARS * 12;
@@ -43,6 +55,7 @@ export type CalculatorParams = {
   modernizationPlacements?: Record<string, string>;
   modernizationCostOverrides?: Record<string, number>;
   renovationTimingOverrides?: Record<string, RenovationTiming>;
+  rentIncreasePlan?: RentIncreasePlanRow[];
   rentIncreaseOverrides?: Record<string, { effectiveYyyymm?: string; monthlyDelta?: number }>;
   mode: CalculatorMode;
   placementMode: PlacementMode;
@@ -88,6 +101,8 @@ export type RentIncrease558Row = {
   id?: string;
   effectiveYyyymm: string;
   monthlyDelta: number;
+  legalMaximum: number;
+  sourceType: Extract<RentIncreaseSourceType, 'RENT_INDEX' | 'MANUAL'>;
 };
 
 export const DENSE_MARKET_CITIES = [
@@ -289,7 +304,13 @@ function plan558(
     const delta = roundCurrency(legalMaximum * utilization);
 
     if (delta > 0) {
-      steps.push({ id: `558-${steps.length + 1}`, effectiveYyyymm: month, monthlyDelta: delta });
+      steps.push({
+        id: `558-${steps.length + 1}`,
+        effectiveYyyymm: month,
+        monthlyDelta: delta,
+        legalMaximum,
+        sourceType: 'RENT_INDEX',
+      });
       current558Base = roundCurrency(current558Base + delta);
       lastEffective = month;
     }
@@ -302,24 +323,55 @@ function applyRentIncreaseOverrides(
   params: CalculatorParams,
   steps: RentIncrease558Row[],
   capPercent: number,
+  targetPerM2: number,
+  modernizations: ModernizationPlanRow[],
 ): RentIncrease558Row[] {
   const overrides = params.rentIncreaseOverrides;
-  if (!overrides) return steps;
-  const requested = steps.map((step, index) => {
-    const override = overrides[step.id ?? `558-${index + 1}`];
-    if (!override) return step;
-    const effectiveYyyymm = override.effectiveYyyymm
+  const storedPlan = (params.rentIncreasePlan ?? [])
+    .filter((item) => item.legalBasis === '558')
+    .sort((a, b) => a.sequenceNumber - b.sequenceNumber);
+  if (!overrides && storedPlan.length === 0) return steps;
+  const requested: RentIncrease558Row[] = steps.map((step, index) => {
+    const stored = storedPlan[index];
+    const id = stored?.id ?? step.id ?? `558-${index + 1}`;
+    const override = overrides?.[id] ?? overrides?.[step.id ?? `558-${index + 1}`];
+    const effectiveYyyymm = override?.effectiveYyyymm
       ? normalizeYyyymm(override.effectiveYyyymm, step.effectiveYyyymm)
-      : step.effectiveYyyymm;
-    const monthlyDelta = override.monthlyDelta == null
-      ? step.monthlyDelta
-      : roundCurrency(clamp(override.monthlyDelta, 0, step.monthlyDelta));
-    return { ...step, effectiveYyyymm, monthlyDelta };
+      : stored?.effectiveYyyymm ?? step.effectiveYyyymm;
+    const monthlyDelta = override?.monthlyDelta == null
+      ? stored?.monthlyAmount ?? step.monthlyDelta
+      : roundCurrency(Math.max(0, override.monthlyDelta));
+    const sourceType: RentIncrease558Row['sourceType'] = override || stored?.sourceType === 'MANUAL'
+      ? 'MANUAL'
+      : 'RENT_INDEX';
+    return {
+      ...step,
+      id,
+      effectiveYyyymm,
+      monthlyDelta,
+      sourceType,
+    };
   });
 
   let previous = params.last558Date ? normalizeYyyymm(params.last558Date) : params.rentStartYyyymm;
+  let current558Base = params.monthlyRentStart;
   const accepted: RentIncrease558Row[] = [];
   const capAmount = params.monthlyRentStart * capPercent;
+
+  const legalMaximumAt = (effectiveYyyymm: string) => {
+    const offset = Math.max(0, monthDiff(params.startYyyymm, effectiveYyyymm));
+    const target = roundCurrency(targetPerM2 * Math.pow(1.02, Math.floor(offset / 12)) * params.livingAreaM2);
+    const active559 = modernizations
+      .filter((item) => compareMonth(item.effectiveYyyymm, effectiveYyyymm) <= 0)
+      .reduce((sum, item) => sum + item.monthlyDelta, 0);
+    const windowStart = addMonths(effectiveYyyymm, -35);
+    const usedInWindow = accepted
+      .filter((item) => compareMonth(item.effectiveYyyymm, windowStart) >= 0)
+      .reduce((sum, item) => sum + item.monthlyDelta, 0);
+    const capRoom = Math.max(0, capAmount - usedInWindow);
+    const targetRoom = Math.max(0, target - current558Base - active559);
+    return roundCurrency(Math.min(capRoom, targetRoom));
+  };
 
   return requested.map((step) => {
     let effectiveYyyymm = [
@@ -329,19 +381,18 @@ function applyRentIncreaseOverrides(
       addMonths(previous, Math.round(clamp(params.rentIncreaseIntervalMonths, 15, 60))),
     ].sort().at(-1) ?? step.effectiveYyyymm;
 
-    // A moved §558 increase keeps its sequence. Later increases follow when
-    // the selected legal interval or the rolling three-year cap requires it.
-    for (let attempt = 0; attempt <= CALCULATION_HORIZON_MONTHS; attempt += 1) {
-      const windowStart = addMonths(effectiveYyyymm, -35);
-      const usedInWindow = accepted
-        .filter((item) => compareMonth(item.effectiveYyyymm, windowStart) >= 0)
-        .reduce((sum, item) => sum + item.monthlyDelta, 0);
-      if (usedInWindow + step.monthlyDelta <= capAmount + 0.01) break;
+    let legalMaximum = legalMaximumAt(effectiveYyyymm);
+    // A moved increase keeps its sequence. If the legal room is exhausted,
+    // dependent increases move to the first month in which room is available.
+    for (let attempt = 0; step.monthlyDelta > 0 && legalMaximum <= 0.009 && attempt <= CALCULATION_HORIZON_MONTHS; attempt += 1) {
       effectiveYyyymm = addMonths(effectiveYyyymm, 1);
+      legalMaximum = legalMaximumAt(effectiveYyyymm);
     }
 
-    const scheduled = { ...step, effectiveYyyymm };
+    const monthlyDelta = roundCurrency(clamp(step.monthlyDelta, 0, legalMaximum));
+    const scheduled = { ...step, effectiveYyyymm, monthlyDelta, legalMaximum };
     accepted.push(scheduled);
+    current558Base = roundCurrency(current558Base + monthlyDelta);
     previous = effectiveYyyymm;
     return scheduled;
   });
@@ -504,7 +555,27 @@ function buildTimeline(
   };
 }
 
-function placementScore(params: CalculatorParams, plan: ModernizationPlanRow[], increases558: RentIncrease558Row[], increases558WithRentIndex: RentIncrease558Row[]) {
+function placementScore(
+  params: CalculatorParams,
+  plan: ModernizationPlanRow[],
+  capPercent: number,
+  conservativeRentIndexPerM2: number,
+  marketRentIndexPerM2: number,
+) {
+  const increases558 = applyRentIncreaseOverrides(
+    { ...params, rentIncreaseOverrides: undefined },
+    plan558(params, capPercent, conservativeRentIndexPerM2, plan),
+    capPercent,
+    conservativeRentIndexPerM2,
+    plan,
+  );
+  const increases558WithRentIndex = applyRentIncreaseOverrides(
+    { ...params, rentIncreaseOverrides: undefined },
+    plan558(params, capPercent, marketRentIndexPerM2, plan),
+    capPercent,
+    marketRentIndexPerM2,
+    plan,
+  );
   const result = buildTimeline(params, increases558, increases558WithRentIndex, plan, false);
   const breakEvenOffset = result.breakEven ? monthDiff(params.startYyyymm, result.breakEven) : 9999;
   return { ...result, breakEvenOffset };
@@ -514,8 +585,9 @@ function optimizeKnownModernizations(
   params: CalculatorParams,
   renovationCases: RenovationCase[],
   capAbs: number,
-  increases558: RentIncrease558Row[],
-  increases558WithRentIndex: RentIncrease558Row[],
+  capPercent: number,
+  conservativeRentIndexPerM2: number,
+  marketRentIndexPerM2: number,
 ) {
   const relevant = renovationCases.filter((item) => item.selected && item.ai);
   if (relevant.length === 0) return [];
@@ -533,7 +605,7 @@ function optimizeKnownModernizations(
       for (const offset of possibleOffsets) {
         const placements = [...candidate.placements, offset];
         const plan = buildPlanFromPlacements(params, relevant.slice(0, index + 1), placements, capAbs);
-        const score = placementScore(params, plan, increases558, increases558WithRentIndex);
+        const score = placementScore(params, plan, capPercent, conservativeRentIndexPerM2, marketRentIndexPerM2);
         next.push({ placements, plan, breakEvenOffset: score.breakEvenOffset, endingCashflow: score.endingCashflow });
       }
     }
@@ -551,7 +623,7 @@ function optimizeKnownModernizations(
     for (const offset of nearbyOffsets) {
       const placements = best.placements.map((value, placementIndex) => placementIndex === index ? offset : value);
       const plan = buildPlanFromPlacements(params, relevant, placements, capAbs);
-      const score = placementScore(params, plan, increases558, increases558WithRentIndex);
+      const score = placementScore(params, plan, capPercent, conservativeRentIndexPerM2, marketRentIndexPerM2);
       if (
         score.breakEvenOffset < best.breakEvenOffset
         || (score.breakEvenOffset === best.breakEvenOffset && score.endingCashflow > best.endingCashflow)
@@ -579,25 +651,27 @@ export function runRentCalculator(params: CalculatorParams, renovationCases: Ren
   const marketRentIndexPerM2 = params.rentIndexPerM2 && params.rentIndexPerM2 > 0
     ? params.rentIndexPerM2
     : conservativeRentIndexPerM2;
-  const provisional558 = applyRentIncreaseOverrides(params, plan558(params, capPercent, conservativeRentIndexPerM2), capPercent);
-  const provisional558WithRentIndex = applyRentIncreaseOverrides(params, plan558(params, capPercent, marketRentIndexPerM2), capPercent);
   const defaultPlan = params.mode === 'POTENTIAL'
     ? placePotentialModernizations(params, capAbs)
     : placeKnownModernizations(params, renovationCases, capAbs);
   const modernizationPlan = params.placementMode === 'OPTIMIZED'
     && params.mode === 'KNOWN'
     && !params.modernizationPlacements
-    ? optimizeKnownModernizations(params, renovationCases, capAbs, provisional558, provisional558WithRentIndex)
+    ? optimizeKnownModernizations(params, renovationCases, capAbs, capPercent, conservativeRentIndexPerM2, marketRentIndexPerM2)
     : defaultPlan;
   const increases558 = applyRentIncreaseOverrides(
     params,
     plan558(params, capPercent, conservativeRentIndexPerM2, modernizationPlan),
     capPercent,
+    conservativeRentIndexPerM2,
+    modernizationPlan,
   );
   const increases558WithRentIndex = applyRentIncreaseOverrides(
     params,
     plan558(params, capPercent, marketRentIndexPerM2, modernizationPlan),
     capPercent,
+    marketRentIndexPerM2,
+    modernizationPlan,
   );
   const scenario = buildTimeline(params, increases558, increases558WithRentIndex, modernizationPlan);
 
