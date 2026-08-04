@@ -6,7 +6,7 @@ Real estate property management and valuation platform built with Next.js and Su
 
 This is a monorepo containing:
 
-- **`apps/web`**: Next.js 16 frontend with App Router
+- **`apps/web`**: Next.js 15 frontend with App Router
 - **`supabase/`**: Database migrations and configuration
 - **`packages/types`**: Shared TypeScript types
 
@@ -63,7 +63,7 @@ immonext/
 
 ## 🛠️ Technology Stack
 
-- **Next.js 16** - React framework with App Router
+- **Next.js 15** - React framework with App Router
 - **React 19** - UI library
 - **TypeScript** - Type safety
 - **Tailwind CSS v4** - Styling

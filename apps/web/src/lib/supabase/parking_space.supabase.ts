@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabase/client.supabase';
+import { jsonRequest, propertyResourceRequest } from '@/lib/api/propertyResources';
 import type {
     ParkingSpace,
     ParkingSpaceInsert,
@@ -22,24 +22,13 @@ function toParkingSpace(row: Record<string, unknown>): ParkingSpace {
 // ----------------------------------------------------------------------------
 
 export async function getParkingSpacesByProperty(propertyId: number): Promise<ParkingSpace[]> {
-  const { data, error } = await supabase
-    .from('parking_space')
-    .select('*')
-    .eq('property_id', propertyId)
-    .order('parking_space_id', { ascending: true });
-
-  if (error || !data) return [];
-  return data.map(toParkingSpace);
+  const data = await propertyResourceRequest<Record<string, unknown>[]>('parking-spaces', {}, { propertyId });
+  return data?.map(toParkingSpace) ?? [];
 }
 
 export async function getParkingSpaceById(parkingSpaceId: number): Promise<ParkingSpace | null> {
-  const { data, error } = await supabase
-    .from('parking_space')
-    .select('*')
-    .eq('parking_space_id', parkingSpaceId)
-    .single();
-
-  if (error || !data) return null;
+  const data = await propertyResourceRequest<Record<string, unknown>>('parking-spaces', {}, { id: parkingSpaceId });
+  if (!data) return null;
   return toParkingSpace(data);
 }
 
@@ -48,17 +37,12 @@ export async function getParkingSpaceById(parkingSpaceId: number): Promise<Parki
 // ----------------------------------------------------------------------------
 
 export async function createParkingSpace(payload: ParkingSpaceInsert): Promise<ParkingSpace | null> {
-  const { data, error } = await supabase
-    .from('parking_space')
-    .insert({
+  const data = await propertyResourceRequest<Record<string, unknown>>('parking-spaces', jsonRequest('POST', { values: {
       property_id:              payload.propertyId,
       parking_space_type:       payload.parkingSpaceType,
       number_of_parking_spaces: payload.numberOfParkingSpaces,
-    })
-    .select()
-    .single();
-
-  if (error || !data) return null;
+    } }));
+  if (!data) return null;
   return toParkingSpace(data);
 }
 
@@ -71,31 +55,15 @@ export async function updateParkingSpace(
   if (updates.parkingSpaceType !== undefined)      dbUpdates.parking_space_type       = updates.parkingSpaceType;
   if (updates.numberOfParkingSpaces !== undefined) dbUpdates.number_of_parking_spaces = updates.numberOfParkingSpaces;
 
-  const { data, error } = await supabase
-    .from('parking_space')
-    .update(dbUpdates)
-    .eq('parking_space_id', parkingSpaceId)
-    .select()
-    .single();
-
-  if (error || !data) return null;
+  const data = await propertyResourceRequest<Record<string, unknown>>('parking-spaces', jsonRequest('PATCH', { id: parkingSpaceId, values: dbUpdates }));
+  if (!data) return null;
   return toParkingSpace(data);
 }
 
 export async function deleteParkingSpace(parkingSpaceId: number): Promise<boolean> {
-  const { error } = await supabase
-    .from('parking_space')
-    .delete()
-    .eq('parking_space_id', parkingSpaceId);
-
-  return !error;
+  return Boolean(await propertyResourceRequest<{ deleted: number }>('parking-spaces', { method: 'DELETE' }, { id: parkingSpaceId }));
 }
 
 export async function deleteParkingSpacesByProperty(propertyId: number): Promise<boolean> {
-  const { error } = await supabase
-    .from('parking_space')
-    .delete()
-    .eq('property_id', propertyId);
-
-  return !error;
+  return Boolean(await propertyResourceRequest<{ deleted: number }>('parking-spaces', { method: 'DELETE' }, { propertyId }));
 }

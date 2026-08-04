@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase/client.supabase';
+import { authFetch } from '@/lib/api/authFetch';
 import type { DocumentCategory, UserDocument, UserDocumentInsert } from '@immonext/types';
 
 const BUCKET = 'documents';
@@ -46,13 +47,10 @@ function toUserDocument(row: Record<string, unknown>): UserDocument {
 // ----------------------------------------------------------------------------
 
 export async function getDocumentsByUser(userId: string): Promise<UserDocument[]> {
-  const { data, error } = await supabase
-    .from('document')
-    .select('*')
-    .eq('user_id', userId)
-    .order('document_date', { ascending: false, nullsFirst: false });
-
-  if (error || !data) return [];
+  void userId;
+  const response = await authFetch('/api/documents', { cache: 'no-store' });
+  if (!response.ok) return [];
+  const data = await response.json() as Record<string, unknown>[];
   return data.map(toUserDocument);
 }
 
@@ -84,10 +82,10 @@ export async function uploadDocument(userId: string, file: File, payload: UserDo
     return { document: null, error: uploadError.message };
   }
 
-  const { data, error } = await supabase
-    .from('document')
-    .insert({
-      user_id:        payload.userId,
+  const metadataResponse = await authFetch('/api/documents', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
       category:       payload.category,
       name:           payload.name,
       property_id:    payload.propertyId,
@@ -97,15 +95,16 @@ export async function uploadDocument(userId: string, file: File, payload: UserDo
       storage_path:   storagePath,
       content_type:   contentType,
       file_size:      file.size,
-    })
-    .select()
-    .single();
+    }),
+  });
 
-  if (error || !data) {
-    console.error('Document metadata insert failed:', error?.message);
+  if (!metadataResponse.ok) {
+    const message = await metadataResponse.text();
+    console.error('Document metadata insert failed:', message);
     await supabase.storage.from(BUCKET).remove([storagePath]);
-    return { document: null, error: error?.message ?? 'Unbekannter Fehler beim Speichern.' };
+    return { document: null, error: message || 'Unbekannter Fehler beim Speichern.' };
   }
+  const data = await metadataResponse.json() as Record<string, unknown>;
   return { document: toUserDocument(data), error: null };
 }
 
@@ -113,6 +112,6 @@ export async function deleteDocument(documentId: number, storagePath: string): P
   const { error: storageError } = await supabase.storage.from(BUCKET).remove([storagePath]);
   if (storageError) return false;
 
-  const { error } = await supabase.from('document').delete().eq('document_id', documentId);
-  return !error;
+  const response = await authFetch(`/api/documents?id=${encodeURIComponent(documentId)}`, { method: 'DELETE' });
+  return response.ok;
 }

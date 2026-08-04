@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabase/client.supabase';
+import { jsonRequest, propertyResourceRequest } from '@/lib/api/propertyResources';
 import type {
     PropertyAcquisition,
     PropertyAcquisitionInsert,
@@ -24,26 +24,16 @@ function toPropertyAcquisition(row: Record<string, unknown>): PropertyAcquisitio
 export async function getPropertyAcquisitionByProperty(
   propertyId: number,
 ): Promise<PropertyAcquisition | null> {
-  const { data, error } = await supabase
-    .from('property_acquisition')
-    .select('*')
-    .eq('property_id', propertyId)
-    .single();
-
-  if (error || !data) return null;
+  const data = await propertyResourceRequest<Record<string, unknown>>('property-acquisition', {}, { propertyId, single: true });
+  if (!data) return null;
   return toPropertyAcquisition(data);
 }
 
 export async function getPropertyAcquisitionById(
   propertyAcquisitionId: number,
 ): Promise<PropertyAcquisition | null> {
-  const { data, error } = await supabase
-    .from('property_acquisition')
-    .select('*')
-    .eq('property_acquisition_id', propertyAcquisitionId)
-    .single();
-
-  if (error || !data) return null;
+  const data = await propertyResourceRequest<Record<string, unknown>>('property-acquisition', {}, { id: propertyAcquisitionId });
+  if (!data) return null;
   return toPropertyAcquisition(data);
 }
 
@@ -54,18 +44,13 @@ export async function getPropertyAcquisitionById(
 export async function createPropertyAcquisition(
   payload: PropertyAcquisitionInsert,
 ): Promise<PropertyAcquisition | null> {
-  const { data, error } = await supabase
-    .from('property_acquisition')
-    .insert({
+  const data = await propertyResourceRequest<Record<string, unknown>>('property-acquisition', jsonRequest('POST', { values: {
       property_id:           payload.propertyId,
       house_completion_year: payload.houseCompletionYear ?? null,
       purchase_date:         payload.purchaseDate ?? null,
       transfer_date:         payload.transferDate ?? null,
-    })
-    .select()
-    .single();
-
-  if (error || !data) return null;
+    } }));
+  if (!data) return null;
   return toPropertyAcquisition(data);
 }
 
@@ -79,43 +64,24 @@ export async function updatePropertyAcquisition(
   if (updates.purchaseDate !== undefined)        dbUpdates.purchase_date         = updates.purchaseDate;
   if (updates.transferDate !== undefined)        dbUpdates.transfer_date         = updates.transferDate;
 
-  const { data, error } = await supabase
-    .from('property_acquisition')
-    .update(dbUpdates)
-    .eq('property_acquisition_id', propertyAcquisitionId)
-    .select()
-    .single();
-
-  if (error || !data) return null;
+  const data = await propertyResourceRequest<Record<string, unknown>>('property-acquisition', jsonRequest('PATCH', { id: propertyAcquisitionId, values: dbUpdates }));
+  if (!data) return null;
   return toPropertyAcquisition(data);
 }
 
 export async function upsertPropertyAcquisition(
   payload: PropertyAcquisitionInsert,
 ): Promise<PropertyAcquisition | null> {
-  const { data, error } = await supabase
-    .from('property_acquisition')
-    .upsert(
-      {
+  const data = await propertyResourceRequest<Record<string, unknown>>('property-acquisition', jsonRequest('POST', { upsert: true, values: {
         property_id:           payload.propertyId,
         house_completion_year: payload.houseCompletionYear ?? null,
         purchase_date:         payload.purchaseDate ?? null,
         transfer_date:         payload.transferDate ?? null,
-      },
-      { onConflict: 'property_id' },
-    )
-    .select()
-    .single();
-
-  if (error || !data) return null;
+      } }));
+  if (!data) return null;
   return toPropertyAcquisition(data);
 }
 
 export async function deletePropertyAcquisition(propertyAcquisitionId: number): Promise<boolean> {
-  const { error } = await supabase
-    .from('property_acquisition')
-    .delete()
-    .eq('property_acquisition_id', propertyAcquisitionId);
-
-  return !error;
+  return Boolean(await propertyResourceRequest<{ deleted: number }>('property-acquisition', { method: 'DELETE' }, { id: propertyAcquisitionId }));
 }

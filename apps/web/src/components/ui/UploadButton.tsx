@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useRef } from "react";
+import React, { useId, useRef } from "react";
 import { cn } from "@/lib/utils";
 import { Upload } from "lucide-react";
 
@@ -15,8 +15,11 @@ export function UploadButton({
   buttonText = "Choose File",
   onFileSelect,
   className,
+  id,
   ...props
 }: UploadButtonProps) {
+  const generatedId = useId();
+  const inputId = id ?? generatedId;
   const inputRef = useRef<HTMLInputElement>(null);
   const [fileName, setFileName] = React.useState<string>("");
 
@@ -35,7 +38,9 @@ export function UploadButton({
   return (
     <div className="w-full">
       {label && (
-        <label className="block mb-2 text-sm text-foreground">
+        // Points at the visually hidden file input, so it names that control
+        // for screen readers and opens the file dialog when clicked.
+        <label htmlFor={inputId} className="block mb-2 text-sm text-foreground">
           {label}
         </label>
       )}
@@ -43,6 +48,7 @@ export function UploadButton({
         <button
           type="button"
           onClick={handleClick}
+          aria-controls={inputId}
           className={cn(
             "inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg cursor-pointer",
             "hover:bg-primary/90 transition-all duration-200",
@@ -60,6 +66,7 @@ export function UploadButton({
       </div>
       <input
         ref={inputRef}
+        id={inputId}
         type="file"
         className="sr-only"
         onChange={handleChange}

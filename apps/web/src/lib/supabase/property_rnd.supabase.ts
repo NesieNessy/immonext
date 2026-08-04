@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabase/client.supabase';
+import { jsonRequest, propertyResourceRequest } from '@/lib/api/propertyResources';
 import type { PropertyRnd, PropertyRndInsert } from '@immonext/types';
 
 function toPropertyRnd(row: Record<string, unknown>): PropertyRnd {
@@ -25,13 +25,8 @@ function toPropertyRnd(row: Record<string, unknown>): PropertyRnd {
 // ----------------------------------------------------------------------------
 
 export async function getPropertyRndByProperty(propertyId: number): Promise<PropertyRnd | null> {
-  const { data, error } = await supabase
-    .from('property_rnd')
-    .select('*')
-    .eq('property_id', propertyId)
-    .single();
-
-  if (error || !data) return null;
+  const data = await propertyResourceRequest<Record<string, unknown>>('property-rnd', {}, { propertyId, single: true });
+  if (!data) return null;
   return toPropertyRnd(data);
 }
 
@@ -40,10 +35,7 @@ export async function getPropertyRndByProperty(propertyId: number): Promise<Prop
 // ----------------------------------------------------------------------------
 
 export async function upsertPropertyRnd(payload: PropertyRndInsert): Promise<PropertyRnd | null> {
-  const { data, error } = await supabase
-    .from('property_rnd')
-    .upsert(
-      {
+  const data = await propertyResourceRequest<Record<string, unknown>>('property-rnd', jsonRequest('POST', { upsert: true, values: {
         property_id:             payload.propertyId,
         rnd_mode:                payload.rndMode,
         modernization_roof:      payload.modernizationRoof,
@@ -55,13 +47,7 @@ export async function upsertPropertyRnd(payload: PropertyRndInsert): Promise<Pro
         modernization_interior:  payload.modernizationInterior,
         remaining_useful_life_years: payload.remainingUsefulLifeYears,
         afa_percent:              payload.afaPercent,
-        updated_at:              new Date().toISOString(),
-      },
-      { onConflict: 'property_id' },
-    )
-    .select()
-    .single();
-
-  if (error || !data) return null;
+      } }));
+  if (!data) return null;
   return toPropertyRnd(data);
 }

@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabase/client.supabase';
+import { jsonRequest, propertyResourceRequest } from '@/lib/api/propertyResources';
 import type { EnergyEfficient, PropertyUnit, PropertyUnitInsert, PropertyUnitUpdate, UnitUsageType } from '@immonext/types';
 
 function toPropertyUnit(row: Record<string, unknown>): PropertyUnit {
@@ -28,24 +28,13 @@ function toPropertyUnit(row: Record<string, unknown>): PropertyUnit {
 // ----------------------------------------------------------------------------
 
 export async function getPropertyUnitsByProperty(propertyId: number): Promise<PropertyUnit[]> {
-  const { data, error } = await supabase
-    .from('property_unit')
-    .select('*')
-    .eq('property_id', propertyId)
-    .order('sort_order', { ascending: true });
-
-  if (error || !data) return [];
-  return data.map(toPropertyUnit);
+  const data = await propertyResourceRequest<Record<string, unknown>[]>('property-units', {}, { propertyId });
+  return data?.map(toPropertyUnit) ?? [];
 }
 
 export async function getPropertyUnitById(propertyUnitId: number): Promise<PropertyUnit | null> {
-  const { data, error } = await supabase
-    .from('property_unit')
-    .select('*')
-    .eq('property_unit_id', propertyUnitId)
-    .single();
-
-  if (error || !data) return null;
+  const data = await propertyResourceRequest<Record<string, unknown>>('property-units', {}, { id: propertyUnitId });
+  if (!data) return null;
   return toPropertyUnit(data);
 }
 
@@ -54,9 +43,7 @@ export async function getPropertyUnitById(propertyUnitId: number): Promise<Prope
 // ----------------------------------------------------------------------------
 
 export async function createPropertyUnit(payload: PropertyUnitInsert): Promise<PropertyUnit | null> {
-  const { data, error } = await supabase
-    .from('property_unit')
-    .insert({
+  const data = await propertyResourceRequest<Record<string, unknown>>('property-units', jsonRequest('POST', { values: {
       property_id:               payload.propertyId,
       unit_label:                payload.unitLabel,
       sort_order:                payload.sortOrder,
@@ -71,11 +58,8 @@ export async function createPropertyUnit(payload: PropertyUnitInsert): Promise<P
       target_cold_rent:          payload.targetColdRent,
       target_parking_rent:       payload.targetParkingRent,
       target_ancillary_costs:    payload.targetAncillaryCosts,
-    })
-    .select()
-    .single();
-
-  if (error || !data) return null;
+    } }));
+  if (!data) return null;
   return toPropertyUnit(data);
 }
 
@@ -98,22 +82,11 @@ export async function updatePropertyUnit(
   if (updates.targetParkingRent !== undefined)     dbUpdates.target_parking_rent = updates.targetParkingRent;
   if (updates.targetAncillaryCosts !== undefined)  dbUpdates.target_ancillary_costs = updates.targetAncillaryCosts;
 
-  const { data, error } = await supabase
-    .from('property_unit')
-    .update(dbUpdates)
-    .eq('property_unit_id', propertyUnitId)
-    .select()
-    .single();
-
-  if (error || !data) return null;
+  const data = await propertyResourceRequest<Record<string, unknown>>('property-units', jsonRequest('PATCH', { id: propertyUnitId, values: dbUpdates }));
+  if (!data) return null;
   return toPropertyUnit(data);
 }
 
 export async function deletePropertyUnit(propertyUnitId: number): Promise<boolean> {
-  const { error } = await supabase
-    .from('property_unit')
-    .delete()
-    .eq('property_unit_id', propertyUnitId);
-
-  return !error;
+  return Boolean(await propertyResourceRequest<{ deleted: number }>('property-units', { method: 'DELETE' }, { id: propertyUnitId }));
 }

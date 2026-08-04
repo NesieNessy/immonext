@@ -1,6 +1,9 @@
+"use client";
+
 import React from "react";
 import { cn } from "@/lib/utils";
 import { LucideIcon } from "lucide-react";
+import { useFieldIds } from "./fieldIds";
 
 interface TextFieldWithIconProps extends React.InputHTMLAttributes<HTMLInputElement> {
   label?: string;
@@ -15,22 +18,33 @@ export function TextFieldWithIcon({
   icon: Icon,
   iconPosition = "left",
   className,
+  id,
+  "aria-describedby": ariaDescribedBy,
   ...props
 }: TextFieldWithIconProps) {
+  const { controlId, errorId, describedBy, invalid } = useFieldIds({
+    id,
+    error,
+    describedBy: ariaDescribedBy,
+  });
+
   return (
     <div className="w-full">
       {label && (
-        <label className="block mb-2 text-sm text-foreground">
+        <label htmlFor={controlId} className="block mb-2 text-sm text-foreground">
           {label}
         </label>
       )}
       <div className="relative">
         {iconPosition === "left" && (
-          <div className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+          <div className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" aria-hidden="true">
             <Icon size={20} />
           </div>
         )}
         <input
+          id={controlId}
+          aria-invalid={invalid}
+          aria-describedby={describedBy}
           className={cn(
             "w-full px-4 py-2 bg-input-background border border-border rounded-lg",
             "focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary",
@@ -43,13 +57,13 @@ export function TextFieldWithIcon({
           {...props}
         />
         {iconPosition === "right" && (
-          <div className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+          <div className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground" aria-hidden="true">
             <Icon size={20} />
           </div>
         )}
       </div>
       {error && (
-        <p className="mt-1 text-sm text-destructive">{error}</p>
+        <p id={errorId} role="alert" className="mt-1 text-sm text-destructive">{error}</p>
       )}
     </div>
   );

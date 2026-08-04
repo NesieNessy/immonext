@@ -15,7 +15,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
+    <html lang="de">
       <body className="antialiased bg-background text-foreground">
         <ToastProvider>
           {/* AppNavigation is fixed (see NavigationBar) — this spacer reserves

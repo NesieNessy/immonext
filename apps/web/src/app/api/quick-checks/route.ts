@@ -160,6 +160,55 @@ export async function POST(request: Request) {
   return NextResponse.json(mapQuickCheck(rows[0]), { status: 201 });
 }
 
+export async function PATCH(request: Request) {
+  const userId = await requireUserId(request);
+  const input = await request.json();
+  const id = Number(input.id);
+  if (!Number.isInteger(id)) return NextResponse.json({ error: 'Invalid quick-check id' }, { status: 400 });
+
+  if (input.action === 'MARK_DETAIL_CHECK') {
+    const result = await db.query(
+      'UPDATE quick_check SET detail_check = TRUE, updated_at = NOW() WHERE quick_check_id = $1 AND user_id = $2',
+      [id, userId],
+    );
+    return NextResponse.json({ updated: result.rowCount ?? 0 });
+  }
+
+  if (input.action === 'ACCEPT' || input.action === 'DISCARD') {
+    const { rows } = await db.query<{ property_id: number | null }>(
+      'SELECT finalize_quick_check($1::int, $2::uuid, $3::varchar) AS property_id',
+      [id, userId, input.action],
+    );
+    return NextResponse.json({ propertyId: rows[0]?.property_id ?? null });
+  }
+
+  const values = input.values ?? {};
+  const purchasePrice = Number(values.purchasePrice);
+  const coldRent = Number(values.coldRent);
+  const yearOfConstruction = Number(values.yearOfConstruction);
+  const kpfMultiplier = Number(values.kpfMultiplier);
+  if (![purchasePrice, coldRent, yearOfConstruction, kpfMultiplier].every(Number.isFinite)) {
+    return NextResponse.json({ error: 'Invalid quick-check payload' }, { status: 400 });
+  }
+  const { rows } = await db.query<QuickCheckRow>(
+    `
+      UPDATE quick_check SET
+        portal_id = $3, purchase_price = $4, cold_rent = $5, street = $6,
+        postal_code = $7, city = $8, year_of_construction = $9,
+        condition = $10, kpf_multiplier = $11, updated_at = NOW()
+      WHERE quick_check_id = $1 AND user_id = $2
+      RETURNING *
+    `,
+    [
+      id, userId, values.portalId ?? null, purchasePrice, coldRent,
+      String(values.street ?? '').trim(), String(values.postalCode ?? ''),
+      String(values.city ?? '').trim(), yearOfConstruction, values.condition, kpfMultiplier,
+    ],
+  );
+  if (!rows[0]) return NextResponse.json({ error: 'Quick-check not found' }, { status: 404 });
+  return NextResponse.json(mapQuickCheck(rows[0]));
+}
+
 export async function DELETE(request: Request) {
   const userId = await requireUserId(request);
   const input = await request.json();

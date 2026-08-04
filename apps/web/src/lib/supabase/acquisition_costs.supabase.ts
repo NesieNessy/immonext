@@ -1,7 +1,7 @@
 // ==============================================================================
 // ImmoNext – Supabase Client: acquisition_costs
 // ==============================================================================
-import { supabase } from '@/lib/supabase/client.supabase';
+import { jsonRequest, propertyResourceRequest } from '@/lib/api/propertyResources';
 import type { AcquisitionCosts, AcquisitionCostsInsert, AcquisitionCostsUpdate } from '@immonext/types';
 
 function toAcquisitionCosts(row: Record<string, unknown>): AcquisitionCosts {
@@ -30,28 +30,18 @@ function toAcquisitionCosts(row: Record<string, unknown>): AcquisitionCosts {
 }
 
 export async function getAcquisitionCosts(propertyId: number): Promise<AcquisitionCosts[]> {
-  const { data, error } = await supabase
-    .from('acquisition_costs')
-    .select('*')
-    .eq('property_id', propertyId);
-  if (error || !data) return [];
-  return data.map(toAcquisitionCosts);
+  const data = await propertyResourceRequest<Record<string, unknown>[]>('acquisition-costs', {}, { propertyId });
+  return data?.map(toAcquisitionCosts) ?? [];
 }
 
 export async function getAcquisitionCostsById(acquisitionCostsId: number): Promise<AcquisitionCosts | null> {
-  const { data, error } = await supabase
-    .from('acquisition_costs')
-    .select('*')
-    .eq('acquisition_costs_id', acquisitionCostsId)
-    .single();
-  if (error || !data) return null;
+  const data = await propertyResourceRequest<Record<string, unknown>>('acquisition-costs', {}, { id: acquisitionCostsId });
+  if (!data) return null;
   return toAcquisitionCosts(data);
 }
 
 export async function createAcquisitionCosts(payload: AcquisitionCostsInsert): Promise<AcquisitionCosts | null> {
-  const { data, error } = await supabase
-    .from('acquisition_costs')
-    .insert({
+  const data = await propertyResourceRequest<Record<string, unknown>>('acquisition-costs', jsonRequest('POST', { values: {
       property_id:                  payload.propertyId,
       parking_space_id:             payload.parkingSpaceId ?? null,
       property_purchase_price:      payload.propertyPurchasePrice,
@@ -69,10 +59,8 @@ export async function createAcquisitionCosts(payload: AcquisitionCostsInsert): P
       total_ancillary_costs_value:  payload.totalAncillaryCostsValue ?? null,
       total_ancillary_costs:        payload.totalAncillaryCosts ?? null,
       parking_space_purchase_price: payload.parkingSpacePurchasePrice ?? null,
-    })
-    .select()
-    .single();
-  if (error || !data) return null;
+    } }));
+  if (!data) return null;
   return toAcquisitionCosts(data);
 }
 
@@ -94,12 +82,11 @@ export async function updateAcquisitionCosts(acquisitionCostsId: number, updates
   if (updates.totalAncillaryCostsValue !== undefined)  dbUpdates.total_ancillary_costs_value   = updates.totalAncillaryCostsValue;
   if (updates.totalAncillaryCosts !== undefined)       dbUpdates.total_ancillary_costs         = updates.totalAncillaryCosts;
   if (updates.parkingSpacePurchasePrice !== undefined) dbUpdates.parking_space_purchase_price  = updates.parkingSpacePurchasePrice;
-  const { data, error } = await supabase.from('acquisition_costs').update(dbUpdates).eq('acquisition_costs_id', acquisitionCostsId).select().single();
-  if (error || !data) return null;
+  const data = await propertyResourceRequest<Record<string, unknown>>('acquisition-costs', jsonRequest('PATCH', { id: acquisitionCostsId, values: dbUpdates }));
+  if (!data) return null;
   return toAcquisitionCosts(data);
 }
 
 export async function deleteAcquisitionCosts(acquisitionCostsId: number): Promise<boolean> {
-  const { error } = await supabase.from('acquisition_costs').delete().eq('acquisition_costs_id', acquisitionCostsId);
-  return !error;
+  return Boolean(await propertyResourceRequest<{ deleted: number }>('acquisition-costs', { method: 'DELETE' }, { id: acquisitionCostsId }));
 }

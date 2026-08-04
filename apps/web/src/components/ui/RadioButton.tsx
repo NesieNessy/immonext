@@ -1,4 +1,6 @@
-import React from "react";
+"use client";
+
+import React, { useId } from "react";
 import { cn } from "@/lib/utils";
 
 interface RadioButtonProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'type'> {
@@ -11,8 +13,11 @@ export function RadioButton({
   id,
   ...props
 }: RadioButtonProps) {
-  const inputId = id || `radio-${Math.random().toString(36).substr(2, 9)}`;
-  
+  // Was `Math.random()`, which produced a different id on the server than on
+  // the client (hydration mismatch) and a fresh one on every re-render.
+  const generatedId = useId();
+  const inputId = id ?? generatedId;
+
   return (
     <div className="flex items-center gap-2">
       <div className="relative inline-flex items-center">
@@ -30,10 +35,14 @@ export function RadioButton({
             "peer-focus:ring-2 peer-focus:ring-primary/50",
             "transition-all duration-200",
             "flex items-center justify-center",
+            // The dot is a *child* of this label, not a sibling of the input,
+            // so a plain `peer-checked:` on it never matches — the modifier
+            // has to be applied here and reach down into the dot.
+            "peer-checked:[&>div]:opacity-100",
             className
           )}
         >
-          <div className="w-2.5 h-2.5 bg-primary-foreground rounded-full opacity-0 peer-checked:opacity-100" />
+          <div className="w-2.5 h-2.5 bg-primary-foreground rounded-full opacity-0" />
         </label>
       </div>
       {label && (

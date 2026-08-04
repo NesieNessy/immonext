@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase/client.supabase';
+import { authFetch } from '@/lib/api/authFetch';
 import type { Property, PropertyInsert, PropertyUpdate, PropertyWithCity } from '@immonext/types';
 
 function toProperty(row: Record<string, unknown>): Property {
@@ -51,36 +52,18 @@ export interface PropertyOverview extends Property {
   purchasePrice: number | null;
 }
 
-function toPropertyOverview(row: Record<string, unknown>): PropertyOverview {
-  return {
-    ...toProperty(row),
-    isRented: Boolean(row.is_rented),
-    purchasePrice: row.purchase_price === null || row.purchase_price === undefined
-      ? null
-      : Number(row.purchase_price),
-  };
-}
-
 export async function getProperties(userId: string): Promise<Property[]> {
-  const { data, error } = await supabase
-    .from('property')
-    .select('*')
-    .eq('user_id', userId)
-    .order('property_abbreviation', { ascending: true });
-
-  if (error || !data) return [];
-  return data.map(toProperty);
+  void userId;
+  const response = await authFetch('/api/properties', { cache: 'no-store' });
+  if (!response.ok) return [];
+  return response.json() as Promise<Property[]>;
 }
 
 export async function getPropertiesOverview(userId: string): Promise<PropertyOverview[]> {
-  const { data, error } = await supabase
-    .from('property_overview')
-    .select('*')
-    .eq('user_id', userId)
-    .order('property_abbreviation', { ascending: true });
-
-  if (error || !data) return [];
-  return data.map(toPropertyOverview);
+  void userId;
+  const response = await authFetch('/api/properties', { cache: 'no-store' });
+  if (!response.ok) return [];
+  return response.json() as Promise<PropertyOverview[]>;
 }
 
 export async function getPropertiesWithCity(userId: string): Promise<PropertyWithCity[]> {
@@ -104,25 +87,15 @@ export async function getPropertiesWithCity(userId: string): Promise<PropertyWit
 }
 
 export async function getPropertyById(propertyId: number): Promise<Property | null> {
-  const { data, error } = await supabase
-    .from('property')
-    .select('*')
-    .eq('property_id', propertyId)
-    .single();
-
-  if (error || !data) return null;
-  return toProperty(data);
+  const response = await authFetch(`/api/properties?id=${encodeURIComponent(propertyId)}`, { cache: 'no-store' });
+  if (!response.ok) return null;
+  return response.json() as Promise<Property>;
 }
 
 export async function getPropertyOverviewById(propertyId: number): Promise<PropertyOverview | null> {
-  const { data, error } = await supabase
-    .from('property_overview')
-    .select('*')
-    .eq('property_id', propertyId)
-    .single();
-
-  if (error || !data) return null;
-  return toPropertyOverview(data);
+  const response = await authFetch(`/api/properties?id=${encodeURIComponent(propertyId)}`, { cache: 'no-store' });
+  if (!response.ok) return null;
+  return response.json() as Promise<PropertyOverview>;
 }
 
 export async function getPropertyWithCityById(propertyId: number): Promise<PropertyWithCity | null> {
@@ -146,64 +119,32 @@ export async function getPropertyWithCityById(propertyId: number): Promise<Prope
 }
 
 export async function createProperty(payload: PropertyInsert): Promise<Property | null> {
-  const { data, error } = await supabase
-    .from('property')
-    .insert({
-      user_id: payload.userId,
-      city_id: payload.cityId,
-      street: payload.street,
-      house_number: payload.houseNumber,
-      city: payload.city,
-      postal_code: payload.postalCode,
-      federal_state: payload.federalState,
-      square_meters: payload.squareMeters,
-      number_of_rooms: payload.numberOfRooms,
-      year_of_construction: payload.yearOfConstruction,
-      energy_efficient: payload.energyEfficient,
-      property_abbreviation: payload.propertyAbbreviation,
-      property_category: payload.propertyCategory,
-      number_of_units: payload.numberOfUnits,
-    })
-    .select()
-    .single();
+  const response = await authFetch('/api/properties', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
 
-  if (error || !data) return null;
-  return toProperty(data);
+  const result = await response.json().catch(() => null) as Property | { error?: string } | null;
+  if (!response.ok) {
+    throw new Error(result && 'error' in result && result.error
+      ? result.error
+      : 'Objekt konnte nicht gespeichert werden.');
+  }
+  return result as Property;
 }
 
 export async function updateProperty(propertyId: number, updates: PropertyUpdate): Promise<Property | null> {
-  const dbUpdates: Record<string, unknown> = {};
-  if (updates.cityId !== undefined) dbUpdates.city_id = updates.cityId;
-  if (updates.street !== undefined) dbUpdates.street = updates.street;
-  if (updates.houseNumber !== undefined) dbUpdates.house_number = updates.houseNumber;
-  if (updates.city !== undefined) dbUpdates.city = updates.city;
-  if (updates.postalCode !== undefined) dbUpdates.postal_code = updates.postalCode;
-  if (updates.federalState !== undefined) dbUpdates.federal_state = updates.federalState;
-  if (updates.squareMeters !== undefined) dbUpdates.square_meters = updates.squareMeters;
-  if (updates.numberOfRooms !== undefined) dbUpdates.number_of_rooms = updates.numberOfRooms;
-  if (updates.yearOfConstruction !== undefined) dbUpdates.year_of_construction = updates.yearOfConstruction;
-  if (updates.energyEfficient !== undefined) dbUpdates.energy_efficient = updates.energyEfficient;
-  if (updates.propertyAbbreviation !== undefined) dbUpdates.property_abbreviation = updates.propertyAbbreviation;
-  if (updates.propertyCategory !== undefined) dbUpdates.property_category = updates.propertyCategory;
-  if (updates.imageUrl !== undefined) dbUpdates.image_base64 = updates.imageUrl;
-  if (updates.numberOfUnits !== undefined) dbUpdates.number_of_units = updates.numberOfUnits;
-
-  const { data, error } = await supabase
-    .from('property')
-    .update(dbUpdates)
-    .eq('property_id', propertyId)
-    .select()
-    .single();
-
-  if (error || !data) return null;
-  return toProperty(data);
+  const response = await authFetch('/api/properties', {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ propertyId, updates }),
+  });
+  if (!response.ok) return null;
+  return response.json() as Promise<Property>;
 }
 
 export async function deleteProperty(propertyId: number): Promise<boolean> {
-  const { error } = await supabase
-    .from('property')
-    .delete()
-    .eq('property_id', propertyId);
-
-  return !error;
+  const response = await authFetch(`/api/properties?id=${encodeURIComponent(propertyId)}`, { method: 'DELETE' });
+  return response.ok;
 }

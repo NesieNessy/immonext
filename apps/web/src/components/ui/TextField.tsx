@@ -1,5 +1,8 @@
+"use client";
+
 import React from "react";
 import { cn } from "@/lib/utils";
+import { useFieldIds } from "./fieldIds";
 
 interface TextFieldProps extends React.InputHTMLAttributes<HTMLInputElement> {
   label?: string;
@@ -16,17 +19,29 @@ export function TextField({
   className,
   readOnly,
   disabled,
+  id,
+  "aria-describedby": ariaDescribedBy,
   ...props
 }: TextFieldProps) {
+  const { controlId, errorId, helperId, describedBy, invalid } = useFieldIds({
+    id,
+    error,
+    helperText,
+    describedBy: ariaDescribedBy,
+  });
+
   return (
     <div className="w-full">
       {label && (
-        <label className="mb-2 block text-sm font-medium text-foreground">
+        <label htmlFor={controlId} className="mb-2 block text-sm font-medium text-foreground">
           {label}
         </label>
       )}
       <div className="relative">
         <input
+          id={controlId}
+          aria-invalid={invalid}
+          aria-describedby={describedBy}
           className={cn(
             "w-full rounded-md border-2 border-primary/30 bg-card px-4 py-2 shadow-sm",
             "hover:border-primary/55 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20",
@@ -48,10 +63,10 @@ export function TextField({
         )}
       </div>
       {error && (
-        <p className="mt-1 text-sm text-destructive">{error}</p>
+        <p id={errorId} role="alert" className="mt-1 text-sm text-destructive">{error}</p>
       )}
       {helperText && !error && (
-        <p className="mt-1 text-sm text-muted-foreground">{helperText}</p>
+        <p id={helperId} className="mt-1 text-sm text-muted-foreground">{helperText}</p>
       )}
     </div>
   );

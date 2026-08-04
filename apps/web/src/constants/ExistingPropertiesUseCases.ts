@@ -13,17 +13,6 @@ export enum ExistingPropertiesUseCases {
   TenantMoveOut = 'Mieterauszug',
 }
 
-export const ExistingPropertiesUseCasesIcons: Record<keyof typeof ExistingPropertiesUseCases, string> = {
-  PropertyData: 'Database',
-  RND: 'Clock',
-  SplitPurchasePrice: 'PieChart',
-  TenantData: 'Users',
-  TenantHistory: 'History',
-  TenancyTrends: 'TrendingUp',
-  ServiceChargeSettlement: 'Receipt',
-  Contractors: 'Wrench',
-  TaxDocuments: 'Landmark',
-  KeyMetrics: 'BarChart3',
-  Sale: 'ShoppingCart',
-  TenantMoveOut: 'DoorOpen',
-};
+// The matching icon per use case lives in `lib/useCaseMenu.tsx` as a map of
+// real component references. It used to sit here as icon *names*, which forced
+// a `lucide-react` namespace import (and the whole icon set) into the bundle.

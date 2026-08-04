@@ -1,5 +1,8 @@
+"use client";
+
 import React from "react";
 import { cn } from "@/lib/utils";
+import { useFieldIds } from "./fieldIds";
 
 interface DropdownProps extends React.SelectHTMLAttributes<HTMLSelectElement> {
   label?: string;
@@ -14,16 +17,28 @@ export function Dropdown({
   helperText,
   options,
   className,
+  id,
+  "aria-describedby": ariaDescribedBy,
   ...props
 }: DropdownProps) {
+  const { controlId, errorId, helperId, describedBy, invalid } = useFieldIds({
+    id,
+    error,
+    helperText,
+    describedBy: ariaDescribedBy,
+  });
+
   return (
     <div className="w-full">
       {label && (
-        <label className="mb-2 block text-sm font-medium text-foreground">
+        <label htmlFor={controlId} className="mb-2 block text-sm font-medium text-foreground">
           {label}
         </label>
       )}
       <select
+        id={controlId}
+        aria-invalid={invalid}
+        aria-describedby={describedBy}
         className={cn(
           "w-full cursor-pointer appearance-none rounded-md border-2 border-primary/30 bg-card px-4 py-2 shadow-sm",
           "hover:border-primary/55 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20",
@@ -42,10 +57,10 @@ export function Dropdown({
         ))}
       </select>
       {error && (
-        <p className="mt-1 text-sm text-destructive">{error}</p>
+        <p id={errorId} role="alert" className="mt-1 text-sm text-destructive">{error}</p>
       )}
       {helperText && !error && (
-        <p className="mt-1 text-sm text-muted-foreground">{helperText}</p>
+        <p id={helperId} className="mt-1 text-sm text-muted-foreground">{helperText}</p>
       )}
     </div>
   );

@@ -1,6 +1,9 @@
+"use client";
+
 import React from "react";
 import { cn } from "@/lib/utils";
 import { Calendar as CalendarIcon } from "lucide-react";
+import { useFieldIds } from "./fieldIds";
 import { Calendar } from "../ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { format } from "date-fns";
@@ -18,8 +21,15 @@ export function CalendarField({
   value,
   onChange,
   className,
+  id,
+  "aria-describedby": ariaDescribedBy,
   ...props
 }: CalendarFieldProps) {
+  const { controlId, errorId, describedBy, invalid } = useFieldIds({
+    id,
+    error,
+    describedBy: ariaDescribedBy,
+  });
   const [open, setOpen] = React.useState(false);
   const [inputValue, setInputValue] = React.useState(value ? format(value, "dd.MM.yyyy") : "");
 
@@ -66,7 +76,7 @@ export function CalendarField({
   return (
     <div className="w-full">
       {label && (
-        <label className="block mb-2 text-sm text-foreground">
+        <label htmlFor={controlId} className="block mb-2 text-sm text-foreground">
           {label}
         </label>
       )}
@@ -75,6 +85,9 @@ export function CalendarField({
           <div className="relative">
             <input
               type="text"
+              id={controlId}
+              aria-invalid={invalid}
+              aria-describedby={describedBy}
               value={inputValue}
               onChange={handleInputChange}
               onBlur={handleBlur}
@@ -96,9 +109,11 @@ export function CalendarField({
               <button
                 type="button"
                 onClick={() => setOpen(!open)}
+                aria-label={label ? `${label}: Kalender öffnen` : "Kalender öffnen"}
+                aria-expanded={open}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
               >
-                <CalendarIcon size={20} />
+                <CalendarIcon size={20} aria-hidden="true" />
               </button>
             )}
           </div>
@@ -113,7 +128,7 @@ export function CalendarField({
         </PopoverContent>
       </Popover>
       {error && (
-        <p className="mt-1 text-sm text-destructive">{error}</p>
+        <p id={errorId} role="alert" className="mt-1 text-sm text-destructive">{error}</p>
       )}
     </div>
   );

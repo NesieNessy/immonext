@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabase/client.supabase';
+import { jsonRequest, propertyResourceRequest } from '@/lib/api/propertyResources';
 import type {
     Tenancy,
     TenancyInsert,
@@ -36,39 +36,21 @@ function toTenancy(row: Record<string, unknown>): Tenancy {
 // ----------------------------------------------------------------------------
 
 export async function getTenanciesByProperty(propertyId: number): Promise<Tenancy[]> {
-    const { data, error } = await supabase
-        .from('tenancy')
-        .select('*')
-        .eq('property_id', propertyId)
-        .order('tenancy_id', { ascending: true });
-
-    if (error || !data) return [];
-    return data.map(toTenancy);
+    const data = await propertyResourceRequest<Record<string, unknown>[]>('tenancies', {}, { propertyId });
+    return data?.map(toTenancy) ?? [];
 }
 
 export async function getTenancyById(tenancyId: number): Promise<Tenancy | null> {
-    const { data, error } = await supabase
-        .from('tenancy')
-        .select('*')
-        .eq('tenancy_id', tenancyId)
-        .single();
-
-    if (error || !data) return null;
+    const data = await propertyResourceRequest<Record<string, unknown>>('tenancies', {}, { id: tenancyId });
+    if (!data) return null;
     return toTenancy(data);
 }
 
 /** The current (or most recent) tenancy for a Wohneinheit — null means the
  *  unit has never had one, i.e. it's vacant (Leerstand). */
 export async function getCurrentTenancyByUnit(propertyUnitId: number): Promise<Tenancy | null> {
-    const { data, error } = await supabase
-        .from('tenancy')
-        .select('*')
-        .eq('property_unit_id', propertyUnitId)
-        .order('tenancy_start_date', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-    if (error || !data) return null;
+    const data = await propertyResourceRequest<Record<string, unknown>>('tenancies', {}, { propertyUnitId, current: true, single: true });
+    if (!data) return null;
     return toTenancy(data);
 }
 
@@ -77,9 +59,7 @@ export async function getCurrentTenancyByUnit(propertyUnitId: number): Promise<T
 // ----------------------------------------------------------------------------
 
 export async function createTenancy(payload: TenancyInsert): Promise<Tenancy | null> {
-    const { data, error } = await supabase
-        .from('tenancy')
-        .insert({
+    const data = await propertyResourceRequest<Record<string, unknown>>('tenancies', jsonRequest('POST', { values: {
             maintenance_costs_id: payload.maintenanceCostsId,
             parking_space_id: payload.parkingSpaceId,
             property_id: payload.propertyId,
@@ -97,11 +77,8 @@ export async function createTenancy(payload: TenancyInsert): Promise<Tenancy | n
             tenant_first_name: payload.tenantFirstName,
             tenant_last_name: payload.tenantLastName,
             deposit: payload.deposit,
-        })
-        .select()
-        .single();
-
-    if (error || !data) return null;
+        } }));
+    if (!data) return null;
     return toTenancy(data);
 }
 
@@ -128,31 +105,15 @@ export async function updateTenancy(
     if (updates.tenantLastName !== undefined) dbUpdates.tenant_last_name = updates.tenantLastName;
     if (updates.deposit !== undefined) dbUpdates.deposit = updates.deposit;
 
-    const { data, error } = await supabase
-        .from('tenancy')
-        .update(dbUpdates)
-        .eq('tenancy_id', tenancyId)
-        .select()
-        .single();
-
-    if (error || !data) return null;
+    const data = await propertyResourceRequest<Record<string, unknown>>('tenancies', jsonRequest('PATCH', { id: tenancyId, values: dbUpdates }));
+    if (!data) return null;
     return toTenancy(data);
 }
 
 export async function deleteTenancy(tenancyId: number): Promise<boolean> {
-    const { error } = await supabase
-        .from('tenancy')
-        .delete()
-        .eq('tenancy_id', tenancyId);
-
-    return !error;
+    return Boolean(await propertyResourceRequest<{ deleted: number }>('tenancies', { method: 'DELETE' }, { id: tenancyId }));
 }
 
 export async function deleteTenanciesByProperty(propertyId: number): Promise<boolean> {
-    const { error } = await supabase
-        .from('tenancy')
-        .delete()
-        .eq('property_id', propertyId);
-
-    return !error;
+    return Boolean(await propertyResourceRequest<{ deleted: number }>('tenancies', { method: 'DELETE' }, { propertyId }));
 }

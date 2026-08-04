@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabase/client.supabase';
+import { jsonRequest, propertyResourceRequest } from '@/lib/api/propertyResources';
 import type { PropertyPriceSplit, PropertyPriceSplitInsert } from '@immonext/types';
 
 function toPropertyPriceSplit(row: Record<string, unknown>): PropertyPriceSplit {
@@ -20,13 +20,8 @@ function toPropertyPriceSplit(row: Record<string, unknown>): PropertyPriceSplit 
 // ----------------------------------------------------------------------------
 
 export async function getPropertyPriceSplitByProperty(propertyId: number): Promise<PropertyPriceSplit | null> {
-  const { data, error } = await supabase
-    .from('property_price_split')
-    .select('*')
-    .eq('property_id', propertyId)
-    .single();
-
-  if (error || !data) return null;
+  const data = await propertyResourceRequest<Record<string, unknown>>('property-price-split', {}, { propertyId, single: true });
+  if (!data) return null;
   return toPropertyPriceSplit(data);
 }
 
@@ -35,23 +30,14 @@ export async function getPropertyPriceSplitByProperty(propertyId: number): Promi
 // ----------------------------------------------------------------------------
 
 export async function upsertPropertyPriceSplit(payload: PropertyPriceSplitInsert): Promise<PropertyPriceSplit | null> {
-  const { data, error } = await supabase
-    .from('property_price_split')
-    .upsert(
-      {
+  const data = await propertyResourceRequest<Record<string, unknown>>('property-price-split', jsonRequest('POST', { upsert: true, values: {
         property_id:               payload.propertyId,
         split_mode:                payload.splitMode,
         plot_area_m2:              payload.plotAreaM2,
         land_reference_value:      payload.landReferenceValue,
         co_ownership_numerator:    payload.coOwnershipNumerator,
         co_ownership_denominator:  payload.coOwnershipDenominator,
-        updated_at:                new Date().toISOString(),
-      },
-      { onConflict: 'property_id' },
-    )
-    .select()
-    .single();
-
-  if (error || !data) return null;
+      } }));
+  if (!data) return null;
   return toPropertyPriceSplit(data);
 }

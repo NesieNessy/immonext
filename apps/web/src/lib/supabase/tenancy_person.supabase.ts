@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabase/client.supabase';
+import { authFetch } from '@/lib/api/authFetch';
 import type { TenancyPerson, TenancyPersonInsert, TenancyPersonUpdate } from '@immonext/types';
 
 function toTenancyPerson(row: Record<string, unknown>): TenancyPerson {
@@ -21,13 +21,9 @@ function toTenancyPerson(row: Record<string, unknown>): TenancyPerson {
 // ----------------------------------------------------------------------------
 
 export async function getTenancyPersonsByTenancy(tenancyId: number): Promise<TenancyPerson[]> {
-  const { data, error } = await supabase
-    .from('tenancy_person')
-    .select('*')
-    .eq('tenancy_id', tenancyId)
-    .order('sort_order', { ascending: true });
-
-  if (error || !data) return [];
+  const response = await authFetch(`/api/tenancy-people?tenancyId=${encodeURIComponent(tenancyId)}`, { cache: 'no-store' });
+  if (!response.ok) return [];
+  const data = await response.json() as Record<string, unknown>[];
   return data.map(toTenancyPerson);
 }
 
@@ -36,9 +32,10 @@ export async function getTenancyPersonsByTenancy(tenancyId: number): Promise<Ten
 // ----------------------------------------------------------------------------
 
 export async function createTenancyPerson(payload: TenancyPersonInsert): Promise<TenancyPerson | null> {
-  const { data, error } = await supabase
-    .from('tenancy_person')
-    .insert({
+  const response = await authFetch('/api/tenancy-people', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
       tenancy_id: payload.tenancyId,
       last_name:  payload.lastName,
       first_name: payload.firstName,
@@ -46,11 +43,10 @@ export async function createTenancyPerson(payload: TenancyPersonInsert): Promise
       is_primary:  payload.isPrimary,
       sort_order:  payload.sortOrder,
       move_in_date: payload.moveInDate,
-    })
-    .select()
-    .single();
-
-  if (error || !data) return null;
+    }),
+  });
+  if (!response.ok) return null;
+  const data = await response.json() as Record<string, unknown>;
   return toTenancyPerson(data);
 }
 
@@ -66,22 +62,17 @@ export async function updateTenancyPerson(
   if (updates.sortOrder !== undefined) dbUpdates.sort_order = updates.sortOrder;
   if (updates.moveInDate !== undefined) dbUpdates.move_in_date = updates.moveInDate;
 
-  const { data, error } = await supabase
-    .from('tenancy_person')
-    .update(dbUpdates)
-    .eq('tenancy_person_id', tenancyPersonId)
-    .select()
-    .single();
-
-  if (error || !data) return null;
+  const response = await authFetch('/api/tenancy-people', {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id: tenancyPersonId, values: dbUpdates }),
+  });
+  if (!response.ok) return null;
+  const data = await response.json() as Record<string, unknown>;
   return toTenancyPerson(data);
 }
 
 export async function deleteTenancyPerson(tenancyPersonId: number): Promise<boolean> {
-  const { error } = await supabase
-    .from('tenancy_person')
-    .delete()
-    .eq('tenancy_person_id', tenancyPersonId);
-
-  return !error;
+  const response = await authFetch(`/api/tenancy-people?id=${encodeURIComponent(tenancyPersonId)}`, { method: 'DELETE' });
+  return response.ok;
 }

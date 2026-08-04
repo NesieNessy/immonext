@@ -16,9 +16,7 @@
 // ==============================================================================
 
 import type { PropertyCondition } from '@immonext/types';
-import { isAuthBypassEnabled } from '../authBypass';
 import { authFetch } from '../api/authFetch';
-import { supabase } from './client.supabase';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -139,72 +137,28 @@ function mapOverview(row: Record<string, unknown>): QuickCheckOverview {
  * applies per list, not split across both.
  */
 export async function getAllQuickChecks(detailCheck: boolean): Promise<QuickCheckOverview[]> {
-    if (isAuthBypassEnabled()) {
-        const res = await authFetch(`/api/quick-checks?detailCheck=${detailCheck}`, { cache: 'no-store' });
-        if (!res.ok) throw new Error(await res.text());
-        const data = await res.json();
-        return (data ?? []).map(mapOverview);
-    }
-
-    const { data, error } = await supabase
-        .from('quick_check_overview')
-        .select('*')
-        .eq('detail_check', detailCheck)
-        .order('ingest_date', { ascending: false })
-        .limit(100);
-    if (error) throw error;
+    const res = await authFetch(`/api/quick-checks?detailCheck=${detailCheck}`, { cache: 'no-store' });
+    if (!res.ok) throw new Error(await res.text());
+    const data = await res.json();
     return (data ?? []).map(mapOverview);
 }
 
 export async function getQuickCheckById(quickCheckId: number): Promise<QuickCheck | null> {
-    if (isAuthBypassEnabled()) {
-        const res = await authFetch(`/api/quick-checks?id=${quickCheckId}`, { cache: 'no-store' });
-        if (res.status === 404) return null;
-        if (!res.ok) throw new Error(await res.text());
-        return mapQuickCheck(await res.json());
-    }
-
-    const { data, error } = await supabase
-        .from('quick_check')
-        .select('*')
-        .eq('quick_check_id', quickCheckId)
-        .single();
-    if (error) throw error;
-    return data ? mapQuickCheck(data) : null;
+    const res = await authFetch(`/api/quick-checks?id=${quickCheckId}`, { cache: 'no-store' });
+    if (res.status === 404) return null;
+    if (!res.ok) throw new Error(await res.text());
+    return mapQuickCheck(await res.json());
 }
 
 // ── Create ────────────────────────────────────────────────────────────────────
 
 /** Saves the QuickCheckPage form. Status = ACTIVE. No kpf_ranges write yet. */
 export async function createQuickCheck(input: CreateQuickCheckInput): Promise<QuickCheck> {
-    if (isAuthBypassEnabled()) {
-        const res = await authFetch('/api/quick-checks', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(input),
-        });
-        if (!res.ok) throw new Error(await res.text());
-        return mapQuickCheck(await res.json());
-    }
-
-    const { data, error } = await supabase
-        .from('quick_check')
-        .insert({
-            user_id: input.userId,
-            portal_id: input.portalId ?? null,
-            purchase_price: input.purchasePrice,
-            cold_rent: input.coldRent,
-            street: input.street,
-            postal_code: input.postalCode,
-            city: input.city,
-            year_of_construction: input.yearOfConstruction,
-            condition: input.condition,
-            kpf_multiplier: input.kpfMultiplier,
-        })
-        .select()
-        .single();
-    if (error) throw error;
-    return mapQuickCheck(data);
+    const res = await authFetch('/api/quick-checks', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(input),
+    });
+    if (!res.ok) throw new Error(await res.text());
+    return mapQuickCheck(await res.json());
 }
 
 /** Updates the snapshot fields of an ACTIVE quick-check. Recalculates kpf_multiplier. */
@@ -212,36 +166,24 @@ export async function updateQuickCheck(
     quickCheckId: number,
     input: CreateQuickCheckInput,
 ): Promise<QuickCheck> {
-    const { data, error } = await supabase
-        .from('quick_check')
-        .update({
-            portal_id: input.portalId ?? null,
-            purchase_price: input.purchasePrice,
-            cold_rent: input.coldRent,
-            street: input.street,
-            postal_code: input.postalCode,
-            city: input.city,
-            year_of_construction: input.yearOfConstruction,
-            condition: input.condition,
-            kpf_multiplier: input.kpfMultiplier,
-        })
-        .eq('quick_check_id', quickCheckId)
-        .select()
-        .single();
-    if (error) throw error;
-    return mapQuickCheck(data);
+    const res = await authFetch('/api/quick-checks', {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: quickCheckId, values: input }),
+    });
+    if (!res.ok) throw new Error(await res.text());
+    return mapQuickCheck(await res.json());
 }
 
 // ── Finalise ──────────────────────────────────────────────────────────────────
 
 /** "Verwerfen" button — sets finalised_action = 'DISCARD'. */
 export async function discardQuickCheck(quickCheckId: number, userId: string): Promise<void> {
-    const { error } = await supabase.rpc('finalize_quick_check', {
-        p_quick_check_id: quickCheckId,
-        p_user_id:        userId,
-        p_action:         'DISCARD',
+    void userId;
+    const res = await authFetch('/api/quick-checks', {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: quickCheckId, action: 'DISCARD' }),
     });
-    if (error) throw error;
+    if (!res.ok) throw new Error(await res.text());
 }
 
 /**
@@ -259,24 +201,24 @@ export async function acceptQuickCheck(
     quickCheckId: number,
     userId: string,
 ): Promise<number> {
-    const { data, error } = await supabase.rpc('finalize_quick_check', {
-        p_quick_check_id: quickCheckId,
-        p_user_id:        userId,
-        p_action:         'ACCEPT',
+    void userId;
+    const res = await authFetch('/api/quick-checks', {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: quickCheckId, action: 'ACCEPT' }),
     });
-    if (error) throw error;
-    return data as number;
+    if (!res.ok) throw new Error(await res.text());
+    return Number((await res.json()).propertyId);
 }
 
 // ── Updates ───────────────────────────────────────────────────────────────────
 
 /** Called when user starts a detail check from this quick-check */
 export async function markDetailCheck(quickCheckId: number): Promise<void> {
-    const { error } = await supabase
-        .from('quick_check')
-        .update({ detail_check: true })
-        .eq('quick_check_id', quickCheckId);
-    if (error) throw error;
+    const res = await authFetch('/api/quick-checks', {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: quickCheckId, action: 'MARK_DETAIL_CHECK' }),
+    });
+    if (!res.ok) throw new Error(await res.text());
 }
 
 // ── Delete ────────────────────────────────────────────────────────────────────
@@ -285,11 +227,7 @@ export async function markDetailCheck(quickCheckId: number): Promise<void> {
  * Hard delete
  */
 export async function deleteQuickCheck(quickCheckId: number): Promise<void> {
-    const { error } = await supabase
-        .from('quick_check')
-        .delete()
-        .eq('quick_check_id', quickCheckId);
-    if (error) throw error;
+    await deleteQuickChecks([quickCheckId]);
 }
 
 /**
@@ -297,19 +235,8 @@ export async function deleteQuickCheck(quickCheckId: number): Promise<void> {
  */
 export async function deleteQuickChecks(quickCheckIds: number[]): Promise<void> {
     if (quickCheckIds.length === 0) return;
-    if (isAuthBypassEnabled()) {
-        const res = await authFetch('/api/quick-checks', {
-            method: 'DELETE',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ ids: quickCheckIds }),
-        });
-        if (!res.ok) throw new Error(await res.text());
-        return;
-    }
-
-    const { error } = await supabase
-        .from('quick_check')
-        .delete()
-        .in('quick_check_id', quickCheckIds);
-    if (error) throw error;
+    const res = await authFetch('/api/quick-checks', {
+        method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ids: quickCheckIds }),
+    });
+    if (!res.ok) throw new Error(await res.text());
 }

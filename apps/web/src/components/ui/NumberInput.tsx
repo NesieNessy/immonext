@@ -1,8 +1,12 @@
+"use client";
+
 import React from "react";
 import { cn } from "@/lib/utils";
 import { ChevronUp, ChevronDown } from "lucide-react";
+import { useFieldIds } from "./fieldIds";
 
 interface NumberInputProps {
+  id?: string;
   label?: string;
   placeholder?: string;
   value?: number;
@@ -18,6 +22,7 @@ interface NumberInputProps {
 }
 
 export function NumberInput({
+  id,
   label,
   placeholder,
   value,
@@ -31,6 +36,7 @@ export function NumberInput({
   showControls = true,
   className,
 }: NumberInputProps) {
+  const { controlId, errorId, helperId, describedBy, invalid } = useFieldIds({ id, error, helperText });
   const [internalValue, setInternalValue] = React.useState<string>(
     value !== undefined ? String(value) : ""
   );
@@ -85,11 +91,14 @@ export function NumberInput({
   return (
     <div className={cn("flex flex-col gap-2", className)}>
       {label && (
-        <label className="text-sm font-medium text-foreground">{label}</label>
+        <label htmlFor={controlId} className="text-sm font-medium text-foreground">{label}</label>
       )}
       <div className="relative">
         <input
           type="number"
+          id={controlId}
+          aria-invalid={invalid}
+          aria-describedby={describedBy}
           value={internalValue}
           onChange={handleChange}
           onKeyDown={handleKeyDown}
@@ -114,6 +123,8 @@ export function NumberInput({
             <button
               type="button"
               onClick={handleIncrement}
+              aria-label={label ? `${label} erhöhen` : "Wert erhöhen"}
+              aria-controls={controlId}
               disabled={max !== undefined && value !== undefined && value >= max}
               className={cn(
                 "p-0.5 rounded hover:bg-muted transition-colors cursor-pointer",
@@ -125,6 +136,8 @@ export function NumberInput({
             <button
               type="button"
               onClick={handleDecrement}
+              aria-label={label ? `${label} verringern` : "Wert verringern"}
+              aria-controls={controlId}
               disabled={min !== undefined && value !== undefined && value <= min}
               className={cn(
                 "p-0.5 rounded hover:bg-muted transition-colors cursor-pointer",
@@ -138,6 +151,8 @@ export function NumberInput({
       </div>
       {(helperText || error) && (
         <p
+          id={error ? errorId : helperId}
+          role={error ? "alert" : undefined}
           className={cn(
             "text-xs",
             error ? "text-destructive" : "text-muted-foreground"

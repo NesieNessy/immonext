@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase/client.supabase';
+import { authFetch } from '@/lib/api/authFetch';
 import type { TenancyDocument, TenancyDocumentInsert, TenancyDocumentType } from '@immonext/types';
 
 const BUCKET = 'tenancy-documents';
@@ -23,12 +24,9 @@ function toTenancyDocument(row: Record<string, unknown>): TenancyDocument {
 // ----------------------------------------------------------------------------
 
 export async function getTenancyDocumentsByTenancy(tenancyId: number): Promise<TenancyDocument[]> {
-  const { data, error } = await supabase
-    .from('tenancy_document')
-    .select('*')
-    .eq('tenancy_id', tenancyId);
-
-  if (error || !data) return [];
+  const response = await authFetch(`/api/tenancy-documents?tenancyId=${encodeURIComponent(tenancyId)}`, { cache: 'no-store' });
+  if (!response.ok) return [];
+  const data = await response.json() as Record<string, unknown>[];
   return data.map(toTenancyDocument);
 }
 
@@ -50,20 +48,13 @@ export interface TenancyDocumentForUser {
  * scopes everything to the caller, so no explicit user filter is needed.
  */
 export async function getTenancyDocumentsByUser(): Promise<TenancyDocumentForUser[]> {
-  const [{ data: docs, error: docsError }, { data: tenancies, error: tenanciesError }] = await Promise.all([
-    supabase.from('tenancy_document').select('*'),
-    supabase.from('tenancy').select('tenancy_id, property_id'),
-  ]);
-  if (docsError || tenanciesError || !docs || !tenancies) return [];
-
-  const propertyIdByTenancy = new Map<number, number | null>(
-    tenancies.map((t) => [t.tenancy_id as number, t.property_id as number | null])
-  );
-
+  const response = await authFetch('/api/tenancy-documents', { cache: 'no-store' });
+  if (!response.ok) return [];
+  const docs = await response.json() as Record<string, unknown>[];
   return docs.map((row) => ({
     tenancyDocumentId: row.tenancy_document_id as number,
     tenancyId: row.tenancy_id as number,
-    propertyId: propertyIdByTenancy.get(row.tenancy_id as number) ?? null,
+    propertyId: row.property_id as number | null,
     documentType: row.document_type as TenancyDocumentType,
     fileName: row.file_name as string,
     storagePath: row.storage_path as string,
@@ -92,16 +83,6 @@ export async function uploadTenancyDocument(
   file: File,
   payload: Omit<TenancyDocumentInsert, 'fileName' | 'storagePath' | 'contentType' | 'fileSize'>,
 ): Promise<TenancyDocument | null> {
-  let existingQuery = supabase
-    .from('tenancy_document')
-    .select('tenancy_document_id, storage_path')
-    .eq('tenancy_id', payload.tenancyId)
-    .eq('document_type', payload.documentType);
-  existingQuery = payload.tenancyPersonId === null
-    ? existingQuery.is('tenancy_person_id', null)
-    : existingQuery.eq('tenancy_person_id', payload.tenancyPersonId);
-  const { data: existing } = await existingQuery.maybeSingle();
-
   const storagePath = `${userId}/${payload.tenancyId}/${payload.documentType}-${payload.tenancyPersonId ?? 'shared'}-${crypto.randomUUID()}-${file.name}`;
 
   const { error: uploadError } = await supabase.storage.from(BUCKET).upload(storagePath, file, {
@@ -109,11 +90,10 @@ export async function uploadTenancyDocument(
   });
   if (uploadError) return null;
 
-  const { data, error } = await supabase
-    .from('tenancy_document')
-    .upsert(
-      {
-        tenancy_document_id: existing?.tenancy_document_id,
+  const metadataResponse = await authFetch('/api/tenancy-documents', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
         tenancy_id:          payload.tenancyId,
         tenancy_person_id:   payload.tenancyPersonId,
         document_type:       payload.documentType,
@@ -121,30 +101,24 @@ export async function uploadTenancyDocument(
         storage_path:        storagePath,
         content_type:        file.type || null,
         file_size:           file.size,
-      },
-      { onConflict: 'tenancy_document_id' },
-    )
-    .select()
-    .single();
+    }),
+  });
 
-  if (error || !data) {
+  if (!metadataResponse.ok) {
     await supabase.storage.from(BUCKET).remove([storagePath]);
     return null;
   }
+  const result = await metadataResponse.json() as { document: Record<string, unknown>; previousStoragePath: string | null };
 
-  if (existing) {
-    await supabase.storage.from(BUCKET).remove([existing.storage_path]);
+  if (result.previousStoragePath) {
+    await supabase.storage.from(BUCKET).remove([result.previousStoragePath]);
   }
 
-  return toTenancyDocument(data);
+  return toTenancyDocument(result.document);
 }
 
 export async function deleteTenancyDocument(tenancyDocumentId: number, storagePath: string): Promise<boolean> {
   await supabase.storage.from(BUCKET).remove([storagePath]);
-  const { error } = await supabase
-    .from('tenancy_document')
-    .delete()
-    .eq('tenancy_document_id', tenancyDocumentId);
-
-  return !error;
+  const response = await authFetch(`/api/tenancy-documents?id=${encodeURIComponent(tenancyDocumentId)}`, { method: 'DELETE' });
+  return response.ok;
 }
