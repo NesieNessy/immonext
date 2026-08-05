@@ -30,6 +30,8 @@ type ApiPayload = {
   landRegistryPercent: number;
   propertyTransferTaxPercent: number | null;
   livingAreaM2: number | null;
+  /** From Objektdaten. Null when that step has not been filled in yet. */
+  parkingSpaces: number | null;
 };
 
 const currencyFormatter = new Intl.NumberFormat('de-DE', {
@@ -53,14 +55,30 @@ function DecimalField({
   unit,
   onChange,
   error,
+  disabled,
+  helperText,
 }: {
   label: string;
   value: string;
   unit: string;
   onChange: (value: string) => void;
   error?: string;
+  disabled?: boolean;
+  helperText?: string;
 }) {
-  return <TextField label={label} inputMode="decimal" value={value} suffix={unit} error={error} onBlur={() => onChange(formatDecimalInput(value))} onChange={(event) => onChange(event.target.value)} />;
+  return (
+    <TextField
+      label={label}
+      inputMode="decimal"
+      value={value}
+      suffix={unit}
+      error={error}
+      disabled={disabled}
+      helperText={helperText}
+      onBlur={() => onChange(formatDecimalInput(value))}
+      onChange={(event) => onChange(event.target.value)}
+    />
+  );
 }
 
 function AcquisitionCostsContent() {
@@ -113,6 +131,22 @@ function AcquisitionCostsContent() {
       cancelled = true;
     };
   }, [suffix]);
+
+  // Explicitly 0 spaces recorded in Objektdaten → there is nothing to price,
+  // so the field is locked. A null value means Objektdaten has not been filled
+  // in yet; that stays editable rather than silently blocking input.
+  const hasNoParkingSpaces = apiData?.parkingSpaces === 0;
+
+  // Keep the stored amount consistent with the lock, otherwise a price entered
+  // before the parking count was set back to 0 would stay in the form, remain
+  // invisible to the user behind a disabled field, and still be saved into the
+  // acquisition-cost total.
+  useEffect(() => {
+    if (!hasNoParkingSpaces) return;
+    setForm((prev) => (parseDecimalInput(prev.parkingPurchasePrice) === 0
+      ? prev
+      : { ...prev, parkingPurchasePrice: '0' }));
+  }, [hasNoParkingSpaces]);
 
   const values = useMemo(() => ({
     purchasePrice: parseDecimalInput(form.purchasePrice),
@@ -236,6 +270,8 @@ function AcquisitionCostsContent() {
                   value={form.parkingPurchasePrice}
                   unit="€"
                   error={errors.parkingPurchasePrice}
+                  disabled={hasNoParkingSpaces}
+                  helperText={hasNoParkingSpaces ? 'In den Objektdaten sind keine Stellplätze erfasst.' : undefined}
                   onChange={(parkingPurchasePrice) => setForm((prev) => ({ ...prev, parkingPurchasePrice }))}
                 />
               </div>

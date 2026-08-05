@@ -66,7 +66,7 @@ async function loadQuickCheck(userId: string, quickCheckId: string | null) {
 async function loadPropertyData(userId: string, workflowId: string) {
   const { rows } = await db.query(
     `
-      SELECT postal_code, living_area_m2
+      SELECT postal_code, living_area_m2, parking_spaces
       FROM detail_check_property_data
       WHERE user_id = $1
         AND workflow_id = $2
@@ -165,6 +165,12 @@ export async function GET(request: Request) {
     landRegistryPercent,
     propertyTransferTaxPercent,
     livingAreaM2,
+    // Drives whether the parking price field is editable on the Kaufkosten
+    // step: with no parking spaces recorded in Objektdaten there is nothing
+    // to price. Null means "not captured yet", which stays editable.
+    parkingSpaces: propertyData?.parking_spaces == null
+      ? null
+      : toNumber(propertyData.parking_spaces),
     computed,
   });
 }

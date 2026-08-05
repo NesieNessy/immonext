@@ -213,28 +213,58 @@ export function aggregateRenovationPricing(cases: RenovationCase[]) {
   };
 }
 
-export function allocateSelectedRenovationCosts(
+/**
+ * Gives every priced case a `cost_selected`, defaulting to the midpoint of its
+ * indicated range. `cost_selected` is the single source of truth for what a
+ * measure costs — the total is derived from it, never the other way round.
+ *
+ * Cases that are currently unselected keep their amount instead of being reset
+ * to 0: unticking a measure means "leave it out of the total for now", not
+ * "throw away the price I entered". Re-ticking it must restore what the user
+ * had, which is what previously got lost.
+ */
+export function withDefaultSelectedCosts(cases: RenovationCase[]): RenovationCase[] {
+  return cases.map((item) => {
+    if (!item.ai || typeof item.cost_selected === 'number') return item;
+    return { ...item, cost_selected: roundCurrency((item.ai.price_min + item.ai.price_max) / 2) };
+  });
+}
+
+/** Total of the ticked measures — the figure the financing and the calculator use. */
+export function sumSelectedCosts(cases: RenovationCase[]): number {
+  return roundCurrency(
+    cases
+      .filter((item) => item.selected && item.ai)
+      .reduce((sum, item) => sum + costForCase(item), 0),
+  );
+}
+
+/**
+ * Moves the whole plan to a common point in each measure's own indicated band,
+ * so the slider endpoints land exactly on the aggregate minimum and maximum:
+ * t=0 puts every measure at its `price_min`, t=1 at its `price_max`.
+ *
+ * This deliberately overwrites individually entered amounts — dragging the
+ * overall slider is a statement about the plan as a whole. Editing a single
+ * amount afterwards refines it again; the two controls are complementary, and
+ * whichever was used last wins.
+ */
+export function distributeTotalAcrossCases(
   cases: RenovationCase[],
-  selectedTotal: number,
+  targetTotal: number,
 ): RenovationCase[] {
   const selected = cases.filter((item) => item.selected && item.ai);
-  const midpointTotal = selected.reduce((sum, item) => {
-    if (!item.ai) return sum;
-    return sum + (item.ai.price_min + item.ai.price_max) / 2;
-  }, 0);
-  let allocated = 0;
+  const sumMin = selected.reduce((sum, item) => sum + (item.ai?.price_min ?? 0), 0);
+  const sumMax = selected.reduce((sum, item) => sum + (item.ai?.price_max ?? 0), 0);
+  const span = sumMax - sumMin;
+  const ratio = span <= 0 ? 0 : Math.max(0, Math.min(1, (targetTotal - sumMin) / span));
 
   return cases.map((item) => {
-    if (!item.selected || !item.ai || midpointTotal <= 0) {
-      return { ...item, cost_selected: 0 };
-    }
-    const isLast = selected[selected.length - 1]?.id === item.id;
-    const proportional = roundCurrency(
-      selectedTotal * (((item.ai.price_min + item.ai.price_max) / 2) / midpointTotal),
-    );
-    const costSelected = isLast ? roundCurrency(selectedTotal - allocated) : proportional;
-    allocated = roundCurrency(allocated + costSelected);
-    return { ...item, cost_selected: Math.max(0, costSelected) };
+    if (!item.selected || !item.ai) return item;
+    return {
+      ...item,
+      cost_selected: roundCurrency(item.ai.price_min + (item.ai.price_max - item.ai.price_min) * ratio),
+    };
   });
 }
 

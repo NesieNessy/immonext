@@ -290,6 +290,9 @@ function plan558(
       modernizationIndex += 1;
     }
     if (monthDiff(lastEffective, month) < intervalMonths) continue;
+    // §558 and §559 may not both take effect in the same month. The
+    // modernization keeps the month; the rent-index increase waits.
+    if (sortedModernizations.some((item) => item.effectiveYyyymm === month)) continue;
 
     const target = roundCurrency(targetPerM2 * Math.pow(1.02, Math.floor(offset / 12)) * params.livingAreaM2);
     const windowStart = addMonths(month, -35);
@@ -299,7 +302,18 @@ function plan558(
       }
       return sum;
     }, 0);
-    const room = roundCurrency(Math.max(0, params.monthlyRentStart * capPercent - usedInWindow));
+    // §558 Abs. 3: the 20 % / 15 % ceiling is measured against the rent at the
+    // start of the rolling three-year window, not against the rent at the very
+    // beginning of the projection. `current558Base` is the rent before this
+    // step, so subtracting what was already raised inside the window
+    // reconstructs the rent as it stood when the window opened. Using the
+    // initial rent instead kept the ceiling frozen at its year-one value and
+    // understated every later window (20 % → 11 % after twelve years).
+    // §559 increases stay out of it by construction: they accumulate in
+    // `active559`, never in `current558Base` — matching "von Erhöhungen nach
+    // den §§ 559 bis 560 abgesehen".
+    const rentAtWindowStart = Math.max(0, current558Base - usedInWindow);
+    const room = roundCurrency(Math.max(0, rentAtWindowStart * capPercent - usedInWindow));
     const legalMaximum = clamp(target - current558Base - active559, 0, room);
     const delta = roundCurrency(legalMaximum * utilization);
 
@@ -356,7 +370,10 @@ function applyRentIncreaseOverrides(
   let previous = params.last558Date ? normalizeYyyymm(params.last558Date) : params.rentStartYyyymm;
   let current558Base = params.monthlyRentStart;
   const accepted: RentIncrease558Row[] = [];
-  const capAmount = params.monthlyRentStart * capPercent;
+
+  /** §558 and §559 must not take effect in the same month. */
+  const collidesWith559 = (effectiveYyyymm: string) =>
+    modernizations.some((item) => item.effectiveYyyymm === effectiveYyyymm);
 
   const legalMaximumAt = (effectiveYyyymm: string) => {
     const offset = Math.max(0, monthDiff(params.startYyyymm, effectiveYyyymm));
@@ -368,7 +385,9 @@ function applyRentIncreaseOverrides(
     const usedInWindow = accepted
       .filter((item) => compareMonth(item.effectiveYyyymm, windowStart) >= 0)
       .reduce((sum, item) => sum + item.monthlyDelta, 0);
-    const capRoom = Math.max(0, capAmount - usedInWindow);
+    // Same rolling-window base as plan558 — see the comment there.
+    const rentAtWindowStart = Math.max(0, current558Base - usedInWindow);
+    const capRoom = Math.max(0, rentAtWindowStart * capPercent - usedInWindow);
     const targetRoom = Math.max(0, target - current558Base - active559);
     return roundCurrency(Math.min(capRoom, targetRoom));
   };
@@ -382,9 +401,16 @@ function applyRentIncreaseOverrides(
     ].sort().at(-1) ?? step.effectiveYyyymm;
 
     let legalMaximum = legalMaximumAt(effectiveYyyymm);
-    // A moved increase keeps its sequence. If the legal room is exhausted,
-    // dependent increases move to the first month in which room is available.
-    for (let attempt = 0; step.monthlyDelta > 0 && legalMaximum <= 0.009 && attempt <= CALCULATION_HORIZON_MONTHS; attempt += 1) {
+    // A moved increase keeps its sequence. If the legal room is exhausted — or
+    // the month is already taken by a §559 modernization — dependent increases
+    // move to the first month that works.
+    for (
+      let attempt = 0;
+      step.monthlyDelta > 0
+        && (legalMaximum <= 0.009 || collidesWith559(effectiveYyyymm))
+        && attempt <= CALCULATION_HORIZON_MONTHS;
+      attempt += 1
+    ) {
       effectiveYyyymm = addMonths(effectiveYyyymm, 1);
       legalMaximum = legalMaximumAt(effectiveYyyymm);
     }

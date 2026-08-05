@@ -9,6 +9,10 @@ import {
   aggregateRenovationPricing,
   categoryLabel,
   costForCase,
+  distributeTotalAcrossCases,
+  evaluateRenovationCases,
+  sumSelectedCosts,
+  withDefaultSelectedCosts,
   RENOVATION_CATEGORIES,
   RENOVATION_MEASURES,
   type RenovationCase,
@@ -90,10 +94,11 @@ function RenovationContent() {
   const [previewUrls, setPreviewUrls] = useState<Record<number, string>>({});
   const [isUploadingFiles, setIsUploadingFiles] = useState(false);
   const [uploadFilesError, setUploadFilesError] = useState<string | null>(null);
-  const [sumSelected, setSumSelected] = useState(0);
   const [financingMode, setFinancingMode] = useState<RenovationFinancingMode>('FREMD');
   const [financedAmount, setFinancedAmount] = useState('');
   const [context, setContext] = useState<RenovationResponse['context'] | null>(null);
+  /** Raw text per measure while its amount field is being edited (id → input). */
+  const [costInputs, setCostInputs] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -109,9 +114,8 @@ function RenovationContent() {
         if (!res.ok) throw new Error(await res.text());
         const data = await res.json() as RenovationResponse;
         if (cancelled) return;
-        setCases(data.cases);
+        setCases(withDefaultSelectedCosts(data.cases));
         setContext(data.context);
-        setSumSelected(data.pricing.sum_selected);
         setFinancingMode(data.financing.mode);
         setFinancedAmount(formatDecimalInput(String(data.financing.financedAmount || '')));
         if (data.cases.length > 0) setStage('PRICING');
@@ -142,16 +146,12 @@ function RenovationContent() {
 
   const totals = useMemo(() => aggregateRenovationPricing(cases), [cases]);
 
-  useEffect(() => {
-    if (totals.sum_max <= 0) {
-      setSumSelected(0);
-      return;
-    }
-    setSumSelected((prev) => {
-      if (prev <= 0) return totals.sum_mid;
-      return Math.max(totals.sum_min, Math.min(totals.sum_max, prev));
-    });
-  }, [totals.sum_min, totals.sum_mid, totals.sum_max]);
+  // Derived, never stored. The per-measure amounts in `cases` are the single
+  // source of truth. Previously this was its own state that an effect clamped
+  // into the current min/max whenever a measure was ticked or unticked — a
+  // lossy write that destroyed the entered figure: unticking clamped it down,
+  // re-ticking could not bring it back because the original was already gone.
+  const sumSelected = useMemo(() => sumSelectedCosts(cases), [cases]);
 
   useEffect(() => {
     if (financingMode === 'FREMD') setFinancedAmount(formatDecimalInput(String(sumSelected)));
@@ -209,9 +209,17 @@ function RenovationContent() {
       return;
     }
     setError(null);
-    setCases((prev) => [
-      ...prev,
-      {
+    // Price the new case right away with the same pure function the API route
+    // uses (evaluateRenovationCases in buildResponse). Without this the case
+    // enters the list with no `ai` payload, and because the pricing table
+    // falls back to `item.ai?.price_min ?? 0` it would read "0,00 € – 0,00 €"
+    // until the next server round-trip. That round-trip only happens via the
+    // primary action, which runs evaluateCases only while stage === 'ENTRY' —
+    // so once a workflow already has a saved case (which puts the page into
+    // stage PRICING on load), every further case stayed at 0 indefinitely.
+    // The server re-evaluates all cases on save, so it stays authoritative.
+    const [evaluated] = withDefaultSelectedCosts(evaluateRenovationCases({
+      cases: [{
         id: idForCase(),
         kategorie: category,
         massnahme: measure,
@@ -220,8 +228,11 @@ function RenovationContent() {
         selected: true,
         zeitpunkt: 'SOFORT',
         publish_order: false,
-      },
-    ]);
+      }],
+      postalCode: context?.postalCode,
+      livingAreaM2: context?.livingAreaM2,
+    }));
+    setCases((prev) => [...prev, evaluated]);
     setMeasure('');
     setDescription('');
     setUploadNames([]);
@@ -229,7 +240,7 @@ function RenovationContent() {
 
   const evaluateCases = async () => {
     if (cases.length === 0) {
-      setError('Bitte legen Sie mindestens einen Sanierungsfall an.');
+      setError('Bitte legen Sie mindestens eine Modernisierung an.');
       return false;
     }
     setIsSaving(true);
@@ -251,8 +262,7 @@ function RenovationContent() {
       });
       if (!res.ok) throw new Error(await res.text());
       const data = await res.json() as RenovationResponse;
-      setCases(data.cases);
-      setSumSelected(data.pricing.sum_selected);
+      setCases(withDefaultSelectedCosts(data.cases));
       setFinancingMode(data.financing.mode);
       setFinancedAmount(formatDecimalInput(String(data.financing.financedAmount || '')));
       setStage('PRICING');
@@ -310,6 +320,25 @@ function RenovationContent() {
     setCases((prev) => prev.map((item) => item.id === id ? { ...item, ...patch } : item));
   };
 
+  /**
+   * Writes the typed amount back into the case and drops the draft, so the
+   * field falls back to showing the canonical value again. Keeping the raw
+   * text in a separate draft map while editing lets the user type "1.2" or
+   * clear the field without the parsed value fighting the keystrokes.
+   */
+  const commitCostInput = (id: string) => {
+    const draft = costInputs[id];
+    if (draft !== undefined) {
+      updateCase(id, { cost_selected: Math.max(0, parseDecimalInput(draft)) });
+    }
+    setCostInputs((prev) => {
+      if (!(id in prev)) return prev;
+      const next = { ...prev };
+      delete next[id];
+      return next;
+    });
+  };
+
   const selectedCases = cases.filter((item) => item.selected);
   const primaryLabel = stage === 'ENTRY' ? 'Weiter zur Auswertung' : 'Weiter';
 
@@ -342,7 +371,7 @@ function RenovationContent() {
             <section>
               <div className="mb-4 flex items-center gap-4">
                 <h2 className="rounded-lg border border-border bg-card px-4 py-2 text-lg font-medium text-foreground">
-                  Aufnahme der Sanierungsfälle
+                  Aufnahme der Modernisierungen
                 </h2>
                 <div className="h-px flex-1 bg-border" />
               </div>
@@ -403,7 +432,7 @@ function RenovationContent() {
                   {uploadFilesError && <p className="mt-1 text-xs text-destructive">{uploadFilesError}</p>}
                 </div>
                 <div className="flex items-end justify-start md:justify-end">
-                  <Button label="Fall hinzufügen" onClick={addCase} />
+                  <Button label="Modernisierung hinzufügen" onClick={addCase} />
                 </div>
               </div>
 
@@ -485,6 +514,7 @@ function RenovationContent() {
                           <th className="px-4 py-3 font-medium">Indikation</th>
                           <th className="px-4 py-3 text-right font-medium">Von</th>
                           <th className="px-4 py-3 text-right font-medium">Bis</th>
+                          <th className="px-4 py-3 text-right font-medium">Angesetzt</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -502,6 +532,18 @@ function RenovationContent() {
                             <td className="px-4 py-3 text-muted-foreground">{item.ai?.summary ?? '-'}</td>
                             <td className="px-4 py-3 text-right">{formatCurrency(item.ai?.price_min ?? 0)}</td>
                             <td className="px-4 py-3 text-right">{formatCurrency(item.ai?.price_max ?? 0)}</td>
+                            <td className="px-4 py-3">
+                              <TextField
+                                inputMode="decimal"
+                                suffix="€"
+                                className="text-right"
+                                aria-label={`Angesetzte Kosten für ${item.massnahme}`}
+                                disabled={!item.selected || !item.ai}
+                                value={costInputs[item.id] ?? formatDecimalInput(String(costForCase(item)))}
+                                onChange={(event) => setCostInputs((prev) => ({ ...prev, [item.id]: event.target.value }))}
+                                onBlur={() => commitCostInput(item.id)}
+                              />
+                            </td>
                           </tr>
                         ))}
                       </tbody>
@@ -519,7 +561,7 @@ function RenovationContent() {
                         step="100"
                         value={Math.max(totals.sum_min, Math.min(totals.sum_max, sumSelected))}
                         disabled={totals.sum_max <= totals.sum_min}
-                        onChange={(event) => setSumSelected(Number(event.target.value))}
+                        onChange={(event) => setCases((prev) => distributeTotalAcrossCases(prev, Number(event.target.value)))}
                         aria-label="Preis für weitere Berechnung"
                       />
                       <ReadOnlyPill value={formatCurrency(totals.sum_max)} />
@@ -556,7 +598,7 @@ function RenovationContent() {
                             </td>
                             <td className="px-4 py-3 text-right">
                               <div>{formatCurrency(costForCase(item))}</div>
-                              <div className="text-xs font-normal text-muted-foreground">Aus dem gewählten Gesamtwert anteilig auf diese Maßnahme verteilt</div>
+                              <div className="text-xs font-normal text-muted-foreground">In der Preisindikation angesetzt</div>
                             </td>
                             <td className="px-4 py-3">
                               <Dropdown
