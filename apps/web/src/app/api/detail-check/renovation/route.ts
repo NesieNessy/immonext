@@ -1,7 +1,8 @@
 import {
-  allocateSelectedRenovationCosts,
   aggregateRenovationPricing,
   evaluateRenovationCases,
+  sumSelectedCosts,
+  withDefaultSelectedCosts,
   type RenovationCase,
   type RenovationFinancingMode,
 } from '@/lib/detailCheck/renovation';
@@ -148,17 +149,16 @@ async function syncFinancingRenovation(args: {
 function buildResponse(saved: Record<string, unknown> | undefined, context: Awaited<ReturnType<typeof loadContext>>) {
   const savedCases = safeCases(saved?.cases);
   const evaluatedCases = savedCases.length
-    ? evaluateRenovationCases({
+    ? withDefaultSelectedCosts(evaluateRenovationCases({
         cases: savedCases,
         postalCode: context.postalCode,
         livingAreaM2: context.livingAreaM2,
-      })
+      }))
     : [];
   const aggregate = aggregateRenovationPricing(evaluatedCases);
-  const pricing = saved?.pricing && typeof saved.pricing === 'object'
-    ? saved.pricing as Record<string, unknown>
-    : {};
-  const selected = toNumber(pricing.sum_selected ?? aggregate.sum_mid);
+  // Derived from the per-measure amounts rather than read back from the stored
+  // pricing blob, so the total can never drift away from the parts it sums.
+  const selected = sumSelectedCosts(evaluatedCases);
   const financingMode = normalizeFinancingMode(saved?.financing_mode);
   const financedAmount = saved
     ? toNumber(saved.financed_amount)
@@ -217,8 +217,12 @@ export async function POST(request: Request) {
     livingAreaM2: context.livingAreaM2,
   });
   const aggregate = aggregateRenovationPricing(evaluatedCases);
-  const requestedSelected = toNumber(input.pricing?.sum_selected ?? aggregate.sum_mid);
-  const sumSelected = Math.max(aggregate.sum_min, Math.min(aggregate.sum_max || requestedSelected, requestedSelected));
+  // Per-measure amounts are authoritative and are stored as the client sent
+  // them; the total is their sum. This used to run allocateSelectedRenovationCosts,
+  // which recomputed every amount proportionally from the total and therefore
+  // discarded any individually entered figure on every save.
+  const cases = withDefaultSelectedCosts(evaluatedCases);
+  const sumSelected = sumSelectedCosts(cases);
   const financingMode = normalizeFinancingMode(input.financing?.mode);
   const requestedFinanced = toNumber(input.financing?.financedAmount);
   const financedAmount = financingMode === 'FREMD'
@@ -232,7 +236,6 @@ export async function POST(request: Request) {
     sum_mid: aggregate.sum_mid,
     sum_selected: sumSelected,
   };
-  const cases = allocateSelectedRenovationCosts(evaluatedCases, sumSelected);
 
   await db.query(
     `
