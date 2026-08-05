@@ -1,5 +1,8 @@
 import { jsonRequest, propertyResourceRequest } from '@/lib/api/propertyResources';
 import type {
+    RentalTermsPetsAllowed,
+    RentalTermsRedecorationClause,
+    RentalTermsSubletAllowed,
     Tenancy,
     TenancyInsert,
     TenancyTypeValues,
@@ -28,6 +31,13 @@ function toTenancy(row: Record<string, unknown>): Tenancy {
         tenantFirstName: row.tenant_first_name as string,
         tenantLastName: row.tenant_last_name as string,
         deposit: row.deposit as number,
+        nextRentAdjustmentDate: row.next_rent_adjustment_date as string | null,
+        nextRentAdjustmentAmount: row.next_rent_adjustment_amount as number | null,
+        renovationAdjustmentPlanned: row.renovation_adjustment_planned as boolean | null,
+        petsAllowed: row.pets_allowed as RentalTermsPetsAllowed | null,
+        redecorationClause: row.redecoration_clause as RentalTermsRedecorationClause | null,
+        subletAllowed: row.sublet_allowed as RentalTermsSubletAllowed | null,
+        additionalTerms: row.additional_terms as string | null,
     };
 }
 
@@ -104,6 +114,13 @@ export async function updateTenancy(
     if (updates.tenantFirstName !== undefined) dbUpdates.tenant_first_name = updates.tenantFirstName;
     if (updates.tenantLastName !== undefined) dbUpdates.tenant_last_name = updates.tenantLastName;
     if (updates.deposit !== undefined) dbUpdates.deposit = updates.deposit;
+    if (updates.nextRentAdjustmentDate !== undefined) dbUpdates.next_rent_adjustment_date = updates.nextRentAdjustmentDate;
+    if (updates.nextRentAdjustmentAmount !== undefined) dbUpdates.next_rent_adjustment_amount = updates.nextRentAdjustmentAmount;
+    if (updates.renovationAdjustmentPlanned !== undefined) dbUpdates.renovation_adjustment_planned = updates.renovationAdjustmentPlanned;
+    if (updates.petsAllowed !== undefined) dbUpdates.pets_allowed = updates.petsAllowed;
+    if (updates.redecorationClause !== undefined) dbUpdates.redecoration_clause = updates.redecorationClause;
+    if (updates.subletAllowed !== undefined) dbUpdates.sublet_allowed = updates.subletAllowed;
+    if (updates.additionalTerms !== undefined) dbUpdates.additional_terms = updates.additionalTerms;
 
     const data = await propertyResourceRequest<Record<string, unknown>>('tenancies', jsonRequest('PATCH', { id: tenancyId, values: dbUpdates }));
     if (!data) return null;
