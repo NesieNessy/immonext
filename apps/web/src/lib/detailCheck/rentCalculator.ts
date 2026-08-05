@@ -103,6 +103,17 @@ export type RentIncrease558Row = {
   monthlyDelta: number;
   legalMaximum: number;
   sourceType: Extract<RentIncreaseSourceType, 'RENT_INDEX' | 'MANUAL'>;
+  /**
+   * Earliest month this increase could take effect, given everything that
+   * constrains it: the waiting period after the previous increase, the
+   * remaining Kappungsgrenze head-room, the distance still left to the
+   * ortsübliche Vergleichsmiete, and §559 months that are already taken.
+   *
+   * Only the first of those is derivable in the UI; the rest depend on the
+   * month-by-month simulation. Reporting it from here lets the planner grey
+   * out exactly the range a bar cannot be dragged into, instead of guessing.
+   */
+  earliestYyyymm?: string;
 };
 
 export const DENSE_MARKET_CITIES = [
@@ -393,12 +404,28 @@ function applyRentIncreaseOverrides(
   };
 
   return requested.map((step) => {
-    let effectiveYyyymm = [
-      step.effectiveYyyymm,
+    // Hard floor from the waiting period and the start of the projection.
+    const lowerBound = [
       params.startYyyymm,
       params.rentStartYyyymm,
       addMonths(previous, Math.round(clamp(params.rentIncreaseIntervalMonths, 15, 60))),
-    ].sort().at(-1) ?? step.effectiveYyyymm;
+    ].sort().at(-1) ?? params.startYyyymm;
+
+    // From that floor, walk forward to the first month that actually permits an
+    // increase. This is what the planner greys out — the floor alone is often
+    // years too optimistic, because the rent still has to fall far enough below
+    // the ortsübliche Vergleichsmiete before any increase is lawful.
+    let earliestYyyymm = lowerBound;
+    for (
+      let attempt = 0;
+      (legalMaximumAt(earliestYyyymm) <= 0.009 || collidesWith559(earliestYyyymm))
+        && attempt < CALCULATION_HORIZON_MONTHS;
+      attempt += 1
+    ) {
+      earliestYyyymm = addMonths(earliestYyyymm, 1);
+    }
+
+    let effectiveYyyymm = [step.effectiveYyyymm, lowerBound].sort().at(-1) ?? step.effectiveYyyymm;
 
     let legalMaximum = legalMaximumAt(effectiveYyyymm);
     // A moved increase keeps its sequence. If the legal room is exhausted — or
@@ -416,7 +443,7 @@ function applyRentIncreaseOverrides(
     }
 
     const monthlyDelta = roundCurrency(clamp(step.monthlyDelta, 0, legalMaximum));
-    const scheduled = { ...step, effectiveYyyymm, monthlyDelta, legalMaximum };
+    const scheduled = { ...step, effectiveYyyymm, monthlyDelta, legalMaximum, earliestYyyymm };
     accepted.push(scheduled);
     current558Base = roundCurrency(current558Base + monthlyDelta);
     previous = effectiveYyyymm;

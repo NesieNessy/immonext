@@ -676,9 +676,13 @@ function PlanEditor({
     const landed = data.increases558.find((item, index) => (item.id ?? `558-${index + 1}`) === pending.id);
     if (!landed || landed.effectiveYyyymm === pending.requested) return;
     if (landed.effectiveYyyymm > pending.requested) {
-      setMessage(`Verschiebung auf ${pending.requested} nicht möglich — zu diesem Zeitpunkt besteht kein rechtlicher Spielraum (Kappungsgrenze bzw. ortsübliche Vergleichsmiete noch nicht erreicht). Wirksam ab ${landed.effectiveYyyymm}.`);
+      setMessage(
+        `Nicht möglich: Verschiebung auf ${pending.requested} nicht zulässig — bis dahin ist entweder die ortsübliche `
+        + `Vergleichsmiete bereits erreicht oder die Kappungsgrenze von ${Math.round(data.capPercent * 100)} % innerhalb `
+        + `von drei Jahren ausgeschöpft (§ 558 Abs. 1 und Abs. 3 BGB). Wirksam frühestens ab ${landed.effectiveYyyymm}.`,
+      );
     }
-  }, [data.increases558]);
+  }, [data.increases558, data.capPercent]);
 
   const planPlacement = (item: ModernizationPlanRow) => data.params.modernizationPlacements?.[item.id] ?? item.effectiveYyyymm;
 
@@ -776,7 +780,10 @@ function PlanEditor({
       if (offset < 3) {
         draggingRef.current = null;
         setDragging(null);
-        setMessage('Zeitpunkt nicht übernommen: Eine Erhöhung oder Modernisierung kann frühestens ab dem 3. Monat wirksam werden.');
+        const basis = completedDrag.kind === 'modernization'
+          ? 'Die Mieterhöhung nach einer Modernisierung wird erst ab Beginn des dritten Monats nach Zugang der Erhöhungserklärung fällig (§ 559b Abs. 2 BGB).'
+          : 'Eine Mieterhöhung ist erst ab Beginn des dritten Monats nach Zugang des Erhöhungsverlangens zu zahlen (§ 558b Abs. 1 BGB).';
+        setMessage(`Nicht möglich: ${basis}`);
         return;
       }
       // Covers the global §558 lock-out period and the waiting period between
@@ -793,7 +800,7 @@ function PlanEditor({
         if (offset < limit.offset) {
           draggingRef.current = null;
           setDragging(null);
-          setMessage(`Zeitpunkt nicht übernommen. ${limit.reason}`);
+          setMessage(`Nicht möglich: ${limit.reason}`);
           return;
         }
       }
@@ -969,40 +976,48 @@ function PlanEditor({
   /**
    * Earliest month a given §558 increase may take effect, plus why.
    *
-   * Three separate rules can bind, and the strictest wins. The sequence rule is
-   * the one users hit without any explanation: an increase may not move in
-   * front of its predecessor plus the 15-month waiting period, and the
-   * recalculation used to silently snap it back with no message at all.
+   * The month itself comes from the server (`earliestYyyymm`), because only the
+   * month-by-month simulation knows when enough legal head-room exists. The
+   * reason is reconstructed here by checking which rule that month lines up
+   * with — the waiting period, the lock-out period, or, when it is later than
+   * both, the head-room itself.
    */
   const earliest558For = (id: string): { offset: number; reason: string } => {
     const intervalMonths = data.params.rentIncreaseIntervalMonths;
-    const candidates = [
-      { offset: 3, reason: 'Eine Erhöhung kann frühestens ab dem 3. Monat wirksam werden.' },
-      {
-        offset: earliest558Offset,
-        reason: `§558-Sperrfrist: frühestens ${earliest558Month} — ${intervalMonths} Monate nach der letzten Mieterhöhung.`,
-      },
-    ];
-
     const index = data.increases558.findIndex((item, position) => (item.id ?? `558-${position + 1}`) === id);
-    const previous = index > 0 ? data.increases558[index - 1] : null;
-    if (previous) {
-      const previousMonth = previous.effectiveYyyymm;
-      const earliestMonth = addMonths(previousMonth, intervalMonths);
-      candidates.push({
-        offset: monthOffset(startYyyymm, earliestMonth),
-        reason: `Zwischen zwei Mieterhöhungen müssen ${intervalMonths} Monate liegen. Die vorherige Erhöhung wirkt ab ${previousMonth}, diese daher frühestens ab ${earliestMonth}.`,
-      });
-    }
+    const increase = index >= 0 ? data.increases558[index] : null;
+    const previousMonth = index > 0 ? data.increases558[index - 1].effectiveYyyymm : null;
 
-    return candidates.reduce((strictest, candidate) => (
-      candidate.offset > strictest.offset ? candidate : strictest
-    ));
+    const waitMonth = previousMonth ? addMonths(previousMonth, intervalMonths) : null;
+    const earliestMonth = increase?.earliestYyyymm
+      ?? waitMonth
+      ?? earliest558Month;
+    const offset = Math.max(3, monthOffset(startYyyymm, earliestMonth));
+
+    const capPercentText = `${Math.round(data.capPercent * 100)} %`;
+    const reason = waitMonth && earliestMonth <= waitMonth
+      ? `Wartezeit zwischen zwei Mieterhöhungen: Eine Mieterhöhung darf frühestens 12 Monate nach der letzten verlangt werden und wird selbst frühestens 15 Monate danach wirksam (§ 558 Abs. 1 Satz 1 BGB). Die vorherige Erhöhung wirkt ab ${previousMonth}, diese daher frühestens ab ${earliestMonth}.`
+      : !waitMonth && earliestMonth <= earliest558Month
+        ? `Wartezeit seit Mietbeginn: Die Miete muss vor einer Erhöhung mindestens 15 Monate unverändert gewesen sein (§ 558 Abs. 1 Satz 1 BGB). Frühestens möglich ab ${earliestMonth}.`
+        : `Kein rechtlicher Spielraum bis ${earliestMonth}: Entweder ist die ortsübliche Vergleichsmiete bereits erreicht, oder die Kappungsgrenze von ${capPercentText} innerhalb von drei Jahren ist ausgeschöpft (§ 558 Abs. 1 und Abs. 3 BGB). Eine höhere Miete wäre hier nicht zulässig.`;
+
+    return { offset, reason };
   };
 
   /** Blocked zone shown while a §558 bar is being dragged. */
   const draggedBlock = dragging?.kind === 'rent' && dragging.dateEditable
     ? earliest558For(dragging.id)
+    : null;
+
+  /**
+   * Same thing, but only truthy while the bar is actually sitting inside the
+   * blocked zone — as opposed to `draggedBlock`, which is set for the whole
+   * gesture and would otherwise flag a perfectly legal drop target as blocked
+   * just because a §558 bar happens to be the one in motion.
+   */
+  const draggedOffset = dragging ? Math.round(viewport.start + (dragging.currentLeft / 100) * viewport.span) : null;
+  const draggedIntoBlock = draggedBlock && draggedOffset != null && draggedOffset < draggedBlock.offset
+    ? draggedBlock
     : null;
 
   const baselineDateForCase = (item: RenovationCase) => {
@@ -1143,7 +1158,7 @@ function PlanEditor({
                 <div
                   className="absolute inset-y-0 left-0 z-30 flex items-center justify-end overflow-hidden border-r-2 border-[#d65b58] bg-[rgba(100,116,139,.22)] pr-2"
                   style={{ width: `${draggedBlockWidth}%` }}
-                  title={draggedBlock.reason}
+                  title={`Nicht möglich: ${draggedBlock.reason}`}
                 >
                   <span className="truncate text-[10px] font-medium text-[#4b5563]">Nicht möglich</span>
                 </div>
@@ -1267,7 +1282,16 @@ function PlanEditor({
           <TimelineRangeBar startYyyymm={startYyyymm} viewport={viewport} onChange={onViewportChange} />
         </div>
       </div>
-      <div className="mt-3 flex flex-wrap items-center justify-between gap-3"><span className="text-sm text-muted-foreground">{message || 'Noch keine Änderung vorgemerkt.'}</span><button className="rounded-md bg-primary px-4 py-2 font-medium text-primary-foreground" onClick={() => setShowApply(true)} disabled={isSaving}>Änderungen prüfen und übernehmen</button></div>
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+        <span className={`text-sm ${draggedIntoBlock ? 'font-medium text-[#d65b58]' : 'text-muted-foreground'}`}>
+          {/* While the bar sits inside a blocked zone, this shows the reason
+              live — the grey overlay itself is too narrow to fit readable
+              text, and waiting for the drop (or a hover tooltip) delays the
+              explanation past the moment it's actually useful. */}
+          {draggedIntoBlock ? `Nicht möglich: ${draggedIntoBlock.reason}` : message || 'Noch keine Änderung vorgemerkt.'}
+        </span>
+        <button className="rounded-md bg-primary px-4 py-2 font-medium text-primary-foreground" onClick={() => setShowApply(true)} disabled={isSaving}>Änderungen prüfen und übernehmen</button>
+      </div>
       {immediateMoveWarning && (
         <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4" role="dialog" aria-modal="true" aria-labelledby="immediate-warning-title">
           <div className="w-full max-w-md rounded-lg border border-border bg-card p-6 shadow-xl">
