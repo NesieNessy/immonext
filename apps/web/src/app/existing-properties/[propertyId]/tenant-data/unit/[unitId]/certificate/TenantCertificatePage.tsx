@@ -8,8 +8,8 @@ import { useRequireAuth } from '@/hooks/useRequireAuth';
 import { formatDeDate } from '@/lib/utils';
 import { AlertTriangle, Eye, FileText, Landmark, ListChecks, Upload, Users } from 'lucide-react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useEffect, useRef, useState } from 'react';
 import { DataCard, Field, initials, Pill, readFileAsDataUrl } from '../../../DocumentGeneratorParts';
 import { useUnitDocumentGeneratorData } from '../../../useUnitDocumentGeneratorData';
 
@@ -112,6 +112,7 @@ function certificatePrintDocument(c: CertificateContent): string {
 
 export default function TenantCertificatePage({ propertyId, unitId }: { propertyId: string; unitId: string }) {
     const router = useRouter();
+    const searchParams = useSearchParams();
     const { user } = useRequireAuth();
     const { isLoading, notFound, property, unit, hasMultipleUnits, tenancy, persons, landlord } =
         useUnitDocumentGeneratorData(propertyId, unitId, user?.id);
@@ -119,6 +120,20 @@ export default function TenantCertificatePage({ propertyId, unitId }: { property
     const [view, setView] = useState<View>('review');
     const [signatureDataUrl, setSignatureDataUrl] = useState<string | null>(null);
     const [isUploadingSignature, setIsUploadingSignature] = useState(false);
+
+    // The "PDF generieren" shortcut on the tenant-unit page links here with
+    // ?autoGenerate=1 to skip the extra click — handleGenerate is defined
+    // further down (after the not-found/loading early returns), so it's
+    // invoked indirectly through a ref that gets assigned once it exists.
+    const didAutoGenerate = useRef(false);
+    const handleGenerateRef = useRef<(() => void) | null>(null);
+    useEffect(() => {
+        if (didAutoGenerate.current) return;
+        if (searchParams.get('autoGenerate') !== '1') return;
+        if (!handleGenerateRef.current) return;
+        didAutoGenerate.current = true;
+        handleGenerateRef.current();
+    }, [searchParams, tenancy, landlord, persons]);
 
     if (notFound) return <PropertyNotFoundPage />;
     if (isLoading || !property || !unit) return <PropertyLoadingPage />;
@@ -195,6 +210,8 @@ export default function TenantCertificatePage({ propertyId, unitId }: { property
         win.focus();
         setTimeout(() => win.print(), 250);
     };
+
+    handleGenerateRef.current = handleGenerate;
 
     return (
         <div className="min-h-screen bg-background pb-24">

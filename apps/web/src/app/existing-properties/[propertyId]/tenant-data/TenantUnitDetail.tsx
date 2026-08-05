@@ -23,7 +23,7 @@ import { createUseCaseMenuItems } from '@/lib/useCaseMenu';
 import { base64ToDataUri, cn } from '@/lib/utils';
 import type { PersonalData, Property, PropertyUnit, Tenancy, TenancyDocument, TenancyDocumentType } from '@immonext/types';
 import { format } from 'date-fns';
-import { Download, Eye, FileText, Plus, RefreshCw, Star, Trash2, Upload, User, Users } from 'lucide-react';
+import { Download, Eye, FileSignature, FileText, Plus, RefreshCw, Star, Trash2, Upload, User, Users } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 
@@ -94,6 +94,7 @@ export function TenantUnitDetail({ propertyId, property, unit, hasMultipleUnits 
     const [pendingDocKey, setPendingDocKey] = useState<string | null>(null);
     const [docPendingDelete, setDocPendingDelete] = useState<{ key: string; label: string; doc: TenancyDocument } | null>(null);
     const [mietvertragIndividual, setMietvertragIndividual] = useState(false);
+    const [activeTab, setActiveTab] = useState<'mieter' | 'mietvertrag'>('mieter');
     const [originalPersonsSnapshot, setOriginalPersonsSnapshot] = useState(() => serializePersons([EMPTY_PRIMARY_PERSON]));
     const [originalDeposit, setOriginalDeposit] = useState('');
     const [pendingHref, setPendingHref] = useState<string | null>(null);
@@ -174,67 +175,57 @@ export function TenantUnitDetail({ propertyId, property, unit, hasMultipleUnits 
     // stays disabled until user-settings has been filled in.
     const landlordMissing = !landlord;
 
-    const documentRows = useMemo(() => {
-        const mietvertrag = SHARED_DOCUMENTS[0];
-        return [
-            ...persons.flatMap((person, personIndex) =>
-                PER_PERSON_DOCUMENTS.map((document) => ({
-                    key: `${document}-${personIndex}`,
-                    document,
-                    tenant: personDisplayName(person, personIndex),
-                    tenancyPersonId: person.id,
-                    canUpload: tenancy != null && person.id != null,
-                    blockedByLandlord: false,
-                    isMietvertrag: false,
-                    generateType: null as TenancyDocumentType | null,
-                    doc: person.id != null
-                        ? documents.find((d) => d.tenancyPersonId === person.id && d.documentType === document)
-                        : undefined,
-                }))
-            ),
-            ...(mietvertragIndividual
-                ? persons.map((person, personIndex) => ({
-                    key: `${mietvertrag}-${personIndex}`,
-                    document: mietvertrag,
-                    tenant: personDisplayName(person, personIndex),
-                    tenancyPersonId: person.id,
-                    canUpload: tenancy != null && person.id != null,
-                    blockedByLandlord: landlordMissing,
-                    isMietvertrag: true,
-                    generateType: mietvertrag,
-                    doc: person.id != null
-                        ? documents.find((d) => d.tenancyPersonId === person.id && d.documentType === mietvertrag)
-                        : undefined,
-                }))
-                : [{
-                    key: mietvertrag,
-                    document: mietvertrag,
-                    tenant: allTenantsDisplayName(persons),
-                    tenancyPersonId: null as number | null,
-                    canUpload: tenancy != null,
-                    blockedByLandlord: landlordMissing,
-                    isMietvertrag: true,
-                    generateType: mietvertrag,
-                    doc: documents.find((d) => d.tenancyPersonId === null && d.documentType === mietvertrag),
-                }]),
-            {
-                key: MIETERBESCHEINIGUNG,
-                document: MIETERBESCHEINIGUNG,
+    // Ausweis/Schufa/Bürgschaft only — Mietvertrag and Mieterbescheinigung
+    // moved to the "Generierbare Dokumente" section below, where the
+    // generate action can be a lot more prominent than a table icon.
+    const documentRows = useMemo(() => (
+        persons.flatMap((person, personIndex) =>
+            PER_PERSON_DOCUMENTS.map((document) => ({
+                key: `${document}-${personIndex}`,
+                document,
+                tenant: personDisplayName(person, personIndex),
+                tenancyPersonId: person.id,
+                canUpload: tenancy != null && person.id != null,
+                doc: person.id != null
+                    ? documents.find((d) => d.tenancyPersonId === person.id && d.documentType === document)
+                    : undefined,
+            }))
+        )
+    ), [persons, documents, tenancy]);
+
+    const documentFilterOptions = useMemo(
+        () => PER_PERSON_DOCUMENTS.map((value) => ({ value, label: value })),
+        []
+    );
+
+    const mietvertrag = SHARED_DOCUMENTS[0];
+
+    const mietvertragRows = useMemo(() => (
+        mietvertragIndividual
+            ? persons.map((person, personIndex) => ({
+                key: `${mietvertrag}-${personIndex}`,
+                tenant: personDisplayName(person, personIndex),
+                tenancyPersonId: person.id,
+                canUpload: tenancy != null && person.id != null,
+                doc: person.id != null
+                    ? documents.find((d) => d.tenancyPersonId === person.id && d.documentType === mietvertrag)
+                    : undefined,
+            }))
+            : [{
+                key: mietvertrag,
                 tenant: allTenantsDisplayName(persons),
                 tenancyPersonId: null as number | null,
                 canUpload: tenancy != null,
-                blockedByLandlord: false,
-                isMietvertrag: false,
-                generateType: MIETERBESCHEINIGUNG,
-                doc: documents.find((d) => d.tenancyPersonId === null && d.documentType === MIETERBESCHEINIGUNG),
-            },
-        ];
-    }, [persons, documents, tenancy, mietvertragIndividual, landlordMissing]);
+                doc: documents.find((d) => d.tenancyPersonId === null && d.documentType === mietvertrag),
+            }]
+    ), [persons, documents, tenancy, mietvertragIndividual, mietvertrag]);
 
-    const documentFilterOptions = useMemo(
-        () => Array.from(new Set([...PER_PERSON_DOCUMENTS, ...SHARED_DOCUMENTS, MIETERBESCHEINIGUNG])).map((value) => ({ value, label: value })),
-        []
-    );
+    const mieterbescheinigungRow = useMemo(() => ({
+        key: MIETERBESCHEINIGUNG,
+        tenant: allTenantsDisplayName(persons),
+        canUpload: tenancy != null,
+        doc: documents.find((d) => d.tenancyPersonId === null && d.documentType === MIETERBESCHEINIGUNG),
+    }), [persons, documents, tenancy]);
 
     const tenantFilterOptions = useMemo(() => {
         const names = Array.from(new Set(documentRows.map((row) => row.tenant)));
@@ -559,21 +550,16 @@ export function TenantUnitDetail({ propertyId, property, unit, hasMultipleUnits 
         {
             key: 'action',
             label: 'Aktion',
-            width: '190px',
+            width: '140px',
             align: 'right',
             renderCell: (_v, row) => {
                 const key = row.key as string;
                 const doc = row.doc as TenancyDocument | undefined;
                 const isPending = pendingDocKey === key;
-                const isMietvertrag = row.isMietvertrag as boolean;
-                const generateType = row.generateType as TenancyDocumentType | null;
-                const blockedByLandlord = row.blockedByLandlord as boolean;
-
-                let primaryAction: React.ReactNode;
 
                 if (doc) {
-                    primaryAction = (
-                        <>
+                    return (
+                        <div className="flex items-center justify-end gap-2">
                             <button
                                 type="button"
                                 onClick={() => void handleViewDocument(doc)}
@@ -599,27 +585,116 @@ export function TenantUnitDetail({ propertyId, property, unit, hasMultipleUnits 
                             >
                                 <Trash2 className="w-4 h-4" />
                             </button>
+                        </div>
+                    );
+                }
+
+                if (!row.canUpload) {
+                    return (
+                        <div className="flex justify-end">
+                            <span title="Bitte zuerst speichern">
+                                <Button
+                                    iconOnly
+                                    icon={<Upload className="w-4 h-4" />}
+                                    variant="outline"
+                                    size="sm"
+                                    disabled
+                                    aria-label={`${row.document as string} für ${row.tenant as string} hochladen`}
+                                />
+                            </span>
+                        </div>
+                    );
+                }
+
+                const inputId = `tenancy-document-upload-${key}`;
+                return (
+                    <div className="flex justify-end">
+                        <input
+                            id={inputId}
+                            type="file"
+                            accept=".pdf,.jpg,.jpeg,.png"
+                            className="sr-only"
+                            disabled={isPending}
+                            onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                e.target.value = '';
+                                if (file) {
+                                    void handleUploadDocument(key, row.tenancyPersonId as number | null, row.document as TenancyDocumentType, file);
+                                }
+                            }}
+                        />
+                        <label
+                            htmlFor={inputId}
+                            aria-label={`${row.document as string} für ${row.tenant as string} hochladen`}
+                            title="Hochladen"
+                            className={cn(
+                                "inline-flex items-center justify-center p-1.5 rounded-lg border-2 border-primary text-primary cursor-pointer transition-colors hover:bg-primary hover:text-primary-foreground",
+                                isPending && "opacity-50 pointer-events-none"
+                            )}
+                        >
+                            <Upload className="w-4 h-4" />
+                        </label>
+                    </div>
+                );
+            },
+        },
+    ];
+
+    // Shared row renderer for the Mietvertrag/Mieterbescheinigung cards in
+    // "Generierbare Dokumente" — same view/download/delete/upload logic as
+    // the Unterlagen table's action column, just inside a card row instead
+    // of a table cell.
+    const renderDocRow = (
+        row: { key: string; tenant: string; tenancyPersonId?: number | null; canUpload: boolean; doc?: TenancyDocument },
+        documentType: TenancyDocumentType,
+        blocked: boolean,
+    ) => {
+        const isPending = pendingDocKey === row.key;
+        return (
+            <div key={row.key} className="flex items-center justify-between gap-3 p-2.5 rounded-lg bg-muted/30">
+                <div className="min-w-0 flex items-center gap-2 flex-wrap">
+                    <span className="text-sm text-foreground truncate">{row.tenant}</span>
+                    {row.doc && (
+                        <button
+                            type="button"
+                            onClick={() => void handleViewDocument(row.doc!)}
+                            title={row.doc.fileName}
+                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-primary/10 text-primary text-xs font-medium max-w-[180px] hover:bg-primary/20 transition-colors cursor-pointer"
+                        >
+                            <FileText className="w-3 h-3 shrink-0" />
+                            <span className="truncate">{row.doc.fileName}</span>
+                        </button>
+                    )}
+                </div>
+                <div className="flex items-center gap-1 shrink-0">
+                    {row.doc ? (
+                        <>
+                            <button
+                                type="button"
+                                onClick={() => void handleDownloadDocument(row.doc!)}
+                                aria-label="Herunterladen"
+                                className="p-1.5 rounded-md text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors cursor-pointer"
+                            >
+                                <Download className="w-4 h-4" />
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setDocPendingDelete({ key: row.key, doc: row.doc!, label: `${documentType} von ${row.tenant}` })}
+                                disabled={isPending}
+                                aria-label="Löschen"
+                                className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
+                            >
+                                <Trash2 className="w-4 h-4" />
+                            </button>
                         </>
-                    );
-                } else if (!row.canUpload || blockedByLandlord) {
-                    primaryAction = (
-                        <span title={blockedByLandlord ? 'Bitte zuerst Vermieterdaten in den Einstellungen hinterlegen' : 'Bitte zuerst speichern'}>
-                            <Button
-                                iconOnly
-                                icon={<Upload className="w-4 h-4" />}
-                                variant="outline"
-                                size="sm"
-                                disabled
-                                aria-label={`${row.document as string} für ${row.tenant as string} hochladen`}
-                            />
+                    ) : !row.canUpload || blocked ? (
+                        <span title={blocked ? 'Bitte zuerst Vermieterdaten in den Einstellungen hinterlegen' : 'Bitte zuerst speichern'}>
+                            <Button iconOnly icon={<Upload className="w-4 h-4" />} variant="outline" size="sm" disabled aria-label="Hochladen" />
                         </span>
-                    );
-                } else {
-                    const inputId = `tenancy-document-upload-${key}`;
-                    primaryAction = (
+                    ) : (
                         <>
                             <input
-                                id={inputId}
+                                id={`doc-upload-${row.key}`}
                                 type="file"
                                 accept=".pdf,.jpg,.jpeg,.png"
                                 className="sr-only"
@@ -627,14 +702,11 @@ export function TenantUnitDetail({ propertyId, property, unit, hasMultipleUnits 
                                 onChange={(e) => {
                                     const file = e.target.files?.[0];
                                     e.target.value = '';
-                                    if (file) {
-                                        void handleUploadDocument(key, row.tenancyPersonId as number | null, row.document as TenancyDocumentType, file);
-                                    }
+                                    if (file) void handleUploadDocument(row.key, row.tenancyPersonId ?? null, documentType, file);
                                 }}
                             />
                             <label
-                                htmlFor={inputId}
-                                aria-label={`${row.document as string} für ${row.tenant as string} hochladen`}
+                                htmlFor={`doc-upload-${row.key}`}
                                 title="Hochladen"
                                 className={cn(
                                     "inline-flex items-center justify-center p-1.5 rounded-lg border-2 border-primary text-primary cursor-pointer transition-colors hover:bg-primary hover:text-primary-foreground",
@@ -644,55 +716,13 @@ export function TenantUnitDetail({ propertyId, property, unit, hasMultipleUnits 
                                 <Upload className="w-4 h-4" />
                             </label>
                         </>
-                    );
-                }
+                    )}
+                </div>
+            </div>
+        );
+    };
 
-                return (
-                    <div className="flex items-center justify-end gap-2">
-                        {primaryAction}
-                        {isMietvertrag && (
-                            <Button
-                                iconOnly
-                                icon={mietvertragIndividual ? <Users className="w-4 h-4" /> : <User className="w-4 h-4" />}
-                                variant="outline"
-                                size="sm"
-                                disabled={blockedByLandlord}
-                                title={blockedByLandlord ? 'Bitte zuerst Vermieterdaten in den Einstellungen hinterlegen' : (mietvertragIndividual ? 'Gemeinsam' : 'Individuell')}
-                                aria-label={mietvertragIndividual ? 'Gemeinsam hochladen' : 'Individuell hochladen'}
-                                onClick={() => setMietvertragIndividual((prev) => !prev)}
-                            />
-                        )}
-                        {generateType && (
-                            <Button
-                                iconOnly
-                                icon={<FileText className="w-4 h-4" />}
-                                variant="outline"
-                                size="sm"
-                                disabled={blockedByLandlord || !row.canUpload}
-                                title={
-                                    blockedByLandlord
-                                        ? 'Bitte zuerst Vermieterdaten in den Einstellungen hinterlegen'
-                                        : !row.canUpload
-                                            ? 'Bitte zuerst speichern'
-                                            : `${generateType} generieren`
-                                }
-                                aria-label={`${generateType} generieren`}
-                                onClick={() => {
-                                    const base = `/existing-properties/${propertyId}/tenant-data/unit/${unit.propertyUnitId}`;
-                                    if (generateType === 'Mieterbescheinigung') {
-                                        goTo(`${base}/certificate`);
-                                    } else {
-                                        const query = row.tenancyPersonId != null ? `?personId=${row.tenancyPersonId as number}` : '';
-                                        goTo(`${base}/rental-agreement${query}`);
-                                    }
-                                }}
-                            />
-                        )}
-                    </div>
-                );
-            },
-        },
-    ];
+    const generatorBase = `/existing-properties/${propertyId}/tenant-data/unit/${unit.propertyUnitId}`;
 
     return (
         <div className="min-h-screen bg-background pb-24">
@@ -738,6 +768,30 @@ export function TenantUnitDetail({ propertyId, property, unit, hasMultipleUnits 
                                 </div>
                             </div>
 
+                            {/* Tabs */}
+                            <div className="flex items-center gap-6 border-b border-border">
+                                <button
+                                    type="button"
+                                    onClick={() => setActiveTab('mieter')}
+                                    className={`relative flex items-center gap-2 pb-3 text-sm font-medium transition-colors cursor-pointer ${activeTab === 'mieter' ? 'text-primary' : 'text-muted-foreground hover:text-foreground'}`}
+                                >
+                                    <User className="w-4 h-4" />
+                                    Aktueller Mieter
+                                    {activeTab === 'mieter' && <span className="absolute left-0 right-0 bottom-0 h-0.5 bg-primary" />}
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setActiveTab('mietvertrag')}
+                                    className={`relative flex items-center gap-2 pb-3 text-sm font-medium transition-colors cursor-pointer ${activeTab === 'mietvertrag' ? 'text-primary' : 'text-muted-foreground hover:text-foreground'}`}
+                                >
+                                    <FileSignature className="w-4 h-4" />
+                                    Mietvertrag
+                                    {activeTab === 'mietvertrag' && <span className="absolute left-0 right-0 bottom-0 h-0.5 bg-primary" />}
+                                </button>
+                            </div>
+
+                            {activeTab === 'mieter' && (
+                            <>
                             {/* Person cards */}
                             <div className="flex flex-col gap-4">
                                 {persons.map((person, index) => (
@@ -813,6 +867,99 @@ export function TenantUnitDetail({ propertyId, property, unit, hasMultipleUnits 
                                     />
                                 </div>
                             </div>
+                            </>
+                            )}
+
+                            {activeTab === 'mietvertrag' && (
+                            <div>
+                                <SectionLabel>Dokumente</SectionLabel>
+                                <div className="mt-3 flex flex-col gap-4">
+                                    <div className="rounded-lg border border-border bg-card p-4">
+                                        <div className="flex items-center justify-between gap-3 flex-wrap">
+                                            <div className="flex items-center gap-2">
+                                                <FileSignature className="w-4 h-4 text-primary" />
+                                                <span className="text-sm font-semibold text-foreground">Mietvertrag</span>
+                                            </div>
+                                            <Button
+                                                iconOnly
+                                                icon={mietvertragIndividual ? <Users className="w-4 h-4" /> : <User className="w-4 h-4" />}
+                                                variant="outline"
+                                                size="sm"
+                                                disabled={landlordMissing}
+                                                title={landlordMissing ? 'Bitte zuerst Vermieterdaten in den Einstellungen hinterlegen' : (mietvertragIndividual ? 'Gemeinsam' : 'Individuell')}
+                                                aria-label={mietvertragIndividual ? 'Gemeinsam' : 'Individuell'}
+                                                onClick={() => setMietvertragIndividual((prev) => !prev)}
+                                            />
+                                        </div>
+
+                                        <div className="mt-3 flex flex-col gap-2">
+                                            {mietvertragRows.map((row) => renderDocRow(row, mietvertrag, landlordMissing))}
+                                        </div>
+
+                                        <p className="mt-3 text-xs text-muted-foreground">
+                                            Wohnraummietvertrag für die Mietpartei(en) dieser Einheit, inklusive Mietkonditionen, Kaution und Sonderregelungen.
+                                        </p>
+
+                                        <div className="mt-3 flex items-center justify-end gap-2">
+                                            <Button
+                                                label="Daten prüfen & Vorschau"
+                                                icon={<Eye className="w-4 h-4" />}
+                                                variant="outline"
+                                                disabled={landlordMissing || tenancy == null}
+                                                onClick={() => goTo(`${generatorBase}/rental-agreement`)}
+                                            />
+                                            <Button
+                                                label="PDF generieren"
+                                                icon={<FileText className="w-4 h-4" />}
+                                                variant="primary"
+                                                disabled={landlordMissing || tenancy == null}
+                                                onClick={() => goTo(`${generatorBase}/rental-agreement?autoGenerate=1`)}
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            )}
+
+                            {activeTab === 'mieter' && (
+                            <>
+                            {/* Generierbare Dokumente */}
+                            <div>
+                                <SectionLabel>Generierbare Dokumente</SectionLabel>
+                                <div className="mt-3 flex flex-col gap-4">
+                                    <div className="rounded-lg border border-border bg-card p-4">
+                                        <div className="flex items-center gap-2">
+                                            <FileText className="w-4 h-4 text-primary" />
+                                            <span className="text-sm font-semibold text-foreground">Mieterbescheinigung</span>
+                                        </div>
+
+                                        <div className="mt-3 flex flex-col gap-2">
+                                            {renderDocRow(mieterbescheinigungRow, MIETERBESCHEINIGUNG, false)}
+                                        </div>
+
+                                        <p className="mt-3 text-xs text-muted-foreground">
+                                            Bestätigt das bestehende Mietverhältnis für alle Mietparteien auf Basis der hinterlegten Daten.
+                                        </p>
+
+                                        <div className="mt-3 flex items-center justify-end gap-2">
+                                            <Button
+                                                label="Daten prüfen & Vorschau"
+                                                icon={<Eye className="w-4 h-4" />}
+                                                variant="outline"
+                                                disabled={tenancy == null}
+                                                onClick={() => goTo(`${generatorBase}/certificate`)}
+                                            />
+                                            <Button
+                                                label="PDF generieren"
+                                                icon={<FileText className="w-4 h-4" />}
+                                                variant="primary"
+                                                disabled={tenancy == null}
+                                                onClick={() => goTo(`${generatorBase}/certificate?autoGenerate=1`)}
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
 
                             {/* Mietkaution */}
                             <div>
@@ -834,6 +981,8 @@ export function TenantUnitDetail({ propertyId, property, unit, hasMultipleUnits 
                                     />
                                 </div>
                             </div>
+                            </>
+                            )}
                 </div>
             </main>
 

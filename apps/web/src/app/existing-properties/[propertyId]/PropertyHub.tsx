@@ -45,7 +45,7 @@ const OBJEKTVERWALTUNG: HubCard[] = [
   {
     key: 'property-data',
     title: 'Objektdaten',
-    description: 'Adresse, Fläche, Baujahr und weitere Stammdaten des Objekts pflegen',
+    description: 'Adresse, Fläche, Baujahr und weitere Stammdaten pflegen',
     route: 'property-data',
     icon: Database,
     colorClass: 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400',
@@ -53,7 +53,7 @@ const OBJEKTVERWALTUNG: HubCard[] = [
   {
     key: 'adjust-rnd',
     title: 'Restnutzungsdauer',
-    description: 'Individuelle Restnutzungsdauer für die Abschreibung festlegen und anpassen',
+    description: 'Restnutzungsdauer für die Abschreibung individuell festlegen',
     route: 'adjust-rnd',
     icon: Clock,
     colorClass: 'bg-cyan-100 text-cyan-600 dark:bg-cyan-900/30 dark:text-cyan-400',
@@ -61,7 +61,7 @@ const OBJEKTVERWALTUNG: HubCard[] = [
   {
     key: 'adjust-distribution',
     title: 'Kaufpreisaufteilung',
-    description: 'Prozentuale Verteilung des Kaufpreises auf Grundstück und Gebäude für die Abschreibung',
+    description: 'Prozentuale Kaufpreisverteilung für die Abschreibung',
     route: 'adjust-distribution',
     icon: PieChart,
     colorClass: 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400',
@@ -69,7 +69,7 @@ const OBJEKTVERWALTUNG: HubCard[] = [
   {
     key: 'tenant-data-new',
     title: 'Neue Einheit',
-    description: 'Weitere Wohn-, Gewerbe- oder Stellplatzeinheiten für dieses Objekt anlegen',
+    description: 'Weitere Wohn-, Gewerbe- oder Stellplatzeinheiten anlegen',
     route: 'tenant-data/new',
     icon: Plus,
     colorClass: 'bg-primary/10 text-primary',
@@ -80,7 +80,7 @@ const MIETE: HubCard[] = [
   {
     key: 'tenant-data',
     title: 'Mieterdaten',
-    description: 'Kontaktdaten, Mietvertrag und Unterlagen des aktuellen Mieters verwalten',
+    description: 'Kontaktdaten und Unterlagen des aktuellen Mieters verwalten',
     route: 'tenant-data',
     icon: Users,
     colorClass: 'bg-violet-100 text-violet-600 dark:bg-violet-900/30 dark:text-violet-400',
@@ -88,7 +88,7 @@ const MIETE: HubCard[] = [
   {
     key: 'tenant-history',
     title: 'Mieter-Historie',
-    description: 'Übersicht aller bisherigen Mietverhältnisse und Mieterwechsel einsehen',
+    description: 'Alle bisherigen Mietverhältnisse und Mieterwechsel einsehen',
     route: 'tenant-history',
     icon: History,
     colorClass: 'bg-muted text-muted-foreground',
@@ -96,7 +96,7 @@ const MIETE: HubCard[] = [
   {
     key: 'rental-trends',
     title: 'Mietentwicklung',
-    description: 'Entwicklung der Mietpreise über die Zeit auswerten und analysieren',
+    description: 'Entwicklung der Mietpreise über die Zeit analysieren',
     route: 'rental-trends',
     icon: TrendingUp,
     colorClass: 'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400',
@@ -104,7 +104,7 @@ const MIETE: HubCard[] = [
   {
     key: 'tenant-move-out',
     title: 'Mieterauszug',
-    description: 'Abnahmeprotokoll erstellen und die Wohnungsübergabe dokumentieren',
+    description: 'Abnahmeprotokoll erstellen und Übergabe dokumentieren',
     route: 'tenant-move-out',
     icon: DoorOpen,
     colorClass: 'bg-rose-100 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400',
@@ -115,7 +115,7 @@ const FINANZEN_DOKUMENTE: HubCard[] = [
   {
     key: 'service-charge-settlement',
     title: 'Nebenkostenabrechnung',
-    description: 'Jährliche Nebenkostenabrechnungen erstellen, prüfen und verwalten',
+    description: 'Jährliche Nebenkostenabrechnungen erstellen und verwalten',
     route: 'service-charge-settlement',
     icon: Receipt,
     colorClass: 'bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400',
@@ -123,7 +123,7 @@ const FINANZEN_DOKUMENTE: HubCard[] = [
   {
     key: 'tax-documents',
     title: 'Steuerunterlagen',
-    description: 'Relevante Belege und Dokumente für die Steuererklärung sammeln',
+    description: 'Belege und Dokumente für die Steuererklärung sammeln',
     route: 'tax-documents',
     icon: Landmark,
     colorClass: 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400',
@@ -131,7 +131,7 @@ const FINANZEN_DOKUMENTE: HubCard[] = [
   {
     key: 'key-metrics',
     title: 'Kennzahlen',
-    description: 'Rendite, KPF und weitere Kennzahlen des Objekts im Überblick auswerten',
+    description: 'Rendite, KPF und weitere Kennzahlen im Überblick auswerten',
     route: 'key-metrics',
     icon: BarChart3,
     colorClass: 'bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400',
@@ -139,7 +139,7 @@ const FINANZEN_DOKUMENTE: HubCard[] = [
   {
     key: 'contractors',
     title: 'Handwerker',
-    description: 'Handwerksaufträge verwalten sowie Angebote einholen und vergleichen',
+    description: 'Handwerksaufträge verwalten und Angebote einholen',
     route: 'contractors',
     icon: Wrench,
     colorClass: 'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400',
@@ -150,7 +150,7 @@ const WEITERE_AKTIONEN: HubCard[] = [
   {
     key: 'sale',
     title: 'Verkauf',
-    description: 'Verkaufsprozess einleiten und alle nötigen Unterlagen vorbereiten',
+    description: 'Verkaufsprozess einleiten und Unterlagen vorbereiten',
     route: 'sale',
     icon: ShoppingCart,
     colorClass: 'bg-muted text-muted-foreground',
@@ -225,7 +225,7 @@ export default function PropertyHub({ propertyId }: { propertyId: string }) {
       {
         key: 'certificate-generate',
         title: 'Mieterbescheinigung',
-        description: 'Offizielle Bescheinigung des Mietverhältnisses für den aktuellen Mieter erstellen',
+        description: 'Bescheinigung des Mietverhältnisses für den Mieter erstellen',
         route: `tenant-data/unit/${singleUnit.propertyUnitId}/certificate`,
         icon: FileText,
         colorClass: 'bg-sky-100 text-sky-600 dark:bg-sky-900/30 dark:text-sky-400',
@@ -233,7 +233,7 @@ export default function PropertyHub({ propertyId }: { propertyId: string }) {
       {
         key: 'rental-agreement-generate',
         title: 'Mietvertrag',
-        description: 'Standardisierten Mietvertrag für Wohnraum automatisch erstellen',
+        description: 'Mietvertrag für Wohnraum automatisch erstellen',
         route: `tenant-data/unit/${singleUnit.propertyUnitId}/rental-agreement`,
         icon: FileSignature,
         colorClass: 'bg-teal-100 text-teal-600 dark:bg-teal-900/30 dark:text-teal-400',
@@ -246,7 +246,7 @@ export default function PropertyHub({ propertyId }: { propertyId: string }) {
     {
       key: 'delete-property',
       title: 'Löschung',
-      description: 'Dieses Bestandsobjekt und alle zugehörigen Daten endgültig entfernen',
+      description: 'Bestandsobjekt und alle Daten endgültig entfernen',
       icon: Trash2,
       colorClass: 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400',
       onClick: () => setDeleteModalOpen(true),

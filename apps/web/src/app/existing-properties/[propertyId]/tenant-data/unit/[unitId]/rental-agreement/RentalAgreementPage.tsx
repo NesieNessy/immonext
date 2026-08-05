@@ -221,6 +221,20 @@ export default function RentalAgreementPage({ propertyId, unitId }: { propertyId
         setAdditionalTerms(tenancy.additionalTerms ?? '');
     }, [tenancy]);
 
+    // The "PDF generieren" shortcut on the tenant-unit page links here with
+    // ?autoGenerate=1 to skip the extra click — handleGenerate is defined
+    // further down (after the not-found/loading early returns), so it's
+    // invoked indirectly through a ref that gets assigned once it exists.
+    const didAutoGenerate = useRef(false);
+    const handleGenerateRef = useRef<(() => void) | null>(null);
+    useEffect(() => {
+        if (didAutoGenerate.current) return;
+        if (searchParams.get('autoGenerate') !== '1') return;
+        if (!handleGenerateRef.current) return;
+        didAutoGenerate.current = true;
+        handleGenerateRef.current();
+    }, [searchParams, tenancy, landlord, persons]);
+
     if (notFound) return <PropertyNotFoundPage />;
     if (isLoading || !property || !unit) return <PropertyLoadingPage />;
 
@@ -337,6 +351,8 @@ export default function RentalAgreementPage({ propertyId, unitId }: { propertyId
         win.focus();
         setTimeout(() => win.print(), 250);
     };
+
+    handleGenerateRef.current = () => void handleGenerate();
 
     return (
         <div className="min-h-screen bg-background pb-24">
