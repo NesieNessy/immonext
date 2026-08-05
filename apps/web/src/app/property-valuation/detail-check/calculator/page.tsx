@@ -489,6 +489,45 @@ function snapTaxPercent(previous: number, requested: number): number {
 
 type BarKind = 'modernization' | 'rent';
 
+/** Bar geometry, in the same percentage units the gantt tracks are laid out in. */
+const BAR_WIDTH_PERCENT = 15;
+const BAR_HEIGHT_PX = 32;
+const LANE_GAP_PX = 4;
+const TRACK_PADDING_PX = 8;
+const LANE_STEP_PX = BAR_HEIGHT_PX + LANE_GAP_PX;
+
+function trackHeightPx(laneCount: number): number {
+  return Math.max(56, TRACK_PADDING_PX * 2 + laneCount * BAR_HEIGHT_PX + (laneCount - 1) * LANE_GAP_PX);
+}
+
+/**
+ * Assigns each bar the topmost row in which it does not overlap an earlier one,
+ * so measures that fall in the same or adjacent months stack instead of hiding
+ * each other. Bars are a fixed 15 % wide, so two of them collide whenever their
+ * left edges are closer together than that — previously the later one simply
+ * covered the earlier one and only a z-index told them apart.
+ */
+function assignLanes(lefts: number[]): number[] {
+  const laneEnds: number[] = [];
+  const lanes = new Array<number>(lefts.length).fill(0);
+  const order = lefts
+    .map((left, index) => ({ left, index }))
+    .sort((a, b) => a.left - b.left || a.index - b.index);
+
+  for (const { left, index } of order) {
+    // 0.01 absorbs floating-point noise in the percentage arithmetic.
+    let lane = laneEnds.findIndex((end) => left >= end - 0.01);
+    if (lane === -1) {
+      lane = laneEnds.length;
+      laneEnds.push(0);
+    }
+    laneEnds[lane] = left + BAR_WIDTH_PERCENT;
+    lanes[index] = lane;
+  }
+
+  return lanes;
+}
+
 interface BarLayout {
   left: number;
   reason: string;
@@ -523,7 +562,8 @@ interface BarProps {
   left: number;
   amount: number;
   maxAmount: number;
-  layer: number;
+  /** Stacking row within the track; 0 is the topmost. */
+  lane: number;
   editable: boolean;
   isDragging: boolean;
   onBeginDrag: (event: PointerEvent<HTMLDivElement>, id: string, kind: BarKind, baseLeft: number, amount: number, maxAmount: number, dateEditable: boolean) => void;
@@ -542,13 +582,19 @@ interface BarProps {
  * wrappers in PlanEditor) or this memoization would be defeated immediately.
  */
 const Bar = memo(function Bar({
-  id, kind, label, date, reason, left, amount, maxAmount, layer, editable, isDragging,
+  id, kind, label, date, reason, left, amount, maxAmount, lane, editable, isDragging,
   onBeginDrag, onMove, onUp, onCancel,
 }: BarProps) {
   return (
     <div
-      className={`absolute top-2 flex h-8 min-w-[94px] touch-none cursor-grab items-center gap-1 rounded-md border-2 px-2 text-[11px] font-semibold text-white shadow-sm active:cursor-grabbing ${kind === 'rent' ? 'border-[#9fd7c5] bg-[#2c9b7b]' : 'border-[#efb1ae] bg-[#d65b58]'} ${isDragging ? 'ring-2 ring-[#d99432] ring-offset-2' : ''}`}
-      style={{ left: `${left}%`, width: '15%', zIndex: 20 + layer }}
+      className={`absolute flex h-8 min-w-[94px] touch-none cursor-grab items-center gap-1 rounded-md border-2 px-2 text-[11px] font-semibold text-white shadow-sm active:cursor-grabbing ${kind === 'rent' ? 'border-[#9fd7c5] bg-[#2c9b7b]' : 'border-[#efb1ae] bg-[#d65b58]'} ${isDragging ? 'ring-2 ring-[#d99432] ring-offset-2' : ''}`}
+      style={{
+        left: `${left}%`,
+        top: `${TRACK_PADDING_PX + lane * LANE_STEP_PX}px`,
+        width: `${BAR_WIDTH_PERCENT}%`,
+        // The dragged bar rises above the rest; otherwise later lanes sit on top.
+        zIndex: isDragging ? 40 : 20 + lane,
+      }}
       onPointerDown={editable ? (event) => onBeginDrag(event, id, kind, left, amount, maxAmount, true) : undefined}
       onPointerMove={editable ? onMove : undefined}
       onPointerUp={editable ? onUp : undefined}
@@ -600,6 +646,8 @@ function PlanEditor({
   const [immediateMoveWarning, setImmediateMoveWarning] = useState<RenovationCase | null>(null);
   const [showApply, setShowApply] = useState(false);
   const [message, setMessage] = useState('');
+  /** Date the user last dropped a §558 bar on, pending the server's verdict. */
+  const pendingMoveRef = useRef<{ id: string; requested: string } | null>(null);
   const initialValuesRef = useRef({
     financingRate: data.params.interestRate,
     refinancingRate: data.params.refinancingInterestRate ?? data.params.interestRate,
@@ -614,6 +662,23 @@ function PlanEditor({
   useEffect(() => setDraftTaxRate(data.params.taxRate * 100), [data.params.taxRate]);
   useEffect(() => setDraftLossesOffsettable(data.params.taxableLossesOffsettable === true), [data.params.taxableLossesOffsettable]);
   useEffect(() => setDraftTimingOverrides(data.params.renovationTimingOverrides ?? {}), [data.params.renovationTimingOverrides]);
+
+  // The recalculation may push an increase later than requested when there is
+  // no legal head-room in the chosen month — the Kappungsgrenze is exhausted,
+  // the ortsübliche Vergleichsmiete is already reached, or a §559 modernization
+  // occupies that month. That constraint varies month by month and is only
+  // known after the server has recalculated, so instead of guessing client-side
+  // the actual result is compared against what was asked for.
+  useEffect(() => {
+    const pending = pendingMoveRef.current;
+    if (!pending) return;
+    pendingMoveRef.current = null;
+    const landed = data.increases558.find((item, index) => (item.id ?? `558-${index + 1}`) === pending.id);
+    if (!landed || landed.effectiveYyyymm === pending.requested) return;
+    if (landed.effectiveYyyymm > pending.requested) {
+      setMessage(`Verschiebung auf ${pending.requested} nicht möglich — zu diesem Zeitpunkt besteht kein rechtlicher Spielraum (Kappungsgrenze bzw. ortsübliche Vergleichsmiete noch nicht erreicht). Wirksam ab ${landed.effectiveYyyymm}.`);
+    }
+  }, [data.increases558]);
 
   const planPlacement = (item: ModernizationPlanRow) => data.params.modernizationPlacements?.[item.id] ?? item.effectiveYyyymm;
 
@@ -714,12 +779,30 @@ function PlanEditor({
         setMessage('Zeitpunkt nicht übernommen: Eine Erhöhung oder Modernisierung kann frühestens ab dem 3. Monat wirksam werden.');
         return;
       }
-      if (completedDrag.kind === 'rent' && completedDrag.id.startsWith('558-') && offset < earliest558Offset) {
-        draggingRef.current = null;
-        setDragging(null);
-        setMessage(`Zeitpunkt nicht übernommen: Eine §558-Erhöhung kann frühestens ab ${addMonths(startYyyymm, earliest558Offset)} wirksam werden.`);
-        return;
+      // Covers the global §558 lock-out period and the waiting period between
+      // two increases. The recalculation would clamp the date back silently,
+      // leaving the bar to snap into place with no explanation.
+      //
+      // Identified by kind + dateEditable, NOT by an id prefix: once an
+      // increase has been persisted its id is the database key ("1", "2", …),
+      // so the previous `id.startsWith('558-')` test only ever matched
+      // increases that had never been saved — which is to say, almost none.
+      // §559 bars are the other 'rent' bars but are not date-editable.
+      if (completedDrag.kind === 'rent') {
+        const limit = earliest558For(completedDrag.id);
+        if (offset < limit.offset) {
+          draggingRef.current = null;
+          setDragging(null);
+          setMessage(`Zeitpunkt nicht übernommen. ${limit.reason}`);
+          return;
+        }
       }
+      // The server has the final say — legal head-room varies month by month
+      // and is only known after recalculation. Remember what was asked for so
+      // the result can be compared against it (see the effect below).
+      pendingMoveRef.current = completedDrag.kind === 'rent'
+        ? { id: completedDrag.id, requested: monthFromOffset(startYyyymm, offset) }
+        : null;
       const date = monthFromOffset(startYyyymm, offset);
       if (completedDrag.kind === 'modernization') placements[completedDrag.id] = date;
       if (completedDrag.kind === 'rent') rentOverrides[completedDrag.id] = { ...rentOverrides[completedDrag.id], effectiveYyyymm: date };
@@ -816,30 +899,58 @@ function PlanEditor({
     };
   }, [handleDragCancel]);
 
-  const renderBar = (id: string, kind: BarKind, label: string, date: string, amount: number, maxAmount: number, editable = true, layer = 0) => {
-    const layout = computeBarLayout(startYyyymm, viewport, kind, label, date);
-    if (!layout) return null;
-    const isDragging = dragging?.id === id;
-    return (
-      <Bar
-        key={`${kind}-${id}`}
-        id={id}
-        kind={kind}
-        label={label}
-        date={date}
-        reason={layout.reason}
-        left={isDragging ? dragging.currentLeft : layout.left}
-        amount={isDragging ? dragging.currentAmount : amount}
-        maxAmount={maxAmount}
-        layer={layer}
-        editable={editable}
-        isDragging={isDragging}
-        onBeginDrag={beginDrag}
-        onMove={handlePointerMove}
-        onUp={handleBarPointerUp}
-        onCancel={handleDragCancel}
-      />
-    );
+  type BarSpec = {
+    id: string;
+    kind: BarKind;
+    label: string;
+    date: string;
+    amount: number;
+    maxAmount: number;
+    editable?: boolean;
+  };
+
+  /**
+   * Lays out one gantt row: drops bars outside the viewport, stacks whatever
+   * still overlaps into separate lanes, and reports how tall the row has to be
+   * so nothing is clipped.
+   */
+  const buildTrack = (specs: BarSpec[]) => {
+    const visible = specs.flatMap((spec) => {
+      const layout = computeBarLayout(startYyyymm, viewport, spec.kind, spec.label, spec.date);
+      return layout ? [{ spec, layout }] : [];
+    });
+    const lefts = visible.map(({ spec, layout }) => (
+      dragging?.id === spec.id ? dragging.currentLeft : layout.left
+    ));
+    const lanes = assignLanes(lefts);
+    const laneCount = lanes.length ? Math.max(...lanes) + 1 : 1;
+
+    return {
+      heightPx: trackHeightPx(laneCount),
+      nodes: visible.map(({ spec, layout }, index) => {
+        const isDragging = dragging?.id === spec.id;
+        return (
+          <Bar
+            key={`${spec.kind}-${spec.id}`}
+            id={spec.id}
+            kind={spec.kind}
+            label={spec.label}
+            date={spec.date}
+            reason={layout.reason}
+            left={lefts[index]}
+            amount={isDragging ? dragging.currentAmount : spec.amount}
+            maxAmount={spec.maxAmount}
+            lane={lanes[index]}
+            editable={spec.editable !== false}
+            isDragging={isDragging}
+            onBeginDrag={beginDrag}
+            onMove={handlePointerMove}
+            onUp={handleBarPointerUp}
+            onCancel={handleDragCancel}
+          />
+        );
+      }),
+    };
   };
 
   const fixedInterestMonths = (data.params.interestPeriodYears ?? 10) * 12;
@@ -854,6 +965,46 @@ function PlanEditor({
     ? addMonths(data.params.last558Date, data.params.rentIncreaseIntervalMonths)
     : addMonths(data.params.rentStartYyyymm, data.params.rentIncreaseIntervalMonths);
   const earliest558Offset = Math.max(0, monthOffset(startYyyymm, earliest558Month));
+
+  /**
+   * Earliest month a given §558 increase may take effect, plus why.
+   *
+   * Three separate rules can bind, and the strictest wins. The sequence rule is
+   * the one users hit without any explanation: an increase may not move in
+   * front of its predecessor plus the 15-month waiting period, and the
+   * recalculation used to silently snap it back with no message at all.
+   */
+  const earliest558For = (id: string): { offset: number; reason: string } => {
+    const intervalMonths = data.params.rentIncreaseIntervalMonths;
+    const candidates = [
+      { offset: 3, reason: 'Eine Erhöhung kann frühestens ab dem 3. Monat wirksam werden.' },
+      {
+        offset: earliest558Offset,
+        reason: `§558-Sperrfrist: frühestens ${earliest558Month} — ${intervalMonths} Monate nach der letzten Mieterhöhung.`,
+      },
+    ];
+
+    const index = data.increases558.findIndex((item, position) => (item.id ?? `558-${position + 1}`) === id);
+    const previous = index > 0 ? data.increases558[index - 1] : null;
+    if (previous) {
+      const previousMonth = previous.effectiveYyyymm;
+      const earliestMonth = addMonths(previousMonth, intervalMonths);
+      candidates.push({
+        offset: monthOffset(startYyyymm, earliestMonth),
+        reason: `Zwischen zwei Mieterhöhungen müssen ${intervalMonths} Monate liegen. Die vorherige Erhöhung wirkt ab ${previousMonth}, diese daher frühestens ab ${earliestMonth}.`,
+      });
+    }
+
+    return candidates.reduce((strictest, candidate) => (
+      candidate.offset > strictest.offset ? candidate : strictest
+    ));
+  };
+
+  /** Blocked zone shown while a §558 bar is being dragged. */
+  const draggedBlock = dragging?.kind === 'rent' && dragging.dateEditable
+    ? earliest558For(dragging.id)
+    : null;
+
   const baselineDateForCase = (item: RenovationCase) => {
     if (item.calculator_effective_yyyymm) return item.calculator_effective_yyyymm;
     const index = data.renovationCases.findIndex((candidate) => candidate.id === item.id);
@@ -894,6 +1045,38 @@ function PlanEditor({
   };
   const blocked559Width = blockedWidth(3);
   const blocked558Width = blockedWidth(earliest558Offset);
+  const draggedBlockWidth = draggedBlock ? blockedWidth(draggedBlock.offset) : 0;
+
+  const modernizationTrack = buildTrack(data.modernizationPlan.map((item) => {
+    const amount = data.params.modernizationCostOverrides?.[item.id] ?? item.allocableCosts;
+    return {
+      id: item.id,
+      kind: 'modernization' as const,
+      label: item.title,
+      date: planPlacement(item),
+      amount,
+      maxAmount: Math.max(1000, amount * 3, item.allocableCosts * 3),
+    };
+  }));
+
+  const effect559Track = buildTrack(data.modernizationPlan.map((item) => ({
+    id: `${item.id}-559`,
+    kind: 'rent' as const,
+    label: item.title,
+    date: planPlacement(item),
+    amount: item.monthlyDelta,
+    maxAmount: item.monthlyDelta,
+    editable: false,
+  })));
+
+  const increases558Track = buildTrack(data.increases558.map((item, index) => ({
+    id: item.id ?? `558-${index + 1}`,
+    kind: 'rent' as const,
+    label: item.sourceType === 'MANUAL' ? '§558 · Manuell' : '§558 · Mietspiegel',
+    date: item.effectiveYyyymm,
+    amount: item.monthlyDelta,
+    maxAmount: item.legalMaximum,
+  })));
   const blockedPattern = 'bg-[repeating-linear-gradient(135deg,rgba(100,116,139,.16),rgba(100,116,139,.16)_5px,transparent_5px,transparent_10px)]';
 
   return (
@@ -901,9 +1084,73 @@ function PlanEditor({
       <div className="mb-4"><h2 className="text-lg font-medium text-foreground">Interaktive Planung</h2></div>
       <div className="overflow-hidden">
         <div className="w-full min-w-0">
-          <div className="grid grid-cols-[15%_85%] border-t border-border"><div className="py-4 pr-3 font-medium">Sanierungen</div><div data-gantt-track="true" className="relative h-14 bg-[repeating-linear-gradient(90deg,transparent,transparent_calc(20%-1px),theme(colors.border)_calc(20%-1px),theme(colors.border)_20%)]" onPointerMove={handlePointerMove} onPointerUp={() => void finishDrag()}>{viewport.start === 0 && <div className="absolute inset-y-0 left-0 w-[2.5%] bg-[repeating-linear-gradient(135deg,rgba(100,116,139,.12),rgba(100,116,139,.12)_5px,transparent_5px,transparent_10px)]" title="Vor dem Startmonat gesperrt" />}{data.modernizationPlan.map((item, index) => { const amount = data.params.modernizationCostOverrides?.[item.id] ?? item.allocableCosts; return renderBar(item.id, 'modernization', item.title, planPlacement(item), amount, Math.max(1000, amount * 3, item.allocableCosts * 3), true, index); })}</div></div>
-          <div className="grid grid-cols-[15%_85%] border-t border-border"><div className="py-4 pr-3 font-medium">§559 Wirksamkeit</div><div data-gantt-track="true" className="relative h-14 bg-[repeating-linear-gradient(90deg,transparent,transparent_calc(20%-1px),theme(colors.border)_calc(20%-1px),theme(colors.border)_20%)]" onPointerMove={handlePointerMove} onPointerUp={() => void finishDrag()}>{blocked559Width > 0 && <div className={`absolute inset-y-0 left-0 z-10 ${blockedPattern}`} style={{ width: `${blocked559Width}%` }} title="§559-Wirksamkeitsfrist: Die erhöhte Miete wird frühestens ab dem dritten Monat nach Zugang der Erhöhungserklärung geschuldet." />}{data.modernizationPlan.map((item, index) => renderBar(`${item.id}-559`, 'rent', item.title, planPlacement(item), item.monthlyDelta, item.monthlyDelta, false, index))}</div></div>
-          <div className="grid grid-cols-[15%_85%] border-t border-border"><div className="py-4 pr-3 font-medium">§558 Mieterhöhungen</div><div data-gantt-track="true" className="relative h-14 bg-[repeating-linear-gradient(90deg,transparent,transparent_calc(20%-1px),theme(colors.border)_calc(20%-1px),theme(colors.border)_20%)]" onPointerMove={handlePointerMove} onPointerUp={() => void finishDrag()}>{blocked558Width > 0 && <div className={`absolute inset-y-0 left-0 z-10 ${blockedPattern}`} style={{ width: `${blocked558Width}%` }} title={`§558-Sperrfrist: Früheste Wirksamkeit ${earliest558Month}; gewählter Abstand ${data.params.rentIncreaseIntervalMonths} Monate.`} />}{data.increases558.map((item, index) => renderBar(item.id ?? `558-${index + 1}`, 'rent', item.sourceType === 'MANUAL' ? '§558 · Manuell' : '§558 · Mietspiegel', item.effectiveYyyymm, item.monthlyDelta, item.legalMaximum, true, index))}</div></div>
+          <div className="grid grid-cols-[15%_85%] border-t border-border">
+            <div className="py-4 pr-3 font-medium">Sanierungen</div>
+            <div
+              data-gantt-track="true"
+              className="relative bg-[repeating-linear-gradient(90deg,transparent,transparent_calc(20%-1px),theme(colors.border)_calc(20%-1px),theme(colors.border)_20%)]"
+              style={{ height: `${modernizationTrack.heightPx}px` }}
+              onPointerMove={handlePointerMove}
+              onPointerUp={() => void finishDrag()}
+            >
+              {viewport.start === 0 && (
+                <div
+                  className="absolute inset-y-0 left-0 w-[2.5%] bg-[repeating-linear-gradient(135deg,rgba(100,116,139,.12),rgba(100,116,139,.12)_5px,transparent_5px,transparent_10px)]"
+                  title="Vor dem Startmonat gesperrt"
+                />
+              )}
+              {modernizationTrack.nodes}
+            </div>
+          </div>
+          <div className="grid grid-cols-[15%_85%] border-t border-border">
+            <div className="py-4 pr-3 font-medium">§559 Wirksamkeit</div>
+            <div
+              data-gantt-track="true"
+              className="relative bg-[repeating-linear-gradient(90deg,transparent,transparent_calc(20%-1px),theme(colors.border)_calc(20%-1px),theme(colors.border)_20%)]"
+              style={{ height: `${effect559Track.heightPx}px` }}
+              onPointerMove={handlePointerMove}
+              onPointerUp={() => void finishDrag()}
+            >
+              {blocked559Width > 0 && (
+                <div
+                  className={`absolute inset-y-0 left-0 z-10 ${blockedPattern}`}
+                  style={{ width: `${blocked559Width}%` }}
+                  title="§559-Wirksamkeitsfrist: Die erhöhte Miete wird frühestens ab dem dritten Monat nach Zugang der Erhöhungserklärung geschuldet."
+                />
+              )}
+              {effect559Track.nodes}
+            </div>
+          </div>
+          <div className="grid grid-cols-[15%_85%] border-t border-border">
+            <div className="py-4 pr-3 font-medium">§558 Mieterhöhungen</div>
+            <div
+              data-gantt-track="true"
+              className="relative bg-[repeating-linear-gradient(90deg,transparent,transparent_calc(20%-1px),theme(colors.border)_calc(20%-1px),theme(colors.border)_20%)]"
+              style={{ height: `${increases558Track.heightPx}px` }}
+              onPointerMove={handlePointerMove}
+              onPointerUp={() => void finishDrag()}
+            >
+              {blocked558Width > 0 && (
+                <div
+                  className={`absolute inset-y-0 left-0 z-10 ${blockedPattern}`}
+                  style={{ width: `${blocked558Width}%` }}
+                  title={`§558-Sperrfrist: Früheste Wirksamkeit ${earliest558Month}; gewählter Abstand ${data.params.rentIncreaseIntervalMonths} Monate.`}
+                />
+              )}
+              {/* Only while a §558 bar is being dragged: greys out everything it
+                  cannot be moved into and names the rule responsible. */}
+              {draggedBlock && draggedBlockWidth > 0 && (
+                <div
+                  className="absolute inset-y-0 left-0 z-30 flex items-center justify-end overflow-hidden border-r-2 border-[#d65b58] bg-[rgba(100,116,139,.22)] pr-2"
+                  style={{ width: `${draggedBlockWidth}%` }}
+                  title={draggedBlock.reason}
+                >
+                  <span className="truncate text-[10px] font-medium text-[#4b5563]">Nicht möglich</span>
+                </div>
+              )}
+              {increases558Track.nodes}
+            </div>
+          </div>
           <div className="grid grid-cols-[15%_85%] border-t border-border">
             <div className="py-4 pr-3 font-medium">Finanzierung</div>
             <div
