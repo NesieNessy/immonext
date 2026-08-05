@@ -55,6 +55,8 @@ const RESOURCES: Record<string, ResourceConfig> = {
       'is_rented', 'tenancy_start_date', 'tenancy_end_date', 'tenancy_type',
       'tenancy_units', 'tenancy_units_price', 'parking_space_rent', 'misc_rent',
       'warm_rent', 'cold_rent', 'tenant_first_name', 'tenant_last_name', 'deposit',
+      'next_rent_adjustment_date', 'next_rent_adjustment_amount', 'renovation_adjustment_planned',
+      'pets_allowed', 'redecoration_clause', 'sublet_allowed', 'additional_terms',
     ],
     orderBy: 'tenancy_id',
   },

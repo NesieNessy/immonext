@@ -1,19 +1,50 @@
 "use client";
 
 import { formatUnitLabel, PropertyLoadingPage, PropertyNotFoundPage } from '@/components/features/PropertyDisplay';
-import { Header, StickyActionBar, type BreadcrumbItem } from '@/components/ui';
+import { CalendarField, Dropdown, Header, NumberField, StickyActionBar, TextArea, type BreadcrumbItem } from '@/components/ui';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { ExistingPropertiesUseCases } from '@/constants/ExistingPropertiesUseCases';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
+import { updateTenancy } from '@/lib/supabase/tenancy.supabase';
 import { deCurrencyFormatter, formatDeDate } from '@/lib/utils';
-import { AlertTriangle, Eye, FileSignature, FileText, Home, Landmark, ListChecks, Upload, Users } from 'lucide-react';
+import type { RentalTermsPetsAllowed, RentalTermsRedecorationClause, RentalTermsSubletAllowed } from '@immonext/types';
+import { format } from 'date-fns';
+import { AlertTriangle, Eye, FileSignature, FileText, Home, Landmark, ListChecks, PenLine, Upload, Users } from 'lucide-react';
 import Link from 'next/link';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useState } from 'react';
 import { DataCard, Field, initials, Pill, readFileAsDataUrl } from '../../../DocumentGeneratorParts';
 import { useUnitDocumentGeneratorData } from '../../../useUnitDocumentGeneratorData';
 
 type View = 'review' | 'preview';
+type TriState = '' | 'true' | 'false';
+
+const PETS_OPTIONS: { value: RentalTermsPetsAllowed | ''; label: string }[] = [
+    { value: '', label: 'Bitte wählen…' },
+    { value: 'Erlaubt', label: 'Erlaubt' },
+    { value: 'Nicht erlaubt', label: 'Nicht erlaubt' },
+    { value: 'Nach Vereinbarung', label: 'Nach Vereinbarung' },
+];
+
+const REDECORATION_OPTIONS: { value: RentalTermsRedecorationClause | ''; label: string }[] = [
+    { value: '', label: 'Bitte wählen…' },
+    { value: 'Mieter trägt Kosten (üblich)', label: 'Mieter trägt Kosten (üblich)' },
+    { value: 'Vermieter trägt Kosten', label: 'Vermieter trägt Kosten' },
+    { value: 'Individuelle Regelung', label: 'Individuelle Regelung' },
+];
+
+const SUBLET_OPTIONS: { value: RentalTermsSubletAllowed | ''; label: string }[] = [
+    { value: '', label: 'Bitte wählen…' },
+    { value: 'Erlaubt', label: 'Erlaubt' },
+    { value: 'Nicht erlaubt', label: 'Nicht erlaubt' },
+    { value: 'Nach Zustimmung', label: 'Nach Zustimmung' },
+];
+
+const RENOVATION_ADJUSTMENT_OPTIONS: { value: TriState; label: string }[] = [
+    { value: '', label: 'Nicht erfasst' },
+    { value: 'true', label: 'Geplant' },
+    { value: 'false', label: 'Nicht geplant' },
+];
 
 function euro(value: number | null | undefined): string {
     return value != null ? `${deCurrencyFormatter.format(value)} €` : '–';
@@ -33,15 +64,25 @@ interface AgreementContent {
     mietende: string;
     coldRent: string;
     miscRent: string;
-    warmRent: string;
     parkingRent: string | null;
+    warmRent: string;
     deposit: string;
+    depositRatio: string | null;
+    nextRentAdjustmentDate: string | null;
+    nextRentAdjustmentAmount: string | null;
+    renovationAdjustmentPlanned: boolean | null;
+    petsAllowed: RentalTermsPetsAllowed | null;
+    redecorationClause: RentalTermsRedecorationClause | null;
+    subletAllowed: RentalTermsSubletAllowed | null;
+    additionalTerms: string | null;
     issuePlace: string;
     issueDate: string;
+    documentNumber: string;
     signatureDataUrl: string | null;
 }
 
 function agreementBodyHtml(c: AgreementContent): string {
+    const tenantNames = c.tenants.map((t) => t.name).join(' / ');
     const tenantRows = c.tenants.map((t) => `
         <div style="background:#f4f4f5;border-radius:6px;padding:8px 12px;margin-bottom:6px;">
             <strong>${t.name}</strong> <span style="color:#666;font-size:12px;">— ${t.role}</span>
@@ -49,7 +90,11 @@ function agreementBodyHtml(c: AgreementContent): string {
 
     const signatureBlock = c.signatureDataUrl
         ? `<img src="${c.signatureDataUrl}" style="max-height:60px;max-width:220px;" />`
-        : `<div style="width:220px;height:60px;border:1px dashed #bbb;display:flex;align-items:center;justify-content:center;color:#999;font-size:12px;">[Unterschrift nicht hinterlegt]</div>`;
+        : `<div style="height:40px;"></div>`;
+
+    const sectionTitle = (n: number, label: string) => `<h2 style="font-size:13px;text-transform:uppercase;letter-spacing:0.04em;color:#0f4c81;border-bottom:1px solid #ddd;padding-bottom:6px;margin:24px 0 10px;">§ ${n} · ${label}</h2>`;
+    const row = (label: string, value: string, bold = false) => `<p style="margin:4px 0;display:flex;justify-content:space-between;${bold ? 'font-weight:bold;' : ''}"><span style="color:#666;">${label}</span><span>${value}</span></p>`;
+    const note = (html: string) => `<div style="border-left:3px solid #0f4c81;background:#eff6ff;padding:12px 16px;font-size:13px;margin:10px 0 4px;">${html}</div>`;
 
     return `
         <div style="display:flex;justify-content:space-between;align-items:flex-start;">
@@ -57,56 +102,67 @@ function agreementBodyHtml(c: AgreementContent): string {
                 <strong>${c.landlordName}</strong><br/>${c.landlordStreet}<br/>${c.landlordCity}
             </div>
             <div style="font-size:12px;color:#555;text-align:right;line-height:1.6;">
-                Ausgestellt am: ${c.issueDate}<br/>
-                Ausstellungsort: ${c.issuePlace}
+                Vertragsdatum: ${c.issueDate}<br/>
+                Ort: ${c.issuePlace}<br/>
+                Vertrags-Nr.: ${c.documentNumber}
             </div>
         </div>
         <hr style="margin:20px 0;border:none;border-top:1px solid #ccc;" />
-        <h1 style="text-align:center;font-size:22px;margin-bottom:4px;">Mietvertrag für Wohnraum</h1>
-        <p style="text-align:center;color:#666;font-size:13px;margin-bottom:28px;">zwischen dem Vermieter und der/den nachstehend genannten Mietpartei(en)</p>
+        <h1 style="text-align:center;font-size:22px;margin-bottom:4px;">Mietvertrag</h1>
+        <p style="text-align:center;color:#666;font-size:13px;margin-bottom:16px;">Wohnraummietvertrag gemäß §§ 535 ff. BGB</p>
 
-        <h2 style="font-size:13px;text-transform:uppercase;letter-spacing:0.04em;color:#555;border-bottom:1px solid #ddd;padding-bottom:6px;margin-bottom:10px;">Vermieter</h2>
-        <p style="margin:4px 0;"><span style="color:#666;">Name:</span> ${c.landlordName}</p>
-        <p style="margin:4px 0 20px;"><span style="color:#666;">Adresse:</span> ${c.landlordStreet}, ${c.landlordCity}</p>
-
-        <h2 style="font-size:13px;text-transform:uppercase;letter-spacing:0.04em;color:#555;border-bottom:1px solid #ddd;padding-bottom:6px;margin-bottom:10px;">Mieter</h2>
+        ${sectionTitle(1, 'Vertragsparteien')}
+        ${row('Vermieter', `${c.landlordName}, ${c.landlordStreet}, ${c.landlordCity}`)}
+        ${row('Mieter', tenantNames || '–')}
         ${tenantRows}
 
-        <h2 style="font-size:13px;text-transform:uppercase;letter-spacing:0.04em;color:#555;border-bottom:1px solid #ddd;padding-bottom:6px;margin:20px 0 10px;">§ 1 Mieträume</h2>
-        <p style="margin:4px 0;"><span style="color:#666;">Adresse:</span> ${c.propertyAddress}</p>
-        <p style="margin:4px 0;"><span style="color:#666;">Einheit:</span> ${c.unitLabel}</p>
-        <p style="margin:4px 0 20px;"><span style="color:#666;">Wohnfläche / Zimmer:</span> ${c.livingArea} / ${c.numberOfRooms}</p>
+        ${sectionTitle(2, 'Mietobjekt')}
+        ${row('Adresse', c.propertyAddress)}
+        ${row('Einheit', c.unitLabel)}
+        ${row('Wohnfläche', `ca. ${c.livingArea}`)}
+        ${row('Zimmer', c.numberOfRooms)}
 
-        <h2 style="font-size:13px;text-transform:uppercase;letter-spacing:0.04em;color:#555;border-bottom:1px solid #ddd;padding-bottom:6px;margin-bottom:10px;">§ 2 Mietzeit</h2>
-        <p style="margin:4px 0;"><span style="color:#666;">Mietbeginn:</span> ${c.mietbeginn}</p>
-        <p style="margin:4px 0 20px;"><span style="color:#666;">Mietverhältnis:</span> ${c.befristet ? `befristet bis ${c.mietende}` : 'unbefristet'}</p>
+        ${sectionTitle(3, 'Mietdauer')}
+        ${c.befristet
+            ? note(`<strong>BEFRISTETES MIETVERHÄLTNIS</strong><br/>Das Mietverhältnis beginnt am ${c.mietbeginn} und endet am ${c.mietende}.`)
+            : note(`<strong>UNBEFRISTETES MIETVERHÄLTNIS</strong><br/>Das Mietverhältnis beginnt am ${c.mietbeginn} und läuft auf unbestimmte Zeit. Es kann von beiden Parteien mit der gesetzlichen Kündigungsfrist gekündigt werden.`)}
 
-        <h2 style="font-size:13px;text-transform:uppercase;letter-spacing:0.04em;color:#555;border-bottom:1px solid #ddd;padding-bottom:6px;margin-bottom:10px;">§ 3 Miete und Nebenkosten</h2>
-        <p style="margin:4px 0;"><span style="color:#666;">Kaltmiete:</span> ${c.coldRent}</p>
-        <p style="margin:4px 0;"><span style="color:#666;">Nebenkostenvorauszahlung:</span> ${c.miscRent}</p>
-        ${c.parkingRent ? `<p style="margin:4px 0;"><span style="color:#666;">Stellplatzmiete:</span> ${c.parkingRent}</p>` : ''}
-        <p style="margin:4px 0 20px;"><span style="color:#666;">Gesamtmiete (warm):</span> ${c.warmRent}</p>
+        ${sectionTitle(4, 'Miete & Nebenkosten')}
+        ${row('Nettokaltmiete', c.coldRent)}
+        ${c.parkingRent ? row('Stellplatz', c.parkingRent) : ''}
+        ${row('NK-Vorauszahlung', c.miscRent)}
+        ${row('Gesamtmiete', c.warmRent, true)}
+        ${note('Die Nebenkostenvorauszahlung wird jährlich abgerechnet. Eine Anpassung ist nach erfolgter Abrechnung möglich.')}
 
-        <h2 style="font-size:13px;text-transform:uppercase;letter-spacing:0.04em;color:#555;border-bottom:1px solid #ddd;padding-bottom:6px;margin-bottom:10px;">§ 4 Kaution</h2>
-        <p style="margin:4px 0 20px;"><span style="color:#666;">Höhe der Kaution:</span> ${c.deposit}</p>
+        ${sectionTitle(5, 'Kaution')}
+        ${note(`Der Mieter leistet eine Kaution in Höhe von ${c.deposit}${c.depositRatio ? ` (entspricht ${c.depositRatio} Nettokaltmieten)` : ''}. Die Kaution ist zu Mietbeginn fällig und wird zinsbringend angelegt.`)}
 
-        <h2 style="font-size:13px;text-transform:uppercase;letter-spacing:0.04em;color:#555;border-bottom:1px solid #ddd;padding-bottom:6px;margin-bottom:10px;">§ 5 Sonstige Vereinbarungen</h2>
-        <div style="border-left:3px solid #3b82f6;background:#eff6ff;padding:12px 16px;font-size:13px;margin-bottom:24px;">
-            Es gelten ergänzend die gesetzlichen Bestimmungen des Mietrechts (BGB). Änderungen und Ergänzungen dieses Vertrags bedürfen der Schriftform.
-        </div>
+        ${sectionTitle(6, 'Mietanpassung')}
+        ${c.nextRentAdjustmentDate
+            ? note(`Eine Mieterhöhung ist zum ${c.nextRentAdjustmentDate}${c.nextRentAdjustmentAmount ? ` in Höhe von ${c.nextRentAdjustmentAmount}` : ''} vorgesehen, vorbehaltlich der gesetzlichen Voraussetzungen gemäß § 558 BGB.${c.renovationAdjustmentPlanned ? ' Zusätzlich ist eine Mieterhöhung infolge geplanter Modernisierungsmaßnahmen gemäß § 559 BGB vorgesehen.' : ''}`)
+            : note('Es ist derzeit keine Mietanpassung vorgesehen. Gesetzliche Mieterhöhungen gemäß §§ 558 f. BGB bleiben hiervon unberührt.')}
 
-        <p style="margin:0 0 40px;">${c.issuePlace}, ${c.issueDate}</p>
+        ${sectionTitle(7, 'Haustierhaltung & Sonstige Vereinbarungen')}
+        ${row('Haustierhaltung', c.petsAllowed ?? 'Nicht geregelt')}
+        ${row('Schönheitsreparaturen', c.redecorationClause ?? 'Nicht geregelt')}
+        ${row('Untervermietung', c.subletAllowed ?? 'Nicht geregelt')}
+        ${c.additionalTerms ? note(c.additionalTerms) : ''}
 
-        <div style="margin-bottom:8px;">${signatureBlock}</div>
-        <div style="border-top:1px solid #111;width:260px;"></div>
-        <div style="display:flex;justify-content:space-between;width:260px;font-size:12px;color:#555;margin-top:4px;">
-            <span>Unterschrift Vermieter</span>
-        </div>
+        <p style="margin:32px 0 0;">${c.issuePlace}, ${c.issueDate}</p>
 
-        <div style="height:60px;"></div>
-        <div style="border-top:1px solid #111;width:260px;"></div>
-        <div style="display:flex;justify-content:space-between;width:260px;font-size:12px;color:#555;margin-top:4px;">
-            <span>Unterschrift Mieter</span>
+        <div style="display:flex;justify-content:space-between;margin-top:16px;">
+            <div style="width:45%;">
+                <div style="margin-bottom:8px;">${signatureBlock}</div>
+                <div style="border-top:1px solid #111;"></div>
+                <div style="font-size:12px;color:#555;margin-top:4px;">Unterschrift Vermieter</div>
+                <div style="font-size:11px;color:#999;">${c.landlordName}</div>
+            </div>
+            <div style="width:45%;">
+                <div style="height:40px;"></div>
+                <div style="border-top:1px solid #111;"></div>
+                <div style="font-size:12px;color:#555;margin-top:4px;">Unterschrift Mieter</div>
+                <div style="font-size:11px;color:#999;">${tenantNames || '–'}</div>
+            </div>
         </div>
 
         <hr style="margin:32px 0 12px;border:none;border-top:1px solid #eee;" />
@@ -140,6 +196,30 @@ export default function RentalAgreementPage({ propertyId, unitId }: { propertyId
     const [view, setView] = useState<View>('review');
     const [signatureDataUrl, setSignatureDataUrl] = useState<string | null>(null);
     const [isUploadingSignature, setIsUploadingSignature] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
+    const [saveError, setSaveError] = useState<string | null>(null);
+
+    // Rental-agreement clauses — persisted on the tenancy, seeded from it once.
+    const [nextRentAdjustmentDate, setNextRentAdjustmentDate] = useState<Date | undefined>(undefined);
+    const [nextRentAdjustmentAmount, setNextRentAdjustmentAmount] = useState('');
+    const [renovationAdjustmentPlanned, setRenovationAdjustmentPlanned] = useState<TriState>('');
+    const [petsAllowed, setPetsAllowed] = useState<RentalTermsPetsAllowed | ''>('');
+    const [redecorationClause, setRedecorationClause] = useState<RentalTermsRedecorationClause | ''>('');
+    const [subletAllowed, setSubletAllowed] = useState<RentalTermsSubletAllowed | ''>('');
+    const [additionalTerms, setAdditionalTerms] = useState('');
+    const seededTenancyId = useRef<number | null>(null);
+
+    useEffect(() => {
+        if (!tenancy || seededTenancyId.current === tenancy.tenancyId) return;
+        seededTenancyId.current = tenancy.tenancyId;
+        setNextRentAdjustmentDate(tenancy.nextRentAdjustmentDate ? new Date(tenancy.nextRentAdjustmentDate) : undefined);
+        setNextRentAdjustmentAmount(tenancy.nextRentAdjustmentAmount != null ? String(tenancy.nextRentAdjustmentAmount) : '');
+        setRenovationAdjustmentPlanned(tenancy.renovationAdjustmentPlanned == null ? '' : tenancy.renovationAdjustmentPlanned ? 'true' : 'false');
+        setPetsAllowed(tenancy.petsAllowed ?? '');
+        setRedecorationClause(tenancy.redecorationClause ?? '');
+        setSubletAllowed(tenancy.subletAllowed ?? '');
+        setAdditionalTerms(tenancy.additionalTerms ?? '');
+    }, [tenancy]);
 
     if (notFound) return <PropertyNotFoundPage />;
     if (isLoading || !property || !unit) return <PropertyLoadingPage />;
@@ -182,6 +262,11 @@ export default function RentalAgreementPage({ propertyId, unitId }: { propertyId
     const canGenerate = landlord != null && tenants.length > 0 && tenancy != null;
     const livingArea = unit.livingAreaM2 != null ? `${unit.livingAreaM2} m²` : '–';
     const numberOfRooms = unit.numberOfRooms != null ? String(unit.numberOfRooms) : '–';
+    const documentNumber = `MV-${new Date().getFullYear()}-${String(tenancy?.tenancyId ?? 0).padStart(3, '0')}`;
+
+    const depositRatio = tenancy?.deposit && tenancy.coldRent
+        ? (tenancy.deposit / tenancy.coldRent).toLocaleString('de-DE', { maximumFractionDigits: 1 })
+        : null;
 
     const content: AgreementContent = {
         landlordName,
@@ -197,11 +282,20 @@ export default function RentalAgreementPage({ propertyId, unitId }: { propertyId
         mietende,
         coldRent: euro(tenancy?.coldRent),
         miscRent: euro(tenancy?.miscRent),
-        warmRent: euro(tenancy?.warmRent),
         parkingRent: tenancy?.parkingSpaceRent ? euro(tenancy.parkingSpaceRent) : null,
+        warmRent: euro(tenancy?.warmRent),
         deposit: euro(tenancy?.deposit),
+        depositRatio,
+        nextRentAdjustmentDate: nextRentAdjustmentDate ? formatDeDate(format(nextRentAdjustmentDate, 'yyyy-MM-dd')) : null,
+        nextRentAdjustmentAmount: nextRentAdjustmentAmount !== '' ? euro(Number(nextRentAdjustmentAmount)) : null,
+        renovationAdjustmentPlanned: renovationAdjustmentPlanned === '' ? null : renovationAdjustmentPlanned === 'true',
+        petsAllowed: petsAllowed || null,
+        redecorationClause: redecorationClause || null,
+        subletAllowed: subletAllowed || null,
+        additionalTerms: additionalTerms.trim() || null,
         issuePlace,
         issueDate,
+        documentNumber,
         signatureDataUrl,
     };
 
@@ -214,8 +308,28 @@ export default function RentalAgreementPage({ propertyId, unitId }: { propertyId
         }
     };
 
-    const handleGenerate = () => {
-        if (!canGenerate) return;
+    const handleGenerate = async () => {
+        if (!canGenerate || !tenancy) return;
+        setIsSaving(true);
+        setSaveError(null);
+        try {
+            const saved = await updateTenancy(tenancy.tenancyId, {
+                nextRentAdjustmentDate: nextRentAdjustmentDate ? format(nextRentAdjustmentDate, 'yyyy-MM-dd') : null,
+                nextRentAdjustmentAmount: nextRentAdjustmentAmount !== '' ? Number(nextRentAdjustmentAmount) : null,
+                renovationAdjustmentPlanned: renovationAdjustmentPlanned === '' ? null : renovationAdjustmentPlanned === 'true',
+                petsAllowed: petsAllowed || null,
+                redecorationClause: redecorationClause || null,
+                subletAllowed: subletAllowed || null,
+                additionalTerms: additionalTerms.trim() || null,
+            });
+            if (!saved) {
+                setSaveError('Angaben konnten nicht gespeichert werden.');
+                return;
+            }
+        } finally {
+            setIsSaving(false);
+        }
+
         const win = window.open('', '_blank', 'width=800,height=1000');
         if (!win) return;
         win.document.write(agreementPrintDocument(content));
@@ -258,8 +372,8 @@ export default function RentalAgreementPage({ propertyId, unitId }: { propertyId
                         <div className="flex items-start gap-2.5 p-3 rounded-lg border border-border bg-muted/30">
                             <FileText className="w-4 h-4 shrink-0 text-primary mt-0.5" />
                             <p className="text-sm text-muted-foreground">
-                                Der Mietvertrag wird automatisch aus den hinterlegten Daten befüllt. Bitte prüfen Sie die Angaben bevor Sie das Dokument generieren.
-                                Fehlende oder veraltete Daten können in den jeweiligen Bereichen ergänzt werden.
+                                Der Mietvertrag wird automatisch aus den hinterlegten Daten befüllt. Ergänzen Sie fehlende Angaben direkt hier, bevor Sie
+                                das Dokument generieren. Änderungen werden in die jeweiligen Bereiche zurückgespiegelt.
                             </p>
                         </div>
 
@@ -285,31 +399,36 @@ export default function RentalAgreementPage({ propertyId, unitId }: { propertyId
                         </div>
 
                         <div>
-                            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Mieträume</p>
+                            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Mietobjekt</p>
                             <DataCard icon={Home} title="Objektdaten" source="Bestandsobjekt · Objektdaten">
                                 <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
                                     <Field label="Straße & Hausnummer" value={propertyStreet} />
                                     <Field label="PLZ & Ort" value={propertyCity} />
                                     <Field label="Einheit" value={unitLabel} />
-                                    <Field label="Wohnfläche / Zimmer" value={`${livingArea} / ${numberOfRooms}`} />
+                                    <Field label="Stellplatz" value={tenancy?.parkingSpaceRent ? '1 Stellplatz' : '–'} />
+                                    <Field label="Wohnfläche" value={livingArea} />
+                                    <Field label="Zimmer" value={numberOfRooms} />
                                 </div>
                             </DataCard>
                         </div>
 
                         <div>
-                            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Mieter</p>
+                            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Mietpartei(en)</p>
                             <DataCard icon={Users} title="Mieterdaten" source="Bestandsobjekt · Mieterdaten">
                                 <div className="flex flex-col gap-2">
                                     {namedPersons.length === 0 && <p className="text-sm text-muted-foreground">Keine Mieterdaten hinterlegt.</p>}
                                     {namedPersons.map((person, index) => (
-                                        <div key={index} className="flex items-center gap-3 p-2.5 rounded-lg bg-muted/30">
-                                            <div className="shrink-0 w-9 h-9 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-semibold">
-                                                {initials(person.firstName, person.lastName)}
+                                        <div key={index} className="flex items-center justify-between gap-3 p-2.5 rounded-lg bg-muted/30">
+                                            <div className="flex items-center gap-3 min-w-0">
+                                                <div className="shrink-0 w-9 h-9 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-semibold">
+                                                    {initials(person.firstName, person.lastName)}
+                                                </div>
+                                                <div className="min-w-0">
+                                                    <p className="text-sm font-medium text-foreground truncate">{`${person.firstName} ${person.lastName}`.trim()}</p>
+                                                    <p className="text-xs text-muted-foreground">{person.isPrimary ? 'Hauptmieter' : 'Weitere Person'}</p>
+                                                </div>
                                             </div>
-                                            <div className="min-w-0">
-                                                <p className="text-sm font-medium text-foreground truncate">{`${person.firstName} ${person.lastName}`.trim()}</p>
-                                                <p className="text-xs text-muted-foreground">{person.isPrimary ? 'Hauptmieter' : 'Weitere Person'}</p>
-                                            </div>
+                                            <Pill ok label="Vollständig" />
                                         </div>
                                     ))}
                                 </div>
@@ -317,18 +436,78 @@ export default function RentalAgreementPage({ propertyId, unitId }: { propertyId
                         </div>
 
                         <div>
-                            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Mietzeit, Miete und Kaution</p>
-                            <DataCard icon={FileSignature} title="Mietkonditionen" source="Bestandsobjekt · Mieterdaten">
-                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Mietkonditionen</p>
+                            <DataCard icon={FileSignature} title="Mietvertrag" source="Bestandsobjekt · Mieterdaten">
+                                <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
                                     <Field label="Mietbeginn" value={mietbeginn} />
                                     <div>
-                                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Befristet</p>
-                                        <div className="mt-1"><Pill ok={!befristet} label={befristet ? `bis ${mietende}` : 'Unbefristet'} /></div>
+                                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Mietende</p>
+                                        <div className="mt-1"><Pill ok={!befristet} label={befristet ? mietende : 'Unbefristet'} /></div>
                                     </div>
-                                    <Field label="Kaltmiete" value={content.coldRent} />
-                                    <Field label="Nebenkosten" value={content.miscRent} />
-                                    <Field label="Warmmiete" value={content.warmRent} />
+                                    <Field label="Nettokaltmiete" value={content.coldRent} />
+                                    {content.parkingRent && <Field label="Stellplatz" value={content.parkingRent} />}
+                                    <Field label="NK-Vorauszahlung" value={content.miscRent} />
+                                    <Field label="Gesamtmiete" value={content.warmRent} />
                                     <Field label="Kaution" value={content.deposit} />
+                                </div>
+                            </DataCard>
+                        </div>
+
+                        <div>
+                            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Mietanpassung & Sonderregelungen</p>
+                            <DataCard icon={FileSignature} title="Anpassungsregelungen" source="Bestandsobjekt · Mietvertrag">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <CalendarField
+                                        label="Nächste Mietanpassung"
+                                        value={nextRentAdjustmentDate}
+                                        onChange={setNextRentAdjustmentDate}
+                                    />
+                                    <NumberField
+                                        label="Höhe der Anpassung"
+                                        unit="€"
+                                        min={0}
+                                        value={nextRentAdjustmentAmount}
+                                        onChange={(e) => setNextRentAdjustmentAmount(e.target.value)}
+                                    />
+                                    <Dropdown
+                                        label="Sanierungsanpassung geplant"
+                                        options={RENOVATION_ADJUSTMENT_OPTIONS}
+                                        value={renovationAdjustmentPlanned}
+                                        onChange={(e) => setRenovationAdjustmentPlanned(e.target.value as TriState)}
+                                    />
+                                    <Dropdown
+                                        label="Haustierhaltung"
+                                        options={PETS_OPTIONS}
+                                        value={petsAllowed}
+                                        onChange={(e) => setPetsAllowed(e.target.value as RentalTermsPetsAllowed | '')}
+                                    />
+                                </div>
+                            </DataCard>
+                        </div>
+
+                        <div>
+                            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Zusätzliche Klauseln (opt.)</p>
+                            <DataCard icon={PenLine} title="Individuelle Vereinbarungen" source="Ergänzbar">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <Dropdown
+                                        label="Schönheitsreparaturen"
+                                        options={REDECORATION_OPTIONS}
+                                        value={redecorationClause}
+                                        onChange={(e) => setRedecorationClause(e.target.value as RentalTermsRedecorationClause | '')}
+                                    />
+                                    <Dropdown
+                                        label="Untervermietung"
+                                        options={SUBLET_OPTIONS}
+                                        value={subletAllowed}
+                                        onChange={(e) => setSubletAllowed(e.target.value as RentalTermsSubletAllowed | '')}
+                                    />
+                                    <TextArea
+                                        label="Sonstige Vereinbarungen (opt.)"
+                                        placeholder="Freitext für individuelle Vereinbarungen…"
+                                        className="sm:col-span-2"
+                                        value={additionalTerms}
+                                        onChange={(e) => setAdditionalTerms(e.target.value)}
+                                    />
                                 </div>
                             </DataCard>
                         </div>
@@ -350,8 +529,8 @@ export default function RentalAgreementPage({ propertyId, unitId }: { propertyId
                                         </div>
                                     ) : (
                                         <p className="text-sm text-muted-foreground max-w-md">
-                                            Laden Sie eine Unterschrift als Bilddatei hoch (PNG, JPG). Diese wird automatisch in das generierte PDF eingefügt.
-                                            Alternativ kann die Unterschrift nachträglich in PDF ergänzt werden.
+                                            Laden Sie die Vermieter-Unterschrift als Bilddatei hoch (PNG, JPG).
+                                            Die Unterschrift des Mieters wird nach Ausdrucken eingeholt.
                                         </p>
                                     )}
                                     <input
@@ -393,17 +572,21 @@ export default function RentalAgreementPage({ propertyId, unitId }: { propertyId
                         )}
                     </div>
                 )}
+
+                {saveError && (
+                    <p className="mt-4 text-sm text-destructive">{saveError}</p>
+                )}
             </main>
 
             <StickyActionBar
                 show={true}
                 onGhost={() => router.push(backHref)}
-                onPrimary={handleGenerate}
+                onPrimary={() => void handleGenerate()}
                 ghostLabel={BUTTON_DETAILS.Back.label}
                 ghostIcon={<BUTTON_DETAILS.Back.icon />}
                 primaryLabel="PDF generieren"
                 primaryIcon={<FileText className="w-4 h-4" />}
-                primaryDisabled={!canGenerate}
+                primaryDisabled={!canGenerate || isSaving}
             />
         </div>
     );

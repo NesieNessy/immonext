@@ -368,9 +368,23 @@ export interface Tenancy {
   tenantFirstName: string,
   tenantLastName: string,
   deposit: number | null,
+  /** Rental-agreement clauses (§§5-7 of the generated Mietvertrag) — all
+   *  optional, filled in from the Mietvertrag generieren page. */
+  nextRentAdjustmentDate?: string | null,
+  nextRentAdjustmentAmount?: number | null,
+  /** null = not captured yet, true = planned, false = not planned. */
+  renovationAdjustmentPlanned?: boolean | null,
+  petsAllowed?: RentalTermsPetsAllowed | null,
+  redecorationClause?: RentalTermsRedecorationClause | null,
+  subletAllowed?: RentalTermsSubletAllowed | null,
+  additionalTerms?: string | null,
   createdAt: string,
   updatedAt: string
 }
+
+export type RentalTermsPetsAllowed = 'Erlaubt' | 'Nicht erlaubt' | 'Nach Vereinbarung';
+export type RentalTermsRedecorationClause = 'Mieter trägt Kosten (üblich)' | 'Vermieter trägt Kosten' | 'Individuelle Regelung';
+export type RentalTermsSubletAllowed = 'Erlaubt' | 'Nicht erlaubt' | 'Nach Zustimmung';
 
 export type TenancyInsert = Omit<Tenancy, 'tenancyId' | 'createdAt' | 'updatedAt'>;
 export type TenancyUpdate = Partial<Omit<Tenancy, 'tenancyId' | 'propertyId' | 'createdAt' | 'updatedAt'>>;
