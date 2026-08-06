@@ -54,12 +54,10 @@ export function CalendarField({
   };
 
   const handleBlur = () => {
-    // If input is invalid, reset to the current value
-    if (value) {
-      setInputValue(format(value, "dd.MM.yyyy"));
-    } else if (!inputValue) {
-      setInputValue("");
-    }
+    // If input is invalid, reset to the current value — including clearing
+    // unparseable text when there never was a valid value to fall back to
+    // (previously left stuck in the field forever).
+    setInputValue(value ? format(value, "dd.MM.yyyy") : "");
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -122,6 +120,7 @@ export function CalendarField({
           <Calendar
             mode="single"
             selected={value}
+            defaultMonth={value}
             onSelect={handleSelect}
             initialFocus
           />

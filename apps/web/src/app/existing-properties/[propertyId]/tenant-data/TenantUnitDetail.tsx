@@ -42,7 +42,6 @@ function addMonthsSafe(date: Date, months: number): Date {
 }
 
 interface RentalForm {
-    tenancyStartDate: Date | undefined;
     tenancyEndDate: Date | undefined;
     coldRent: string;
     parkingSpaceRent: string;
@@ -60,7 +59,6 @@ interface RentalForm {
 }
 
 const EMPTY_RENTAL_FORM: RentalForm = {
-    tenancyStartDate: undefined,
     tenancyEndDate: undefined,
     coldRent: '',
     parkingSpaceRent: '',
@@ -80,7 +78,6 @@ const EMPTY_RENTAL_FORM: RentalForm = {
 function serializeRentalForm(form: RentalForm): string {
     return JSON.stringify({
         ...form,
-        tenancyStartDate: form.tenancyStartDate?.toISOString() ?? null,
         tenancyEndDate: form.tenancyEndDate?.toISOString() ?? null,
         nextRentAdjustmentDate: form.nextRentAdjustmentDate?.toISOString() ?? null,
         rentAdjustmentReminderDate: form.rentAdjustmentReminderDate?.toISOString() ?? null,
@@ -230,7 +227,6 @@ export function TenantUnitDetail({ propertyId, property, unit, hasMultipleUnits 
                 setCostItems(loadedCostItems);
                 setOriginalCostItemsSnapshot(JSON.stringify(loadedCostItems));
                 const form: RentalForm = {
-                    tenancyStartDate: found.tenancyStartDate ? new Date(found.tenancyStartDate) : undefined,
                     tenancyEndDate: found.tenancyEndDate ? new Date(found.tenancyEndDate) : undefined,
                     coldRent: found.coldRent != null ? String(found.coldRent) : '',
                     parkingSpaceRent: found.parkingSpaceRent != null ? String(found.parkingSpaceRent) : '',
@@ -522,7 +518,11 @@ export function TenantUnitDetail({ propertyId, property, unit, hasMultipleUnits 
             const depositValue = deposit !== '' ? Number(deposit) : null;
             const hasAnyPersonData = persons.some((p) => p.lastName.trim() !== '' || p.firstName.trim() !== '');
 
-            const startDateValue = rentalForm.tenancyStartDate ? format(rentalForm.tenancyStartDate, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd');
+            // The Hauptmieter's own Einzugsdatum (persons[0].moveInDate) is the
+            // single source of truth for the tenancy's move-in date — the
+            // Mietvertrag tab's Einzugsdatum field edits that same value.
+            const primaryMoveInDate = persons[0]?.moveInDate;
+            const startDateValue = primaryMoveInDate ? format(primaryMoveInDate, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd');
             const endDateValue = rentalForm.tenancyEndDate ? format(rentalForm.tenancyEndDate, 'yyyy-MM-dd') : null;
             const coldRentValue = rentalForm.coldRent !== '' ? Number(rentalForm.coldRent) : null;
             const parkingSpaceRentValue = rentalForm.parkingSpaceRent !== '' ? Number(rentalForm.parkingSpaceRent) : null;
@@ -1202,7 +1202,7 @@ export function TenantUnitDetail({ propertyId, property, unit, hasMultipleUnits 
                                                 onChange={(e) => updatePerson(index, { taxId: e.target.value })}
                                             />
                                             <CalendarField
-                                                label={person.isPrimary ? 'Einzug *' : 'Einzug (opt.)'}
+                                                label={person.isPrimary ? 'Einzugsdatum *' : 'Einzugsdatum (opt.)'}
                                                 value={person.moveInDate}
                                                 onChange={(date) => updatePerson(index, { moveInDate: date })}
                                             />
@@ -1237,8 +1237,8 @@ export function TenantUnitDetail({ propertyId, property, unit, hasMultipleUnits 
                                 <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
                                     <CalendarField
                                         label="Einzugsdatum *"
-                                        value={rentalForm.tenancyStartDate}
-                                        onChange={(date) => setRentalForm((prev) => ({ ...prev, tenancyStartDate: date }))}
+                                        value={persons[0]?.moveInDate}
+                                        onChange={(date) => updatePerson(0, { moveInDate: date })}
                                     />
                                     <div>
                                         <CalendarField
