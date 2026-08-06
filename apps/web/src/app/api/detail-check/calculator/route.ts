@@ -1,57 +1,31 @@
 import {
   normalizeYyyymm,
   runRentCalculator,
-  type CalculatorMode,
   type CalculatorParams,
-  type PlacementMode,
   type RentIncreasePlanRow,
 } from '@/lib/detailCheck/rentCalculator';
-import { type RenovationCase } from '@/lib/detailCheck/renovation';
-import { computeIndividualAdditionalCosts, computeFinancing, type InterestPeriodYears } from '@/lib/detailCheck/financing';
+import { computeIndividualAdditionalCosts, computeFinancing } from '@/lib/detailCheck/financing';
 import { estimateRentIndexPerM2 } from '@/lib/detailCheck/rentIndex';
 import { roundCurrency } from '@/lib/detailCheck/acquisitionCosts';
+import {
+  clampInterestRate,
+  normalizeRecentMonth,
+  normalizeRentIncreaseIntervalMonths,
+  normalizeRentIncreaseUtilizationPercent,
+  normalizeTaxRate,
+  recomputeMonthlyDebtService,
+  safeCases,
+  toInterestYears,
+  toMode,
+  toNumber,
+  toPlacementMode,
+} from '@/lib/detailCheck/calculatorParamNormalization';
+import { calculatorContextFingerprint } from '@/lib/detailCheck/calculatorContextFingerprint';
 import { requireUserId, workflowIdFor } from '@/lib/server/auth';
 import { db } from '@/lib/server/db';
 import { NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
-
-function toNumber(value: unknown): number {
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : 0;
-}
-
-function toMode(value: unknown): CalculatorMode {
-  return value === 'POTENTIAL' ? 'POTENTIAL' : 'KNOWN';
-}
-
-function toPlacementMode(value: unknown): PlacementMode {
-  return value === 'OPTIMIZED' ? 'OPTIMIZED' : 'DEFAULT';
-}
-
-function toInterestYears(value: unknown): InterestPeriodYears {
-  const parsed = Number(value);
-  return parsed === 15 || parsed === 20 ? parsed : 10;
-}
-
-function safeCases(value: unknown): RenovationCase[] {
-  return Array.isArray(value) ? value as RenovationCase[] : [];
-}
-
-function normalizeTaxRate(value: unknown, fallback = 0.42): number {
-  const parsed = Number(value);
-  if (!Number.isFinite(parsed)) return fallback;
-  const clamped = Math.max(0, parsed);
-  if (clamped > 0.42) return 0.45;
-  return Math.min(0.42, clamped);
-}
-
-function normalizeRecentMonth(value: unknown, previousYears: number): string | null {
-  if (typeof value !== 'string' || !/^\d{4}-(0[1-9]|1[0-2])$/.test(value)) return null;
-  const year = Number(value.slice(0, 4));
-  const currentYear = new Date().getFullYear();
-  return year >= currentYear - previousYears && year <= currentYear ? value : null;
-}
 
 async function loadRentIncreasePlan(userId: string, workflowId: string): Promise<RentIncreasePlanRow[]> {
   const rows = await db.query(
@@ -210,11 +184,13 @@ async function syncRentIncreasePlan(
   return loadRentIncreasePlan(userId, workflowId);
 }
 
-function resultForStorage(result: CalculatorResult) {
+function resultForStorage(result: CalculatorResult, contextFingerprint: string) {
   const storedParams = { ...result.params };
   delete storedParams.rentIncreasePlan;
   delete storedParams.rentIncreaseOverrides;
-  return { ...result, params: storedParams };
+  // Stored alongside the result so a later GET can tell whether the upstream
+  // values these overrides were computed against have actually moved.
+  return { ...result, params: storedParams, contextFingerprint };
 }
 
 async function loadContext(userId: string, workflowId: string, quickCheckId: string | null) {
@@ -346,11 +322,7 @@ async function loadContext(userId: string, workflowId: string, quickCheckId: str
   const livingAreaM2 = toNumber(property?.living_area_m2 ?? 0);
   const serviceChargesAllocable = toNumber(rental?.service_charges_allocable ?? 0);
   const serviceChargesNonAllocable = toNumber(rental?.service_charges_non_allocable ?? 0);
-  const upstreamUpdatedAt = [property, rental, financing, renovation, acquisition, depreciation]
-    .map((item) => item?.updated_at ? Date.parse(String(item.updated_at)) : 0)
-    .reduce((latest, value) => Math.max(latest, Number.isFinite(value) ? value : 0), 0);
-  return {
-    quickCheck,
+  const upstream = {
     city: property?.city ?? quickCheck?.city ?? '',
     postalCode: property?.postal_code ?? quickCheck?.postal_code ?? '',
     livingAreaM2,
@@ -371,20 +343,30 @@ async function loadContext(userId: string, workflowId: string, quickCheckId: str
     purchasePrice,
     totalInvestment: roundCurrency(selectedFinancing.totalCosts),
     renovationCases,
-    upstreamUpdatedAt,
   };
+  // Derived from the values above rather than from `updated_at`: the wizard
+  // steps re-save unconditionally when left, so a timestamp says only "the
+  // row was written", never "a number the calculator uses actually moved".
+  return { quickCheck, ...upstream, contextFingerprint: calculatorContextFingerprint(upstream) };
 }
 
 function buildParams(
   saved: Record<string, unknown> | undefined,
   context: Awaited<ReturnType<typeof loadContext>>,
   rentIncreasePlan: RentIncreasePlanRow[],
-): CalculatorParams {
+): { params: CalculatorParams; overridesResetByUpstreamChange: boolean } {
   const fallbackStart = new Date().toISOString().slice(0, 7);
   const livingAreaM2 = context.livingAreaM2;
   const rentStart = context.coldRent;
-  const calculatorUpdatedAt = saved?.updated_at ? Date.parse(String(saved.updated_at)) : 0;
-  const upstreamIsNewer = context.upstreamUpdatedAt > (Number.isFinite(calculatorUpdatedAt) ? calculatorUpdatedAt : 0);
+  const savedFingerprint = typeof (saved?.result as Record<string, unknown> | undefined)?.contextFingerprint === 'string'
+    ? String((saved!.result as Record<string, unknown>).contextFingerprint)
+    : null;
+  // Rows saved before fingerprints existed carry none. Those are treated as
+  // unchanged rather than reset: the timestamp rule this replaces discarded
+  // overrides on almost every visit, so "keep what the user made" is by far
+  // the safer default, and the very next save writes a fingerprint and the
+  // row self-heals.
+  const upstreamIsNewer = savedFingerprint !== null && savedFingerprint !== context.contextFingerprint;
   const fallbackRentIndex = estimateRentIndexPerM2(context.yearOfConstruction, livingAreaM2)
     ?? (livingAreaM2 > 0 && rentStart > 0 ? (rentStart / livingAreaM2) * 1.02 : null);
   const savedResult = (saved?.result as Record<string, unknown> | undefined) ?? {};
@@ -401,15 +383,29 @@ function buildParams(
   );
   const savedFinancingInterestRate = upstreamIsNewer || savedParams.financingInterestRateOverride == null
     ? context.interestRate
-    : Math.max(0, Math.min(25, toNumber(savedParams.financingInterestRateOverride)));
+    : clampInterestRate(toNumber(savedParams.financingInterestRateOverride));
   const savedRefinancingInterestRate = upstreamIsNewer || savedParams.interestRateOverride == null
     ? context.interestRate
-    : Math.max(0, Math.min(25, toNumber(savedParams.interestRateOverride)));
+    : clampInterestRate(toNumber(savedParams.interestRateOverride));
   const monthlyDebtService = upstreamIsNewer || savedParams.financingInterestRateOverride == null
     ? context.monthlyDebtService
-    : roundCurrency(context.loanAmount * ((savedFinancingInterestRate + context.repaymentRate) / 100) / 12);
+    : recomputeMonthlyDebtService(context.loanAmount, savedFinancingInterestRate, context.repaymentRate);
+  // Whether this load actually dropped a previously-saved manual override
+  // because upstream data (Objektdaten/Finanzierung/etc.) changed more
+  // recently than the calculator was last saved — surfaced to the client so
+  // it can tell the user, instead of the override just silently vanishing.
+  const overridesResetByUpstreamChange = upstreamIsNewer && (
+    savedParams.financingInterestRateOverride != null
+    || savedParams.interestRateOverride != null
+    || (savedParams.modernizationPlacements != null && Object.keys(savedParams.modernizationPlacements as object).length > 0)
+    || Object.keys(savedPlanPlacements).length > 0
+    || (savedParams.modernizationCostOverrides != null && Object.keys(savedParams.modernizationCostOverrides as object).length > 0)
+    || (savedParams.renovationTimingOverrides != null && Object.keys(savedParams.renovationTimingOverrides as object).length > 0)
+    || (savedParams.rentIncreaseOverrides != null && Object.keys(savedParams.rentIncreaseOverrides as object).length > 0)
+  );
 
   return {
+    params: {
     startYyyymm: normalizeYyyymm(saved?.start_yyyymm as string | undefined, fallbackStart),
     rentStartYyyymm: normalizeYyyymm(context.valuationDate, fallbackStart),
     monthlyRentStart: rentStart,
@@ -420,8 +416,8 @@ function buildParams(
     last558Date: normalizeRecentMonth(saved?.last_558_date, 1),
     last559Date: normalizeRecentMonth(saved?.last_559_date, 5),
     last559MonthlyDelta: Math.max(0, toNumber(savedParams.last559MonthlyDelta)),
-    rentIncreaseIntervalMonths: Math.max(15, Math.min(60, Math.round(toNumber(savedParams.rentIncreaseIntervalMonths) || 15))),
-    rentIncreaseUtilizationPercent: Math.max(0, Math.min(100, savedParams.rentIncreaseUtilizationPercent == null ? 100 : toNumber(savedParams.rentIncreaseUtilizationPercent))),
+    rentIncreaseIntervalMonths: normalizeRentIncreaseIntervalMonths(savedParams.rentIncreaseIntervalMonths),
+    rentIncreaseUtilizationPercent: normalizeRentIncreaseUtilizationPercent(savedParams.rentIncreaseUtilizationPercent),
     rentIndexPerM2: saved?.rent_index_per_m2 == null ? fallbackRentIndex : toNumber(saved.rent_index_per_m2),
     rentIndexSource: saved?.rent_index_per_m2 == null ? 'AUTOMATIC' : 'MANUAL',
     monthlyDebtService,
@@ -451,6 +447,8 @@ function buildParams(
       : (savedParams.rentIncreaseOverrides as Record<string, { effectiveYyyymm?: string; monthlyDelta?: number }> | undefined) ?? undefined,
     mode: toMode(saved?.mode),
     placementMode: toPlacementMode(savedResult.placementMode),
+    },
+    overridesResetByUpstreamChange,
   };
 }
 
@@ -465,7 +463,8 @@ export async function GET(request: Request) {
     [userId, workflowId],
   );
   let rentIncreasePlan = await loadRentIncreasePlan(userId, workflowId);
-  let params = buildParams(savedRows.rows[0], context, rentIncreasePlan);
+  const built = buildParams(savedRows.rows[0], context, rentIncreasePlan);
+  let params = built.params;
   let result = runRentCalculator(params, context.renovationCases);
   if (rentIncreasePlanNeedsSync(rentIncreasePlan, result)) {
     rentIncreasePlan = await syncRentIncreasePlan(userId, workflowId, result);
@@ -478,6 +477,7 @@ export async function GET(request: Request) {
     quickCheckId: context.quickCheck?.quick_check_id ?? null,
     selectedFinancingVariant: context.selectedVariant,
     renovationCases: context.renovationCases,
+    overridesResetByUpstreamChange: built.overridesResetByUpstreamChange,
     ...result,
   });
 }
@@ -497,13 +497,13 @@ export async function POST(request: Request) {
     : toNumber(input.financingInterestRateOverride);
   const interestRate = requestedFinancingInterestRate == null
     ? context.interestRate
-    : Math.max(0, Math.min(25, requestedFinancingInterestRate));
+    : clampInterestRate(requestedFinancingInterestRate);
   const refinancingInterestRate = requestedInterestRate == null
     ? context.interestRate
-    : Math.max(0, Math.min(25, requestedInterestRate));
+    : clampInterestRate(requestedInterestRate);
   const monthlyDebtService = requestedFinancingInterestRate == null
     ? context.monthlyDebtService
-    : roundCurrency(context.loanAmount * ((interestRate + context.repaymentRate) / 100) / 12);
+    : recomputeMonthlyDebtService(context.loanAmount, interestRate, context.repaymentRate);
   let params: CalculatorParams = {
     startYyyymm: normalizeYyyymm(input.startYyyymm, new Date().toISOString().slice(0, 7)),
     rentStartYyyymm: normalizeYyyymm(context.valuationDate, new Date().toISOString().slice(0, 7)),
@@ -515,8 +515,8 @@ export async function POST(request: Request) {
     last558Date: normalizeRecentMonth(input.last558Date, 1),
     last559Date: normalizeRecentMonth(input.last559Date, 5),
     last559MonthlyDelta: normalizeRecentMonth(input.last559Date, 5) ? Math.max(0, toNumber(input.last559MonthlyDelta)) : 0,
-    rentIncreaseIntervalMonths: Math.max(15, Math.min(60, Math.round(toNumber(input.rentIncreaseIntervalMonths) || 15))),
-    rentIncreaseUtilizationPercent: Math.max(0, Math.min(100, input.rentIncreaseUtilizationPercent == null ? 100 : toNumber(input.rentIncreaseUtilizationPercent))),
+    rentIncreaseIntervalMonths: normalizeRentIncreaseIntervalMonths(input.rentIncreaseIntervalMonths),
+    rentIncreaseUtilizationPercent: normalizeRentIncreaseUtilizationPercent(input.rentIncreaseUtilizationPercent),
     rentIndexPerM2: input.rentIndexSource !== 'MANUAL' || input.rentIndexPerM2 == null || input.rentIndexPerM2 === ''
       ? estimateRentIndexPerM2(context.yearOfConstruction, context.livingAreaM2)
       : toNumber(input.rentIndexPerM2),
@@ -590,7 +590,7 @@ export async function POST(request: Request) {
       params.last558Date,
       params.last559Date,
       params.mode,
-      JSON.stringify(resultForStorage(result)),
+      JSON.stringify(resultForStorage(result, context.contextFingerprint)),
     ],
   );
 
@@ -636,9 +636,20 @@ export async function POST(request: Request) {
         [params.interestRate, params.monthlyDebtService, userId, workflowId],
       );
     }
+    // Applying writes the user's own overrides back into the upstream tables,
+    // so the context legitimately differs from the fingerprint stored moments
+    // ago. Re-derive it from the post-apply state, otherwise the very next GET
+    // would compare against the pre-apply snapshot, see a difference, and
+    // discard the overrides the user just chose to apply.
+    const appliedContext = await loadContext(userId, workflowId, quickCheckId);
     await db.query(
-      'UPDATE detail_check_rent_calculator SET updated_at = NOW() WHERE user_id = $1 AND workflow_id = $2',
-      [userId, workflowId],
+      `
+        UPDATE detail_check_rent_calculator
+        SET result = jsonb_set(result::jsonb, '{contextFingerprint}', to_jsonb($1::text)),
+            updated_at = NOW()
+        WHERE user_id = $2 AND workflow_id = $3
+      `,
+      [appliedContext.contextFingerprint, userId, workflowId],
     );
   }
 

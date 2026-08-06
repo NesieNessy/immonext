@@ -1,0 +1,626 @@
+{
+  "increases558": [
+    {
+      "id": "1",
+      "effectiveYyyymm": "2034-11",
+      "monthlyDelta": 95.81,
+      "legalMaximum": 95.81,
+      "sourceType": "MANUAL",
+      "earliestYyyymm": "2032-08"
+    },
+    {
+      "id": "2",
+      "effectiveYyyymm": "2036-10",
+      "monthlyDelta": 12.9,
+      "legalMaximum": 96.56,
+      "sourceType": "RENT_INDEX",
+      "earliestYyyymm": "2036-05"
+    },
+    {
+      "id": "3",
+      "effectiveYyyymm": "2038-04",
+      "monthlyDelta": 26.11,
+      "legalMaximum": 133.39,
+      "sourceType": "RENT_INDEX",
+      "earliestYyyymm": "2038-04"
+    },
+    {
+      "id": "4",
+      "effectiveYyyymm": "2039-10",
+      "monthlyDelta": 29.85,
+      "legalMaximum": 209.76,
+      "sourceType": "RENT_INDEX",
+      "earliestYyyymm": "2039-10"
+    },
+    {
+      "id": "5",
+      "effectiveYyyymm": "2041-04",
+      "monthlyDelta": 41.32,
+      "legalMaximum": 232.69,
+      "sourceType": "RENT_INDEX",
+      "earliestYyyymm": "2041-04"
+    },
+    {
+      "id": "6",
+      "effectiveYyyymm": "2042-10",
+      "monthlyDelta": 42.66,
+      "legalMaximum": 283.38,
+      "sourceType": "RENT_INDEX",
+      "earliestYyyymm": "2042-10"
+    },
+    {
+      "id": "7",
+      "effectiveYyyymm": "2044-04",
+      "monthlyDelta": 43.43,
+      "legalMaximum": 288.24,
+      "sourceType": "RENT_INDEX",
+      "earliestYyyymm": "2044-04"
+    },
+    {
+      "id": "8",
+      "effectiveYyyymm": "2045-10",
+      "monthlyDelta": 44.31,
+      "legalMaximum": 293.87,
+      "sourceType": "RENT_INDEX",
+      "earliestYyyymm": "2045-10"
+    },
+    {
+      "id": "9",
+      "effectiveYyyymm": "2047-04",
+      "monthlyDelta": 45.21,
+      "legalMaximum": 299.5,
+      "sourceType": "RENT_INDEX",
+      "earliestYyyymm": "2047-04"
+    },
+    {
+      "id": "10",
+      "effectiveYyyymm": "2048-10",
+      "monthlyDelta": 46.11,
+      "legalMaximum": 305.25,
+      "sourceType": "RENT_INDEX",
+      "earliestYyyymm": "2048-10"
+    },
+    {
+      "id": "11",
+      "effectiveYyyymm": "2050-04",
+      "monthlyDelta": 47.04,
+      "legalMaximum": 311.13,
+      "sourceType": "RENT_INDEX",
+      "earliestYyyymm": "2050-04"
+    },
+    {
+      "id": "12",
+      "effectiveYyyymm": "2051-10",
+      "monthlyDelta": 47.99,
+      "legalMaximum": 317.12,
+      "sourceType": "RENT_INDEX",
+      "earliestYyyymm": "2051-10"
+    },
+    {
+      "id": "13",
+      "effectiveYyyymm": "2053-04",
+      "monthlyDelta": 48.95,
+      "legalMaximum": 323.22,
+      "sourceType": "RENT_INDEX",
+      "earliestYyyymm": "2053-04"
+    },
+    {
+      "id": "14",
+      "effectiveYyyymm": "2054-10",
+      "monthlyDelta": 49.94,
+      "legalMaximum": 329.46,
+      "sourceType": "RENT_INDEX",
+      "earliestYyyymm": "2054-10"
+    },
+    {
+      "id": "101",
+      "effectiveYyyymm": "2056-04",
+      "monthlyDelta": 50.94,
+      "legalMaximum": 335.81,
+      "sourceType": "RENT_INDEX",
+      "earliestYyyymm": "2056-04"
+    },
+    {
+      "id": "102",
+      "effectiveYyyymm": "2057-10",
+      "monthlyDelta": 51.97,
+      "legalMaximum": 342.3,
+      "sourceType": "RENT_INDEX",
+      "earliestYyyymm": "2057-10"
+    },
+    {
+      "id": "103",
+      "effectiveYyyymm": "2059-04",
+      "monthlyDelta": 53.01,
+      "legalMaximum": 348.92,
+      "sourceType": "RENT_INDEX",
+      "earliestYyyymm": "2059-04"
+    },
+    {
+      "id": "104",
+      "effectiveYyyymm": "2060-10",
+      "monthlyDelta": 54.08,
+      "legalMaximum": 355.67,
+      "sourceType": "RENT_INDEX",
+      "earliestYyyymm": "2060-10"
+    },
+    {
+      "id": "105",
+      "effectiveYyyymm": "2062-04",
+      "monthlyDelta": 55.17,
+      "legalMaximum": 362.55,
+      "sourceType": "RENT_INDEX",
+      "earliestYyyymm": "2062-04"
+    },
+    {
+      "id": "106",
+      "effectiveYyyymm": "2063-10",
+      "monthlyDelta": 56.28,
+      "legalMaximum": 369.57,
+      "sourceType": "RENT_INDEX",
+      "earliestYyyymm": "2063-10"
+    },
+    {
+      "id": "107",
+      "effectiveYyyymm": "2065-04",
+      "monthlyDelta": 57.41,
+      "legalMaximum": 376.74,
+      "sourceType": "RENT_INDEX",
+      "earliestYyyymm": "2065-04"
+    },
+    {
+      "id": "108",
+      "effectiveYyyymm": "2066-10",
+      "monthlyDelta": 58.56,
+      "legalMaximum": 384.05,
+      "sourceType": "RENT_INDEX",
+      "earliestYyyymm": "2066-10"
+    },
+    {
+      "id": "109",
+      "effectiveYyyymm": "2068-04",
+      "monthlyDelta": 59.74,
+      "legalMaximum": 391.51,
+      "sourceType": "RENT_INDEX",
+      "earliestYyyymm": "2068-04"
+    },
+    {
+      "id": "110",
+      "effectiveYyyymm": "2069-10",
+      "monthlyDelta": 60.94,
+      "legalMaximum": 399.12,
+      "sourceType": "RENT_INDEX",
+      "earliestYyyymm": "2069-10"
+    },
+    {
+      "id": "111",
+      "effectiveYyyymm": "2071-04",
+      "monthlyDelta": 62.17,
+      "legalMaximum": 406.88,
+      "sourceType": "RENT_INDEX",
+      "earliestYyyymm": "2071-04"
+    },
+    {
+      "id": "112",
+      "effectiveYyyymm": "2072-10",
+      "monthlyDelta": 63.42,
+      "legalMaximum": 414.79,
+      "sourceType": "RENT_INDEX",
+      "earliestYyyymm": "2072-10"
+    },
+    {
+      "id": "113",
+      "effectiveYyyymm": "2074-04",
+      "monthlyDelta": 64.7,
+      "legalMaximum": 422.86,
+      "sourceType": "RENT_INDEX",
+      "earliestYyyymm": "2074-04"
+    },
+    {
+      "id": "114",
+      "effectiveYyyymm": "2075-10",
+      "monthlyDelta": 66,
+      "legalMaximum": 431.1,
+      "sourceType": "RENT_INDEX",
+      "earliestYyyymm": "2075-10"
+    },
+    {
+      "id": "115",
+      "effectiveYyyymm": "2077-04",
+      "monthlyDelta": 67.33,
+      "legalMaximum": 439.5,
+      "sourceType": "RENT_INDEX",
+      "earliestYyyymm": "2077-04"
+    },
+    {
+      "id": "116",
+      "effectiveYyyymm": "2078-10",
+      "monthlyDelta": 67.79,
+      "legalMaximum": 448.07,
+      "sourceType": "RENT_INDEX",
+      "earliestYyyymm": "2078-10"
+    }
+  ],
+  "increases558WithRentIndex": [
+    {
+      "id": "1",
+      "effectiveYyyymm": "2034-11",
+      "monthlyDelta": 95.81,
+      "legalMaximum": 300,
+      "sourceType": "MANUAL",
+      "earliestYyyymm": "2028-02"
+    },
+    {
+      "id": "2",
+      "effectiveYyyymm": "2036-10",
+      "monthlyDelta": 12.9,
+      "legalMaximum": 204.19,
+      "sourceType": "RENT_INDEX",
+      "earliestYyyymm": "2036-05"
+    },
+    {
+      "id": "3",
+      "effectiveYyyymm": "2038-04",
+      "monthlyDelta": 26.11,
+      "legalMaximum": 301.47,
+      "sourceType": "RENT_INDEX",
+      "earliestYyyymm": "2038-04"
+    },
+    {
+      "id": "4",
+      "effectiveYyyymm": "2039-10",
+      "monthlyDelta": 29.85,
+      "legalMaximum": 290.2,
+      "sourceType": "RENT_INDEX",
+      "earliestYyyymm": "2039-10"
+    },
+    {
+      "id": "5",
+      "effectiveYyyymm": "2041-04",
+      "monthlyDelta": 41.32,
+      "legalMaximum": 290.37,
+      "sourceType": "RENT_INDEX",
+      "earliestYyyymm": "2041-04"
+    },
+    {
+      "id": "6",
+      "effectiveYyyymm": "2042-10",
+      "monthlyDelta": 42.66,
+      "legalMaximum": 283.38,
+      "sourceType": "RENT_INDEX",
+      "earliestYyyymm": "2042-10"
+    },
+    {
+      "id": "7",
+      "effectiveYyyymm": "2044-04",
+      "monthlyDelta": 43.43,
+      "legalMaximum": 288.24,
+      "sourceType": "RENT_INDEX",
+      "earliestYyyymm": "2044-04"
+    },
+    {
+      "id": "8",
+      "effectiveYyyymm": "2045-10",
+      "monthlyDelta": 44.31,
+      "legalMaximum": 293.87,
+      "sourceType": "RENT_INDEX",
+      "earliestYyyymm": "2045-10"
+    },
+    {
+      "id": "9",
+      "effectiveYyyymm": "2047-04",
+      "monthlyDelta": 45.21,
+      "legalMaximum": 299.5,
+      "sourceType": "RENT_INDEX",
+      "earliestYyyymm": "2047-04"
+    },
+    {
+      "id": "10",
+      "effectiveYyyymm": "2048-10",
+      "monthlyDelta": 46.11,
+      "legalMaximum": 305.25,
+      "sourceType": "RENT_INDEX",
+      "earliestYyyymm": "2048-10"
+    },
+    {
+      "id": "11",
+      "effectiveYyyymm": "2050-04",
+      "monthlyDelta": 47.04,
+      "legalMaximum": 311.13,
+      "sourceType": "RENT_INDEX",
+      "earliestYyyymm": "2050-04"
+    },
+    {
+      "id": "12",
+      "effectiveYyyymm": "2051-10",
+      "monthlyDelta": 47.99,
+      "legalMaximum": 317.12,
+      "sourceType": "RENT_INDEX",
+      "earliestYyyymm": "2051-10"
+    },
+    {
+      "id": "13",
+      "effectiveYyyymm": "2053-04",
+      "monthlyDelta": 48.95,
+      "legalMaximum": 323.22,
+      "sourceType": "RENT_INDEX",
+      "earliestYyyymm": "2053-04"
+    },
+    {
+      "id": "14",
+      "effectiveYyyymm": "2054-10",
+      "monthlyDelta": 49.94,
+      "legalMaximum": 329.46,
+      "sourceType": "RENT_INDEX",
+      "earliestYyyymm": "2054-10"
+    },
+    {
+      "id": "101",
+      "effectiveYyyymm": "2056-04",
+      "monthlyDelta": 50.94,
+      "legalMaximum": 335.81,
+      "sourceType": "RENT_INDEX",
+      "earliestYyyymm": "2056-04"
+    },
+    {
+      "id": "102",
+      "effectiveYyyymm": "2057-10",
+      "monthlyDelta": 51.97,
+      "legalMaximum": 342.3,
+      "sourceType": "RENT_INDEX",
+      "earliestYyyymm": "2057-10"
+    },
+    {
+      "id": "103",
+      "effectiveYyyymm": "2059-04",
+      "monthlyDelta": 53.01,
+      "legalMaximum": 348.92,
+      "sourceType": "RENT_INDEX",
+      "earliestYyyymm": "2059-04"
+    },
+    {
+      "id": "104",
+      "effectiveYyyymm": "2060-10",
+      "monthlyDelta": 54.08,
+      "legalMaximum": 355.67,
+      "sourceType": "RENT_INDEX",
+      "earliestYyyymm": "2060-10"
+    },
+    {
+      "id": "105",
+      "effectiveYyyymm": "2062-04",
+      "monthlyDelta": 55.17,
+      "legalMaximum": 362.55,
+      "sourceType": "RENT_INDEX",
+      "earliestYyyymm": "2062-04"
+    },
+    {
+      "id": "106",
+      "effectiveYyyymm": "2063-10",
+      "monthlyDelta": 56.28,
+      "legalMaximum": 369.57,
+      "sourceType": "RENT_INDEX",
+      "earliestYyyymm": "2063-10"
+    },
+    {
+      "id": "107",
+      "effectiveYyyymm": "2065-04",
+      "monthlyDelta": 57.41,
+      "legalMaximum": 376.74,
+      "sourceType": "RENT_INDEX",
+      "earliestYyyymm": "2065-04"
+    },
+    {
+      "id": "108",
+      "effectiveYyyymm": "2066-10",
+      "monthlyDelta": 58.56,
+      "legalMaximum": 384.05,
+      "sourceType": "RENT_INDEX",
+      "earliestYyyymm": "2066-10"
+    },
+    {
+      "id": "109",
+      "effectiveYyyymm": "2068-04",
+      "monthlyDelta": 59.74,
+      "legalMaximum": 391.51,
+      "sourceType": "RENT_INDEX",
+      "earliestYyyymm": "2068-04"
+    },
+    {
+      "id": "110",
+      "effectiveYyyymm": "2069-10",
+      "monthlyDelta": 60.94,
+      "legalMaximum": 399.12,
+      "sourceType": "RENT_INDEX",
+      "earliestYyyymm": "2069-10"
+    },
+    {
+      "id": "111",
+      "effectiveYyyymm": "2071-04",
+      "monthlyDelta": 62.17,
+      "legalMaximum": 406.88,
+      "sourceType": "RENT_INDEX",
+      "earliestYyyymm": "2071-04"
+    },
+    {
+      "id": "112",
+      "effectiveYyyymm": "2072-10",
+      "monthlyDelta": 63.42,
+      "legalMaximum": 414.79,
+      "sourceType": "RENT_INDEX",
+      "earliestYyyymm": "2072-10"
+    },
+    {
+      "id": "113",
+      "effectiveYyyymm": "2074-04",
+      "monthlyDelta": 64.7,
+      "legalMaximum": 422.86,
+      "sourceType": "RENT_INDEX",
+      "earliestYyyymm": "2074-04"
+    },
+    {
+      "id": "114",
+      "effectiveYyyymm": "2075-10",
+      "monthlyDelta": 66,
+      "legalMaximum": 431.1,
+      "sourceType": "RENT_INDEX",
+      "earliestYyyymm": "2075-10"
+    },
+    {
+      "id": "115",
+      "effectiveYyyymm": "2077-04",
+      "monthlyDelta": 67.33,
+      "legalMaximum": 439.5,
+      "sourceType": "RENT_INDEX",
+      "earliestYyyymm": "2077-04"
+    },
+    {
+      "id": "116",
+      "effectiveYyyymm": "2078-10",
+      "monthlyDelta": 67.79,
+      "legalMaximum": 448.07,
+      "sourceType": "RENT_INDEX",
+      "earliestYyyymm": "2078-10"
+    },
+    {
+      "id": "558-31",
+      "effectiveYyyymm": "2080-04",
+      "monthlyDelta": 73.32,
+      "legalMaximum": 457.71,
+      "sourceType": "RENT_INDEX",
+      "earliestYyyymm": "2080-04"
+    },
+    {
+      "id": "558-32",
+      "effectiveYyyymm": "2081-10",
+      "monthlyDelta": 74.8,
+      "legalMaximum": 462.35,
+      "sourceType": "RENT_INDEX",
+      "earliestYyyymm": "2081-10"
+    },
+    {
+      "id": "558-33",
+      "effectiveYyyymm": "2083-04",
+      "monthlyDelta": 76.3,
+      "legalMaximum": 471.87,
+      "sourceType": "RENT_INDEX",
+      "earliestYyyymm": "2083-04"
+    }
+  ],
+  "modernizationPlan": [
+    {
+      "id": "5c7d71dd-ecce-429a-8c57-86e71d644392",
+      "title": "Neue Bodenbeläge (Parkett/Vinyl)",
+      "source": "KNOWN",
+      "paymentYyyymm": "2026-09",
+      "effectiveYyyymm": "2026-11",
+      "monthlyDelta": 129.38,
+      "allocableCosts": 19406.73
+    },
+    {
+      "id": "7e90e828-f17f-4149-9f18-008fa5008a49",
+      "title": "Neue Bodenbeläge (Parkett/Vinyl)",
+      "source": "KNOWN",
+      "paymentYyyymm": "2027-06",
+      "effectiveYyyymm": "2027-08",
+      "monthlyDelta": 84.67,
+      "allocableCosts": 12700
+    },
+    {
+      "id": "bd6615c9-6ce4-406b-92ed-840ab45e1658",
+      "title": "Abgehängte Decke + Spots",
+      "source": "KNOWN",
+      "paymentYyyymm": "2028-05",
+      "effectiveYyyymm": "2028-07",
+      "monthlyDelta": 72.33,
+      "allocableCosts": 10850
+    },
+    {
+      "id": "7dd2f981-8bcc-4a38-9960-703a34671460",
+      "title": "Schwellenfreie Übergänge",
+      "source": "KNOWN",
+      "paymentYyyymm": "2033-07",
+      "effectiveYyyymm": "2033-09",
+      "monthlyDelta": 8,
+      "allocableCosts": 1200
+    },
+    {
+      "id": "a6e8c396-87d6-4412-973a-553ff03c4e16",
+      "title": "Wassersparende Armaturen",
+      "source": "KNOWN",
+      "paymentYyyymm": "2060-06",
+      "effectiveYyyymm": "2060-08",
+      "monthlyDelta": 8.92,
+      "allocableCosts": 1337.27
+    }
+  ],
+  "metrics": {
+    "totalInvestment": 265991.63,
+    "totalRenovationCosts": 45494,
+    "grossYieldToday": 12,
+    "netYieldToday": 9.02,
+    "cashflowToday": 803.04,
+    "afterTaxCashflowToday": 700.07,
+    "rentAtHorizon": 3739.32,
+    "rentAtHorizonWithRentIndex": 3739.32,
+    "endingCashflow": 1086510.15,
+    "endingCashflowWithRentIndex": 1086510.15
+  },
+  "breakEven": "2026-08",
+  "breakEvenWithRentIndex": "2026-08",
+  "capAbs": 360,
+  "capPercent": 0.15,
+  "capPerM2": 3,
+  "denseMarket": true,
+  "timelineLength": 600,
+  "timelineFirstRow": {
+    "yyyymm": "2026-08",
+    "rentTotal": 2000,
+    "rentTotalWithRentIndex": 2000,
+    "delta558": 0,
+    "delta559": 0,
+    "renovationPayment": 0,
+    "debtService": 1196.96,
+    "interest": 753.64,
+    "afa": 216.67,
+    "allocableCosts": 0,
+    "nonAllocableCosts": 0,
+    "taxes": 102.97,
+    "taxableIncome": 1029.69,
+    "taxLossCarryforward": 0,
+    "income": 2000,
+    "expenses": 1196.96,
+    "monthlyDelta": 803.04,
+    "afterTaxCashflow": 700.07,
+    "cumulativeIncome": 2000,
+    "cumulativeExpenses": 1299.93,
+    "cumulativeTaxes": 102.97,
+    "cumulativeCashflowBeforeTax": 803.04,
+    "cumulativeCashflow": 700.07
+  },
+  "timelineLastRow": {
+    "yyyymm": "2076-07",
+    "rentTotal": 3739.32,
+    "rentTotalWithRentIndex": 3739.32,
+    "delta558": 0,
+    "delta559": 0,
+    "renovationPayment": 0,
+    "debtService": 410.34,
+    "interest": 258.36,
+    "afa": 216.67,
+    "allocableCosts": 0,
+    "nonAllocableCosts": 0,
+    "taxes": 326.43,
+    "taxableIncome": 3264.29,
+    "taxLossCarryforward": 0,
+    "income": 3739.32,
+    "expenses": 410.34,
+    "monthlyDelta": 3328.98,
+    "afterTaxCashflow": 3002.55,
+    "cumulativeIncome": 1708008.9,
+    "cumulativeExpenses": 621498.75,
+    "cumulativeTaxes": 130773.55,
+    "cumulativeCashflowBeforeTax": 1217283.7,
+    "cumulativeCashflow": 1086510.15
+  }
+}
