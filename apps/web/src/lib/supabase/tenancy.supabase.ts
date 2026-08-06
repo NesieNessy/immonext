@@ -34,6 +34,11 @@ function toTenancy(row: Record<string, unknown>): Tenancy {
         nextRentAdjustmentDate: row.next_rent_adjustment_date as string | null,
         nextRentAdjustmentAmount: row.next_rent_adjustment_amount as number | null,
         renovationAdjustmentPlanned: row.renovation_adjustment_planned as boolean | null,
+        renovationAdjustmentStartDate: row.renovation_adjustment_start_date as string | null,
+        renovationAdjustmentEndDate: row.renovation_adjustment_end_date as string | null,
+        renovationAdjustmentAmount: row.renovation_adjustment_amount as number | null,
+        rentAdjustmentReminderDate: row.rent_adjustment_reminder_date as string | null,
+        renovationAdjustmentReminderDate: row.renovation_adjustment_reminder_date as string | null,
         petsAllowed: row.pets_allowed as RentalTermsPetsAllowed | null,
         redecorationClause: row.redecoration_clause as RentalTermsRedecorationClause | null,
         subletAllowed: row.sublet_allowed as RentalTermsSubletAllowed | null,
@@ -87,6 +92,14 @@ export async function createTenancy(payload: TenancyInsert): Promise<Tenancy | n
             tenant_first_name: payload.tenantFirstName,
             tenant_last_name: payload.tenantLastName,
             deposit: payload.deposit,
+            next_rent_adjustment_date: payload.nextRentAdjustmentDate,
+            next_rent_adjustment_amount: payload.nextRentAdjustmentAmount,
+            renovation_adjustment_planned: payload.renovationAdjustmentPlanned,
+            renovation_adjustment_start_date: payload.renovationAdjustmentStartDate,
+            renovation_adjustment_end_date: payload.renovationAdjustmentEndDate,
+            renovation_adjustment_amount: payload.renovationAdjustmentAmount,
+            rent_adjustment_reminder_date: payload.rentAdjustmentReminderDate,
+            renovation_adjustment_reminder_date: payload.renovationAdjustmentReminderDate,
         } }));
     if (!data) return null;
     return toTenancy(data);
@@ -117,6 +130,11 @@ export async function updateTenancy(
     if (updates.nextRentAdjustmentDate !== undefined) dbUpdates.next_rent_adjustment_date = updates.nextRentAdjustmentDate;
     if (updates.nextRentAdjustmentAmount !== undefined) dbUpdates.next_rent_adjustment_amount = updates.nextRentAdjustmentAmount;
     if (updates.renovationAdjustmentPlanned !== undefined) dbUpdates.renovation_adjustment_planned = updates.renovationAdjustmentPlanned;
+    if (updates.renovationAdjustmentStartDate !== undefined) dbUpdates.renovation_adjustment_start_date = updates.renovationAdjustmentStartDate;
+    if (updates.renovationAdjustmentEndDate !== undefined) dbUpdates.renovation_adjustment_end_date = updates.renovationAdjustmentEndDate;
+    if (updates.renovationAdjustmentAmount !== undefined) dbUpdates.renovation_adjustment_amount = updates.renovationAdjustmentAmount;
+    if (updates.rentAdjustmentReminderDate !== undefined) dbUpdates.rent_adjustment_reminder_date = updates.rentAdjustmentReminderDate;
+    if (updates.renovationAdjustmentReminderDate !== undefined) dbUpdates.renovation_adjustment_reminder_date = updates.renovationAdjustmentReminderDate;
     if (updates.petsAllowed !== undefined) dbUpdates.pets_allowed = updates.petsAllowed;
     if (updates.redecorationClause !== undefined) dbUpdates.redecoration_clause = updates.redecorationClause;
     if (updates.subletAllowed !== undefined) dbUpdates.sublet_allowed = updates.subletAllowed;

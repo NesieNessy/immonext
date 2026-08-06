@@ -374,6 +374,14 @@ export interface Tenancy {
   nextRentAdjustmentAmount?: number | null,
   /** null = not captured yet, true = planned, false = not planned. */
   renovationAdjustmentPlanned?: boolean | null,
+  /** Sanierungsanpassung scheduling, shown on the Mietvertrag tab. */
+  renovationAdjustmentStartDate?: string | null,
+  renovationAdjustmentEndDate?: string | null,
+  renovationAdjustmentAmount?: number | null,
+  /** Reminder-date overrides; null means "use the computed default" (-4
+   *  months before the adjustment date) rather than "no reminder". */
+  rentAdjustmentReminderDate?: string | null,
+  renovationAdjustmentReminderDate?: string | null,
   petsAllowed?: RentalTermsPetsAllowed | null,
   redecorationClause?: RentalTermsRedecorationClause | null,
   subletAllowed?: RentalTermsSubletAllowed | null,
@@ -473,6 +481,14 @@ export type AcquisitionCostsUpdate = Partial<Omit<AcquisitionCosts, 'acquisition
 // MaintenanceCosts
 // ----------------------------------------------------------------------------
 
+export interface MaintenanceCostItem {
+  id: string;
+  label: string;
+  amount: number;
+  /** true = umlagefähig, false = nicht umlagefähig. */
+  allocable: boolean;
+}
+
 export interface MaintenanceCosts {
   maintenanceCostsId: number;
   propertyId: number;
@@ -484,12 +500,36 @@ export interface MaintenanceCosts {
   allocableCostsProjection: boolean;
   nonAllocableCostsProjection: boolean;
   totalCostsProjection: boolean;
+  /** Itemized Nebenkosten breakdown entered via "Detailerfassung
+   *  Nebenkosten"; allocableCosts/nonAllocableCosts are kept as the summed
+   *  totals of this list once it's used. */
+  costItems?: MaintenanceCostItem[] | null;
   createdAt: string;
   updatedAt: string;
 }
 
 export type MaintenanceCostsInsert = Omit<MaintenanceCosts, 'maintenanceCostsId' | 'createdAt' | 'updatedAt'>;
 export type MaintenanceCostsUpdate = Partial<Omit<MaintenanceCosts, 'maintenanceCostsId' | 'propertyId' | 'createdAt' | 'updatedAt'>>;
+
+// ----------------------------------------------------------------------------
+// TenancyAdjustmentHistory
+// ----------------------------------------------------------------------------
+
+export type TenancyAdjustmentType = 'rent' | 'renovation';
+
+export interface TenancyAdjustmentHistoryEntry {
+  historyId: number;
+  tenancyId: number;
+  propertyId: number;
+  adjustmentType: TenancyAdjustmentType;
+  effectiveDate: string | null;
+  amount: number | null;
+  note: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type TenancyAdjustmentHistoryInsert = Omit<TenancyAdjustmentHistoryEntry, 'historyId' | 'createdAt' | 'updatedAt'>;
 
 // ----------------------------------------------------------------------------
 // Financing

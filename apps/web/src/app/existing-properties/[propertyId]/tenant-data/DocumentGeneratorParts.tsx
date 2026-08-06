@@ -35,27 +35,40 @@ export function Field({ label, value }: { label: string; value: string }) {
     );
 }
 
+/** Card shell shared by the tenant-data feature: icon + title header (bar of
+ *  "Quelle: X" or custom actions on the right), a body, and an optional
+ *  footer bar for primary actions — keeps every card in this area visually
+ *  consistent instead of each screen hand-rolling its own header/footer. */
 export function DataCard({
     icon: Icon,
     title,
     source,
+    actions,
+    footer,
     children,
 }: {
     icon: React.ElementType;
     title: string;
-    source: string;
+    source?: string;
+    actions?: React.ReactNode;
+    footer?: React.ReactNode;
     children: React.ReactNode;
 }) {
     return (
         <div className="rounded-lg border border-border bg-card overflow-hidden">
-            <div className="flex items-center justify-between gap-3 px-4 py-3 bg-muted/30">
+            <div className="flex items-center justify-between gap-3 flex-wrap px-4 py-3 bg-muted/30">
                 <div className="flex items-center gap-2">
                     <Icon className="w-4 h-4 text-primary" />
-                    <span className="text-sm font-medium text-foreground">{title}</span>
+                    <span className="text-sm font-semibold text-foreground">{title}</span>
                 </div>
-                <span className="text-xs text-muted-foreground">Quelle: {source}</span>
+                {actions ?? (source && <span className="text-xs text-muted-foreground">Quelle: {source}</span>)}
             </div>
             <div className="p-4">{children}</div>
+            {footer && (
+                <div className="flex items-center justify-end gap-2 flex-wrap px-4 py-3 border-t border-border bg-muted/10">
+                    {footer}
+                </div>
+            )}
         </div>
     );
 }

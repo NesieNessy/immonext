@@ -5,7 +5,9 @@ import { CalendarField, Dropdown, Header, NumberField, StickyActionBar, TextArea
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { ExistingPropertiesUseCases } from '@/constants/ExistingPropertiesUseCases';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
+import { htmlToPdfBlob } from '@/lib/pdf/htmlToPdf';
 import { updateTenancy } from '@/lib/supabase/tenancy.supabase';
+import { uploadTenancyDocument } from '@/lib/supabase/tenancy_document.supabase';
 import { deCurrencyFormatter, formatDeDate } from '@/lib/utils';
 import type { RentalTermsPetsAllowed, RentalTermsRedecorationClause, RentalTermsSubletAllowed } from '@immonext/types';
 import { format } from 'date-fns';
@@ -170,21 +172,6 @@ function agreementBodyHtml(c: AgreementContent): string {
     `;
 }
 
-function agreementPrintDocument(c: AgreementContent): string {
-    return `<!DOCTYPE html>
-<html lang="de">
-<head>
-<meta charset="utf-8" />
-<title>Mietvertrag</title>
-<style>
-    body { font-family: Arial, Helvetica, sans-serif; color: #111; max-width: 700px; margin: 48px auto; line-height: 1.6; }
-    h1, h2 { font-family: Arial, Helvetica, sans-serif; }
-</style>
-</head>
-<body>${agreementBodyHtml(c)}</body>
-</html>`;
-}
-
 export default function RentalAgreementPage({ propertyId, unitId }: { propertyId: string; unitId: string }) {
     const router = useRouter();
     const searchParams = useSearchParams();
@@ -340,16 +327,20 @@ export default function RentalAgreementPage({ propertyId, unitId }: { propertyId
                 setSaveError('Angaben konnten nicht gespeichert werden.');
                 return;
             }
+
+            const blob = await htmlToPdfBlob(agreementBodyHtml(content));
+            if (user) {
+                const file = new File([blob], `${documentNumber}.pdf`, { type: 'application/pdf' });
+                await uploadTenancyDocument(user.id, file, {
+                    tenancyId: tenancy.tenancyId,
+                    tenancyPersonId: personIdParam ? Number(personIdParam) : null,
+                    documentType: 'Mietvertrag',
+                });
+            }
+            window.open(URL.createObjectURL(blob), '_blank', 'noopener,noreferrer');
         } finally {
             setIsSaving(false);
         }
-
-        const win = window.open('', '_blank', 'width=800,height=1000');
-        if (!win) return;
-        win.document.write(agreementPrintDocument(content));
-        win.document.close();
-        win.focus();
-        setTimeout(() => win.print(), 250);
     };
 
     handleGenerateRef.current = () => void handleGenerate();
@@ -600,7 +591,7 @@ export default function RentalAgreementPage({ propertyId, unitId }: { propertyId
                 onPrimary={() => void handleGenerate()}
                 ghostLabel={BUTTON_DETAILS.Back.label}
                 ghostIcon={<BUTTON_DETAILS.Back.icon />}
-                primaryLabel="PDF generieren"
+                primaryLabel={isSaving ? 'Wird erstellt…' : 'PDF generieren'}
                 primaryIcon={<FileText className="w-4 h-4" />}
                 primaryDisabled={!canGenerate || isSaving}
             />

@@ -5,6 +5,8 @@ import { Header, StickyActionBar, type BreadcrumbItem } from '@/components/ui';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { ExistingPropertiesUseCases } from '@/constants/ExistingPropertiesUseCases';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
+import { htmlToPdfBlob } from '@/lib/pdf/htmlToPdf';
+import { uploadTenancyDocument } from '@/lib/supabase/tenancy_document.supabase';
 import { formatDeDate } from '@/lib/utils';
 import { AlertTriangle, Eye, FileText, Landmark, ListChecks, Upload, Users } from 'lucide-react';
 import Link from 'next/link';
@@ -95,21 +97,6 @@ function certificateBodyHtml(c: CertificateContent): string {
     `;
 }
 
-function certificatePrintDocument(c: CertificateContent): string {
-    return `<!DOCTYPE html>
-<html lang="de">
-<head>
-<meta charset="utf-8" />
-<title>Mieterbescheinigung</title>
-<style>
-    body { font-family: Arial, Helvetica, sans-serif; color: #111; max-width: 700px; margin: 48px auto; line-height: 1.6; }
-    h1, h2 { font-family: Arial, Helvetica, sans-serif; }
-</style>
-</head>
-<body>${certificateBodyHtml(c)}</body>
-</html>`;
-}
-
 export default function TenantCertificatePage({ propertyId, unitId }: { propertyId: string; unitId: string }) {
     const router = useRouter();
     const searchParams = useSearchParams();
@@ -120,6 +107,7 @@ export default function TenantCertificatePage({ propertyId, unitId }: { property
     const [view, setView] = useState<View>('review');
     const [signatureDataUrl, setSignatureDataUrl] = useState<string | null>(null);
     const [isUploadingSignature, setIsUploadingSignature] = useState(false);
+    const [isGenerating, setIsGenerating] = useState(false);
 
     // The "PDF generieren" shortcut on the tenant-unit page links here with
     // ?autoGenerate=1 to skip the extra click — handleGenerate is defined
@@ -201,17 +189,26 @@ export default function TenantCertificatePage({ propertyId, unitId }: { property
         }
     };
 
-    const handleGenerate = () => {
+    const handleGenerate = async () => {
         if (!canGenerate) return;
-        const win = window.open('', '_blank', 'width=800,height=1000');
-        if (!win) return;
-        win.document.write(certificatePrintDocument(content));
-        win.document.close();
-        win.focus();
-        setTimeout(() => win.print(), 250);
+        setIsGenerating(true);
+        try {
+            const blob = await htmlToPdfBlob(certificateBodyHtml(content));
+            if (tenancy && user) {
+                const file = new File([blob], `${documentNumber}.pdf`, { type: 'application/pdf' });
+                await uploadTenancyDocument(user.id, file, {
+                    tenancyId: tenancy.tenancyId,
+                    tenancyPersonId: null,
+                    documentType: 'Mieterbescheinigung',
+                });
+            }
+            window.open(URL.createObjectURL(blob), '_blank', 'noopener,noreferrer');
+        } finally {
+            setIsGenerating(false);
+        }
     };
 
-    handleGenerateRef.current = handleGenerate;
+    handleGenerateRef.current = () => void handleGenerate();
 
     return (
         <div className="min-h-screen bg-background pb-24">
@@ -387,12 +384,12 @@ export default function TenantCertificatePage({ propertyId, unitId }: { property
             <StickyActionBar
                 show={true}
                 onGhost={() => router.push(backHref)}
-                onPrimary={handleGenerate}
+                onPrimary={() => void handleGenerate()}
                 ghostLabel={BUTTON_DETAILS.Back.label}
                 ghostIcon={<BUTTON_DETAILS.Back.icon />}
-                primaryLabel="PDF generieren"
+                primaryLabel={isGenerating ? 'Wird erstellt…' : 'PDF generieren'}
                 primaryIcon={<FileText className="w-4 h-4" />}
-                primaryDisabled={!canGenerate}
+                primaryDisabled={!canGenerate || isGenerating}
             />
         </div>
     );
