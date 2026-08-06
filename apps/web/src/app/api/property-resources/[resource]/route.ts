@@ -56,9 +56,17 @@ const RESOURCES: Record<string, ResourceConfig> = {
       'tenancy_units', 'tenancy_units_price', 'parking_space_rent', 'misc_rent',
       'warm_rent', 'cold_rent', 'tenant_first_name', 'tenant_last_name', 'deposit',
       'next_rent_adjustment_date', 'next_rent_adjustment_amount', 'renovation_adjustment_planned',
+      'renovation_adjustment_start_date', 'renovation_adjustment_end_date', 'renovation_adjustment_amount',
+      'rent_adjustment_reminder_date', 'renovation_adjustment_reminder_date',
       'pets_allowed', 'redecoration_clause', 'sublet_allowed', 'additional_terms',
     ],
     orderBy: 'tenancy_id',
+  },
+  'tenancy-adjustment-history': {
+    table: 'tenancy_adjustment_history',
+    primaryKey: 'history_id',
+    columns: ['tenancy_id', 'property_id', 'adjustment_type', 'effective_date', 'amount', 'note'],
+    orderBy: 'created_at DESC',
   },
   'property-rnd': {
     table: 'property_rnd',
@@ -109,6 +117,7 @@ export async function GET(request: Request, context: RouteContext) {
   const id = url.searchParams.get('id');
   const propertyId = url.searchParams.get('propertyId');
   const propertyUnitId = url.searchParams.get('propertyUnitId');
+  const tenancyId = url.searchParams.get('tenancyId');
   const filters: string[] = [];
   const values: unknown[] = [userId];
   if (id) {
@@ -122,6 +131,10 @@ export async function GET(request: Request, context: RouteContext) {
   if (propertyUnitId && config.table === 'tenancy') {
     values.push(Number(propertyUnitId));
     filters.push(`r.property_unit_id = $${values.length}`);
+  }
+  if (tenancyId && config.table === 'tenancy_adjustment_history') {
+    values.push(Number(tenancyId));
+    filters.push(`r.tenancy_id = $${values.length}`);
   }
 
   const where = [

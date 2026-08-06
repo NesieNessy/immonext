@@ -5,7 +5,9 @@ import { CalendarField, Dropdown, Header, NumberField, StickyActionBar, TextArea
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { ExistingPropertiesUseCases } from '@/constants/ExistingPropertiesUseCases';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
+import { htmlToPdfBlob } from '@/lib/pdf/htmlToPdf';
 import { updateTenancy } from '@/lib/supabase/tenancy.supabase';
+import { uploadTenancyDocument } from '@/lib/supabase/tenancy_document.supabase';
 import { deCurrencyFormatter, formatDeDate } from '@/lib/utils';
 import type { RentalTermsPetsAllowed, RentalTermsRedecorationClause, RentalTermsSubletAllowed } from '@immonext/types';
 import { format } from 'date-fns';
@@ -170,21 +172,6 @@ function agreementBodyHtml(c: AgreementContent): string {
     `;
 }
 
-function agreementPrintDocument(c: AgreementContent): string {
-    return `<!DOCTYPE html>
-<html lang="de">
-<head>
-<meta charset="utf-8" />
-<title>Mietvertrag</title>
-<style>
-    body { font-family: Arial, Helvetica, sans-serif; color: #111; max-width: 700px; margin: 48px auto; line-height: 1.6; }
-    h1, h2 { font-family: Arial, Helvetica, sans-serif; }
-</style>
-</head>
-<body>${agreementBodyHtml(c)}</body>
-</html>`;
-}
-
 export default function RentalAgreementPage({ propertyId, unitId }: { propertyId: string; unitId: string }) {
     const router = useRouter();
     const searchParams = useSearchParams();
@@ -220,6 +207,20 @@ export default function RentalAgreementPage({ propertyId, unitId }: { propertyId
         setSubletAllowed(tenancy.subletAllowed ?? '');
         setAdditionalTerms(tenancy.additionalTerms ?? '');
     }, [tenancy]);
+
+    // The "PDF generieren" shortcut on the tenant-unit page links here with
+    // ?autoGenerate=1 to skip the extra click — handleGenerate is defined
+    // further down (after the not-found/loading early returns), so it's
+    // invoked indirectly through a ref that gets assigned once it exists.
+    const didAutoGenerate = useRef(false);
+    const handleGenerateRef = useRef<(() => void) | null>(null);
+    useEffect(() => {
+        if (didAutoGenerate.current) return;
+        if (searchParams.get('autoGenerate') !== '1') return;
+        if (!handleGenerateRef.current) return;
+        didAutoGenerate.current = true;
+        handleGenerateRef.current();
+    }, [searchParams, tenancy, landlord, persons]);
 
     if (notFound) return <PropertyNotFoundPage />;
     if (isLoading || !property || !unit) return <PropertyLoadingPage />;
@@ -326,17 +327,23 @@ export default function RentalAgreementPage({ propertyId, unitId }: { propertyId
                 setSaveError('Angaben konnten nicht gespeichert werden.');
                 return;
             }
+
+            const blob = await htmlToPdfBlob(agreementBodyHtml(content));
+            if (user) {
+                const file = new File([blob], `${documentNumber}.pdf`, { type: 'application/pdf' });
+                await uploadTenancyDocument(user.id, file, {
+                    tenancyId: tenancy.tenancyId,
+                    tenancyPersonId: personIdParam ? Number(personIdParam) : null,
+                    documentType: 'Mietvertrag',
+                });
+            }
+            window.open(URL.createObjectURL(blob), '_blank', 'noopener,noreferrer');
         } finally {
             setIsSaving(false);
         }
-
-        const win = window.open('', '_blank', 'width=800,height=1000');
-        if (!win) return;
-        win.document.write(agreementPrintDocument(content));
-        win.document.close();
-        win.focus();
-        setTimeout(() => win.print(), 250);
     };
+
+    handleGenerateRef.current = () => void handleGenerate();
 
     return (
         <div className="min-h-screen bg-background pb-24">
@@ -372,8 +379,8 @@ export default function RentalAgreementPage({ propertyId, unitId }: { propertyId
                         <div className="flex items-start gap-2.5 p-3 rounded-lg border border-border bg-muted/30">
                             <FileText className="w-4 h-4 shrink-0 text-primary mt-0.5" />
                             <p className="text-sm text-muted-foreground">
-                                Der Mietvertrag wird automatisch aus den hinterlegten Daten befüllt. Ergänzen Sie fehlende Angaben direkt hier, bevor Sie
-                                das Dokument generieren. Änderungen werden in die jeweiligen Bereiche zurückgespiegelt.
+                                Der Mietvertrag wird automatisch aus den hinterlegten Daten befüllt. Ergänze fehlende Angaben direkt hier, bevor du
+                                das Dokument generierst. Änderungen werden in die jeweiligen Bereiche zurückgespiegelt.
                             </p>
                         </div>
 
@@ -383,7 +390,7 @@ export default function RentalAgreementPage({ propertyId, unitId }: { propertyId
                                 <div className="flex items-start gap-2.5 p-3 rounded-lg border border-destructive/30 bg-destructive/10">
                                     <AlertTriangle className="w-4 h-4 shrink-0 text-destructive mt-0.5" />
                                     <p className="text-sm text-destructive">
-                                        Es sind noch keine Vermieterdaten hinterlegt. Bitte ergänzen Sie diese in den{' '}
+                                        Es sind noch keine Vermieterdaten hinterlegt. Bitte ergänze diese in den{' '}
                                         <Link href="/user-settings" className="underline font-medium">Einstellungen</Link>.
                                     </p>
                                 </div>
@@ -529,7 +536,7 @@ export default function RentalAgreementPage({ propertyId, unitId }: { propertyId
                                         </div>
                                     ) : (
                                         <p className="text-sm text-muted-foreground max-w-md">
-                                            Laden Sie die Vermieter-Unterschrift als Bilddatei hoch (PNG, JPG).
+                                            Lade die Vermieter-Unterschrift als Bilddatei hoch (PNG, JPG).
                                             Die Unterschrift des Mieters wird nach Ausdrucken eingeholt.
                                         </p>
                                     )}
@@ -584,7 +591,7 @@ export default function RentalAgreementPage({ propertyId, unitId }: { propertyId
                 onPrimary={() => void handleGenerate()}
                 ghostLabel={BUTTON_DETAILS.Back.label}
                 ghostIcon={<BUTTON_DETAILS.Back.icon />}
-                primaryLabel="PDF generieren"
+                primaryLabel={isSaving ? 'Wird erstellt…' : 'PDF generieren'}
                 primaryIcon={<FileText className="w-4 h-4" />}
                 primaryDisabled={!canGenerate || isSaving}
             />

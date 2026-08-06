@@ -2,7 +2,7 @@
 // ImmoNext – Supabase Client: maintenance_costs
 // ==============================================================================
 import { supabase } from '@/lib/supabase/client.supabase';
-import type { MaintenanceCosts, MaintenanceCostsInsert, MaintenanceCostsUpdate } from '@immonext/types';
+import type { MaintenanceCosts, MaintenanceCostsInsert, MaintenanceCostsUpdate, MaintenanceCostItem } from '@immonext/types';
 
 function toMaintenanceCosts(row: Record<string, unknown>): MaintenanceCosts {
   return {
@@ -16,6 +16,7 @@ function toMaintenanceCosts(row: Record<string, unknown>): MaintenanceCosts {
     allocableCostsProjection:       row.allocable_costs_projection as boolean,
     nonAllocableCostsProjection:    row.non_allocable_costs_projection as boolean,
     totalCostsProjection:           row.total_costs_projection as boolean,
+    costItems:                      row.cost_items as MaintenanceCostItem[] | null,
     createdAt:                      row.created_at as string,
     updatedAt:                      row.updated_at as string,
   };
@@ -54,6 +55,7 @@ export async function createMaintenanceCosts(payload: MaintenanceCostsInsert): P
       allocable_costs_projection:     payload.allocableCostsProjection,
       non_allocable_costs_projection: payload.nonAllocableCostsProjection,
       total_costs_projection:         payload.totalCostsProjection,
+      cost_items:                     payload.costItems ?? null,
     })
     .select()
     .single();
@@ -71,6 +73,7 @@ export async function updateMaintenanceCosts(maintenanceCostsId: number, updates
   if (updates.allocableCostsProjection !== undefined)    dbUpdates.allocable_costs_projection      = updates.allocableCostsProjection;
   if (updates.nonAllocableCostsProjection !== undefined) dbUpdates.non_allocable_costs_projection  = updates.nonAllocableCostsProjection;
   if (updates.totalCostsProjection !== undefined)        dbUpdates.total_costs_projection          = updates.totalCostsProjection;
+  if (updates.costItems !== undefined)                   dbUpdates.cost_items                      = updates.costItems;
   const { data, error } = await supabase.from('maintenance_costs').update(dbUpdates).eq('maintenance_costs_id', maintenanceCostsId).select().single();
   if (error || !data) return null;
   return toMaintenanceCosts(data);

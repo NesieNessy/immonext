@@ -26,6 +26,7 @@ export { RatingScale } from "./RatingScale";
 export { SectionLabel } from "./SectionLabel";
 export { Stepper } from "./Stepper";
 export { StickyActionBar } from "./StickyActionBar";
+export { Switch } from "./Switch";
 export { Table } from "./Table";
 export type { SortDirection, TableColumn, TableProps } from "./Table";
 export { Tag } from "./Tag";
