@@ -244,7 +244,7 @@ export default function TenantCertificatePage({ propertyId, unitId }: { property
                         <div className="flex items-start gap-2.5 p-3 rounded-lg border border-border bg-muted/30">
                             <FileText className="w-4 h-4 shrink-0 text-primary mt-0.5" />
                             <p className="text-sm text-muted-foreground">
-                                Die Bescheinigung wird automatisch aus den hinterlegten Daten befüllt. Bitte prüfen Sie die Angaben bevor Sie das Dokument generieren.
+                                Die Bescheinigung wird automatisch aus den hinterlegten Daten befüllt. Bitte prüfe die Angaben, bevor du das Dokument generierst.
                                 Fehlende oder veraltete Daten können in den jeweiligen Bereichen ergänzt werden.
                             </p>
                         </div>
@@ -255,7 +255,7 @@ export default function TenantCertificatePage({ propertyId, unitId }: { property
                                 <div className="flex items-start gap-2.5 p-3 rounded-lg border border-destructive/30 bg-destructive/10">
                                     <AlertTriangle className="w-4 h-4 shrink-0 text-destructive mt-0.5" />
                                     <p className="text-sm text-destructive">
-                                        Es sind noch keine Vermieterdaten hinterlegt. Bitte ergänzen Sie diese in den{' '}
+                                        Es sind noch keine Vermieterdaten hinterlegt. Bitte ergänze diese in den{' '}
                                         <Link href="/user-settings" className="underline font-medium">Einstellungen</Link>.
                                     </p>
                                 </div>
@@ -336,7 +336,7 @@ export default function TenantCertificatePage({ propertyId, unitId }: { property
                                         </div>
                                     ) : (
                                         <p className="text-sm text-muted-foreground max-w-md">
-                                            Laden Sie eine Unterschrift als Bilddatei hoch (PNG, JPG). Diese wird automatisch in das generierte PDF eingefügt.
+                                            Lade eine Unterschrift als Bilddatei hoch (PNG, JPG). Diese wird automatisch in das generierte PDF eingefügt.
                                             Alternativ kann die Unterschrift nachträglich in PDF ergänzt werden.
                                         </p>
                                     )}

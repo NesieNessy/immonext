@@ -1369,7 +1369,7 @@ export function TenantUnitDetail({ propertyId, property, unit, hasMultipleUnits 
                                             {rentReminderDue && (
                                                 <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-50 border border-amber-200 text-xs text-amber-800">
                                                     <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
-                                                    <span>Das Erinnerungsdatum ist erreicht. Sie können die Mieterhöhung jetzt übernehmen oder ablehnen. Bei Übernahme wird die Netto-Mieteinnahme aktualisiert und ein Historieneintrag erzeugt.</span>
+                                                    <span>Das Erinnerungsdatum ist erreicht. Du kannst die Mieterhöhung jetzt übernehmen oder ablehnen. Bei Übernahme wird die Netto-Mieteinnahme aktualisiert und ein Historieneintrag erzeugt.</span>
                                                 </div>
                                             )}
                                         </div>
@@ -1432,7 +1432,7 @@ export function TenantUnitDetail({ propertyId, property, unit, hasMultipleUnits 
                                             {renovationReminderDue && (
                                                 <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-50 border border-amber-200 text-xs text-amber-800">
                                                     <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
-                                                    <span>Das Erinnerungsdatum ist erreicht. Sie können die Sanierungsanpassung jetzt übernehmen oder ablehnen. Bei Übernahme wird ein Historieneintrag erzeugt.</span>
+                                                    <span>Das Erinnerungsdatum ist erreicht. Du kannst die Sanierungsanpassung jetzt übernehmen oder ablehnen. Bei Übernahme wird ein Historieneintrag erzeugt.</span>
                                                 </div>
                                             )}
                                         </div>
@@ -1443,53 +1443,85 @@ export function TenantUnitDetail({ propertyId, property, unit, hasMultipleUnits 
                             <div>
                                 <SectionLabel>Generierbare Dokumente</SectionLabel>
                                 <div className="mt-3 flex flex-col gap-4">
-                                    <DataCard
-                                        icon={FileSignature}
-                                        title="Mietvertrag"
-                                        actions={
-                                            <span title={landlordMissing ? 'Bitte zuerst Vermieterdaten in den Einstellungen hinterlegen' : undefined}>
-                                                <Switch
-                                                    label="Mehrere Mietverträge"
-                                                    checked={mietvertragIndividual}
-                                                    disabled={landlordMissing}
-                                                    onCheckedChange={(checked) => setMietvertragIndividual(checked)}
-                                                />
-                                            </span>
-                                        }
-                                        footer={
-                                            <>
-                                                {mietvertragRows.map((row) => renderFooterUpload(
-                                                    row,
-                                                    mietvertrag,
-                                                    landlordMissing,
-                                                    mietvertragRows.length > 1 ? `Hochladen – ${row.tenant}` : 'Datei hochladen',
-                                                ))}
-                                                <Button
-                                                    label="Daten prüfen & Vorschau"
-                                                    icon={<Eye className="w-4 h-4" />}
-                                                    variant="outline"
-                                                    disabled={landlordMissing || tenancy == null}
-                                                    onClick={() => goTo(`${generatorBase}/rental-agreement`)}
-                                                />
-                                                <Button
-                                                    label="PDF generieren"
-                                                    icon={<FileText className="w-4 h-4" />}
-                                                    variant="primary"
-                                                    disabled={landlordMissing || tenancy == null}
-                                                    onClick={() => goTo(`${generatorBase}/rental-agreement?autoGenerate=1`)}
-                                                />
-                                            </>
-                                        }
-                                    >
-                                        <div className="flex flex-col gap-3">
-                                            <div className="flex flex-col gap-2">
-                                                {mietvertragRows.map((row) => renderDocRow(row, mietvertrag, landlordMissing, false))}
+                                    <div className="flex items-center justify-end">
+                                        <span title={landlordMissing ? 'Bitte zuerst Vermieterdaten in den Einstellungen hinterlegen' : undefined}>
+                                            <Switch
+                                                label="Mehrere Mietverträge"
+                                                checked={mietvertragIndividual}
+                                                disabled={landlordMissing}
+                                                onCheckedChange={(checked) => setMietvertragIndividual(checked)}
+                                            />
+                                        </span>
+                                    </div>
+
+                                    {mietvertragIndividual ? (
+                                        mietvertragRows.map((row) => (
+                                            <DataCard
+                                                key={row.key}
+                                                icon={FileSignature}
+                                                title={`Mietvertrag – ${row.tenant}`}
+                                                footer={
+                                                    <>
+                                                        {renderFooterUpload(row, mietvertrag, landlordMissing)}
+                                                        <Button
+                                                            label="Daten prüfen & Vorschau"
+                                                            icon={<Eye className="w-4 h-4" />}
+                                                            variant="outline"
+                                                            disabled={landlordMissing || tenancy == null || row.tenancyPersonId == null}
+                                                            title={row.tenancyPersonId == null ? 'Bitte zuerst speichern' : undefined}
+                                                            onClick={() => goTo(`${generatorBase}/rental-agreement?personId=${row.tenancyPersonId}`)}
+                                                        />
+                                                        <Button
+                                                            label="PDF generieren"
+                                                            icon={<FileText className="w-4 h-4" />}
+                                                            variant="primary"
+                                                            disabled={landlordMissing || tenancy == null || row.tenancyPersonId == null}
+                                                            title={row.tenancyPersonId == null ? 'Bitte zuerst speichern' : undefined}
+                                                            onClick={() => goTo(`${generatorBase}/rental-agreement?personId=${row.tenancyPersonId}&autoGenerate=1`)}
+                                                        />
+                                                    </>
+                                                }
+                                            >
+                                                <div className="flex flex-col gap-3">
+                                                    {renderDocRow(row, mietvertrag, landlordMissing, false)}
+                                                    <p className="text-xs text-muted-foreground">
+                                                        Wohnraummietvertrag für {row.tenant}, inklusive Mietkonditionen, Kaution und Sonderregelungen.
+                                                    </p>
+                                                </div>
+                                            </DataCard>
+                                        ))
+                                    ) : (
+                                        <DataCard
+                                            icon={FileSignature}
+                                            title="Mietvertrag"
+                                            footer={
+                                                <>
+                                                    {renderFooterUpload(mietvertragRows[0], mietvertrag, landlordMissing)}
+                                                    <Button
+                                                        label="Daten prüfen & Vorschau"
+                                                        icon={<Eye className="w-4 h-4" />}
+                                                        variant="outline"
+                                                        disabled={landlordMissing || tenancy == null}
+                                                        onClick={() => goTo(`${generatorBase}/rental-agreement`)}
+                                                    />
+                                                    <Button
+                                                        label="PDF generieren"
+                                                        icon={<FileText className="w-4 h-4" />}
+                                                        variant="primary"
+                                                        disabled={landlordMissing || tenancy == null}
+                                                        onClick={() => goTo(`${generatorBase}/rental-agreement?autoGenerate=1`)}
+                                                    />
+                                                </>
+                                            }
+                                        >
+                                            <div className="flex flex-col gap-3">
+                                                {renderDocRow(mietvertragRows[0], mietvertrag, landlordMissing, false)}
+                                                <p className="text-xs text-muted-foreground">
+                                                    Wohnraummietvertrag für die Mietpartei(en) dieser Einheit, inklusive Mietkonditionen, Kaution und Sonderregelungen.
+                                                </p>
                                             </div>
-                                            <p className="text-xs text-muted-foreground">
-                                                Wohnraummietvertrag für die Mietpartei(en) dieser Einheit, inklusive Mietkonditionen, Kaution und Sonderregelungen.
-                                            </p>
-                                        </div>
-                                    </DataCard>
+                                        </DataCard>
+                                    )}
                                 </div>
                             </div>
                             </>
@@ -1580,7 +1612,7 @@ export function TenantUnitDetail({ propertyId, property, unit, hasMultipleUnits 
             >
                 <p className="text-sm text-muted-foreground">
                     {personIndexPendingDelete !== null
-                        ? `Möchten Sie ${personDisplayName(persons[personIndexPendingDelete], personIndexPendingDelete)} wirklich löschen?`
+                        ? `Möchtest du ${personDisplayName(persons[personIndexPendingDelete], personIndexPendingDelete)} wirklich löschen?`
                         : ''}
                 </p>
             </ConfirmDeleteModal>
@@ -1594,7 +1626,7 @@ export function TenantUnitDetail({ propertyId, property, unit, hasMultipleUnits 
             >
                 <p className="text-sm text-muted-foreground">
                     {docPendingDelete
-                        ? `Möchten Sie ${docPendingDelete.label} wirklich löschen?`
+                        ? `Möchtest du ${docPendingDelete.label} wirklich löschen?`
                         : ''}
                 </p>
             </ConfirmDeleteModal>

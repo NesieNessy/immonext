@@ -379,8 +379,8 @@ export default function RentalAgreementPage({ propertyId, unitId }: { propertyId
                         <div className="flex items-start gap-2.5 p-3 rounded-lg border border-border bg-muted/30">
                             <FileText className="w-4 h-4 shrink-0 text-primary mt-0.5" />
                             <p className="text-sm text-muted-foreground">
-                                Der Mietvertrag wird automatisch aus den hinterlegten Daten befüllt. Ergänzen Sie fehlende Angaben direkt hier, bevor Sie
-                                das Dokument generieren. Änderungen werden in die jeweiligen Bereiche zurückgespiegelt.
+                                Der Mietvertrag wird automatisch aus den hinterlegten Daten befüllt. Ergänze fehlende Angaben direkt hier, bevor du
+                                das Dokument generierst. Änderungen werden in die jeweiligen Bereiche zurückgespiegelt.
                             </p>
                         </div>
 
@@ -390,7 +390,7 @@ export default function RentalAgreementPage({ propertyId, unitId }: { propertyId
                                 <div className="flex items-start gap-2.5 p-3 rounded-lg border border-destructive/30 bg-destructive/10">
                                     <AlertTriangle className="w-4 h-4 shrink-0 text-destructive mt-0.5" />
                                     <p className="text-sm text-destructive">
-                                        Es sind noch keine Vermieterdaten hinterlegt. Bitte ergänzen Sie diese in den{' '}
+                                        Es sind noch keine Vermieterdaten hinterlegt. Bitte ergänze diese in den{' '}
                                         <Link href="/user-settings" className="underline font-medium">Einstellungen</Link>.
                                     </p>
                                 </div>
@@ -536,7 +536,7 @@ export default function RentalAgreementPage({ propertyId, unitId }: { propertyId
                                         </div>
                                     ) : (
                                         <p className="text-sm text-muted-foreground max-w-md">
-                                            Laden Sie die Vermieter-Unterschrift als Bilddatei hoch (PNG, JPG).
+                                            Lade die Vermieter-Unterschrift als Bilddatei hoch (PNG, JPG).
                                             Die Unterschrift des Mieters wird nach Ausdrucken eingeholt.
                                         </p>
                                     )}
