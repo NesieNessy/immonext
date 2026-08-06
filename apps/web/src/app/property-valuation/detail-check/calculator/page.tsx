@@ -1522,6 +1522,19 @@ function CalculatorContent() {
   const [hasPendingChanges, setHasPendingChanges] = useState(false);
   const [confirmApplyOpen, setConfirmApplyOpen] = useState(false);
   /**
+   * Which face the apply dialog shows. It flips to `SAVING` synchronously on
+   * the click, before anything is awaited, so the question and both buttons
+   * are gone the instant the user decides.
+   *
+   * Previously the dialog stayed fully interactive for the whole round-trip —
+   * seconds, against a remote database — and only the confirm button was
+   * disabled. It looked like the click had done nothing, so people pressed
+   * "Hier bleiben" next, which cancelled the navigation even though the apply
+   * was already running or done. They ended up on the calculator with their
+   * changes silently written to the earlier steps.
+   */
+  const [applyPhase, setApplyPhase] = useState<'ASK' | 'SAVING'>('ASK');
+  /**
    * Resolver for the "Änderungen übernehmen?" dialog, so a caller that must
    * decide whether navigation may proceed — `beforeStepChange` returns a
    * boolean the layout obeys — can await the user's answer.
@@ -1599,8 +1612,8 @@ function CalculatorContent() {
   /** Mirrors `hasPendingChanges` for the same reason — `leavePageGuard` runs async. */
   const hasPendingChangesRef = useRef(false);
   const recalcRef = useRef<
-    (nextMode?: CalculatorMode, navigate?: boolean, optimize?: boolean, overrides?: Partial<CalculatorOverrides>, apply?: boolean) => Promise<void>
-  >(async () => undefined);
+    (nextMode?: CalculatorMode, navigate?: boolean, optimize?: boolean, overrides?: Partial<CalculatorOverrides>, apply?: boolean) => Promise<boolean>
+  >(async () => false);
 
   const parameterFields: CalculatorParameterFields = useMemo(() => ({
     startYyyymm,
@@ -1790,7 +1803,10 @@ function CalculatorContent() {
       // matters. Re-merging the same overrides then is a no-op, since the
       // merge above has already folded them into `pendingOverrides`.
       queuedRecalcRef.current = { nextMode, navigate, optimize, overrides, apply };
-      return;
+      // Not persisted — only queued. Callers that must know whether the data
+      // actually reached the database (the apply dialog) have to treat this
+      // as "not yet", never as success.
+      return false;
     }
     isSavingRef.current = true;
     setIsSaving(true);
@@ -1855,8 +1871,10 @@ function CalculatorContent() {
       resetRentPlanRef.current = false;
       setHasPendingChanges(!apply);
       if (navigate) router.push(`/property-valuation/detail-check/macro-location${suffix}`);
+      return true;
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : 'Kalkulation konnte nicht gespeichert werden.');
+      return false;
     } finally {
       isSavingRef.current = false;
       setIsSaving(false);
@@ -1989,6 +2007,7 @@ function CalculatorContent() {
    */
   const requestApplyDecision = () => new Promise<boolean>((resolve) => {
     applyDecisionRef.current = resolve;
+    setApplyPhase('ASK');
     setConfirmApplyOpen(true);
   });
 
@@ -2406,55 +2425,94 @@ function CalculatorContent() {
       {confirmApplyOpen && (
         <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4" role="dialog" aria-modal="true">
           <div className="w-full max-w-lg rounded-lg border border-border bg-card p-6 shadow-xl">
-            <h2 className="text-lg font-medium">Änderungen übernehmen?</h2>
-            <p className="mt-1 text-sm text-muted-foreground">Du verlässt den Kalkulator. Diese Werte wurden geändert:</p>
-            <ul className="my-4 list-disc space-y-1 pl-5 text-sm">
-              <li>Sanierungs- und Mietzeitpunkte</li>
-              <li>Mietanpassungen</li>
-              <li>Finanzierungszinssatz und Break-even</li>
-            </ul>
-            <div className="flex justify-end gap-2">
-              <button
-                className="rounded-md border border-border px-3 py-2"
-                onClick={() => {
-                  // Deliberately does not touch hasPendingChanges/isDirty —
-                  // nothing was applied, so both must stay exactly as they
-                  // were. This used to clear hasPendingChanges here, which
-                  // meant a second attempt to leave (with no further edits)
-                  // skipped this dialog entirely and saved silently instead
-                  // of asking again.
-                  setConfirmApplyOpen(false);
-                  applyDecisionRef.current?.(false);
-                  applyDecisionRef.current = null;
-                }}
-              >
-                Hier bleiben
-              </button>
-              <button
-                className="rounded-md bg-primary px-3 py-2 font-medium text-primary-foreground"
-                disabled={isSaving}
-                onClick={async () => {
-                  // Drop the scheduled write and let any in-flight one finish
-                  // first: the apply below supersedes both, and firing it
-                  // concurrently would put two transactions on the same rows.
-                  cancelScheduledPersist();
-                  while (isSavingRef.current) {
-                    await new Promise((resolve) => window.setTimeout(resolve, 25));
-                  }
-                  // apply = true is what writes the placements, costs, timings
-                  // and interest rate back into the renovation and financing
-                  // steps — the whole point of this dialog.
-                  await recalcRef.current(mode, false, false, undefined, true);
-                  setHasPendingChanges(false);
-                  hasPendingChangesRef.current = false;
-                  setConfirmApplyOpen(false);
-                  applyDecisionRef.current?.(true);
-                  applyDecisionRef.current = null;
-                }}
-              >
-                Übernehmen und weiter
-              </button>
-            </div>
+            {applyPhase === 'SAVING' ? (
+              <div className="flex items-start gap-3" aria-live="polite">
+                <Loader2 className="mt-0.5 h-5 w-5 shrink-0 animate-spin text-primary" />
+                <div>
+                  <h2 className="text-lg font-medium">Änderungen werden übernommen…</h2>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Die Werte werden in die vorherigen Schritte geschrieben. Gleich geht es weiter.
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <>
+                <h2 className="text-lg font-medium">Änderungen übernehmen?</h2>
+                <p className="mt-1 text-sm text-muted-foreground">Du verlässt den Kalkulator. Diese Werte wurden geändert:</p>
+                <ul className="my-4 list-disc space-y-1 pl-5 text-sm">
+                  <li>Sanierungs- und Mietzeitpunkte</li>
+                  <li>Mietanpassungen</li>
+                  <li>Finanzierungszinssatz und Break-even</li>
+                </ul>
+                {/* Shown inside the dialog, not only in the page banner behind
+                    it — after a failed apply the overlay is still up, so a
+                    banner underneath would be invisible exactly when it matters. */}
+                {error && (
+                  <div className="mb-4 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                    Übernehmen fehlgeschlagen: {error}
+                  </div>
+                )}
+                <div className="flex justify-end gap-2">
+                  <button
+                    className="rounded-md border border-border px-3 py-2"
+                    onClick={() => {
+                      // Deliberately does not touch hasPendingChanges/isDirty —
+                      // nothing was applied, so both must stay exactly as they
+                      // were. This used to clear hasPendingChanges here, which
+                      // meant a second attempt to leave (with no further edits)
+                      // skipped this dialog entirely and saved silently instead
+                      // of asking again.
+                      setConfirmApplyOpen(false);
+                      applyDecisionRef.current?.(false);
+                      applyDecisionRef.current = null;
+                    }}
+                  >
+                    Hier bleiben
+                  </button>
+                  <button
+                    className="rounded-md bg-primary px-3 py-2 font-medium text-primary-foreground"
+                    onClick={async () => {
+                      // First statement, before any await: the question and
+                      // both buttons must be gone in the same frame as the
+                      // click, or the user sees an unchanged dialog and
+                      // reaches for "Hier bleiben".
+                      setApplyPhase('SAVING');
+                      setError(null);
+                      // Drop the scheduled write and let any in-flight one
+                      // finish first: the apply below supersedes both, and
+                      // firing it concurrently would put two transactions on
+                      // the same rows.
+                      cancelScheduledPersist();
+                      while (isSavingRef.current) {
+                        await new Promise((resolve) => window.setTimeout(resolve, 25));
+                      }
+                      // A queued retry could otherwise start in the gap above
+                      // and make our own call bounce off the in-flight guard.
+                      queuedRecalcRef.current = null;
+                      // apply = true is what writes the placements, costs,
+                      // timings and interest rate back into the renovation and
+                      // financing steps — the whole point of this dialog.
+                      const applied = await recalcRef.current(mode, false, false, undefined, true);
+                      if (!applied) {
+                        // Never navigate on a failed write. `recalc` swallows
+                        // the error and reports it through `error`, so without
+                        // this check the user would be carried to the next step
+                        // believing everything had been applied.
+                        setApplyPhase('ASK');
+                        return;
+                      }
+                      setHasPendingChanges(false);
+                      hasPendingChangesRef.current = false;
+                      setConfirmApplyOpen(false);
+                      applyDecisionRef.current?.(true);
+                      applyDecisionRef.current = null;
+                    }}
+                  >
+                    Übernehmen und weiter
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}
