@@ -4,45 +4,21 @@ import { Button, CalculatedPanel, Dropdown, MetricCard, MonthField, ReadOnlyFiel
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { authFetch } from '@/lib/api/authFetch';
 import { parseDecimalInput } from '@/lib/detailCheck/acquisitionCosts';
-import { addMonths, CALCULATION_HORIZON_MONTHS, CALCULATION_HORIZON_YEARS, type CalculatorMode, type ModernizationPlanRow, type PlacementMode, type RentIndexSource, type RentIncrease558Row, type RentTimelineRow } from '@/lib/detailCheck/rentCalculator';
+import { addMonths, runRentCalculator, CALCULATION_HORIZON_MONTHS, CALCULATION_HORIZON_YEARS, type CalculatorMode, type CalculatorParams, type ModernizationPlanRow, type PlacementMode, type RentIndexSource, type RentIncrease558Row, type RentTimelineRow } from '@/lib/detailCheck/rentCalculator';
+import { buildEffectiveCalculatorParams, overridesFromParams, type CalculatorOverrides, type CalculatorParameterFields } from '@/lib/detailCheck/calculatorParamNormalization';
 import { costForCase, type RenovationCase, type RenovationTiming } from '@/lib/detailCheck/renovation';
-import { ChevronDown, ChevronUp, LineChart, Sparkles } from 'lucide-react';
+import { Check, ChevronDown, ChevronUp, LineChart, Loader2, Sparkles } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { memo, Suspense, useCallback, useEffect, useMemo, useRef, useState, type PointerEvent } from 'react';
 import { PropertyValuationLayout } from '../PropertyValuationLayout';
 
 type CalculatorResponse = {
-  params: {
-    startYyyymm: string;
-    rentStartYyyymm: string;
-    monthlyRentStart: number;
-    livingAreaM2: number;
-    city: string;
-    postalCode: string;
-    last558Date: string | null;
-    last559Date: string | null;
-    last559MonthlyDelta: number;
-    rentIncreaseIntervalMonths: number;
-    rentIncreaseUtilizationPercent: number;
-    rentIndexPerM2: number | null;
-    rentIndexSource: RentIndexSource;
-    monthlyDebtService: number;
-    interestRate: number;
-    taxRate: number;
-    taxableLossesOffsettable?: boolean;
-    financingInterestRateOverride?: number | null;
-    interestRateOverride?: number | null;
-    refinancingInterestRate?: number | null;
-    interestPeriodYears?: number;
-    equityAmount: number;
-    equityIncluded?: boolean;
-    modernizationPlacements?: Record<string, string>;
-    rentIncreaseOverrides?: Record<string, { effectiveYyyymm?: string; monthlyDelta?: number }>;
-    modernizationCostOverrides?: Record<string, number>;
-    renovationTimingOverrides?: Record<string, RenovationTiming>;
-    mode: CalculatorMode;
-    placementMode: PlacementMode;
-  };
+  // The full library type, not a hand-picked subset: the server echoes
+  // `result.params` verbatim (it genuinely is a complete `CalculatorParams`),
+  // and the live preview's own `runRentCalculator` call needs exactly that
+  // shape as input. A trimmed local copy — what this used to be — silently
+  // drifts from the real shape the moment either side adds a field.
+  params: CalculatorParams;
   selectedFinancingVariant: 'OFFER' | 'INDIVIDUAL';
   denseMarket: boolean;
   capPercent: number;
@@ -58,6 +34,14 @@ type CalculatorResponse = {
   breakEvenWithRentIndex: string | null;
   placementMode: PlacementMode;
   rentIndexSource: 'MANUAL' | 'AUTOMATIC';
+  /**
+   * True when this load discarded a previously-saved manual override
+   * (Gantt placement, cost, rate, etc.) because Objektdaten/Finanzierung/
+   * Sanierung/etc. changed more recently than the calculator was last
+   * saved — the server can no longer trust that override against the new
+   * context, so it fell back to the fresh default instead.
+   */
+  overridesResetByUpstreamChange?: boolean;
   metrics: {
     grossYieldToday: number;
     netYieldToday: number;
@@ -78,6 +62,16 @@ const numberFormatter = new Intl.NumberFormat('de-DE', {
   minimumFractionDigits: 0,
   maximumFractionDigits: 2,
 });
+/**
+ * How long a Parameter field waits after the last keystroke before its value
+ * is persisted. Deliberately calm: the live preview (see `presented` in
+ * CalculatorContent) already reflects every keystroke instantly, so this
+ * number is purely about database write frequency, not perceived
+ * responsiveness — there is no reason for it to be short. It was 350 ms
+ * before the local preview existed, when it was the only thing standing
+ * between a keystroke and the user seeing anything change.
+ */
+const PARAMETER_AUTOSAVE_DEBOUNCE_MS = 1500;
 const CURRENT_YEAR = new Date().getFullYear();
 const LAST_558_YEARS = [CURRENT_YEAR, CURRENT_YEAR - 1];
 const LAST_559_YEARS = Array.from({ length: 6 }, (_, index) => CURRENT_YEAR - index);
@@ -97,6 +91,21 @@ function formatPercentValue(value: number): string {
 function valueString(value: number | null | undefined): string {
   if (value == null) return '';
   return String(value).replace('.', ',');
+}
+
+/** Rebuilds the page's Parameter-panel form state from a saved `params` — the same derivation the load effect uses. */
+function parameterFieldsFromParams(params: CalculatorParams): CalculatorParameterFields {
+  return {
+    startYyyymm: params.startYyyymm,
+    last558Date: params.last558Date ?? '',
+    last559Date: params.last559Date ?? '',
+    last559MonthlyDelta: valueString(params.last559MonthlyDelta),
+    rentIndexPerM2: valueString(params.rentIndexPerM2),
+    rentIndexSource: params.rentIndexSource ?? 'AUTOMATIC',
+    rentIncreaseIntervalMonths: params.rentIncreaseIntervalMonths ?? 15,
+    rentIncreaseUtilizationPercent: params.rentIncreaseUtilizationPercent ?? 100,
+    mode: params.mode,
+  };
 }
 
 function formatMonth(value: string | null): string {
@@ -396,17 +405,38 @@ function TableToggle({ label, open, onClick }: { label: string; open: boolean; o
   );
 }
 
-type CalculatorOverrides = {
-  modernizationPlacements: Record<string, string>;
-  modernizationCostOverrides: Record<string, number>;
-  renovationTimingOverrides: Record<string, RenovationTiming>;
-  rentIncreaseOverrides: Record<string, { effectiveYyyymm?: string; monthlyDelta?: number }>;
-  financingInterestRateOverride: number | null;
-  interestRateOverride: number | null;
-  equityIncluded: boolean;
-  taxRate?: number;
-  taxableLossesOffsettable?: boolean;
-};
+/**
+ * The three states a change can be in: still typing/dragging (handled
+ * elsewhere by the instant local preview), saved, or in between. `isDirty`
+ * and `isSaving` are deliberately separate pieces of state — a save can be
+ * in flight for an *earlier* edit while a *newer* one is already queued
+ * behind it (see `queuedRecalcRef`), in which case both are true at once and
+ * "Wird gespeichert…" is still the more honest thing to show.
+ */
+function SaveStatusIndicator({ isSaving, isDirty }: { isSaving: boolean; isDirty: boolean }) {
+  if (isSaving) {
+    return (
+      <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+        <Loader2 size={14} className="animate-spin" aria-hidden="true" />
+        Wird gespeichert…
+      </span>
+    );
+  }
+  if (isDirty) {
+    return (
+      <span className="inline-flex items-center gap-1.5 text-xs text-amber-600" role="status">
+        <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-amber-500" aria-hidden="true" />
+        Nicht gespeicherte Änderungen
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+      <Check size={14} aria-hidden="true" />
+      Gespeichert
+    </span>
+  );
+}
 
 function monthOffset(start: string, value: string): number {
   const [sy, sm] = start.split('-').map(Number);
@@ -1422,6 +1452,21 @@ function CalculatorContent() {
   const suffix = quickCheckId ? `?quickCheckId=${encodeURIComponent(quickCheckId)}` : workflowId ? `?workflowId=${encodeURIComponent(workflowId)}` : '';
 
   const [data, setData] = useState<CalculatorResponse | null>(null);
+  /**
+   * The single source of truth for every override PlanEditor can commit
+   * (Gantt placements/amounts, financing rate, equity, tax). Updated
+   * synchronously by `recalc` the instant a change is requested — not only
+   * after the server round-trip resolves.
+   *
+   * This exists because `recalc` used to fall back to `data?.params.X` for
+   * any override it wasn't explicitly given, and `data` only ever updates
+   * once a request's response lands. A Parameter field's debounced recalc
+   * firing while a Gantt drag's request was still in flight would therefore
+   * read the pre-drag value and could overwrite the drag with it, depending
+   * on which response happened to land last — a silent, timing-dependent
+   * loss of the user's most recent change.
+   */
+  const [pendingOverrides, setPendingOverrides] = useState<CalculatorOverrides | null>(null);
   const [startYyyymm, setStartYyyymm] = useState('');
   const [monthlyRentStart, setMonthlyRentStart] = useState('');
   const [rentIndexPerM2, setRentIndexPerM2] = useState('');
@@ -1433,7 +1478,6 @@ function CalculatorContent() {
   const [rentIncreaseUtilizationPercent, setRentIncreaseUtilizationPercent] = useState(100);
   const [mode, setMode] = useState<CalculatorMode>('KNOWN');
   const [placementMode, setPlacementMode] = useState<PlacementMode>('DEFAULT');
-  const [interestRate, setInterestRate] = useState(0);
   const [equityIncluded, setEquityIncluded] = useState(false);
   const [timelineViewport, setTimelineViewport] = useState<TimelineViewport>({ start: 0, span: 120 });
   const [showRentIndexComparison, setShowRentIndexComparison] = useState(false);
@@ -1449,11 +1493,134 @@ function CalculatorContent() {
   const [error, setError] = useState<string | null>(null);
   const [hasPendingChanges, setHasPendingChanges] = useState(false);
   const [pendingNavigation, setPendingNavigation] = useState<string | null>(null);
+  const [upstreamResetNotice, setUpstreamResetNotice] = useState(false);
   const lastLiveCalculationRef = useRef('');
   const resetRentPlanRef = useRef(false);
-  const recalcRef = useRef<(nextMode?: CalculatorMode) => Promise<void>>(async () => undefined);
+  type RecalcCall = { nextMode: CalculatorMode; navigate: boolean; optimize: boolean; overrides?: Partial<CalculatorOverrides>; apply: boolean };
+  /**
+   * A recalc requested while another was still in flight — coalesced here
+   * instead of being dropped. `recalc`'s `isSaving` guard used to just
+   * `return` in that case, and the debounced Parameter effect marked its
+   * signature as "sent" the moment its timer fired, before that guard was
+   * even checked. A field changed while an unrelated save was in flight (a
+   * Gantt commit, most commonly) was silently discarded and the effect never
+   * retried it, since — as far as it could tell — that exact input state had
+   * already been sent. See the retry effect below, which fires this once the
+   * in-flight request clears.
+   */
+  const queuedRecalcRef = useRef<RecalcCall | null>(null);
+  /**
+   * The real guard `recalc` checks — updated synchronously, unlike the
+   * `isSaving` *state* below. That distinction matters: several `recalc`
+   * calls dispatched in the same synchronous tick (holding down an arrow key
+   * on the Grenzsteuersatz slider fires one `keydown` — and one `submit()` —
+   * per repeat) all run before React has re-rendered, so they'd all read the
+   * SAME stale `isSaving === false` from their shared closure and all sail
+   * past a state-only guard. That happened, and it deadlocked Postgres:
+   * every call ran its own `syncRentIncreasePlan` transaction against the
+   * same `detail_check_rent_increases` rows at once. A ref has no such
+   * lag — writing `isSavingRef.current = true` is visible to every
+   * subsequent call in the same tick, so only the first one ever proceeds
+   * and the rest queue correctly instead of firing concurrently.
+   *
+   * `isSaving` (state) stays in place for what it's actually for — driving
+   * the UI (disabling buttons, showing a spinner) — it just isn't trusted
+   * for serialization anymore.
+   */
+  const isSavingRef = useRef(false);
+  const recalcRef = useRef<
+    (nextMode?: CalculatorMode, navigate?: boolean, optimize?: boolean, overrides?: Partial<CalculatorOverrides>, apply?: boolean) => Promise<void>
+  >(async () => undefined);
 
-  const visibleTimeline = useMemo(() => data?.timeline ?? [], [data]);
+  const parameterFields: CalculatorParameterFields = useMemo(() => ({
+    startYyyymm,
+    last558Date,
+    last559Date,
+    last559MonthlyDelta,
+    rentIndexPerM2,
+    rentIndexSource,
+    rentIncreaseIntervalMonths,
+    rentIncreaseUtilizationPercent,
+    mode,
+  }), [startYyyymm, last558Date, last559Date, last559MonthlyDelta, rentIndexPerM2, rentIndexSource, rentIncreaseIntervalMonths, rentIncreaseUtilizationPercent, mode]);
+
+  /**
+   * The live preview: recomputed with `runRentCalculator` on every render
+   * where an override or a Parameter field actually changed — around 4 ms
+   * (measured), well inside a 60 fps frame budget, so this reacts to a drag
+   * or a keystroke immediately instead of waiting on the network. `recalc`
+   * still POSTs to persist, on its existing debounce/commit cadence, fully
+   * decoupled from what's on screen.
+   *
+   * `buildEffectiveCalculatorParams` is the exact same function the API
+   * route calls (`@/lib/detailCheck/calculatorParamNormalization`) — proven
+   * byte-identical to the server's own output in
+   * calculatorParamNormalization.test.ts — so this can never show the user
+   * something the server wouldn't also compute for the same input.
+   *
+   * `resetRentPlanRef.current` is read directly rather than listed as a
+   * dependency (refs can't be): it only ever changes in the same synchronous
+   * handler as `rentIncreaseIntervalMonths`/`rentIncreaseUtilizationPercent`,
+   * which already are dependencies, so a render is always guaranteed exactly
+   * when it flips.
+   */
+  const effectiveParams = useMemo(() => {
+    if (!data) return null;
+    return buildEffectiveCalculatorParams(
+      data.params,
+      parameterFields,
+      pendingOverrides ?? overridesFromParams(data.params),
+      {
+        resetRentIncreasePlan: resetRentPlanRef.current,
+        storedRentIncreasePlan: data.params.rentIncreasePlan,
+      },
+    );
+  }, [data, parameterFields, pendingOverrides]);
+
+  const localResult = useMemo(() => {
+    if (!data || !effectiveParams) return null;
+    return runRentCalculator(effectiveParams, data.renovationCases);
+  }, [effectiveParams, data]);
+
+  /**
+   * What every table, chart, and read-only figure on this page actually
+   * renders from. `data` itself stays the last *server-confirmed* snapshot —
+   * needed as `runRentCalculator`'s baseline above and as the fallback for
+   * `recalc`'s request body — while `presented` is that snapshot with every
+   * computed field replaced by the fresh local result, so the page reflects
+   * the user's latest edit even while the corresponding save is still
+   * in flight or merely debounced.
+   */
+  const presented: CalculatorResponse | null = useMemo(() => {
+    if (!data || !localResult) return data;
+    return { ...data, ...localResult };
+  }, [data, localResult]);
+
+  /**
+   * Is there a local edit `recalc` hasn't yet persisted? Derived, not tracked
+   * by hand: `effectiveParams` is exactly what the next save would send.
+   * Compared against a *baseline* built the same way from `data.params` —
+   * not against `data.params` directly — because `buildEffectiveCalculatorParams`
+   * normalizes a couple of fields cosmetically (an absent
+   * `rentIncreaseOverrides` becomes `{}`, for instance; see
+   * calculatorParamNormalization.test.ts for why that's harmless to the
+   * actual calculation). Comparing directly against the raw server object
+   * would flag that normalization itself as an unsaved change on every
+   * single load, before the user has touched anything. Running both sides
+   * through the same function cancels those quirks out identically.
+   */
+  const isDirty = useMemo(() => {
+    if (!data || !effectiveParams) return false;
+    const baseline = buildEffectiveCalculatorParams(
+      data.params,
+      parameterFieldsFromParams(data.params),
+      overridesFromParams(data.params),
+      { resetRentIncreasePlan: false, storedRentIncreasePlan: data.params.rentIncreasePlan },
+    );
+    return JSON.stringify(effectiveParams) !== JSON.stringify(baseline);
+  }, [effectiveParams, data]);
+
+  const visibleTimeline = useMemo(() => presented?.timeline ?? [], [presented]);
   const chartRows = useMemo(() => buildChartRows(visibleTimeline), [visibleTimeline]);
   const startMonthError = startYyyymm && !/^\d{4}-(0[1-9]|1[0-2])$/.test(startYyyymm)
     ? 'Bitte einen gültigen Monat wählen.'
@@ -1492,8 +1659,9 @@ function CalculatorContent() {
         setRentIncreaseUtilizationPercent(loaded.params.rentIncreaseUtilizationPercent ?? 100);
         setMode(loaded.params.mode);
         setPlacementMode(loaded.placementMode ?? loaded.params.placementMode ?? 'DEFAULT');
-        setInterestRate(loaded.params.refinancingInterestRate ?? loaded.params.interestRate ?? 0);
         setEquityIncluded(loaded.params.equityIncluded === true);
+        setPendingOverrides(overridesFromParams(loaded.params));
+        setUpstreamResetNotice(loaded.overridesResetByUpstreamChange === true);
         lastLiveCalculationRef.current = JSON.stringify({
           startYyyymm: loaded.params.startYyyymm,
           monthlyRentStart: valueString(loaded.params.monthlyRentStart),
@@ -1519,9 +1687,29 @@ function CalculatorContent() {
   }, [suffix]);
 
   const recalc = async (nextMode = mode, navigate = false, optimize = false, overrides?: Partial<CalculatorOverrides>, apply = false) => {
-    if (isSaving) return;
+    if (isSavingRef.current) {
+      // Coalesce onto whatever's already queued rather than stacking retries —
+      // once the in-flight request clears, only the latest requested state
+      // matters.
+      queuedRecalcRef.current = { nextMode, navigate, optimize, overrides, apply };
+      return;
+    }
+    isSavingRef.current = true;
     setIsSaving(true);
     setError(null);
+    // The one merge point for every override field, regardless of whether this
+    // call came from a Gantt commit (which passes `overrides`) or a Parameter
+    // field's debounced recalc (which doesn't). Reading `pendingOverrides` here
+    // — instead of `data?.params.X`, as this used to — means a Parameter-driven
+    // request always carries the latest committed Gantt state even if that
+    // commit's own request hasn't resolved yet; see the field's doc comment.
+    const baseOverrides = pendingOverrides ?? overridesFromParams(data?.params ?? { taxRate: 0.42 } as CalculatorResponse['params']);
+    const effectiveOverrides: CalculatorOverrides = { ...baseOverrides, ...overrides };
+    if (overrides) {
+      // Functional form so two calls landing in back-to-back ticks each merge
+      // onto the other's result instead of onto the same stale snapshot.
+      setPendingOverrides((prev) => ({ ...(prev ?? baseOverrides), ...overrides }));
+    }
     try {
       const res = await authFetch('/api/detail-check/calculator', {
         method: 'POST',
@@ -1540,16 +1728,16 @@ function CalculatorContent() {
           rentIncreaseUtilizationPercent,
           mode: nextMode,
           optimize,
-          financingInterestRateOverride: overrides?.financingInterestRateOverride ?? data?.params.financingInterestRateOverride ?? null,
-          interestRateOverride: overrides?.interestRateOverride ?? (interestRate || null),
-          equityIncluded: overrides?.equityIncluded ?? equityIncluded,
-          taxRate: overrides?.taxRate ?? data?.params.taxRate ?? 0.42,
-          taxableLossesOffsettable: overrides?.taxableLossesOffsettable ?? data?.params.taxableLossesOffsettable ?? false,
-          modernizationPlacements: overrides?.modernizationPlacements ?? data?.params.modernizationPlacements,
-          modernizationCostOverrides: overrides?.modernizationCostOverrides ?? data?.params.modernizationCostOverrides,
-          renovationTimingOverrides: overrides?.renovationTimingOverrides ?? data?.params.renovationTimingOverrides,
+          financingInterestRateOverride: effectiveOverrides.financingInterestRateOverride,
+          interestRateOverride: effectiveOverrides.interestRateOverride,
+          equityIncluded: effectiveOverrides.equityIncluded,
+          taxRate: effectiveOverrides.taxRate ?? 0.42,
+          taxableLossesOffsettable: effectiveOverrides.taxableLossesOffsettable ?? false,
+          modernizationPlacements: effectiveOverrides.modernizationPlacements,
+          modernizationCostOverrides: effectiveOverrides.modernizationCostOverrides,
+          renovationTimingOverrides: effectiveOverrides.renovationTimingOverrides,
           resetRentIncreasePlan: optimize || resetRentPlanRef.current,
-          rentIncreaseOverrides: optimize || resetRentPlanRef.current ? {} : (overrides?.rentIncreaseOverrides ?? data?.params.rentIncreaseOverrides),
+          rentIncreaseOverrides: optimize || resetRentPlanRef.current ? {} : effectiveOverrides.rentIncreaseOverrides,
           apply,
         }),
       });
@@ -1558,18 +1746,37 @@ function CalculatorContent() {
       setData(updated);
       setMode(updated.params.mode);
       setPlacementMode(updated.placementMode ?? 'DEFAULT');
-      setInterestRate(updated.params.refinancingInterestRate ?? updated.params.interestRate ?? 0);
       setEquityIncluded(updated.params.equityIncluded === true);
+      // Re-align with the server's confirmed state — it is the final authority
+      // and may have clamped a requested value (e.g. a §558 date outside the
+      // legal window), so the saved figure is not always byte-identical to
+      // what was requested.
+      setPendingOverrides(overridesFromParams(updated.params));
       resetRentPlanRef.current = false;
       setHasPendingChanges(!apply);
       if (navigate) router.push(`/property-valuation/detail-check/macro-location${suffix}`);
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : 'Kalkulation konnte nicht gespeichert werden.');
     } finally {
+      isSavingRef.current = false;
       setIsSaving(false);
     }
   };
   recalcRef.current = recalc;
+
+  // Fires whatever got queued by the `isSaving` guard above, once the request
+  // that blocked it has cleared. Runs as an effect (rather than being called
+  // straight from `recalc`'s `finally`) so it goes through `recalcRef.current`
+  // on a fresh render — the just-finished request's `setPendingOverrides`/
+  // `setData` calls need a render to land before this reads them, otherwise
+  // the retry would recompute its merge from the pre-save snapshot.
+  useEffect(() => {
+    if (isSaving) return;
+    const queued = queuedRecalcRef.current;
+    if (!queued) return;
+    queuedRecalcRef.current = null;
+    void recalcRef.current(queued.nextMode, queued.navigate, queued.optimize, queued.overrides, queued.apply);
+  }, [isSaving]);
 
   useEffect(() => {
     if (isLoading || isSaving || !data || startMonthError || last558Error || last559Error || !startYyyymm || monthlyRentStart === '') return;
@@ -1580,7 +1787,7 @@ function CalculatorContent() {
     const timer = window.setTimeout(() => {
       lastLiveCalculationRef.current = signature;
       void recalcRef.current(mode);
-    }, 350);
+    }, PARAMETER_AUTOSAVE_DEBOUNCE_MS);
 
     return () => window.clearTimeout(timer);
   }, [data, isLoading, isSaving, last558Date, last558Error, last559Date, last559Error, last559MonthlyDelta, mode, monthlyRentStart, rentIndexPerM2, rentIndexSource, rentIncreaseIntervalMonths, rentIncreaseUtilizationPercent, startMonthError, startYyyymm]);
@@ -1591,32 +1798,81 @@ function CalculatorContent() {
     void recalc(nextMode);
   };
 
-  const navigateWithConfirmation = (path: string) => {
-    if (hasPendingChanges) setPendingNavigation(path);
-    else router.push(path);
+  // Warns before closing the tab, reloading, or navigating away by URL —
+  // paths this page cannot intercept itself. Internal navigation (below) is
+  // covered separately by flushing the pending save directly, since a native
+  // "leave site?" prompt would be a worse experience than just saving.
+  useEffect(() => {
+    if (!isDirty) return;
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = '';
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [isDirty]);
+
+  /**
+   * Ensures nothing typed in the last `PARAMETER_AUTOSAVE_DEBOUNCE_MS` is
+   * lost to a navigation that fires before that timer would have. Called
+   * from every way this page can be left: the stepper (`beforeStepChange`),
+   * "Zurück", and "Überspringen".
+   */
+  const flushPendingSave = async () => {
+    if (isDirty) await recalc(mode);
+  };
+
+  const navigateWithConfirmation = async (path: string) => {
+    if (hasPendingChanges) {
+      setPendingNavigation(path);
+      return;
+    }
+    await flushPendingSave();
+    router.push(path);
   };
 
   return (
     <PropertyValuationLayout
       currentStep={6}
       title="Mietkalkulator"
+      beforeStepChange={async () => { await flushPendingSave(); return true; }}
       actions={
-        <Button
-          label="Überspringen"
-          variant="outline"
-          hideLabelOnMobile
-          onClick={() => navigateWithConfirmation(`/property-valuation/detail-check/macro-location${suffix}`)}
-        />
+        <>
+          <SaveStatusIndicator isSaving={isSaving} isDirty={isDirty} />
+          <Button
+            label="Überspringen"
+            variant="outline"
+            hideLabelOnMobile
+            onClick={() => void navigateWithConfirmation(`/property-valuation/detail-check/macro-location${suffix}`)}
+          />
+        </>
       }
     >
       <div className="pb-24">
+        {upstreamResetNotice && (
+          <div className="mb-4 flex items-start justify-between gap-4 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-700/60 dark:bg-amber-950/40 dark:text-amber-200">
+            <p>
+              Da sich zugrunde liegende Daten (z.&nbsp;B. Objektdaten, Finanzierung oder Sanierung) seit der letzten
+              Speicherung geändert haben, wurden manuelle Anpassungen im Kalkulator (Platzierungen, Zinssatz-Override,
+              Mieterhöhungsplan o.&nbsp;Ä.) zurückgesetzt. Bitte prüfen und bei Bedarf erneut anpassen.
+            </p>
+            <button
+              type="button"
+              onClick={() => setUpstreamResetNotice(false)}
+              className="shrink-0 text-amber-900/70 hover:text-amber-900 dark:text-amber-200/70 dark:hover:text-amber-200"
+              aria-label="Hinweis schließen"
+            >
+              ✕
+            </button>
+          </div>
+        )}
         {error && (
           <div className="mb-4 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
             {error}
           </div>
         )}
 
-        {isLoading || !data ? (
+        {isLoading || !data || !presented ? (
           <p className="text-sm text-muted-foreground">Kalkulator wird geladen...</p>
         ) : (
           <div className="flex flex-col gap-8">
@@ -1642,7 +1898,7 @@ function CalculatorContent() {
                   <TimelineEventConnectors rows={chartRows} viewport={timelineViewport} />
                   <CalculatorChart rows={chartRows} showRentIndex={showRentIndexComparison} viewport={timelineViewport} />
                   <PlanEditor
-                    data={data}
+                    data={presented}
                     startYyyymm={startYyyymm}
                     equityIncluded={equityIncluded}
                     viewport={timelineViewport}
@@ -1682,13 +1938,13 @@ function CalculatorContent() {
                 </button>
                 {showImportedDetails && (
                   <div className="mt-4 grid gap-4 border-t border-border pt-4 md:grid-cols-2 lg:grid-cols-3">
-                    <ReadOnlyField label="Größe · Objektdaten" value={`${numberFormatter.format(data.params.livingAreaM2)} m²`} />
-                    <ReadOnlyField label="Ort / PLZ · Objektdaten" value={`${data.params.city || '-'} ${data.params.postalCode || ''}`.trim()} />
-                    <ReadOnlyField label="Finanzierungsvariante · Finanzierung" value={data.selectedFinancingVariant === 'INDIVIDUAL' ? 'Individuell' : 'Angebot'} />
-                    <ReadOnlyField label="Kapitaldienst Monat · Finanzierung" value={formatCurrency(data.params.monthlyDebtService)} />
-                    <ReadOnlyField label="AfA pro Monat · Abschreibung" value={formatCurrency(data.timeline[0]?.afa ?? 0)} />
-                    <ReadOnlyField label="Nicht umlagefähige Kosten · Vermietung" value={formatCurrency(data.timeline[0]?.nonAllocableCosts ?? 0)} />
-                    <ReadOnlyField label="Erste Vermietung ab Kauf · Vermietung" value={formatMonth(data.params.rentStartYyyymm)} />
+                    <ReadOnlyField label="Größe · Objektdaten" value={`${numberFormatter.format(presented.params.livingAreaM2)} m²`} />
+                    <ReadOnlyField label="Ort / PLZ · Objektdaten" value={`${presented.params.city || '-'} ${presented.params.postalCode || ''}`.trim()} />
+                    <ReadOnlyField label="Finanzierungsvariante · Finanzierung" value={presented.selectedFinancingVariant === 'INDIVIDUAL' ? 'Individuell' : 'Angebot'} />
+                    <ReadOnlyField label="Kapitaldienst Monat · Finanzierung" value={formatCurrency(presented.params.monthlyDebtService)} />
+                    <ReadOnlyField label="AfA pro Monat · Abschreibung" value={formatCurrency(presented.timeline[0]?.afa ?? 0)} />
+                    <ReadOnlyField label="Nicht umlagefähige Kosten · Vermietung" value={formatCurrency(presented.timeline[0]?.nonAllocableCosts ?? 0)} />
+                    <ReadOnlyField label="Erste Vermietung ab Kauf · Vermietung" value={formatMonth(presented.params.rentStartYyyymm)} />
                   </div>
                 )}
               </div>
@@ -1715,24 +1971,24 @@ function CalculatorContent() {
               <div className="order-7 mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
                 <MetricCard
                   label="Kaltmiete heute"
-                  value={formatCurrency(data.params.monthlyRentStart)}
+                  value={formatCurrency(presented.params.monthlyRentStart)}
                   detail="Aus der Vermietung übernommen"
                 />
                 <MetricCard
                   label="Break-even nach Steuern"
-                  value={formatMonth(data.breakEven)}
+                  value={formatMonth(presented.breakEven)}
                   detail="Wird live aus der Planung berechnet"
-                  tone={data.breakEven ? 'positive' : 'warning'}
+                  tone={presented.breakEven ? 'positive' : 'warning'}
                 />
                 <MetricCard
                   label={`Miete in ${CALCULATION_HORIZON_YEARS} Jahren`}
-                  value={formatCurrency(data.metrics.rentAtHorizon)}
+                  value={formatCurrency(presented.metrics.rentAtHorizon)}
                   detail="Basisszenario der aktuellen Planung"
                 />
                 <MetricCard
                   label="Planstatus"
                   value="regelkonform"
-                  detail={`${data.modernizationPlan.length} Sanierungen · ${data.increases558.length} §558-Erhöhungen`}
+                  detail={`${presented.modernizationPlan.length} Sanierungen · ${presented.increases558.length} §558-Erhöhungen`}
                   tone="positive"
                 />
               </div>
@@ -1743,15 +1999,15 @@ function CalculatorContent() {
                   description="Automatisch aus Parametern, Finanzierung, Steuern und Zeitplanung ermittelt"
                 >
                   <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                    <ReadOnlyField label="Kappungsgrenze" value={`${data.denseMarket ? 'Ballungsgebiet' : 'Regelfall'} · ${formatPercent(data.capPercent)}`} />
-                    <ReadOnlyField label="§559-Deckel" value={`${formatCurrency(data.capAbs)} / Monat`} />
-                    <ReadOnlyField label="Verfügbarer §559-Spielraum" value={`${formatCurrency(data.remaining559Room)} / Monat`} helperText={data.previous559Used > 0 ? `${formatCurrency(data.previous559Used)} aus früherer Erhöhung berücksichtigt` : 'Keine frühere §559-Erhöhung im Sechsjahresfenster'} />
-                    <ReadOnlyField label="Break-even mit Mietspiegel" value={formatMonth(data.breakEvenWithRentIndex)} />
-                    <ReadOnlyField label="Mietspiegelquelle" value={data.rentIndexSource === 'MANUAL' ? 'Manuelle Eingabe' : 'Automatisch aus Baujahr/Fläche'} />
-                    <ReadOnlyField label="Cashflow heute" value={formatCurrency(data.metrics.cashflowToday)} />
-                    <ReadOnlyField label="Nettomietrendite heute" value={formatPercentValue(data.metrics.netYieldToday)} />
-                    <ReadOnlyField label={`Miete nach ${CALCULATION_HORIZON_YEARS} Jahren mit Mietspiegel`} value={formatCurrency(data.metrics.rentAtHorizonWithRentIndex)} />
-                    <ReadOnlyField label={`Kumulierter Cashflow nach ${CALCULATION_HORIZON_YEARS} Jahren`} value={formatCurrency(data.metrics.endingCashflow)} />
+                    <ReadOnlyField label="Kappungsgrenze" value={`${presented.denseMarket ? 'Ballungsgebiet' : 'Regelfall'} · ${formatPercent(presented.capPercent)}`} />
+                    <ReadOnlyField label="§559-Deckel" value={`${formatCurrency(presented.capAbs)} / Monat`} />
+                    <ReadOnlyField label="Verfügbarer §559-Spielraum" value={`${formatCurrency(presented.remaining559Room)} / Monat`} helperText={presented.previous559Used > 0 ? `${formatCurrency(presented.previous559Used)} aus früherer Erhöhung berücksichtigt` : 'Keine frühere §559-Erhöhung im Sechsjahresfenster'} />
+                    <ReadOnlyField label="Break-even mit Mietspiegel" value={formatMonth(presented.breakEvenWithRentIndex)} />
+                    <ReadOnlyField label="Mietspiegelquelle" value={presented.rentIndexSource === 'MANUAL' ? 'Manuelle Eingabe' : 'Automatisch aus Baujahr/Fläche'} />
+                    <ReadOnlyField label="Cashflow heute" value={formatCurrency(presented.metrics.cashflowToday)} />
+                    <ReadOnlyField label="Nettomietrendite heute" value={formatPercentValue(presented.metrics.netYieldToday)} />
+                    <ReadOnlyField label={`Miete nach ${CALCULATION_HORIZON_YEARS} Jahren mit Mietspiegel`} value={formatCurrency(presented.metrics.rentAtHorizonWithRentIndex)} />
+                    <ReadOnlyField label={`Kumulierter Cashflow nach ${CALCULATION_HORIZON_YEARS} Jahren`} value={formatCurrency(presented.metrics.endingCashflow)} />
                   </div>
                 </CalculatedPanel>
                 </div>
@@ -1862,11 +2118,11 @@ function CalculatorContent() {
                         </tr>
                       </thead>
                       <tbody>
-                        {data.modernizationPlan.length === 0 ? (
+                        {presented.modernizationPlan.length === 0 ? (
                           <tr>
                             <td colSpan={4} className="px-4 py-5 text-muted-foreground">Keine Modernisierungsmaßnahmen geplant.</td>
                           </tr>
-                        ) : data.modernizationPlan.map((item) => (
+                        ) : presented.modernizationPlan.map((item) => (
                           <tr key={item.id} className="border-t border-border">
                             <td className="px-4 py-3">{item.title}</td>
                             <td className="px-4 py-3">{item.paymentYyyymm}</td>
@@ -1895,11 +2151,11 @@ function CalculatorContent() {
                         </tr>
                       </thead>
                       <tbody>
-                        {data.increases558.length === 0 ? (
+                        {presented.increases558.length === 0 ? (
                           <tr>
                             <td colSpan={2} className="px-4 py-5 text-muted-foreground">Keine §558-Erhöhung im Zeitraum.</td>
                           </tr>
-                        ) : data.increases558.map((item) => (
+                        ) : presented.increases558.map((item) => (
                           <tr key={`${item.effectiveYyyymm}-${item.monthlyDelta}`} className="border-t border-border">
                             <td className="px-4 py-3">{item.effectiveYyyymm}</td>
                             <td className="px-4 py-3 text-right">{formatCurrency(item.monthlyDelta)}</td>
@@ -1956,13 +2212,50 @@ function CalculatorContent() {
         show
         ghostLabel={BUTTON_DETAILS.Back.label}
         ghostIcon={<BUTTON_DETAILS.Back.icon />}
-        onGhost={() => navigateWithConfirmation(`/property-valuation/detail-check/renovation${suffix}`)}
+        onGhost={() => void navigateWithConfirmation(`/property-valuation/detail-check/renovation${suffix}`)}
         primaryLabel="Weiter"
         primaryIcon={<BUTTON_DETAILS.Next.icon />}
         primaryDisabled={isLoading || isSaving}
         onPrimary={() => hasPendingChanges ? setPendingNavigation(`/property-valuation/detail-check/macro-location${suffix}`) : recalc(mode, true, false, undefined, true)}
       />
-      {pendingNavigation && <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4" role="dialog" aria-modal="true"><div className="w-full max-w-lg rounded-lg border border-border bg-card p-6 shadow-xl"><h2 className="text-lg font-medium">Änderungen übernehmen?</h2><p className="mt-1 text-sm text-muted-foreground">Du verlässt den Kalkulator. Diese Werte wurden geändert:</p><ul className="my-4 list-disc space-y-1 pl-5 text-sm"><li>Sanierungs- und Mietzeitpunkte</li><li>Mietanpassungen</li><li>Finanzierungszinssatz und Break-even</li></ul><div className="flex justify-end gap-2"><button className="rounded-md border border-border px-3 py-2" onClick={() => { setPendingNavigation(null); setHasPendingChanges(false); }}>Hier bleiben</button><button className="rounded-md bg-primary px-3 py-2 font-medium text-primary-foreground" onClick={async () => { const nextPath = pendingNavigation; await recalc(mode, false, false, undefined, true); setPendingNavigation(null); setHasPendingChanges(false); if (nextPath) router.push(nextPath); }}>Übernehmen und weiter</button></div></div></div>}
+      {pendingNavigation && (
+        <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4" role="dialog" aria-modal="true">
+          <div className="w-full max-w-lg rounded-lg border border-border bg-card p-6 shadow-xl">
+            <h2 className="text-lg font-medium">Änderungen übernehmen?</h2>
+            <p className="mt-1 text-sm text-muted-foreground">Du verlässt den Kalkulator. Diese Werte wurden geändert:</p>
+            <ul className="my-4 list-disc space-y-1 pl-5 text-sm">
+              <li>Sanierungs- und Mietzeitpunkte</li>
+              <li>Mietanpassungen</li>
+              <li>Finanzierungszinssatz und Break-even</li>
+            </ul>
+            <div className="flex justify-end gap-2">
+              <button
+                className="rounded-md border border-border px-3 py-2"
+                onClick={() => setPendingNavigation(null)}
+              >
+                {/* Deliberately does not touch hasPendingChanges/isDirty — nothing
+                    was saved, so both must stay exactly as they were. This used
+                    to clear hasPendingChanges here, which meant "Weiter" clicked
+                    a second time (with no further edits made) skipped this dialog
+                    entirely and saved silently instead of asking again. */}
+                Hier bleiben
+              </button>
+              <button
+                className="rounded-md bg-primary px-3 py-2 font-medium text-primary-foreground"
+                onClick={async () => {
+                  const nextPath = pendingNavigation;
+                  await recalc(mode, false, false, undefined, true);
+                  setPendingNavigation(null);
+                  setHasPendingChanges(false);
+                  if (nextPath) router.push(nextPath);
+                }}
+              >
+                Übernehmen und weiter
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </PropertyValuationLayout>
   );
 }

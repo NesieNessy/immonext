@@ -1,0 +1,464 @@
+{
+  "params": {
+    "startYyyymm": "2026-08",
+    "rentStartYyyymm": "2026-08",
+    "monthlyRentStart": 2000,
+    "livingAreaM2": 120,
+    "yearOfConstruction": 1980,
+    "city": "München",
+    "postalCode": "80333",
+    "last558Date": null,
+    "last559Date": null,
+    "last559MonthlyDelta": 0,
+    "rentIncreaseIntervalMonths": 18,
+    "rentIncreaseUtilizationPercent": 15.8,
+    "rentIndexPerM2": 20.5,
+    "rentIndexSource": "MANUAL",
+    "monthlyDebtService": 1196.96,
+    "loanAmount": 265991.63,
+    "interestRate": 3.4,
+    "repaymentRate": 2,
+    "monthlyAfa": 216.67,
+    "serviceChargesAllocable": 0,
+    "serviceChargesNonAllocable": 0,
+    "purchasePrice": 200000,
+    "totalInvestment": 265991.63,
+    "taxRate": 0.1,
+    "taxableLossesOffsettable": false,
+    "equityAmount": 0,
+    "equityIncluded": false,
+    "financingInterestRateOverride": 3.4,
+    "interestRateOverride": 3.4,
+    "interestPeriodYears": 10,
+    "refinancingInterestRate": 3.4,
+    "modernizationPlacements": {
+      "5c7d71dd-ecce-429a-8c57-86e71d644392": "2026-11",
+      "7dd2f981-8bcc-4a38-9960-703a34671460": "2033-09",
+      "7e90e828-f17f-4149-9f18-008fa5008a49": "2027-08",
+      "bd6615c9-6ce4-406b-92ed-840ab45e1658": "2028-07"
+    },
+    "modernizationCostOverrides": {
+      "7dd2f981-8bcc-4a38-9960-703a34671460": 1200,
+      "7e90e828-f17f-4149-9f18-008fa5008a49": 12700,
+      "bd6615c9-6ce4-406b-92ed-840ab45e1658": 10850
+    },
+    "renovationTimingOverrides": {
+      "5c7d71dd-ecce-429a-8c57-86e71d644392": "FLEXIBEL",
+      "7dd2f981-8bcc-4a38-9960-703a34671460": "FLEXIBEL",
+      "7e90e828-f17f-4149-9f18-008fa5008a49": "FLEXIBEL",
+      "bd6615c9-6ce4-406b-92ed-840ab45e1658": "FLEXIBEL"
+    },
+    "rentIncreasePlan": [
+      {
+        "id": "1",
+        "legalBasis": "558",
+        "sourceType": "MANUAL",
+        "sourceId": null,
+        "sequenceNumber": 1,
+        "effectiveYyyymm": "2034-11",
+        "monthlyAmount": 95.81
+      },
+      {
+        "id": "2",
+        "legalBasis": "558",
+        "sourceType": "RENT_INDEX",
+        "sourceId": null,
+        "sequenceNumber": 2,
+        "effectiveYyyymm": "2036-10",
+        "monthlyAmount": 12.9
+      },
+      {
+        "id": "3",
+        "legalBasis": "558",
+        "sourceType": "RENT_INDEX",
+        "sourceId": null,
+        "sequenceNumber": 3,
+        "effectiveYyyymm": "2038-04",
+        "monthlyAmount": 26.11
+      },
+      {
+        "id": "4",
+        "legalBasis": "558",
+        "sourceType": "RENT_INDEX",
+        "sourceId": null,
+        "sequenceNumber": 4,
+        "effectiveYyyymm": "2039-10",
+        "monthlyAmount": 29.85
+      },
+      {
+        "id": "5",
+        "legalBasis": "558",
+        "sourceType": "RENT_INDEX",
+        "sourceId": null,
+        "sequenceNumber": 5,
+        "effectiveYyyymm": "2041-04",
+        "monthlyAmount": 41.32
+      },
+      {
+        "id": "6",
+        "legalBasis": "558",
+        "sourceType": "RENT_INDEX",
+        "sourceId": null,
+        "sequenceNumber": 6,
+        "effectiveYyyymm": "2042-10",
+        "monthlyAmount": 42.66
+      },
+      {
+        "id": "7",
+        "legalBasis": "558",
+        "sourceType": "RENT_INDEX",
+        "sourceId": null,
+        "sequenceNumber": 7,
+        "effectiveYyyymm": "2044-04",
+        "monthlyAmount": 43.43
+      },
+      {
+        "id": "8",
+        "legalBasis": "558",
+        "sourceType": "RENT_INDEX",
+        "sourceId": null,
+        "sequenceNumber": 8,
+        "effectiveYyyymm": "2045-10",
+        "monthlyAmount": 44.31
+      },
+      {
+        "id": "9",
+        "legalBasis": "558",
+        "sourceType": "RENT_INDEX",
+        "sourceId": null,
+        "sequenceNumber": 9,
+        "effectiveYyyymm": "2047-04",
+        "monthlyAmount": 45.21
+      },
+      {
+        "id": "10",
+        "legalBasis": "558",
+        "sourceType": "RENT_INDEX",
+        "sourceId": null,
+        "sequenceNumber": 10,
+        "effectiveYyyymm": "2048-10",
+        "monthlyAmount": 46.11
+      },
+      {
+        "id": "11",
+        "legalBasis": "558",
+        "sourceType": "RENT_INDEX",
+        "sourceId": null,
+        "sequenceNumber": 11,
+        "effectiveYyyymm": "2050-04",
+        "monthlyAmount": 47.04
+      },
+      {
+        "id": "12",
+        "legalBasis": "558",
+        "sourceType": "RENT_INDEX",
+        "sourceId": null,
+        "sequenceNumber": 12,
+        "effectiveYyyymm": "2051-10",
+        "monthlyAmount": 47.99
+      },
+      {
+        "id": "13",
+        "legalBasis": "558",
+        "sourceType": "RENT_INDEX",
+        "sourceId": null,
+        "sequenceNumber": 13,
+        "effectiveYyyymm": "2053-04",
+        "monthlyAmount": 48.95
+      },
+      {
+        "id": "14",
+        "legalBasis": "558",
+        "sourceType": "RENT_INDEX",
+        "sourceId": null,
+        "sequenceNumber": 14,
+        "effectiveYyyymm": "2054-10",
+        "monthlyAmount": 49.94
+      },
+      {
+        "id": "101",
+        "legalBasis": "558",
+        "sourceType": "RENT_INDEX",
+        "sourceId": null,
+        "sequenceNumber": 15,
+        "effectiveYyyymm": "2056-04",
+        "monthlyAmount": 50.94
+      },
+      {
+        "id": "102",
+        "legalBasis": "558",
+        "sourceType": "RENT_INDEX",
+        "sourceId": null,
+        "sequenceNumber": 16,
+        "effectiveYyyymm": "2057-10",
+        "monthlyAmount": 51.97
+      },
+      {
+        "id": "103",
+        "legalBasis": "558",
+        "sourceType": "RENT_INDEX",
+        "sourceId": null,
+        "sequenceNumber": 17,
+        "effectiveYyyymm": "2059-04",
+        "monthlyAmount": 53.01
+      },
+      {
+        "id": "104",
+        "legalBasis": "558",
+        "sourceType": "RENT_INDEX",
+        "sourceId": null,
+        "sequenceNumber": 18,
+        "effectiveYyyymm": "2060-10",
+        "monthlyAmount": 54.08
+      },
+      {
+        "id": "105",
+        "legalBasis": "558",
+        "sourceType": "RENT_INDEX",
+        "sourceId": null,
+        "sequenceNumber": 19,
+        "effectiveYyyymm": "2062-04",
+        "monthlyAmount": 55.17
+      },
+      {
+        "id": "106",
+        "legalBasis": "558",
+        "sourceType": "RENT_INDEX",
+        "sourceId": null,
+        "sequenceNumber": 20,
+        "effectiveYyyymm": "2063-10",
+        "monthlyAmount": 56.28
+      },
+      {
+        "id": "107",
+        "legalBasis": "558",
+        "sourceType": "RENT_INDEX",
+        "sourceId": null,
+        "sequenceNumber": 21,
+        "effectiveYyyymm": "2065-04",
+        "monthlyAmount": 57.41
+      },
+      {
+        "id": "108",
+        "legalBasis": "558",
+        "sourceType": "RENT_INDEX",
+        "sourceId": null,
+        "sequenceNumber": 22,
+        "effectiveYyyymm": "2066-10",
+        "monthlyAmount": 58.56
+      },
+      {
+        "id": "109",
+        "legalBasis": "558",
+        "sourceType": "RENT_INDEX",
+        "sourceId": null,
+        "sequenceNumber": 23,
+        "effectiveYyyymm": "2068-04",
+        "monthlyAmount": 59.74
+      },
+      {
+        "id": "110",
+        "legalBasis": "558",
+        "sourceType": "RENT_INDEX",
+        "sourceId": null,
+        "sequenceNumber": 24,
+        "effectiveYyyymm": "2069-10",
+        "monthlyAmount": 60.94
+      },
+      {
+        "id": "111",
+        "legalBasis": "558",
+        "sourceType": "RENT_INDEX",
+        "sourceId": null,
+        "sequenceNumber": 25,
+        "effectiveYyyymm": "2071-04",
+        "monthlyAmount": 62.17
+      },
+      {
+        "id": "112",
+        "legalBasis": "558",
+        "sourceType": "RENT_INDEX",
+        "sourceId": null,
+        "sequenceNumber": 26,
+        "effectiveYyyymm": "2072-10",
+        "monthlyAmount": 63.42
+      },
+      {
+        "id": "113",
+        "legalBasis": "558",
+        "sourceType": "RENT_INDEX",
+        "sourceId": null,
+        "sequenceNumber": 27,
+        "effectiveYyyymm": "2074-04",
+        "monthlyAmount": 64.7
+      },
+      {
+        "id": "114",
+        "legalBasis": "558",
+        "sourceType": "RENT_INDEX",
+        "sourceId": null,
+        "sequenceNumber": 28,
+        "effectiveYyyymm": "2075-10",
+        "monthlyAmount": 66
+      },
+      {
+        "id": "115",
+        "legalBasis": "558",
+        "sourceType": "RENT_INDEX",
+        "sourceId": null,
+        "sequenceNumber": 29,
+        "effectiveYyyymm": "2077-04",
+        "monthlyAmount": 67.33
+      },
+      {
+        "id": "116",
+        "legalBasis": "558",
+        "sourceType": "RENT_INDEX",
+        "sourceId": null,
+        "sequenceNumber": 30,
+        "effectiveYyyymm": "2078-10",
+        "monthlyAmount": 67.79
+      },
+      {
+        "id": "85",
+        "legalBasis": "559",
+        "sourceType": "RENOVATION",
+        "sourceId": "5c7d71dd-ecce-429a-8c57-86e71d644392",
+        "sequenceNumber": 1,
+        "effectiveYyyymm": "2026-11",
+        "monthlyAmount": 129.38
+      },
+      {
+        "id": "86",
+        "legalBasis": "559",
+        "sourceType": "RENOVATION",
+        "sourceId": "7e90e828-f17f-4149-9f18-008fa5008a49",
+        "sequenceNumber": 2,
+        "effectiveYyyymm": "2027-08",
+        "monthlyAmount": 84.67
+      },
+      {
+        "id": "88",
+        "legalBasis": "559",
+        "sourceType": "RENOVATION",
+        "sourceId": "bd6615c9-6ce4-406b-92ed-840ab45e1658",
+        "sequenceNumber": 3,
+        "effectiveYyyymm": "2028-07",
+        "monthlyAmount": 72.33
+      },
+      {
+        "id": "87",
+        "legalBasis": "559",
+        "sourceType": "RENOVATION",
+        "sourceId": "7dd2f981-8bcc-4a38-9960-703a34671460",
+        "sequenceNumber": 4,
+        "effectiveYyyymm": "2033-09",
+        "monthlyAmount": 8
+      },
+      {
+        "id": "44",
+        "legalBasis": "559",
+        "sourceType": "RENOVATION",
+        "sourceId": "a6e8c396-87d6-4412-973a-553ff03c4e16",
+        "sequenceNumber": 5,
+        "effectiveYyyymm": "2060-08",
+        "monthlyAmount": 8.92
+      }
+    ],
+    "mode": "KNOWN",
+    "placementMode": "DEFAULT"
+  },
+  "renovationCases": [
+    {
+      "ai": {
+        "source": "FALLBACK",
+        "summary": "Wassersparende Armaturen: erste Kostenspanne auf Basis von Kategorie, Wohnfläche und PLZ-Regionalfaktor.",
+        "price_max": 1680,
+        "price_min": 336,
+        "confidence": 0.62
+      },
+      "id": "a6e8c396-87d6-4412-973a-553ff03c4e16",
+      "uploads": [],
+      "selected": true,
+      "kategorie": "SANITAER",
+      "massnahme": "Wassersparende Armaturen",
+      "zeitpunkt": "SOFORT",
+      "beschreibung": "",
+      "cost_selected": 1337.27,
+      "publish_order": false,
+      "calculator_effective_yyyymm": "2060-08"
+    },
+    {
+      "ai": {
+        "source": "FALLBACK",
+        "summary": "Neue Bodenbeläge (Parkett/Vinyl): erste Kostenspanne auf Basis von Kategorie, Wohnfläche und PLZ-Regionalfaktor.",
+        "price_max": 23548,
+        "price_min": 7308,
+        "confidence": 0.62
+      },
+      "id": "5c7d71dd-ecce-429a-8c57-86e71d644392",
+      "uploads": [],
+      "selected": true,
+      "kategorie": "WOHNWERT",
+      "massnahme": "Neue Bodenbeläge (Parkett/Vinyl)",
+      "zeitpunkt": "SOFORT",
+      "beschreibung": "",
+      "cost_selected": 19406.73,
+      "publish_order": false
+    },
+    {
+      "ai": {
+        "source": "FALLBACK",
+        "summary": "Neue Bodenbeläge (Parkett/Vinyl): erste Kostenspanne auf Basis von Kategorie, Wohnfläche und PLZ-Regionalfaktor.",
+        "price_max": 23548,
+        "price_min": 7308,
+        "confidence": 0.62
+      },
+      "id": "7e90e828-f17f-4149-9f18-008fa5008a49",
+      "uploads": [],
+      "selected": true,
+      "kategorie": "WOHNWERT",
+      "massnahme": "Neue Bodenbeläge (Parkett/Vinyl)",
+      "zeitpunkt": "SOFORT",
+      "beschreibung": "",
+      "cost_selected": 12977.17,
+      "publish_order": false
+    },
+    {
+      "ai": {
+        "source": "FALLBACK",
+        "summary": "Schwellenfreie Übergänge: erste Kostenspanne auf Basis von Kategorie, Wohnfläche und PLZ-Regionalfaktor.",
+        "price_max": 5040,
+        "price_min": 1008,
+        "confidence": 0.62
+      },
+      "id": "7dd2f981-8bcc-4a38-9960-703a34671460",
+      "uploads": [],
+      "selected": true,
+      "kategorie": "BARRIEREFREIHEIT",
+      "massnahme": "Schwellenfreie Übergänge",
+      "zeitpunkt": "SOFORT",
+      "beschreibung": "",
+      "cost_selected": 2415.52,
+      "publish_order": false
+    },
+    {
+      "ai": {
+        "source": "FALLBACK",
+        "summary": "Abgehängte Decke + Spots: erste Kostenspanne auf Basis von Kategorie, Wohnfläche und PLZ-Regionalfaktor.",
+        "price_max": 14616,
+        "price_min": 4060,
+        "confidence": 0.62
+      },
+      "id": "bd6615c9-6ce4-406b-92ed-840ab45e1658",
+      "uploads": [],
+      "selected": true,
+      "kategorie": "WOHNWERT",
+      "massnahme": "Abgehängte Decke + Spots",
+      "zeitpunkt": "SOFORT",
+      "beschreibung": "",
+      "cost_selected": 10624.24,
+      "publish_order": false
+    }
+  ]
+}
