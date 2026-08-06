@@ -662,8 +662,12 @@ function PlanEditor({
   viewport: TimelineViewport;
   isSaving: boolean;
   onViewportChange: (next: TimelineViewport) => void;
-  onChange: (overrides: CalculatorOverrides) => Promise<void>;
-  onApply: (overrides: CalculatorOverrides) => Promise<void>;
+  // Fire-and-forget by design: a commit lands in the local preview
+  // synchronously, and its persistence is deferred and coalesced by the
+  // parent. There is no longer a promise here worth awaiting — the editor
+  // must never block on a round-trip to show the user their own edit.
+  onChange: (overrides: CalculatorOverrides) => void;
+  onApply: (overrides: CalculatorOverrides) => void;
 }) {
   const [dragging, setDragging] = useState<PlanDragState | null>(null);
   const draggingRef = useRef<PlanDragState | null>(null);
@@ -1528,6 +1532,18 @@ function CalculatorContent() {
    * for serialization anymore.
    */
   const isSavingRef = useRef(false);
+  /**
+   * Pending debounce timer for persisting Gantt/slider commits. These used to
+   * POST immediately on every single commit — one per drag step, per arrow
+   * key repeat — which kept a request permanently in flight during any
+   * sustained interaction. Now they follow the same cadence the Parameter
+   * fields already used: the preview updates instantly from
+   * `pendingOverrides`, and the database write happens once the user pauses.
+   *
+   * `pendingOverrides` doubles as the accumulator, so the deferred save needs
+   * no payload of its own — `recalc` reads the merged state from there.
+   */
+  const overridePersistTimerRef = useRef<number | null>(null);
   const recalcRef = useRef<
     (nextMode?: CalculatorMode, navigate?: boolean, optimize?: boolean, overrides?: Partial<CalculatorOverrides>, apply?: boolean) => Promise<void>
   >(async () => undefined);
@@ -1687,16 +1703,6 @@ function CalculatorContent() {
   }, [suffix]);
 
   const recalc = async (nextMode = mode, navigate = false, optimize = false, overrides?: Partial<CalculatorOverrides>, apply = false) => {
-    if (isSavingRef.current) {
-      // Coalesce onto whatever's already queued rather than stacking retries —
-      // once the in-flight request clears, only the latest requested state
-      // matters.
-      queuedRecalcRef.current = { nextMode, navigate, optimize, overrides, apply };
-      return;
-    }
-    isSavingRef.current = true;
-    setIsSaving(true);
-    setError(null);
     // The one merge point for every override field, regardless of whether this
     // call came from a Gantt commit (which passes `overrides`) or a Parameter
     // field's debounced recalc (which doesn't). Reading `pendingOverrides` here
@@ -1705,11 +1711,31 @@ function CalculatorContent() {
     // commit's own request hasn't resolved yet; see the field's doc comment.
     const baseOverrides = pendingOverrides ?? overridesFromParams(data?.params ?? { taxRate: 0.42 } as CalculatorResponse['params']);
     const effectiveOverrides: CalculatorOverrides = { ...baseOverrides, ...overrides };
-    if (overrides) {
-      // Functional form so two calls landing in back-to-back ticks each merge
-      // onto the other's result instead of onto the same stale snapshot.
-      setPendingOverrides((prev) => ({ ...(prev ?? baseOverrides), ...overrides }));
+    // Applied BEFORE the in-flight guard below, never after: `pendingOverrides`
+    // is what the live preview renders from, so it has to land on every single
+    // call, including the ones whose *persistence* gets deferred. This used to
+    // sit after the guard, which meant a change requested while any save was
+    // in flight did not reach the preview at all until that request resolved —
+    // the UI simply froze at the previous state. Locally that was ~50 ms and
+    // easy to miss; against a remote database it is several hundred, and since
+    // every Gantt commit fired its own immediate POST there was almost always
+    // a save in flight while dragging. That single misordering was enough to
+    // defeat the entire point of computing locally.
+    //
+    // Functional form so two calls landing in back-to-back ticks each merge
+    // onto the other's result instead of onto the same stale snapshot.
+    if (overrides) setPendingOverrides((prev) => ({ ...(prev ?? baseOverrides), ...overrides }));
+    if (isSavingRef.current) {
+      // Coalesce onto whatever's already queued rather than stacking retries —
+      // once the in-flight request clears, only the latest requested state
+      // matters. Re-merging the same overrides then is a no-op, since the
+      // merge above has already folded them into `pendingOverrides`.
+      queuedRecalcRef.current = { nextMode, navigate, optimize, overrides, apply };
+      return;
     }
+    isSavingRef.current = true;
+    setIsSaving(true);
+    setError(null);
     try {
       const res = await authFetch('/api/detail-check/calculator', {
         method: 'POST',
@@ -1795,6 +1821,7 @@ function CalculatorContent() {
   const handleModeChange = (value: string) => {
     const nextMode = value === 'POTENTIAL' ? 'POTENTIAL' : 'KNOWN';
     setMode(nextMode);
+    cancelScheduledPersist();
     void recalc(nextMode);
   };
 
@@ -1812,13 +1839,55 @@ function CalculatorContent() {
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [isDirty]);
 
+  const cancelScheduledPersist = () => {
+    if (overridePersistTimerRef.current === null) return;
+    window.clearTimeout(overridePersistTimerRef.current);
+    overridePersistTimerRef.current = null;
+  };
+
   /**
-   * Ensures nothing typed in the last `PARAMETER_AUTOSAVE_DEBOUNCE_MS` is
+   * A Gantt/slider commit: reflected in the preview immediately, persisted
+   * once the user stops. Every commit restarts the timer, so dragging a
+   * §558 increase across ten months writes once at the end instead of ten
+   * times along the way.
+   *
+   * `recalcRef.current` rather than `recalc` so the deferred call runs the
+   * current render's closure — by the time the timer fires, the `mode` and
+   * `pendingOverrides` captured here would be stale.
+   */
+  const commitOverrides = (overrides: Partial<CalculatorOverrides>) => {
+    const baseOverrides = pendingOverrides ?? overridesFromParams(data?.params ?? { taxRate: 0.42 } as CalculatorResponse['params']);
+    setPendingOverrides((prev) => ({ ...(prev ?? baseOverrides), ...overrides }));
+    // Set here, not only on the save's success path as before: it gates the
+    // "Änderungen übernehmen?" dialog, and a plan change is un-applied from
+    // the moment it is made, not from the moment it reaches the database.
+    // Leaving it to the deferred save would let a quick drag-then-leave slip
+    // past the dialog entirely.
+    setHasPendingChanges(true);
+    cancelScheduledPersist();
+    overridePersistTimerRef.current = window.setTimeout(() => {
+      overridePersistTimerRef.current = null;
+      void recalcRef.current();
+    }, PARAMETER_AUTOSAVE_DEBOUNCE_MS);
+  };
+
+  // Nothing should outlive the page — an unmount mid-debounce would otherwise
+  // fire a save against a component that is gone. Navigation away already
+  // flushes first (see `flushPendingSave`), so cancelling here loses nothing.
+  useEffect(() => () => cancelScheduledPersist(), []);
+
+  /**
+   * Ensures nothing changed in the last `PARAMETER_AUTOSAVE_DEBOUNCE_MS` is
    * lost to a navigation that fires before that timer would have. Called
    * from every way this page can be left: the stepper (`beforeStepChange`),
    * "Zurück", and "Überspringen".
    */
   const flushPendingSave = async () => {
+    // Drop the scheduled write first, so the immediate one below replaces it
+    // rather than racing it — both would carry the same `pendingOverrides`,
+    // but two concurrent POSTs against the same rows is exactly the pattern
+    // that deadlocked Postgres before.
+    cancelScheduledPersist();
     if (isDirty) await recalc(mode);
   };
 
@@ -1904,8 +1973,8 @@ function CalculatorContent() {
                     viewport={timelineViewport}
                     isSaving={isSaving}
                     onViewportChange={setTimelineViewport}
-                    onChange={(overrides) => recalc(mode, false, false, overrides)}
-                    onApply={(overrides) => recalc(mode, false, false, overrides, true)}
+                    onChange={commitOverrides}
+                    onApply={(overrides) => { cancelScheduledPersist(); void recalc(mode, false, false, overrides, true); }}
                   />
                 </div>
               </div>
@@ -2040,14 +2109,14 @@ function CalculatorContent() {
               <div className="order-6 mt-4 flex flex-wrap gap-3">
                 <Button
                   label="Neu berechnen"
-                  onClick={() => { resetRentPlanRef.current = true; void recalc(mode); }}
+                  onClick={() => { cancelScheduledPersist(); resetRentPlanRef.current = true; void recalc(mode); }}
                   disabled={isSaving}
                 />
                 <Button
                   label="Sanierungen und Mieterhöhungen optimieren"
                   variant="outline"
                   icon={<Sparkles />}
-                  onClick={() => recalc(mode, false, true)}
+                  onClick={() => { cancelScheduledPersist(); void recalc(mode, false, true); }}
                   disabled={isSaving || mode === 'POTENTIAL'}
                 />
               </div>
