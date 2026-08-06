@@ -1,6 +1,6 @@
 "use client";
 
-import { Button, CalculatedPanel, Dropdown, MetricCard, MonthField, ReadOnlyField, StickyActionBar, TextField } from '@/components/ui';
+import { Button, CalculatedPanel, Dropdown, FixedOverlay, MetricCard, MonthField, ReadOnlyField, StickyActionBar, TextField } from '@/components/ui';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { authFetch } from '@/lib/api/authFetch';
 import { parseDecimalInput } from '@/lib/detailCheck/acquisitionCosts';
@@ -10,7 +10,27 @@ import { costForCase, type RenovationCase, type RenovationTiming } from '@/lib/d
 import { Check, ChevronDown, ChevronUp, LineChart, Loader2, Sparkles } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { memo, Suspense, useCallback, useEffect, useMemo, useRef, useState, type PointerEvent } from 'react';
+import { createPortal } from 'react-dom';
 import { PropertyValuationLayout } from '../PropertyValuationLayout';
+
+/**
+ * Renders a modal straight into `document.body`, bypassing every ancestor —
+ * including `PropertyValuationLayout`'s step-transition wrapper, which sets
+ * `will-change: transform` and (per the CSS containing-block rules) turns
+ * any `position: fixed` descendant into something fixed relative to that
+ * wrapper instead of the browser viewport. `FixedOverlay` fixes that same
+ * problem for dialogs rendered as *direct* children of
+ * `PropertyValuationLayout`, but `PlanEditor`'s dialogs live several
+ * component layers deeper — `PropertyValuationLayout` only ever inspects its
+ * own immediate children, so wrapping them in `FixedOverlay` in place would
+ * do nothing. A portal is the correct fix at that depth: it detaches the
+ * rendered DOM node from its React ancestors entirely, so the CSS
+ * containing-block chain no longer runs through them either.
+ */
+function ModalPortal({ children }: { children: React.ReactNode }) {
+  if (typeof document === 'undefined') return null;
+  return createPortal(children, document.body);
+}
 
 type CalculatorResponse = {
   // The full library type, not a hand-picked subset: the server echoes
@@ -1327,6 +1347,7 @@ function PlanEditor({
         <button className="rounded-md bg-primary px-4 py-2 font-medium text-primary-foreground" onClick={() => setShowApply(true)} disabled={isSaving}>Änderungen prüfen und übernehmen</button>
       </div>
       {immediateMoveWarning && (
+        <ModalPortal>
         <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4" role="dialog" aria-modal="true" aria-labelledby="immediate-warning-title">
           <div className="w-full max-w-md rounded-lg border border-border bg-card p-6 shadow-xl">
             <h2 id="immediate-warning-title" className="text-lg font-medium">Sofort-Sanierung verschieben?</h2>
@@ -1365,8 +1386,10 @@ function PlanEditor({
             </div>
           </div>
         </div>
+        </ModalPortal>
       )}
       {showApply && (
+        <ModalPortal>
         <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4" role="dialog" aria-modal="true">
           <div className="flex max-h-[85vh] w-full max-w-2xl flex-col rounded-lg border border-border bg-card p-6 shadow-xl">
             <h2 className="text-lg font-medium">Änderungen übernehmen?</h2>
@@ -1443,6 +1466,7 @@ function PlanEditor({
             </div>
           </div>
         </div>
+        </ModalPortal>
       )}
     </div>
   );
@@ -1496,7 +1520,20 @@ function CalculatorContent() {
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasPendingChanges, setHasPendingChanges] = useState(false);
-  const [pendingNavigation, setPendingNavigation] = useState<string | null>(null);
+  const [confirmApplyOpen, setConfirmApplyOpen] = useState(false);
+  /**
+   * Resolver for the "Änderungen übernehmen?" dialog, so a caller that must
+   * decide whether navigation may proceed — `beforeStepChange` returns a
+   * boolean the layout obeys — can await the user's answer.
+   *
+   * The dialog previously only existed for the paths that navigate
+   * themselves ("Zurück"/"Weiter"/"Überspringen"), driven by a target path in
+   * state. The wizard stepper answers a boolean instead, so it could not use
+   * that shape and was wired straight to a plain save — which never applied
+   * anything upstream. Clicking through to "Sanierung" or "Finanzierung"
+   * therefore left those pages showing the pre-calculator values.
+   */
+  const applyDecisionRef = useRef<((proceed: boolean) => void) | null>(null);
   const [upstreamResetNotice, setUpstreamResetNotice] = useState(false);
   const lastLiveCalculationRef = useRef('');
   const resetRentPlanRef = useRef(false);
@@ -1544,6 +1581,23 @@ function CalculatorContent() {
    * no payload of its own — `recalc` reads the merged state from there.
    */
   const overridePersistTimerRef = useRef<number | null>(null);
+  /**
+   * Counts local override commits. A save captures this before it sends and
+   * re-checks it when the response lands: if the user has committed anything
+   * more in the meantime, the response describes an older world and must not
+   * be written back over the newer local state.
+   *
+   * Without this, `setPendingOverrides(overridesFromParams(updated.params))`
+   * below replaced the live override set with the request-time snapshot —
+   * so a change made while a save was in flight visibly jumped back and was
+   * lost for good. Against a remote database that window is most of a second,
+   * which is why it showed up in production and almost never locally.
+   */
+  const overridesVersionRef = useRef(0);
+  /** Mirrors `isDirty` for reading inside async flows, where a render value would be stale. */
+  const isDirtyRef = useRef(false);
+  /** Mirrors `hasPendingChanges` for the same reason — `leavePageGuard` runs async. */
+  const hasPendingChangesRef = useRef(false);
   const recalcRef = useRef<
     (nextMode?: CalculatorMode, navigate?: boolean, optimize?: boolean, overrides?: Partial<CalculatorOverrides>, apply?: boolean) => Promise<void>
   >(async () => undefined);
@@ -1635,6 +1689,8 @@ function CalculatorContent() {
     );
     return JSON.stringify(effectiveParams) !== JSON.stringify(baseline);
   }, [effectiveParams, data]);
+  isDirtyRef.current = isDirty;
+  hasPendingChangesRef.current = hasPendingChanges;
 
   const visibleTimeline = useMemo(() => presented?.timeline ?? [], [presented]);
   const chartRows = useMemo(() => buildChartRows(visibleTimeline), [visibleTimeline]);
@@ -1724,7 +1780,10 @@ function CalculatorContent() {
     //
     // Functional form so two calls landing in back-to-back ticks each merge
     // onto the other's result instead of onto the same stale snapshot.
-    if (overrides) setPendingOverrides((prev) => ({ ...(prev ?? baseOverrides), ...overrides }));
+    if (overrides) {
+      overridesVersionRef.current += 1;
+      setPendingOverrides((prev) => ({ ...(prev ?? baseOverrides), ...overrides }));
+    }
     if (isSavingRef.current) {
       // Coalesce onto whatever's already queued rather than stacking retries —
       // once the in-flight request clears, only the latest requested state
@@ -1736,6 +1795,9 @@ function CalculatorContent() {
     isSavingRef.current = true;
     setIsSaving(true);
     setError(null);
+    // Captured after the merge above, so it counts this call's own commit as
+    // already represented in what we are about to send.
+    const versionAtRequest = overridesVersionRef.current;
     try {
       const res = await authFetch('/api/detail-check/calculator', {
         method: 'POST',
@@ -1769,15 +1831,27 @@ function CalculatorContent() {
       });
       if (!res.ok) throw new Error(await res.text());
       const updated = await res.json() as CalculatorResponse;
+      // Always safe to adopt: `data` is only the baseline `effectiveParams`
+      // builds on, and the overrides layered on top of it stay whatever the
+      // user has locally.
       setData(updated);
-      setMode(updated.params.mode);
       setPlacementMode(updated.placementMode ?? 'DEFAULT');
-      setEquityIncluded(updated.params.equityIncluded === true);
-      // Re-align with the server's confirmed state — it is the final authority
-      // and may have clamped a requested value (e.g. a §558 date outside the
-      // legal window), so the saved figure is not always byte-identical to
-      // what was requested.
-      setPendingOverrides(overridesFromParams(updated.params));
+      const isStillCurrent = overridesVersionRef.current === versionAtRequest;
+      if (isStillCurrent) {
+        // Re-align with the server's confirmed state — it is the final
+        // authority and may have clamped a requested value (e.g. a §558 date
+        // outside the legal window), so the saved figure is not always
+        // byte-identical to what was requested.
+        //
+        // Only when nothing newer has been committed since this request went
+        // out. Otherwise this response describes a superseded state, and
+        // writing it back would undo the user's most recent edit in front of
+        // them. The newer state is already scheduled to be saved in its own
+        // right, so nothing is lost by leaving it alone here.
+        setMode(updated.params.mode);
+        setEquityIncluded(updated.params.equityIncluded === true);
+        setPendingOverrides(overridesFromParams(updated.params));
+      }
       resetRentPlanRef.current = false;
       setHasPendingChanges(!apply);
       if (navigate) router.push(`/property-valuation/detail-check/macro-location${suffix}`);
@@ -1857,6 +1931,7 @@ function CalculatorContent() {
    */
   const commitOverrides = (overrides: Partial<CalculatorOverrides>) => {
     const baseOverrides = pendingOverrides ?? overridesFromParams(data?.params ?? { taxRate: 0.42 } as CalculatorResponse['params']);
+    overridesVersionRef.current += 1;
     setPendingOverrides((prev) => ({ ...(prev ?? baseOverrides), ...overrides }));
     // Set here, not only on the save's success path as before: it gates the
     // "Änderungen übernehmen?" dialog, and a plan change is un-applied from
@@ -1888,15 +1963,55 @@ function CalculatorContent() {
     // but two concurrent POSTs against the same rows is exactly the pattern
     // that deadlocked Postgres before.
     cancelScheduledPersist();
-    if (isDirty) await recalc(mode);
+    // Wait out an already-running save instead of handing back a resolved
+    // promise. `recalc` answers immediately when one is in flight — it only
+    // queues the work — and the queue is serviced by an effect that never
+    // runs once this page unmounts. Awaiting that was awaiting nothing: the
+    // navigation went through and the change died with the component. That is
+    // the intermittent "switch tabs quickly and lose the last edit" report;
+    // intermittent precisely because it needed a save to be in flight at that
+    // moment.
+    while (isSavingRef.current) {
+      await new Promise((resolve) => window.setTimeout(resolve, 25));
+    }
+    // Let the state updates from that save land, so `isDirtyRef` below
+    // reflects the post-save world rather than the pre-save one.
+    await new Promise((resolve) => window.setTimeout(resolve, 0));
+    // `recalcRef` rather than `recalc`: after the waiting above, this
+    // closure's captured `pendingOverrides`/`mode` may be a render behind.
+    if (isDirtyRef.current) await recalcRef.current();
+  };
+
+  /**
+   * Opens the apply dialog and resolves once the user has chosen: `true` when
+   * the changes were written back to the earlier steps and navigation may go
+   * ahead, `false` when they chose to stay.
+   */
+  const requestApplyDecision = () => new Promise<boolean>((resolve) => {
+    applyDecisionRef.current = resolve;
+    setConfirmApplyOpen(true);
+  });
+
+  /**
+   * The single gate every way of leaving this page goes through. Anything
+   * that only saved — without applying — would leave "Sanierung" and
+   * "Finanzierung" showing the values from before the calculator ran, since
+   * writing back to those tables is what `apply` is for.
+   */
+  const leavePageGuard = async (): Promise<boolean> => {
+    if (hasPendingChangesRef.current) {
+      // No point letting the debounced write fire while the dialog is open —
+      // "Übernehmen und weiter" issues its own apply save regardless of what
+      // this would have sent, so it would only be a redundant round-trip.
+      cancelScheduledPersist();
+      return requestApplyDecision();
+    }
+    await flushPendingSave();
+    return true;
   };
 
   const navigateWithConfirmation = async (path: string) => {
-    if (hasPendingChanges) {
-      setPendingNavigation(path);
-      return;
-    }
-    await flushPendingSave();
+    if (!(await leavePageGuard())) return;
     router.push(path);
   };
 
@@ -1904,7 +2019,7 @@ function CalculatorContent() {
     <PropertyValuationLayout
       currentStep={6}
       title="Mietkalkulator"
-      beforeStepChange={async () => { await flushPendingSave(); return true; }}
+      beforeStepChange={leavePageGuard}
       actions={
         <>
           <SaveStatusIndicator isSaving={isSaving} isDirty={isDirty} />
@@ -2285,9 +2400,10 @@ function CalculatorContent() {
         primaryLabel="Weiter"
         primaryIcon={<BUTTON_DETAILS.Next.icon />}
         primaryDisabled={isLoading || isSaving}
-        onPrimary={() => hasPendingChanges ? setPendingNavigation(`/property-valuation/detail-check/macro-location${suffix}`) : recalc(mode, true, false, undefined, true)}
+        onPrimary={() => void navigateWithConfirmation(`/property-valuation/detail-check/macro-location${suffix}`)}
       />
-      {pendingNavigation && (
+      <FixedOverlay>
+      {confirmApplyOpen && (
         <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4" role="dialog" aria-modal="true">
           <div className="w-full max-w-lg rounded-lg border border-border bg-card p-6 shadow-xl">
             <h2 className="text-lg font-medium">Änderungen übernehmen?</h2>
@@ -2300,23 +2416,40 @@ function CalculatorContent() {
             <div className="flex justify-end gap-2">
               <button
                 className="rounded-md border border-border px-3 py-2"
-                onClick={() => setPendingNavigation(null)}
+                onClick={() => {
+                  // Deliberately does not touch hasPendingChanges/isDirty —
+                  // nothing was applied, so both must stay exactly as they
+                  // were. This used to clear hasPendingChanges here, which
+                  // meant a second attempt to leave (with no further edits)
+                  // skipped this dialog entirely and saved silently instead
+                  // of asking again.
+                  setConfirmApplyOpen(false);
+                  applyDecisionRef.current?.(false);
+                  applyDecisionRef.current = null;
+                }}
               >
-                {/* Deliberately does not touch hasPendingChanges/isDirty — nothing
-                    was saved, so both must stay exactly as they were. This used
-                    to clear hasPendingChanges here, which meant "Weiter" clicked
-                    a second time (with no further edits made) skipped this dialog
-                    entirely and saved silently instead of asking again. */}
                 Hier bleiben
               </button>
               <button
                 className="rounded-md bg-primary px-3 py-2 font-medium text-primary-foreground"
+                disabled={isSaving}
                 onClick={async () => {
-                  const nextPath = pendingNavigation;
-                  await recalc(mode, false, false, undefined, true);
-                  setPendingNavigation(null);
+                  // Drop the scheduled write and let any in-flight one finish
+                  // first: the apply below supersedes both, and firing it
+                  // concurrently would put two transactions on the same rows.
+                  cancelScheduledPersist();
+                  while (isSavingRef.current) {
+                    await new Promise((resolve) => window.setTimeout(resolve, 25));
+                  }
+                  // apply = true is what writes the placements, costs, timings
+                  // and interest rate back into the renovation and financing
+                  // steps — the whole point of this dialog.
+                  await recalcRef.current(mode, false, false, undefined, true);
                   setHasPendingChanges(false);
-                  if (nextPath) router.push(nextPath);
+                  hasPendingChangesRef.current = false;
+                  setConfirmApplyOpen(false);
+                  applyDecisionRef.current?.(true);
+                  applyDecisionRef.current = null;
                 }}
               >
                 Übernehmen und weiter
@@ -2325,6 +2458,7 @@ function CalculatorContent() {
           </div>
         </div>
       )}
+      </FixedOverlay>
     </PropertyValuationLayout>
   );
 }

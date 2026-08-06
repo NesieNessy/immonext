@@ -1,6 +1,6 @@
 "use client";
 
-import { DetailFieldLegend, Header, Stepper, StickyActionBar } from '@/components/ui';
+import { DetailFieldLegend, FixedOverlay, Header, Stepper, StickyActionBar } from '@/components/ui';
 import { PropertyValuationSteps } from '@/constants/PropertyValuationUseCases';
 import { useRouter } from 'next/navigation';
 import { Children, isValidElement, useEffect, useMemo, useState } from 'react';
@@ -78,7 +78,7 @@ export function PropertyValuationLayout({
   const pageChildren: React.ReactNode[] = [];
   const fixedChildren: React.ReactNode[] = [];
   Children.forEach(children, (child) => {
-    if (isValidElement(child) && child.type === StickyActionBar) {
+    if (isValidElement(child) && (child.type === StickyActionBar || child.type === FixedOverlay)) {
       fixedChildren.push(child);
     } else {
       pageChildren.push(child);

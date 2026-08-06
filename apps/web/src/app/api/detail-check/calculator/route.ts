@@ -20,6 +20,7 @@ import {
   toNumber,
   toPlacementMode,
 } from '@/lib/detailCheck/calculatorParamNormalization';
+import { calculatorContextFingerprint } from '@/lib/detailCheck/calculatorContextFingerprint';
 import { requireUserId, workflowIdFor } from '@/lib/server/auth';
 import { db } from '@/lib/server/db';
 import { NextResponse } from 'next/server';
@@ -183,11 +184,13 @@ async function syncRentIncreasePlan(
   return loadRentIncreasePlan(userId, workflowId);
 }
 
-function resultForStorage(result: CalculatorResult) {
+function resultForStorage(result: CalculatorResult, contextFingerprint: string) {
   const storedParams = { ...result.params };
   delete storedParams.rentIncreasePlan;
   delete storedParams.rentIncreaseOverrides;
-  return { ...result, params: storedParams };
+  // Stored alongside the result so a later GET can tell whether the upstream
+  // values these overrides were computed against have actually moved.
+  return { ...result, params: storedParams, contextFingerprint };
 }
 
 async function loadContext(userId: string, workflowId: string, quickCheckId: string | null) {
@@ -319,11 +322,7 @@ async function loadContext(userId: string, workflowId: string, quickCheckId: str
   const livingAreaM2 = toNumber(property?.living_area_m2 ?? 0);
   const serviceChargesAllocable = toNumber(rental?.service_charges_allocable ?? 0);
   const serviceChargesNonAllocable = toNumber(rental?.service_charges_non_allocable ?? 0);
-  const upstreamUpdatedAt = [property, rental, financing, renovation, acquisition, depreciation]
-    .map((item) => item?.updated_at ? Date.parse(String(item.updated_at)) : 0)
-    .reduce((latest, value) => Math.max(latest, Number.isFinite(value) ? value : 0), 0);
-  return {
-    quickCheck,
+  const upstream = {
     city: property?.city ?? quickCheck?.city ?? '',
     postalCode: property?.postal_code ?? quickCheck?.postal_code ?? '',
     livingAreaM2,
@@ -344,8 +343,11 @@ async function loadContext(userId: string, workflowId: string, quickCheckId: str
     purchasePrice,
     totalInvestment: roundCurrency(selectedFinancing.totalCosts),
     renovationCases,
-    upstreamUpdatedAt,
   };
+  // Derived from the values above rather than from `updated_at`: the wizard
+  // steps re-save unconditionally when left, so a timestamp says only "the
+  // row was written", never "a number the calculator uses actually moved".
+  return { quickCheck, ...upstream, contextFingerprint: calculatorContextFingerprint(upstream) };
 }
 
 function buildParams(
@@ -356,8 +358,15 @@ function buildParams(
   const fallbackStart = new Date().toISOString().slice(0, 7);
   const livingAreaM2 = context.livingAreaM2;
   const rentStart = context.coldRent;
-  const calculatorUpdatedAt = saved?.updated_at ? Date.parse(String(saved.updated_at)) : 0;
-  const upstreamIsNewer = context.upstreamUpdatedAt > (Number.isFinite(calculatorUpdatedAt) ? calculatorUpdatedAt : 0);
+  const savedFingerprint = typeof (saved?.result as Record<string, unknown> | undefined)?.contextFingerprint === 'string'
+    ? String((saved!.result as Record<string, unknown>).contextFingerprint)
+    : null;
+  // Rows saved before fingerprints existed carry none. Those are treated as
+  // unchanged rather than reset: the timestamp rule this replaces discarded
+  // overrides on almost every visit, so "keep what the user made" is by far
+  // the safer default, and the very next save writes a fingerprint and the
+  // row self-heals.
+  const upstreamIsNewer = savedFingerprint !== null && savedFingerprint !== context.contextFingerprint;
   const fallbackRentIndex = estimateRentIndexPerM2(context.yearOfConstruction, livingAreaM2)
     ?? (livingAreaM2 > 0 && rentStart > 0 ? (rentStart / livingAreaM2) * 1.02 : null);
   const savedResult = (saved?.result as Record<string, unknown> | undefined) ?? {};
@@ -581,7 +590,7 @@ export async function POST(request: Request) {
       params.last558Date,
       params.last559Date,
       params.mode,
-      JSON.stringify(resultForStorage(result)),
+      JSON.stringify(resultForStorage(result, context.contextFingerprint)),
     ],
   );
 
@@ -627,9 +636,20 @@ export async function POST(request: Request) {
         [params.interestRate, params.monthlyDebtService, userId, workflowId],
       );
     }
+    // Applying writes the user's own overrides back into the upstream tables,
+    // so the context legitimately differs from the fingerprint stored moments
+    // ago. Re-derive it from the post-apply state, otherwise the very next GET
+    // would compare against the pre-apply snapshot, see a difference, and
+    // discard the overrides the user just chose to apply.
+    const appliedContext = await loadContext(userId, workflowId, quickCheckId);
     await db.query(
-      'UPDATE detail_check_rent_calculator SET updated_at = NOW() WHERE user_id = $1 AND workflow_id = $2',
-      [userId, workflowId],
+      `
+        UPDATE detail_check_rent_calculator
+        SET result = jsonb_set(result::jsonb, '{contextFingerprint}', to_jsonb($1::text)),
+            updated_at = NOW()
+        WHERE user_id = $2 AND workflow_id = $3
+      `,
+      [appliedContext.contextFingerprint, userId, workflowId],
     );
   }
 
