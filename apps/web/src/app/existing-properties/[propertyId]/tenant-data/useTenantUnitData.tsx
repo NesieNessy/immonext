@@ -1,10 +1,7 @@
 "use client";
 
 import { formatUnitLabel } from '@/components/features/PropertyDisplay';
-import { DataCard } from './DocumentGeneratorParts';
-import { Button, CalendarField, ComingSoonButton, ConfirmDeleteModal, Header, Modal, NumberField, SectionLabel, StickyActionBar, Switch, Table, Tag, TextField, UnsavedChangesModal, useToast, type BreadcrumbItem, type SortDirection, type TableColumn } from '@/components/ui';
-import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
-import { ExistingPropertiesUseCases } from '@/constants/ExistingPropertiesUseCases';
+import { Button, useToast, type SortDirection, type TableColumn } from '@/components/ui';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
 import { createTenancy, getCurrentTenancyByUnit, updateTenancy } from '@/lib/supabase/tenancy.supabase';
 import { getPersonalData } from '@/lib/supabase/personal_data.supabase';
@@ -23,25 +20,26 @@ import {
     updateTenancyPerson,
 } from '@/lib/supabase/tenancy_person.supabase';
 import { createUseCaseMenuItems } from '@/lib/useCaseMenu';
-import { base64ToDataUri, cn, deCurrencyFormatter, formatDeDate } from '@/lib/utils';
-import { openAndPrintLetter, renovationAdjustmentLetterHtml, rentIncreaseLetterHtml } from './adjustmentLetters';
+import { cn, deCurrencyFormatter, formatDeDate } from '@/lib/utils';
+import { renovationAdjustmentLetterHtml, rentIncreaseLetterHtml } from './adjustmentLetters';
+import { htmlToPdfBlob } from '@/lib/pdf/htmlToPdf';
 import type { MaintenanceCostItem, MaintenanceCosts, PersonalData, Property, PropertyUnit, Tenancy, TenancyAdjustmentHistoryEntry, TenancyAdjustmentType, TenancyDocument, TenancyDocumentType } from '@immonext/types';
 import { format } from 'date-fns';
-import { AlertTriangle, BadgeCheck, Calculator, Download, Eye, FileSignature, FileText, History, ListChecks, Plus, RefreshCw, Star, Trash2, TrendingUp, Upload, User, Wrench } from 'lucide-react';
+import { Download, Eye, FileText, Trash2, Upload } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 
-function euro(value: number | null | undefined): string {
+export function euro(value: number | null | undefined): string {
     return value != null ? `${deCurrencyFormatter.format(value)} €` : '–';
 }
 
-function addMonthsSafe(date: Date, months: number): Date {
+export function addMonthsSafe(date: Date, months: number): Date {
     const result = new Date(date);
     result.setMonth(result.getMonth() + months);
     return result;
 }
 
-interface RentalForm {
+export interface RentalForm {
     tenancyEndDate: Date | undefined;
     coldRent: string;
     parkingSpaceRent: string;
@@ -90,7 +88,7 @@ function serializeRentalForm(form: RentalForm): string {
 /** Common § 2 BetrKV positions, preselected as umlagefähig except the two
  *  that legally never are (Verwaltung, Instandhaltungsrücklage). Amounts
  *  start at 0 — unused rows are simply not summed. */
-const DEFAULT_COST_ITEMS: MaintenanceCostItem[] = [
+export const DEFAULT_COST_ITEMS: MaintenanceCostItem[] = [
     { id: 'grundsteuer', label: 'Grundsteuer', amount: 0, allocable: true },
     { id: 'wasser', label: 'Wasserversorgung', amount: 0, allocable: true },
     { id: 'entwaesserung', label: 'Entwässerung', amount: 0, allocable: true },
@@ -110,7 +108,7 @@ const DEFAULT_COST_ITEMS: MaintenanceCostItem[] = [
     { id: 'instandhaltung', label: 'Instandhaltungsrücklage', amount: 0, allocable: false },
 ];
 
-interface PersonForm {
+export interface PersonForm {
     id: number | null;
     lastName: string;
     firstName: string;
@@ -130,9 +128,9 @@ const SHARED_DOCUMENTS: TenancyDocumentType[] = ['Mietvertrag'];
 /** Mieterbescheinigung is always one shared row for the whole tenancy — it
  *  has no Individuell/Gemeinsam toggle since the certificate always lists
  *  every tenant. */
-const MIETERBESCHEINIGUNG: TenancyDocumentType = 'Mieterbescheinigung';
+export const MIETERBESCHEINIGUNG: TenancyDocumentType = 'Mieterbescheinigung';
 
-function personDisplayName(person: PersonForm, index: number): string {
+export function personDisplayName(person: PersonForm, index: number): string {
     const name = `${person.firstName} ${person.lastName}`.trim();
     return name || `Person ${index + 1}`;
 }
@@ -149,14 +147,15 @@ function serializePersons(persons: PersonForm[]): string {
     return JSON.stringify(persons.map((p) => ({ ...p, moveInDate: p.moveInDate ? p.moveInDate.toISOString() : null })));
 }
 
-interface TenantUnitDetailProps {
-    propertyId: string;
-    property: Property;
-    unit: PropertyUnit;
-    hasMultipleUnits: boolean;
-}
-
-export function TenantUnitDetail({ propertyId, property, unit, hasMultipleUnits }: TenantUnitDetailProps) {
+/**
+ * All the state, data-loading, and mutation logic shared by the Aktueller
+ * Mieter and Mietvertrag pages — they're separate routes/components now
+ * (see TenantMieterPage / TenantMietvertragPage), but both edit the same
+ * underlying tenancy/persons/maintenance_costs records and share one
+ * Speichern flow, so that part stays in one place rather than being
+ * duplicated or awkwardly synced between two copies.
+ */
+export function useTenantUnitData(propertyId: string, property: Property, unit: PropertyUnit, hasMultipleUnits: boolean) {
     const router = useRouter();
     const { user } = useRequireAuth();
     const { showToast } = useToast();
@@ -177,7 +176,6 @@ export function TenantUnitDetail({ propertyId, property, unit, hasMultipleUnits 
     const [pendingDocKey, setPendingDocKey] = useState<string | null>(null);
     const [docPendingDelete, setDocPendingDelete] = useState<{ key: string; label: string; doc: TenancyDocument } | null>(null);
     const [mietvertragIndividual, setMietvertragIndividual] = useState(false);
-    const [activeTab, setActiveTab] = useState<'mieter' | 'mietvertrag'>('mieter');
     const [originalPersonsSnapshot, setOriginalPersonsSnapshot] = useState(() => serializePersons([EMPTY_PRIMARY_PERSON]));
     const [originalDeposit, setOriginalDeposit] = useState('');
     const [pendingHref, setPendingHref] = useState<string | null>(null);
@@ -191,6 +189,7 @@ export function TenantUnitDetail({ propertyId, property, unit, hasMultipleUnits 
     const [historyModalType, setHistoryModalType] = useState<TenancyAdjustmentType | null>(null);
     const [historyEntries, setHistoryEntries] = useState<TenancyAdjustmentHistoryEntry[]>([]);
     const [isGeneratingLetter, setIsGeneratingLetter] = useState<TenancyAdjustmentType | null>(null);
+    const [isResolvingAdjustment, setIsResolvingAdjustment] = useState<TenancyAdjustmentType | null>(null);
 
     useEffect(() => {
         let cancelled = false;
@@ -315,15 +314,6 @@ export function TenantUnitDetail({ propertyId, property, unit, hasMultipleUnits 
     const defaultRenovationReminderDate = rentalForm.renovationAdjustmentStartDate ? addMonthsSafe(rentalForm.renovationAdjustmentStartDate, -4) : undefined;
     const effectiveRenovationReminderDate = rentalForm.renovationAdjustmentReminderDate ?? defaultRenovationReminderDate;
 
-    // The reminder "banner" is a real, on-page check (not a push/email
-    // notification, which this app has no infrastructure for): due once the
-    // reminder date has passed and no letter has been generated since.
-    const today = useMemo(() => { const d = new Date(); d.setHours(0, 0, 0, 0); return d; }, []);
-    const rentReminderDue = !!effectiveRentReminderDate && effectiveRentReminderDate <= today
-        && !historyEntries.some((h) => h.adjustmentType === 'rent' && new Date(h.createdAt) >= effectiveRentReminderDate!);
-    const renovationReminderDue = !!effectiveRenovationReminderDate && effectiveRenovationReminderDate <= today
-        && !historyEntries.some((h) => h.adjustmentType === 'renovation' && new Date(h.createdAt) >= effectiveRenovationReminderDate!);
-
     // Ausweis/Schufa/Bürgschaft only — Mietvertrag and Mieterbescheinigung
     // moved to the "Generierbare Dokumente" section below, where the
     // generate action can be a lot more prominent than a table icon.
@@ -376,6 +366,20 @@ export function TenantUnitDetail({ propertyId, property, unit, hasMultipleUnits 
         doc: documents.find((d) => d.tenancyPersonId === null && d.documentType === MIETERBESCHEINIGUNG),
     }), [persons, documents, tenancy]);
 
+    const rentIncreaseLetterRow = useMemo(() => ({
+        key: 'Mieterhöhungsschreiben',
+        tenant: 'Mieterhöhungsschreiben',
+        canUpload: false,
+        doc: documents.find((d) => d.tenancyPersonId === null && d.documentType === 'Mieterhöhungsschreiben'),
+    }), [documents]);
+
+    const renovationLetterRow = useMemo(() => ({
+        key: 'Sanierungsanpassungsschreiben',
+        tenant: 'Sanierungsanpassungsschreiben',
+        canUpload: false,
+        doc: documents.find((d) => d.tenancyPersonId === null && d.documentType === 'Sanierungsanpassungsschreiben'),
+    }), [documents]);
+
     const tenantFilterOptions = useMemo(() => {
         const names = Array.from(new Set(documentRows.map((row) => row.tenant)));
         return names.map((value) => ({ value, label: value }));
@@ -415,43 +419,6 @@ export function TenantUnitDetail({ propertyId, property, unit, hasMultipleUnits 
         }),
         [propertyId, isEditing] // eslint-disable-line react-hooks/exhaustive-deps
     );
-
-    // With multiple Wohneinheiten, "Mieterdaten" links back to the units
-    // overview and the unit label becomes the current breadcrumb segment.
-    // Every link is routed through goTo() so an in-progress edit is
-    // confirmed before actually navigating away.
-    const breadcrumbItems: BreadcrumbItem[] = hasMultipleUnits
-        ? [
-            {
-                label: 'Bestandsobjekte',
-                href: '/existing-properties',
-                onClick: (e) => { if (isEditing) { e.preventDefault(); goTo('/existing-properties'); } },
-            },
-            {
-                label: `${property.street} ${property.houseNumber}, ${property.postalCode} ${property.city}`,
-                href: `/existing-properties/${propertyId}`,
-                onClick: (e) => { if (isEditing) { e.preventDefault(); goTo(`/existing-properties/${propertyId}`); } },
-            },
-            {
-                label: ExistingPropertiesUseCases.TenantData,
-                href: `/existing-properties/${propertyId}/tenant-data`,
-                onClick: (e) => { if (isEditing) { e.preventDefault(); goTo(`/existing-properties/${propertyId}/tenant-data`); } },
-            },
-            { label: formatUnitLabel(unit.unitLabel, unit.floor, unit.locationNote) },
-        ]
-        : [
-            {
-                label: 'Bestandsobjekte',
-                href: '/existing-properties',
-                onClick: (e) => { if (isEditing) { e.preventDefault(); goTo('/existing-properties'); } },
-            },
-            {
-                label: `${property.street} ${property.houseNumber}, ${property.postalCode} ${property.city}`,
-                href: `/existing-properties/${propertyId}`,
-                onClick: (e) => { if (isEditing) { e.preventDefault(); goTo(`/existing-properties/${propertyId}`); } },
-            },
-            { label: ExistingPropertiesUseCases.TenantData },
-        ];
 
     const updatePerson = (index: number, patch: Partial<PersonForm>) => {
         setPersons((prev) => prev.map((p, i) => i === index ? { ...p, ...patch } : p));
@@ -1030,7 +997,7 @@ export function TenantUnitDetail({ propertyId, property, unit, hasMultipleUnits 
     const canGenerateRenovationLetter = !landlordMissing && tenancy != null && rentalForm.renovationAdjustmentAmount !== '' && (rentalForm.renovationAdjustmentStartDate != null || rentalForm.renovationAdjustmentEndDate != null);
 
     const handleGenerateRentIncreaseLetter = async () => {
-        if (!tenancy || !canGenerateRentIncreaseLetter) return;
+        if (!tenancy || !canGenerateRentIncreaseLetter || !user) return;
         setIsGeneratingLetter('rent');
         try {
             const effectiveDate = rentalForm.nextRentAdjustmentDate ? format(rentalForm.nextRentAdjustmentDate, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd');
@@ -1040,7 +1007,15 @@ export function TenantUnitDetail({ propertyId, property, unit, hasMultipleUnits 
                 increaseAmount: Number(rentalForm.nextRentAdjustmentAmount),
                 effectiveDate,
             });
-            openAndPrintLetter(html);
+            const blob = await htmlToPdfBlob(html);
+            const file = new File([blob], `Mieterhoehungsschreiben_${effectiveDate}.pdf`, { type: 'application/pdf' });
+            const uploaded = await uploadTenancyDocument(user.id, file, {
+                tenancyId: tenancy.tenancyId,
+                tenancyPersonId: null,
+                documentType: 'Mieterhöhungsschreiben',
+            });
+            if (uploaded) setDocuments((prev) => [...prev.filter((d) => d.tenancyDocumentId !== uploaded.tenancyDocumentId), uploaded]);
+            window.open(URL.createObjectURL(blob), '_blank', 'noopener,noreferrer');
             const created = await addAdjustmentHistoryEntry({
                 tenancyId: tenancy.tenancyId,
                 propertyId: property.propertyId,
@@ -1056,7 +1031,7 @@ export function TenantUnitDetail({ propertyId, property, unit, hasMultipleUnits 
     };
 
     const handleGenerateRenovationLetter = async () => {
-        if (!tenancy || !canGenerateRenovationLetter) return;
+        if (!tenancy || !canGenerateRenovationLetter || !user) return;
         setIsGeneratingLetter('renovation');
         try {
             const effectiveDate = rentalForm.renovationAdjustmentEndDate
@@ -1069,7 +1044,15 @@ export function TenantUnitDetail({ propertyId, property, unit, hasMultipleUnits 
                 endDate: rentalForm.renovationAdjustmentEndDate ? format(rentalForm.renovationAdjustmentEndDate, 'yyyy-MM-dd') : null,
                 effectiveDate,
             });
-            openAndPrintLetter(html);
+            const blob = await htmlToPdfBlob(html);
+            const file = new File([blob], `Sanierungsanpassungsschreiben_${effectiveDate}.pdf`, { type: 'application/pdf' });
+            const uploaded = await uploadTenancyDocument(user.id, file, {
+                tenancyId: tenancy.tenancyId,
+                tenancyPersonId: null,
+                documentType: 'Sanierungsanpassungsschreiben',
+            });
+            if (uploaded) setDocuments((prev) => [...prev.filter((d) => d.tenancyDocumentId !== uploaded.tenancyDocumentId), uploaded]);
+            window.open(URL.createObjectURL(blob), '_blank', 'noopener,noreferrer');
             const created = await addAdjustmentHistoryEntry({
                 tenancyId: tenancy.tenancyId,
                 propertyId: property.propertyId,
@@ -1084,639 +1067,123 @@ export function TenantUnitDetail({ propertyId, property, unit, hasMultipleUnits 
         }
     };
 
-    return (
-        <div className="min-h-screen bg-background pb-24">
-            <main className="container mx-auto px-4 py-8">
-                <Header
-                    items={breadcrumbItems}
-                    image={property.imageUrl ? <img src={base64ToDataUri(property.imageUrl)!} alt={`${property.street} ${property.houseNumber}`} className="w-10 h-10 object-cover rounded-lg" /> : undefined}
-                    actions={
-                        <Button
-                            label={BUTTON_DETAILS.UseCases.label}
-                            icon={<BUTTON_DETAILS.UseCases.icon />}
-                            variant="outline"
-                            hideLabelOnMobile
-                            menuItems={useCaseMenuItems}
-                        />
-                    }
-                />
+    // Accepting applies the change (rent adjustments bump Netto-Mieteinnahmen;
+    // Sanierungsanpassung has no single field to bump) and logs it to the
+    // Historie. Declining just clears the pending fields — nothing is ever
+    // written to the Historie unless the client actually accepted it.
+    const handleAcceptRentAdjustment = async () => {
+        if (!tenancy) return;
+        setIsResolvingAdjustment('rent');
+        try {
+            const amount = Number(rentalForm.nextRentAdjustmentAmount || 0);
+            const newColdRent = (tenancy.coldRent ?? 0) + amount;
+            const effectiveDate = rentalForm.nextRentAdjustmentDate ? format(rentalForm.nextRentAdjustmentDate, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd');
+            await updateTenancy(tenancy.tenancyId, { coldRent: newColdRent });
+            const created = await addAdjustmentHistoryEntry({
+                tenancyId: tenancy.tenancyId,
+                propertyId: property.propertyId,
+                adjustmentType: 'rent',
+                effectiveDate,
+                amount,
+                note: 'Mietanpassung übernommen',
+            });
+            if (created) setHistoryEntries((prev) => [created, ...prev]);
+            setTenancy((prev) => prev ? { ...prev, coldRent: newColdRent } : prev);
+            setRentalForm((prev) => ({ ...prev, coldRent: String(newColdRent) }));
+        } finally {
+            setIsResolvingAdjustment(null);
+        }
+    };
 
-                <div className="mt-8 space-y-6">
-                    {error && (
-                        <div className="px-3 py-2 rounded-lg bg-destructive/10 border border-destructive/30 text-sm text-destructive">
-                            {error}
-                        </div>
-                    )}
+    const handleDeclineRentAdjustment = async () => {
+        if (!tenancy) return;
+        setIsResolvingAdjustment('rent');
+        try {
+            await updateTenancy(tenancy.tenancyId, {
+                nextRentAdjustmentDate: null,
+                nextRentAdjustmentAmount: null,
+                rentAdjustmentReminderDate: null,
+            });
+            setRentalForm((prev) => ({ ...prev, nextRentAdjustmentDate: undefined, nextRentAdjustmentAmount: '', rentAdjustmentReminderDate: undefined }));
+        } finally {
+            setIsResolvingAdjustment(null);
+        }
+    };
 
-                    <div className="flex items-center justify-between gap-3 flex-wrap">
-                                <div className="flex items-center gap-2">
-                                    <Tag label={status} variant={status === 'Vermietet' ? 'success' : 'muted'} />
-                                </div>
-                                <div className="flex items-center gap-3">
-                                    <Button
-                                        label="Mieterwechsel"
-                                        icon={<RefreshCw className="w-4 h-4" />}
-                                        variant="outline"
-                                        onClick={handleMieterwechsel}
-                                    />
-                                    <Button
-                                        label="Person hinzufügen"
-                                        icon={<Plus className="w-4 h-4" />}
-                                        variant="primary"
-                                        onClick={addPerson}
-                                    />
-                                </div>
-                            </div>
+    const handleAcceptRenovationAdjustment = async () => {
+        if (!tenancy) return;
+        setIsResolvingAdjustment('renovation');
+        try {
+            const amount = Number(rentalForm.renovationAdjustmentAmount || 0);
+            const newColdRent = (tenancy.coldRent ?? 0) + amount;
+            const effectiveDate = rentalForm.renovationAdjustmentEndDate
+                ? format(rentalForm.renovationAdjustmentEndDate, 'yyyy-MM-dd')
+                : format(new Date(), 'yyyy-MM-dd');
+            await updateTenancy(tenancy.tenancyId, { coldRent: newColdRent });
+            const created = await addAdjustmentHistoryEntry({
+                tenancyId: tenancy.tenancyId,
+                propertyId: property.propertyId,
+                adjustmentType: 'renovation',
+                effectiveDate,
+                amount,
+                note: 'Sanierungsanpassung übernommen',
+            });
+            if (created) setHistoryEntries((prev) => [created, ...prev]);
+            setTenancy((prev) => prev ? { ...prev, coldRent: newColdRent } : prev);
+            setRentalForm((prev) => ({ ...prev, coldRent: String(newColdRent) }));
+        } finally {
+            setIsResolvingAdjustment(null);
+        }
+    };
 
-                            {/* Tabs */}
-                            <div className="flex items-center gap-6 border-b border-border">
-                                <button
-                                    type="button"
-                                    onClick={() => setActiveTab('mieter')}
-                                    className={`relative flex items-center gap-2 pb-3 text-sm font-medium transition-colors cursor-pointer ${activeTab === 'mieter' ? 'text-primary' : 'text-muted-foreground hover:text-foreground'}`}
-                                >
-                                    <User className="w-4 h-4" />
-                                    Aktueller Mieter
-                                    {activeTab === 'mieter' && <span className="absolute left-0 right-0 bottom-0 h-0.5 bg-primary" />}
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => setActiveTab('mietvertrag')}
-                                    className={`relative flex items-center gap-2 pb-3 text-sm font-medium transition-colors cursor-pointer ${activeTab === 'mietvertrag' ? 'text-primary' : 'text-muted-foreground hover:text-foreground'}`}
-                                >
-                                    <FileSignature className="w-4 h-4" />
-                                    Mietvertrag
-                                    {activeTab === 'mietvertrag' && <span className="absolute left-0 right-0 bottom-0 h-0.5 bg-primary" />}
-                                </button>
-                            </div>
+    const handleDeclineRenovationAdjustment = async () => {
+        if (!tenancy) return;
+        setIsResolvingAdjustment('renovation');
+        try {
+            await updateTenancy(tenancy.tenancyId, {
+                renovationAdjustmentStartDate: null,
+                renovationAdjustmentEndDate: null,
+                renovationAdjustmentAmount: null,
+                renovationAdjustmentReminderDate: null,
+                renovationAdjustmentPlanned: false,
+            });
+            setRentalForm((prev) => ({
+                ...prev,
+                renovationAdjustmentStartDate: undefined,
+                renovationAdjustmentEndDate: undefined,
+                renovationAdjustmentAmount: '',
+                renovationAdjustmentReminderDate: undefined,
+            }));
+        } finally {
+            setIsResolvingAdjustment(null);
+        }
+    };
 
-                            {activeTab === 'mieter' && (
-                            <>
-                            {/* Person cards */}
-                            <div className="flex flex-col gap-4">
-                                {persons.map((person, index) => (
-                                    <div key={index} className="p-4 rounded-lg border border-border bg-card">
-                                        <div className="flex items-center justify-between gap-3 mb-3">
-                                            <div className="flex items-center gap-2">
-                                                <User className="w-4 h-4 text-muted-foreground" />
-                                                <span className="text-sm font-semibold text-foreground">Person {index + 1}</span>
-                                                {person.isPrimary && <Tag label="Hauptmieter" variant="primary" />}
-                                            </div>
-                                            {index > 0 && (
-                                                <div className="flex items-center gap-1">
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => makePrimary(index)}
-                                                        aria-label="Zum Hauptmieter machen"
-                                                        title="Zum Hauptmieter machen"
-                                                        className="p-1.5 rounded-md text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors cursor-pointer"
-                                                    >
-                                                        <Star className="w-4 h-4" />
-                                                    </button>
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => handleDeletePersonClick(index)}
-                                                        aria-label="Person entfernen"
-                                                        className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors cursor-pointer"
-                                                    >
-                                                        <Trash2 className="w-4 h-4" />
-                                                    </button>
-                                                </div>
-                                            )}
-                                        </div>
-                                        <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
-                                            <TextField
-                                                label={person.isPrimary ? 'Nachname *' : 'Nachname (opt.)'}
-                                                value={person.lastName}
-                                                onChange={(e) => updatePerson(index, { lastName: e.target.value })}
-                                            />
-                                            <TextField
-                                                label={person.isPrimary ? 'Vorname *' : 'Vorname (opt.)'}
-                                                value={person.firstName}
-                                                onChange={(e) => updatePerson(index, { firstName: e.target.value })}
-                                            />
-                                            <TextField
-                                                label={person.isPrimary ? 'Steuer-ID *' : 'Steuer-ID (opt.)'}
-                                                placeholder="00 000 000 000"
-                                                value={person.taxId}
-                                                onChange={(e) => updatePerson(index, { taxId: e.target.value })}
-                                            />
-                                            <CalendarField
-                                                label={person.isPrimary ? 'Einzugsdatum *' : 'Einzugsdatum (opt.)'}
-                                                value={person.moveInDate}
-                                                onChange={(date) => updatePerson(index, { moveInDate: date })}
-                                            />
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-
-                            {/* Unterlagen */}
-                            <div>
-                                <SectionLabel>Unterlagen</SectionLabel>
-                                <div className="mt-3">
-                                    <Table
-                                        columns={documentColumns}
-                                        data={documentTableData}
-                                        sortKey={docSortKey}
-                                        sortDirection={docSortDirection}
-                                        onSort={handleDocSort}
-                                        columnFilters={docColumnFilters}
-                                        onColumnFilterChange={handleDocColumnFilterChange}
-                                        footerLeft={`${documentTableData.length} Einträge`}
-                                    />
-                                </div>
-                            </div>
-                            </>
-                            )}
-
-                            {activeTab === 'mietvertrag' && (
-                            <>
-                            <div>
-                                <SectionLabel>Mietzeiten</SectionLabel>
-                                <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                    <CalendarField
-                                        label="Einzugsdatum *"
-                                        value={persons[0]?.moveInDate}
-                                        onChange={(date) => updatePerson(0, { moveInDate: date })}
-                                    />
-                                    <div>
-                                        <CalendarField
-                                            label="Auszugsdatum (opt.)"
-                                            value={rentalForm.tenancyEndDate}
-                                            onChange={(date) => setRentalForm((prev) => ({ ...prev, tenancyEndDate: date }))}
-                                        />
-                                        <p className="mt-1 text-xs text-muted-foreground">Synchronisiert mit Mieterauszug-Screen</p>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div>
-                                <SectionLabel>Miete & Nebenkosten</SectionLabel>
-                                <div className="mt-3 grid grid-cols-1 sm:grid-cols-4 gap-3">
-                                    <NumberField
-                                        label="Netto-Mieteinnahmen *"
-                                        unit="€"
-                                        value={rentalForm.coldRent}
-                                        onChange={(e) => setRentalForm((prev) => ({ ...prev, coldRent: e.target.value }))}
-                                        min={0}
-                                    />
-                                    <NumberField
-                                        label="Stellplatz (opt.)"
-                                        unit="€"
-                                        value={rentalForm.parkingSpaceRent}
-                                        onChange={(e) => setRentalForm((prev) => ({ ...prev, parkingSpaceRent: e.target.value }))}
-                                        min={0}
-                                    />
-                                    <NumberField
-                                        label="WEG (opt.)"
-                                        unit="€"
-                                        value={rentalForm.houseMoney}
-                                        onChange={(e) => setRentalForm((prev) => ({ ...prev, houseMoney: e.target.value }))}
-                                        min={0}
-                                    />
-                                    <div>
-                                        <NumberField
-                                            label="Nebenkosten gesamt"
-                                            unit="€"
-                                            value={costBreakdownActive ? String(computedTotalCosts) : rentalForm.totalCosts}
-                                            onChange={(e) => setRentalForm((prev) => ({ ...prev, totalCosts: e.target.value }))}
-                                            min={0}
-                                            disabled={costBreakdownActive}
-                                        />
-                                        {costBreakdownActive && <p className="mt-1 text-xs text-muted-foreground">Berechnet aus Detailerfassung</p>}
-                                    </div>
-                                </div>
-                                <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                    <NumberField
-                                        label="NK umlagefähig"
-                                        unit="€"
-                                        value={rentalForm.allocableCosts}
-                                        onChange={(e) => setRentalForm((prev) => ({ ...prev, allocableCosts: e.target.value }))}
-                                        min={0}
-                                    />
-                                    <NumberField
-                                        label="NK nicht umlagefähig"
-                                        unit="€"
-                                        value={rentalForm.nonAllocableCosts}
-                                        onChange={(e) => setRentalForm((prev) => ({ ...prev, nonAllocableCosts: e.target.value }))}
-                                        min={0}
-                                    />
-                                </div>
-                                <div className="mt-3">
-                                    <Button
-                                        label="Detailerfassung Nebenkosten"
-                                        icon={<ListChecks className="w-4 h-4" />}
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={openCostItemsModal}
-                                    />
-                                </div>
-                            </div>
-
-                            <div>
-                                <SectionLabel>Anpassungen</SectionLabel>
-                                <div className="mt-3 flex flex-col gap-4">
-                                    <DataCard
-                                        icon={TrendingUp}
-                                        title="Nächste Mietanpassung"
-                                        actions={
-                                            <div className="flex items-center gap-2">
-                                                <span title="Es besteht keine Verknüpfung zwischen diesem Objekt und einem Kalkulator-Ergebnis.">
-                                                    <Button label="Vorschlag aus Kalkulator übernehmen" icon={<Calculator className="w-4 h-4" />} variant="outline" size="sm" disabled />
-                                                </span>
-                                                <Button label="Historie" icon={<History className="w-4 h-4" />} variant="outline" size="sm" onClick={() => setHistoryModalType('rent')} />
-                                            </div>
-                                        }
-                                        footer={
-                                            <>
-                                                <span className="mr-auto text-xs font-medium text-muted-foreground">Mieterhöhungsschreiben</span>
-                                                <span title={!canGenerateRentIncreaseLetter ? 'Bitte zuerst Datum, Höhe und Vermieterdaten hinterlegen' : undefined}>
-                                                    <Button
-                                                        label="Schreiben erstellen"
-                                                        icon={<FileText className="w-4 h-4" />}
-                                                        variant="outline"
-                                                        size="sm"
-                                                        disabled={!canGenerateRentIncreaseLetter || isGeneratingLetter === 'rent'}
-                                                        onClick={() => void handleGenerateRentIncreaseLetter()}
-                                                    />
-                                                </span>
-                                            </>
-                                        }
-                                    >
-                                        <div className="flex flex-col gap-3">
-                                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                                                <CalendarField
-                                                    label="Datum"
-                                                    value={rentalForm.nextRentAdjustmentDate}
-                                                    onChange={(date) => setRentalForm((prev) => ({ ...prev, nextRentAdjustmentDate: date }))}
-                                                />
-                                                <NumberField
-                                                    label="Höhe"
-                                                    unit="€"
-                                                    value={rentalForm.nextRentAdjustmentAmount}
-                                                    onChange={(e) => setRentalForm((prev) => ({ ...prev, nextRentAdjustmentAmount: e.target.value }))}
-                                                />
-                                                <div>
-                                                    <CalendarField
-                                                        label="Erinnerung"
-                                                        value={effectiveRentReminderDate}
-                                                        onChange={(date) => setRentalForm((prev) => ({ ...prev, rentAdjustmentReminderDate: date }))}
-                                                    />
-                                                    <p className="mt-1 text-xs text-muted-foreground">Automatisch: Datum -4 Monate</p>
-                                                </div>
-                                            </div>
-                                            {rentReminderDue && (
-                                                <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-50 border border-amber-200 text-xs text-amber-800">
-                                                    <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
-                                                    <span>Das Erinnerungsdatum ist erreicht. Du kannst die Mieterhöhung jetzt übernehmen oder ablehnen. Bei Übernahme wird die Netto-Mieteinnahme aktualisiert und ein Historieneintrag erzeugt.</span>
-                                                </div>
-                                            )}
-                                        </div>
-                                    </DataCard>
-
-                                    <DataCard
-                                        icon={Wrench}
-                                        title="Sanierungsanpassung"
-                                        actions={
-                                            <div className="flex items-center gap-2">
-                                                <span title="Es besteht keine Verknüpfung zwischen diesem Objekt und einem Kalkulator-Ergebnis.">
-                                                    <Button label="Vorschlag aus Kalkulator übernehmen" icon={<Calculator className="w-4 h-4" />} variant="outline" size="sm" disabled />
-                                                </span>
-                                                <Button label="Historie" icon={<History className="w-4 h-4" />} variant="outline" size="sm" onClick={() => setHistoryModalType('renovation')} />
-                                            </div>
-                                        }
-                                        footer={
-                                            <>
-                                                <span className="mr-auto text-xs font-medium text-muted-foreground">Sanierungsanpassungsschreiben</span>
-                                                <span title={!canGenerateRenovationLetter ? 'Bitte zuerst Start/Abschluss, Höhe und Vermieterdaten hinterlegen' : undefined}>
-                                                    <Button
-                                                        label="Schreiben erstellen"
-                                                        icon={<FileText className="w-4 h-4" />}
-                                                        variant="outline"
-                                                        size="sm"
-                                                        disabled={!canGenerateRenovationLetter || isGeneratingLetter === 'renovation'}
-                                                        onClick={() => void handleGenerateRenovationLetter()}
-                                                    />
-                                                </span>
-                                            </>
-                                        }
-                                    >
-                                        <div className="flex flex-col gap-3">
-                                            <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
-                                                <CalendarField
-                                                    label="Start"
-                                                    value={rentalForm.renovationAdjustmentStartDate}
-                                                    onChange={(date) => setRentalForm((prev) => ({ ...prev, renovationAdjustmentStartDate: date }))}
-                                                />
-                                                <CalendarField
-                                                    label="Abschluss"
-                                                    value={rentalForm.renovationAdjustmentEndDate}
-                                                    onChange={(date) => setRentalForm((prev) => ({ ...prev, renovationAdjustmentEndDate: date }))}
-                                                />
-                                                <NumberField
-                                                    label="Höhe"
-                                                    unit="€"
-                                                    value={rentalForm.renovationAdjustmentAmount}
-                                                    onChange={(e) => setRentalForm((prev) => ({ ...prev, renovationAdjustmentAmount: e.target.value }))}
-                                                />
-                                                <div>
-                                                    <CalendarField
-                                                        label="Erinnerung"
-                                                        value={effectiveRenovationReminderDate}
-                                                        onChange={(date) => setRentalForm((prev) => ({ ...prev, renovationAdjustmentReminderDate: date }))}
-                                                    />
-                                                    <p className="mt-1 text-xs text-muted-foreground">Automatisch: Start -4 Monate</p>
-                                                </div>
-                                            </div>
-                                            {renovationReminderDue && (
-                                                <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-50 border border-amber-200 text-xs text-amber-800">
-                                                    <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
-                                                    <span>Das Erinnerungsdatum ist erreicht. Du kannst die Sanierungsanpassung jetzt übernehmen oder ablehnen. Bei Übernahme wird ein Historieneintrag erzeugt.</span>
-                                                </div>
-                                            )}
-                                        </div>
-                                    </DataCard>
-                                </div>
-                            </div>
-
-                            <div>
-                                <SectionLabel>Generierbare Dokumente</SectionLabel>
-                                <div className="mt-3 flex flex-col gap-4">
-                                    <div className="flex items-center justify-end">
-                                        <span title={landlordMissing ? 'Bitte zuerst Vermieterdaten in den Einstellungen hinterlegen' : undefined}>
-                                            <Switch
-                                                label="Mehrere Mietverträge"
-                                                checked={mietvertragIndividual}
-                                                disabled={landlordMissing}
-                                                onCheckedChange={(checked) => setMietvertragIndividual(checked)}
-                                            />
-                                        </span>
-                                    </div>
-
-                                    {mietvertragIndividual ? (
-                                        mietvertragRows.map((row) => (
-                                            <DataCard
-                                                key={row.key}
-                                                icon={FileSignature}
-                                                title={`Mietvertrag – ${row.tenant}`}
-                                                footer={
-                                                    <>
-                                                        {renderFooterUpload(row, mietvertrag, landlordMissing)}
-                                                        <Button
-                                                            label="Daten prüfen & Vorschau"
-                                                            icon={<Eye className="w-4 h-4" />}
-                                                            variant="outline"
-                                                            disabled={landlordMissing || tenancy == null || row.tenancyPersonId == null}
-                                                            title={row.tenancyPersonId == null ? 'Bitte zuerst speichern' : undefined}
-                                                            onClick={() => goTo(`${generatorBase}/rental-agreement?personId=${row.tenancyPersonId}`)}
-                                                        />
-                                                        <Button
-                                                            label="PDF generieren"
-                                                            icon={<FileText className="w-4 h-4" />}
-                                                            variant="primary"
-                                                            disabled={landlordMissing || tenancy == null || row.tenancyPersonId == null}
-                                                            title={row.tenancyPersonId == null ? 'Bitte zuerst speichern' : undefined}
-                                                            onClick={() => goTo(`${generatorBase}/rental-agreement?personId=${row.tenancyPersonId}&autoGenerate=1`)}
-                                                        />
-                                                    </>
-                                                }
-                                            >
-                                                <div className="flex flex-col gap-3">
-                                                    {renderDocRow(row, mietvertrag, landlordMissing, false)}
-                                                    <p className="text-xs text-muted-foreground">
-                                                        Wohnraummietvertrag für {row.tenant}, inklusive Mietkonditionen, Kaution und Sonderregelungen.
-                                                    </p>
-                                                </div>
-                                            </DataCard>
-                                        ))
-                                    ) : (
-                                        <DataCard
-                                            icon={FileSignature}
-                                            title="Mietvertrag"
-                                            footer={
-                                                <>
-                                                    {renderFooterUpload(mietvertragRows[0], mietvertrag, landlordMissing)}
-                                                    <Button
-                                                        label="Daten prüfen & Vorschau"
-                                                        icon={<Eye className="w-4 h-4" />}
-                                                        variant="outline"
-                                                        disabled={landlordMissing || tenancy == null}
-                                                        onClick={() => goTo(`${generatorBase}/rental-agreement`)}
-                                                    />
-                                                    <Button
-                                                        label="PDF generieren"
-                                                        icon={<FileText className="w-4 h-4" />}
-                                                        variant="primary"
-                                                        disabled={landlordMissing || tenancy == null}
-                                                        onClick={() => goTo(`${generatorBase}/rental-agreement?autoGenerate=1`)}
-                                                    />
-                                                </>
-                                            }
-                                        >
-                                            <div className="flex flex-col gap-3">
-                                                {renderDocRow(mietvertragRows[0], mietvertrag, landlordMissing, false)}
-                                                <p className="text-xs text-muted-foreground">
-                                                    Wohnraummietvertrag für die Mietpartei(en) dieser Einheit, inklusive Mietkonditionen, Kaution und Sonderregelungen.
-                                                </p>
-                                            </div>
-                                        </DataCard>
-                                    )}
-                                </div>
-                            </div>
-                            </>
-                            )}
-
-                            {activeTab === 'mieter' && (
-                            <>
-                            {/* Generierbare Dokumente */}
-                            <div>
-                                <SectionLabel>Generierbare Dokumente</SectionLabel>
-                                <div className="mt-3 flex flex-col gap-4">
-                                    <DataCard
-                                        icon={BadgeCheck}
-                                        title="Mieterbescheinigung"
-                                        footer={
-                                            <>
-                                                {renderFooterUpload(mieterbescheinigungRow, MIETERBESCHEINIGUNG, false)}
-                                                <Button
-                                                    label="Daten prüfen & Vorschau"
-                                                    icon={<Eye className="w-4 h-4" />}
-                                                    variant="outline"
-                                                    disabled={tenancy == null}
-                                                    onClick={() => goTo(`${generatorBase}/certificate`)}
-                                                />
-                                                <Button
-                                                    label="PDF generieren"
-                                                    icon={<FileText className="w-4 h-4" />}
-                                                    variant="primary"
-                                                    disabled={tenancy == null}
-                                                    onClick={() => goTo(`${generatorBase}/certificate?autoGenerate=1`)}
-                                                />
-                                            </>
-                                        }
-                                    >
-                                        <div className="flex flex-col gap-3">
-                                            <div className="flex flex-col gap-2">
-                                                {renderDocRow(mieterbescheinigungRow, MIETERBESCHEINIGUNG, false, false)}
-                                            </div>
-                                            <p className="text-xs text-muted-foreground">
-                                                Bestätigt das bestehende Mietverhältnis für alle Mietparteien auf Basis der hinterlegten Daten.
-                                            </p>
-                                        </div>
-                                    </DataCard>
-                                </div>
-                            </div>
-
-                            {/* Mietkaution */}
-                            <div>
-                                <SectionLabel>Mietkaution</SectionLabel>
-                                <div className="mt-3 flex flex-col sm:flex-row items-start sm:items-end gap-3">
-                                    <div className="w-full sm:w-48">
-                                        <NumberField
-                                            label="Betrag (informativ)"
-                                            placeholder="z.B. 2.400"
-                                            unit="€"
-                                            value={deposit}
-                                            onChange={(e) => setDeposit(e.target.value)}
-                                            min={0}
-                                        />
-                                    </div>
-                                    <ComingSoonButton
-                                        label="Mietkautionskonto eröffnen"
-                                        variant="primary"
-                                    />
-                                </div>
-                            </div>
-                            </>
-                            )}
-                </div>
-            </main>
-
-            <StickyActionBar
-                show={true}
-                onGhost={() => goTo(backHref)}
-                onPrimary={() => void handleSave()}
-                ghostLabel={BUTTON_DETAILS.Back.label}
-                ghostIcon={<BUTTON_DETAILS.Back.icon />}
-                primaryLabel="Mieterdaten speichern"
-                primaryIcon={<BUTTON_DETAILS.Save.icon />}
-                primaryDisabled={!isEditing || isSaving}
-            />
-
-            <ConfirmDeleteModal
-                open={personIndexPendingDelete !== null}
-                onCancel={() => setPersonIndexPendingDelete(null)}
-                onConfirm={confirmDeletePerson}
-                title="Person löschen?"
-            >
-                <p className="text-sm text-muted-foreground">
-                    {personIndexPendingDelete !== null
-                        ? `Möchtest du ${personDisplayName(persons[personIndexPendingDelete], personIndexPendingDelete)} wirklich löschen?`
-                        : ''}
-                </p>
-            </ConfirmDeleteModal>
-
-            <ConfirmDeleteModal
-                open={docPendingDelete !== null}
-                onCancel={() => setDocPendingDelete(null)}
-                onConfirm={() => void confirmDeleteDocument()}
-                title="Dokument löschen?"
-                confirmDisabled={pendingDocKey !== null}
-            >
-                <p className="text-sm text-muted-foreground">
-                    {docPendingDelete
-                        ? `Möchtest du ${docPendingDelete.label} wirklich löschen?`
-                        : ''}
-                </p>
-            </ConfirmDeleteModal>
-
-            <UnsavedChangesModal
-                open={pendingHref !== null}
-                onCancel={() => setPendingHref(null)}
-                onDiscard={confirmDiscard}
-                context="an den Mieterdaten"
-            />
-
-            <Modal
-                open={costItemsModalOpen}
-                onClose={() => setCostItemsModalOpen(false)}
-                title="Detailerfassung Nebenkosten"
-                subtitle="Positionen gemäß § 2 BetrKV"
-                maxWidth="max-w-2xl"
-                footer={
-                    <>
-                        <Button label="Abbrechen" variant="outline" onClick={() => setCostItemsModalOpen(false)} />
-                        <Button label="Übernehmen" variant="primary" onClick={applyCostItemsDraft} />
-                    </>
-                }
-            >
-                <div className="flex flex-col gap-2 max-h-[50vh] overflow-y-auto pr-1">
-                    {costItemsDraft.map((item) => (
-                        <div key={item.id} className="flex items-center gap-2">
-                            <input
-                                type="text"
-                                value={item.label}
-                                placeholder="Bezeichnung"
-                                onChange={(e) => updateCostItemsDraftRow(item.id, { label: e.target.value })}
-                                className="flex-1 min-w-0 rounded-md border-2 border-primary/30 bg-card px-3 py-1.5 text-sm focus:border-primary focus:outline-none"
-                            />
-                            <label className="flex items-center gap-1.5 text-xs text-muted-foreground shrink-0">
-                                <input
-                                    type="checkbox"
-                                    checked={item.allocable}
-                                    onChange={(e) => updateCostItemsDraftRow(item.id, { allocable: e.target.checked })}
-                                />
-                                umlagefähig
-                            </label>
-                            <div className="w-28 shrink-0">
-                                <NumberField
-                                    unit="€"
-                                    value={String(item.amount)}
-                                    onChange={(e) => updateCostItemsDraftRow(item.id, { amount: Number(e.target.value) || 0 })}
-                                    min={0}
-                                />
-                            </div>
-                            <button
-                                type="button"
-                                onClick={() => removeCostItemsDraftRow(item.id)}
-                                aria-label="Position entfernen"
-                                className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors cursor-pointer shrink-0"
-                            >
-                                <Trash2 className="w-4 h-4" />
-                            </button>
-                        </div>
-                    ))}
-                </div>
-                <Button label="Position hinzufügen" icon={<Plus className="w-4 h-4" />} variant="outline" size="sm" onClick={addCostItemsDraftRow} />
-                <div className="flex items-center justify-between text-sm pt-3 border-t border-border">
-                    <span>Umlagefähig gesamt: <strong>{euro(draftAllocableSum)}</strong></span>
-                    <span>Nicht umlagefähig gesamt: <strong>{euro(draftNonAllocableSum)}</strong></span>
-                </div>
-            </Modal>
-
-            <Modal
-                open={historyModalType !== null}
-                onClose={() => setHistoryModalType(null)}
-                title={historyModalType === 'rent' ? 'Historie – Mietanpassung' : 'Historie – Sanierungsanpassung'}
-            >
-                {historyEntries.filter((h) => h.adjustmentType === historyModalType).length === 0 ? (
-                    <p className="text-sm text-muted-foreground">Noch keine Einträge.</p>
-                ) : (
-                    <div className="flex flex-col gap-2">
-                        {historyEntries.filter((h) => h.adjustmentType === historyModalType).map((h) => (
-                            <div key={h.historyId} className="p-2.5 rounded-lg bg-muted/30 text-sm">
-                                <div className="flex items-center justify-between gap-3">
-                                    <span>{h.effectiveDate ? formatDeDate(h.effectiveDate) : '–'}</span>
-                                    <span className="font-medium">{h.amount != null ? euro(h.amount) : '–'}</span>
-                                </div>
-                                {h.note && <p className="text-xs text-muted-foreground mt-0.5">{h.note}</p>}
-                                <p className="text-[11px] text-muted-foreground mt-0.5">erstellt am {formatDeDate(h.createdAt)}</p>
-                            </div>
-                        ))}
-                    </div>
-                )}
-            </Modal>
-        </div>
-    );
+    return {
+        // state
+        tenancy, persons, deletedPersonIds, personIndexPendingDelete, deposit, startFreshTenancy,
+        isSaving, error, landlord, docSortKey, docSortDirection, docColumnFilters, documents,
+        pendingDocKey, docPendingDelete, mietvertragIndividual, setMietvertragIndividual,
+        setPersonIndexPendingDelete,
+        pendingHref, setPendingHref, maintenanceCosts, rentalForm, setRentalForm, costItems,
+        costItemsModalOpen, setCostItemsModalOpen, costItemsDraft, historyModalType, setHistoryModalType,
+        historyEntries, isGeneratingLetter, isResolvingAdjustment, setDeposit,
+        // computed
+        status, isEditing, landlordMissing, costBreakdownActive, computedTotalCosts,
+        effectiveRentReminderDate, effectiveRenovationReminderDate,
+        documentRows, mietvertrag, mietvertragRows, mieterbescheinigungRow,
+        rentIncreaseLetterRow, renovationLetterRow, documentColumns, documentTableData,
+        useCaseMenuItems, canGenerateRentIncreaseLetter, canGenerateRenovationLetter,
+        draftAllocableSum, draftNonAllocableSum, backHref, generatorBase,
+        // handlers
+        goTo, confirmDiscard, updatePerson, addPerson, removePerson, handleDeletePersonClick,
+        confirmDeletePerson, makePrimary, handleMieterwechsel, handleSave, handleViewDocument,
+        handleDownloadDocument, confirmDeleteDocument, handleDocSort, handleDocColumnFilterChange,
+        renderDocRow, renderFooterUpload, openCostItemsModal, updateCostItemsDraftRow,
+        addCostItemsDraftRow, removeCostItemsDraftRow, applyCostItemsDraft,
+        handleGenerateRentIncreaseLetter, handleGenerateRenovationLetter,
+        handleAcceptRentAdjustment, handleDeclineRentAdjustment,
+        handleAcceptRenovationAdjustment, handleDeclineRenovationAdjustment,
+        setDocPendingDelete,
+    };
 }

@@ -423,7 +423,7 @@ export type TenancyPersonUpdate = Partial<Omit<TenancyPerson, 'tenancyPersonId' 
 // TenancyDocument
 // ----------------------------------------------------------------------------
 
-export type TenancyDocumentType = 'Ausweis' | 'Schufa' | 'Bürgschaft' | 'Mietvertrag' | 'Mieterbescheinigung';
+export type TenancyDocumentType = 'Ausweis' | 'Schufa' | 'Bürgschaft' | 'Mietvertrag' | 'Mieterbescheinigung' | 'Mieterhöhungsschreiben' | 'Sanierungsanpassungsschreiben';
 
 export interface TenancyDocument {
   tenancyDocumentId: number;
