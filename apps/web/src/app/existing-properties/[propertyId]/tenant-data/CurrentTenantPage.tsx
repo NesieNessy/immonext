@@ -6,8 +6,8 @@ import { Button, CalendarField, ComingSoonButton, ConfirmDeleteModal, Header, Mo
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { ExistingPropertiesUseCases } from '@/constants/ExistingPropertiesUseCases';
 import type { Property, PropertyUnit } from '@immonext/types';
-import { base64ToDataUri } from '@/lib/utils';
-import { BadgeCheck, DoorOpen, Eye, FileText, Plus, RefreshCw, Star, Trash2, User } from 'lucide-react';
+import { base64ToDataUri, formatDeDate } from '@/lib/utils';
+import { Archive, BadgeCheck, DoorOpen, Eye, FileText, Plus, RefreshCw, Star, Trash2, User } from 'lucide-react';
 import { MIETERBESCHEINIGUNG, personDisplayName, useTenantUnitData } from './useTenantUnitData';
 
 interface CurrentTenantPageProps {
@@ -15,6 +15,10 @@ interface CurrentTenantPageProps {
     property: Property;
     unit: PropertyUnit;
     hasMultipleUnits: boolean;
+    /** Set when reached from Mieterhistorie's "Ansehen" action — renders
+     *  this same page for a past tenancy instead of the unit's current one,
+     *  with an "Archiviert" indicator and the Auszugsdatum surfaced. */
+    archivedTenancyId?: number;
 }
 
 /** The Aktueller Mieter page: person data, Unterlagen, Mieterbescheinigung,
@@ -22,41 +26,53 @@ interface CurrentTenantPageProps {
  *  now (see ../tenant-agreement/TenantAgreementPage) — the two are
  *  deliberately not sharing chrome (breadcrumb, header actions, sticky bar)
  *  beyond the data layer. */
-export function CurrentTenantPage({ propertyId, property, unit, hasMultipleUnits }: CurrentTenantPageProps) {
-    const data = useTenantUnitData(propertyId, property, unit, hasMultipleUnits);
+export function CurrentTenantPage({ propertyId, property, unit, hasMultipleUnits, archivedTenancyId }: CurrentTenantPageProps) {
+    const data = useTenantUnitData(propertyId, property, unit, hasMultipleUnits, archivedTenancyId);
 
-    const breadcrumbItems: BreadcrumbItem[] = hasMultipleUnits
+    const address = `${property.street} ${property.houseNumber}, ${property.postalCode} ${property.city}`;
+    const unitLabel = formatUnitLabel(unit.unitLabel, unit.floor, unit.locationNote);
+    const archivedTenantName = data.isArchived && data.persons[0] ? personDisplayName(data.persons[0], 0) : 'Archiviert';
+
+    const breadcrumbItems: BreadcrumbItem[] = data.isArchived
         ? [
-            {
-                label: 'Bestandsobjekte',
-                href: '/existing-properties',
-                onClick: (e) => { if (data.isEditing) { e.preventDefault(); data.goTo('/existing-properties'); } },
-            },
-            {
-                label: `${property.street} ${property.houseNumber}, ${property.postalCode} ${property.city}`,
-                href: `/existing-properties/${propertyId}`,
-                onClick: (e) => { if (data.isEditing) { e.preventDefault(); data.goTo(`/existing-properties/${propertyId}`); } },
-            },
-            {
-                label: ExistingPropertiesUseCases.TenantData,
-                href: `/existing-properties/${propertyId}/tenant-data`,
-                onClick: (e) => { if (data.isEditing) { e.preventDefault(); data.goTo(`/existing-properties/${propertyId}/tenant-data`); } },
-            },
-            { label: formatUnitLabel(unit.unitLabel, unit.floor, unit.locationNote) },
+            { label: 'Bestandsobjekte', href: '/existing-properties' },
+            { label: address, href: `/existing-properties/${propertyId}` },
+            ...(hasMultipleUnits ? [{ label: 'Wohneinheiten', href: `/existing-properties/${propertyId}/tenant-history` }] : []),
+            { label: unitLabel, href: `/existing-properties/${propertyId}/tenant-history/${unit.propertyUnitId}` },
+            { label: archivedTenantName },
         ]
-        : [
-            {
-                label: 'Bestandsobjekte',
-                href: '/existing-properties',
-                onClick: (e) => { if (data.isEditing) { e.preventDefault(); data.goTo('/existing-properties'); } },
-            },
-            {
-                label: `${property.street} ${property.houseNumber}, ${property.postalCode} ${property.city}`,
-                href: `/existing-properties/${propertyId}`,
-                onClick: (e) => { if (data.isEditing) { e.preventDefault(); data.goTo(`/existing-properties/${propertyId}`); } },
-            },
-            { label: ExistingPropertiesUseCases.TenantData },
-        ];
+        : hasMultipleUnits
+            ? [
+                {
+                    label: 'Bestandsobjekte',
+                    href: '/existing-properties',
+                    onClick: (e) => { if (data.isEditing) { e.preventDefault(); data.goTo('/existing-properties'); } },
+                },
+                {
+                    label: address,
+                    href: `/existing-properties/${propertyId}`,
+                    onClick: (e) => { if (data.isEditing) { e.preventDefault(); data.goTo(`/existing-properties/${propertyId}`); } },
+                },
+                {
+                    label: ExistingPropertiesUseCases.TenantData,
+                    href: `/existing-properties/${propertyId}/tenant-data`,
+                    onClick: (e) => { if (data.isEditing) { e.preventDefault(); data.goTo(`/existing-properties/${propertyId}/tenant-data`); } },
+                },
+                { label: unitLabel },
+            ]
+            : [
+                {
+                    label: 'Bestandsobjekte',
+                    href: '/existing-properties',
+                    onClick: (e) => { if (data.isEditing) { e.preventDefault(); data.goTo('/existing-properties'); } },
+                },
+                {
+                    label: address,
+                    href: `/existing-properties/${propertyId}`,
+                    onClick: (e) => { if (data.isEditing) { e.preventDefault(); data.goTo(`/existing-properties/${propertyId}`); } },
+                },
+                { label: ExistingPropertiesUseCases.TenantData },
+            ];
 
     return (
         <div className="min-h-screen bg-background pb-24">
@@ -84,22 +100,34 @@ export function CurrentTenantPage({ propertyId, property, unit, hasMultipleUnits
 
                     <div className="flex items-center justify-between gap-3 flex-wrap">
                         <div className="flex items-center gap-2">
-                            <Tag label={data.status} variant={data.status === 'Vermietet' ? 'success' : 'muted'} />
+                            {data.isArchived ? (
+                                <>
+                                    <Tag label="Archiviert" variant="muted" />
+                                    <Archive className="w-3.5 h-3.5 text-muted-foreground" />
+                                    <span className="text-sm text-muted-foreground">
+                                        Auszugsdatum: {formatDeDate(data.tenancy?.tenancyEndDate)}
+                                    </span>
+                                </>
+                            ) : (
+                                <Tag label={data.status} variant={data.status === 'Vermietet' ? 'success' : 'muted'} />
+                            )}
                         </div>
-                        <div className="flex items-center gap-3">
-                            <Button
-                                label="Mieterwechsel"
-                                icon={<RefreshCw className="w-4 h-4" />}
-                                variant="outline"
-                                onClick={() => data.setMieterwechselModalOpen(true)}
-                            />
-                            <Button
-                                label="Person hinzufügen"
-                                icon={<Plus className="w-4 h-4" />}
-                                variant="primary"
-                                onClick={data.addPerson}
-                            />
-                        </div>
+                        {!data.isArchived && (
+                            <div className="flex items-center gap-3">
+                                <Button
+                                    label="Mieterwechsel"
+                                    icon={<RefreshCw className="w-4 h-4" />}
+                                    variant="outline"
+                                    onClick={() => data.setMieterwechselModalOpen(true)}
+                                />
+                                <Button
+                                    label="Person hinzufügen"
+                                    icon={<Plus className="w-4 h-4" />}
+                                    variant="primary"
+                                    onClick={data.addPerson}
+                                />
+                            </div>
+                        )}
                     </div>
 
                     {/* Person cards */}
@@ -112,7 +140,7 @@ export function CurrentTenantPage({ propertyId, property, unit, hasMultipleUnits
                                         <span className="text-sm font-semibold text-foreground">Person {index + 1}</span>
                                         {person.isPrimary && <Tag label="Hauptmieter" variant="primary" />}
                                     </div>
-                                    {index > 0 && (
+                                    {index > 0 && !data.isArchived && (
                                         <div className="flex items-center gap-1">
                                             <button
                                                 type="button"
@@ -139,22 +167,26 @@ export function CurrentTenantPage({ propertyId, property, unit, hasMultipleUnits
                                         label={person.isPrimary ? 'Nachname *' : 'Nachname (opt.)'}
                                         value={person.lastName}
                                         onChange={(e) => data.updatePerson(index, { lastName: e.target.value })}
+                                        disabled={data.isArchived}
                                     />
                                     <TextField
                                         label={person.isPrimary ? 'Vorname *' : 'Vorname (opt.)'}
                                         value={person.firstName}
                                         onChange={(e) => data.updatePerson(index, { firstName: e.target.value })}
+                                        disabled={data.isArchived}
                                     />
                                     <TextField
                                         label={person.isPrimary ? 'Steuer-ID *' : 'Steuer-ID (opt.)'}
                                         placeholder="00 000 000 000"
                                         value={person.taxId}
                                         onChange={(e) => data.updatePerson(index, { taxId: e.target.value })}
+                                        disabled={data.isArchived}
                                     />
                                     <CalendarField
                                         label={person.isPrimary ? 'Einzugsdatum *' : 'Einzugsdatum (opt.)'}
                                         value={person.moveInDate}
                                         onChange={(date) => data.updatePerson(index, { moveInDate: date })}
+                                        disabled={data.isArchived}
                                     />
                                 </div>
                             </div>
@@ -195,13 +227,15 @@ export function CurrentTenantPage({ propertyId, property, unit, hasMultipleUnits
                                             disabled={data.tenancy == null}
                                             onClick={() => data.goTo(`${data.generatorBase}/certificate`)}
                                         />
-                                        <Button
-                                            label="PDF generieren"
-                                            icon={<FileText className="w-4 h-4" />}
-                                            variant="primary"
-                                            disabled={data.tenancy == null}
-                                            onClick={() => data.goTo(`${data.generatorBase}/certificate?autoGenerate=1`)}
-                                        />
+                                        {!data.isArchived && (
+                                            <Button
+                                                label="PDF generieren"
+                                                icon={<FileText className="w-4 h-4" />}
+                                                variant="primary"
+                                                disabled={data.tenancy == null}
+                                                onClick={() => data.goTo(`${data.generatorBase}/certificate?autoGenerate=1`)}
+                                            />
+                                        )}
                                     </>
                                 }
                             >
@@ -229,12 +263,15 @@ export function CurrentTenantPage({ propertyId, property, unit, hasMultipleUnits
                                     value={data.deposit}
                                     onChange={(e) => data.setDeposit(e.target.value)}
                                     min={0}
+                                    disabled={data.isArchived}
                                 />
                             </div>
-                            <ComingSoonButton
-                                label="Mietkautionskonto eröffnen"
-                                variant="primary"
-                            />
+                            {!data.isArchived && (
+                                <ComingSoonButton
+                                    label="Mietkautionskonto eröffnen"
+                                    variant="primary"
+                                />
+                            )}
                         </div>
                     </div>
                 </div>
@@ -248,7 +285,7 @@ export function CurrentTenantPage({ propertyId, property, unit, hasMultipleUnits
                 ghostIcon={<BUTTON_DETAILS.Back.icon />}
                 primaryLabel="Mieterdaten speichern"
                 primaryIcon={<BUTTON_DETAILS.Save.icon />}
-                primaryDisabled={!data.isEditing || data.isSaving}
+                primaryDisabled={data.isArchived || !data.isEditing || data.isSaving}
             />
 
             <ConfirmDeleteModal

@@ -1,0 +1,41 @@
+"use client";
+import { useEffect, useState } from 'react';
+
+import { PropertyLoadingPage, PropertyNotFoundPage } from '@/components/features/PropertyDisplay';
+import { getPropertyById } from '@/lib/supabase/property.supabase';
+import { getPropertyUnitsByProperty } from '@/lib/supabase/property_unit.supabase';
+import type { Property, PropertyUnit } from '@immonext/types';
+
+import { CurrentTenantPage } from '../../../tenant-data/CurrentTenantPage';
+
+export default function ArchivedTenantPage({ propertyId, unitId, tenancyId }: { propertyId: string; unitId: string; tenancyId: string }) {
+    const [property, setProperty] = useState<Property | null>(null);
+    const [unit, setUnit] = useState<PropertyUnit | null | undefined>(undefined);
+    const [hasMultipleUnits, setHasMultipleUnits] = useState(false);
+
+    useEffect(() => {
+        const id = parseInt(propertyId, 10);
+        const targetUnitId = parseInt(unitId, 10);
+        Promise.all([
+            getPropertyById(id),
+            getPropertyUnitsByProperty(id),
+        ]).then(([foundProperty, units]) => {
+            setProperty(foundProperty);
+            setUnit(units.find((u) => u.propertyUnitId === targetUnitId) ?? null);
+            setHasMultipleUnits(units.length > 1);
+        });
+    }, [propertyId, unitId]);
+
+    if (property === null || unit === null) return <PropertyNotFoundPage />;
+    if (!property || unit === undefined) return <PropertyLoadingPage />;
+
+    return (
+        <CurrentTenantPage
+            propertyId={propertyId}
+            property={property}
+            unit={unit}
+            hasMultipleUnits={hasMultipleUnits}
+            archivedTenancyId={parseInt(tenancyId, 10)}
+        />
+    );
+}

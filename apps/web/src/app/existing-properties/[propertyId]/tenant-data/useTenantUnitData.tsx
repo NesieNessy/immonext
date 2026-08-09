@@ -3,7 +3,7 @@
 import { formatUnitLabel } from '@/components/features/PropertyDisplay';
 import { Button, useToast, type SortDirection, type TableColumn } from '@/components/ui';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
-import { createTenancy, getCurrentTenancyByUnit, updateTenancy } from '@/lib/supabase/tenancy.supabase';
+import { createTenancy, getCurrentTenancyByUnit, getTenancyById, updateTenancy } from '@/lib/supabase/tenancy.supabase';
 import { getPersonalData } from '@/lib/supabase/personal_data.supabase';
 import { createMaintenanceCosts, getMaintenanceCostsById, updateMaintenanceCosts } from '@/lib/supabase/maintenance_costs.supabase';
 import { addAdjustmentHistoryEntry, getAdjustmentHistoryByTenancy } from '@/lib/supabase/tenancy_adjustment_history.supabase';
@@ -155,10 +155,21 @@ function serializePersons(persons: PersonForm[]): string {
  * Speichern flow, so that part stays in one place rather than being
  * duplicated or awkwardly synced between two copies.
  */
-export function useTenantUnitData(propertyId: string, property: Property, unit: PropertyUnit, hasMultipleUnits: boolean) {
+/**
+ * `archivedTenancyId` switches this from the unit's current tenancy (the
+ * normal Mieterdaten/Mietvertrag flow) to a specific past one — used by
+ * Mieterhistorie's "Ansehen" action, which reuses this same page/hook
+ * instead of a bespoke read view so archived tenants get the exact same
+ * layout as the current one, just with the Auszug surfaced.
+ */
+export function useTenantUnitData(propertyId: string, property: Property, unit: PropertyUnit, hasMultipleUnits: boolean, archivedTenancyId?: number) {
     const router = useRouter();
     const { user } = useRequireAuth();
     const { showToast } = useToast();
+    // Archived (Mieterhistorie "Ansehen") view: same page, but nothing that
+    // mutates the record — upload/delete document controls fall back to
+    // their disabled/no-affordance branch below.
+    const readOnly = Boolean(archivedTenancyId);
 
     const [tenancy, setTenancy] = useState<Tenancy | null>(null);
     const [persons, setPersons] = useState<PersonForm[]>([EMPTY_PRIMARY_PERSON]);
@@ -195,7 +206,8 @@ export function useTenantUnitData(propertyId: string, property: Property, unit: 
 
     useEffect(() => {
         let cancelled = false;
-        getCurrentTenancyByUnit(unit.propertyUnitId).then(async (found) => {
+        const fetchTenancy = archivedTenancyId ? getTenancyById(archivedTenancyId) : getCurrentTenancyByUnit(unit.propertyUnitId);
+        fetchTenancy.then(async (found) => {
             if (cancelled) return;
             setTenancy(found);
             const loadedDeposit = found?.deposit != null ? String(found.deposit) : '';
@@ -258,7 +270,7 @@ export function useTenantUnitData(propertyId: string, property: Property, unit: 
             }
         });
         return () => { cancelled = true; };
-    }, [unit.propertyUnitId]);
+    }, [unit.propertyUnitId, archivedTenancyId]);
 
     useEffect(() => {
         if (!user) return;
@@ -496,9 +508,11 @@ export function useTenantUnitData(propertyId: string, property: Property, unit: 
         }
     };
 
-    const backHref = hasMultipleUnits
-        ? `/existing-properties/${propertyId}/tenant-data`
-        : `/existing-properties/${propertyId}`;
+    const backHref = archivedTenancyId
+        ? `/existing-properties/${propertyId}/tenant-history/${unit.propertyUnitId}`
+        : hasMultipleUnits
+            ? `/existing-properties/${propertyId}/tenant-data`
+            : `/existing-properties/${propertyId}`;
 
     const handleSave = async () => {
         setIsSaving(true);
@@ -776,17 +790,23 @@ export function useTenantUnitData(propertyId: string, property: Property, unit: 
                             >
                                 <Download className="w-4 h-4" />
                             </button>
-                            <button
-                                type="button"
-                                onClick={() => setDocPendingDelete({ key, doc, label: `${row.document as string} von ${row.tenant as string}` })}
-                                disabled={isPending}
-                                aria-label={`${row.document as string} löschen`}
-                                className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
-                            >
-                                <Trash2 className="w-4 h-4" />
-                            </button>
+                            {!readOnly && (
+                                <button
+                                    type="button"
+                                    onClick={() => setDocPendingDelete({ key, doc, label: `${row.document as string} von ${row.tenant as string}` })}
+                                    disabled={isPending}
+                                    aria-label={`${row.document as string} löschen`}
+                                    className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
+                                >
+                                    <Trash2 className="w-4 h-4" />
+                                </button>
+                            )}
                         </div>
                     );
+                }
+
+                if (readOnly) {
+                    return <span className="flex justify-end text-xs text-muted-foreground">–</span>;
                 }
 
                 if (!row.canUpload) {
@@ -880,17 +900,19 @@ export function useTenantUnitData(propertyId: string, property: Property, unit: 
                             >
                                 <Download className="w-4 h-4" />
                             </button>
-                            <button
-                                type="button"
-                                onClick={() => setDocPendingDelete({ key: row.key, doc: row.doc!, label: `${documentType} von ${row.tenant}` })}
-                                disabled={isPending}
-                                aria-label="Löschen"
-                                className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
-                            >
-                                <Trash2 className="w-4 h-4" />
-                            </button>
+                            {!readOnly && (
+                                <button
+                                    type="button"
+                                    onClick={() => setDocPendingDelete({ key: row.key, doc: row.doc!, label: `${documentType} von ${row.tenant}` })}
+                                    disabled={isPending}
+                                    aria-label="Löschen"
+                                    className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
+                                >
+                                    <Trash2 className="w-4 h-4" />
+                                </button>
+                            )}
                         </>
-                    ) : !showUploadInRow ? null : !row.canUpload || blocked ? (
+                    ) : !showUploadInRow || readOnly ? null : !row.canUpload || blocked ? (
                         <span title={blocked ? 'Bitte zuerst Vermieterdaten in den Einstellungen hinterlegen' : 'Bitte zuerst speichern'}>
                             <Button iconOnly icon={<Upload className="w-4 h-4" />} variant="outline" size="sm" disabled aria-label="Hochladen" />
                         </span>
@@ -936,6 +958,7 @@ export function useTenantUnitData(propertyId: string, property: Property, unit: 
         blocked: boolean,
         label: string = 'Datei hochladen',
     ) => {
+        if (readOnly) return null;
         const isPending = pendingDocKey === row.key;
         if (!row.canUpload || blocked) {
             return (
@@ -1193,6 +1216,7 @@ export function useTenantUnitData(propertyId: string, property: Property, unit: 
         costItemsModalOpen, setCostItemsModalOpen, costItemsDraft, historyModalType, setHistoryModalType,
         historyEntries, isGeneratingLetter, isResolvingAdjustment, setDeposit,
         // computed
+        isArchived: Boolean(archivedTenancyId),
         status, isEditing, landlordMissing, costBreakdownActive, computedTotalCosts,
         effectiveRentReminderDate, effectiveRenovationReminderDate,
         documentRows, mietvertrag, mietvertragRows, mieterbescheinigungRow,
