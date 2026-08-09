@@ -7,7 +7,7 @@ import { Button, CalendarField, ConfirmDeleteModal, Header, Modal, NumberField, 
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { base64ToDataUri, formatDeDate } from '@/lib/utils';
 import type { Property, PropertyUnit } from '@immonext/types';
-import { Calculator, Eye, FileSignature, FileText, History, ListChecks, Plus, Trash2, TrendingUp, Wrench } from 'lucide-react';
+import { Calculator, Eye, FileSignature, FileText, History, ListChecks, Plus, Receipt, Trash2, TrendingUp, Wrench } from 'lucide-react';
 import { euro, useTenantUnitData } from '../tenant-data/useTenantUnitData';
 
 interface TenantAgreementPageProps {
@@ -107,14 +107,14 @@ export function TenantAgreementPage({ propertyId, property, unit, hasMultipleUni
                                     value={data.rentalForm.tenancyEndDate}
                                     onChange={(date) => data.setRentalForm((prev) => ({ ...prev, tenancyEndDate: date }))}
                                 />
-                                <p className="mt-1 text-xs text-muted-foreground">Synchronisiert mit Mieterauszug-Screen</p>
+                                <p className="mt-1 text-xs text-muted-foreground">Synchronisiert mit Mieterauszug</p>
                             </div>
                         </div>
                     </div>
 
                     <div>
                         <SectionLabel>Miete & Nebenkosten</SectionLabel>
-                        <div className="mt-3 grid grid-cols-1 sm:grid-cols-4 gap-3">
+                        <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-3">
                             <NumberField
                                 label="Netto-Mieteinnahmen *"
                                 unit="€"
@@ -136,42 +136,58 @@ export function TenantAgreementPage({ propertyId, property, unit, hasMultipleUni
                                 onChange={(e) => data.setRentalForm((prev) => ({ ...prev, houseMoney: e.target.value }))}
                                 min={0}
                             />
-                            <div>
-                                <NumberField
-                                    label="Nebenkosten gesamt"
-                                    unit="€"
-                                    value={data.costBreakdownActive ? String(data.computedTotalCosts) : data.rentalForm.totalCosts}
-                                    onChange={(e) => data.setRentalForm((prev) => ({ ...prev, totalCosts: e.target.value }))}
-                                    min={0}
-                                    disabled={data.costBreakdownActive}
-                                />
-                                {data.costBreakdownActive && <p className="mt-1 text-xs text-muted-foreground">Berechnet aus Detailerfassung</p>}
-                            </div>
                         </div>
-                        <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
-                            <NumberField
-                                label="NK umlagefähig"
-                                unit="€"
-                                value={data.rentalForm.allocableCosts}
-                                onChange={(e) => data.setRentalForm((prev) => ({ ...prev, allocableCosts: e.target.value }))}
-                                min={0}
-                            />
-                            <NumberField
-                                label="NK nicht umlagefähig"
-                                unit="€"
-                                value={data.rentalForm.nonAllocableCosts}
-                                onChange={(e) => data.setRentalForm((prev) => ({ ...prev, nonAllocableCosts: e.target.value }))}
-                                min={0}
-                            />
-                        </div>
+
                         <div className="mt-3">
-                            <Button
-                                label="Detailerfassung Nebenkosten"
-                                icon={<ListChecks className="w-4 h-4" />}
-                                variant="outline"
-                                size="sm"
-                                onClick={data.openCostItemsModal}
-                            />
+                            <DataCard
+                                icon={Receipt}
+                                title="Nebenkosten"
+                                actions={
+                                    <Button
+                                        label="Detailerfassung Nebenkosten"
+                                        icon={<ListChecks className="w-4 h-4" />}
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={data.openCostItemsModal}
+                                    />
+                                }
+                            >
+                                <div className="flex flex-col gap-3">
+                                    {data.costItems.length === 0 && (
+                                        <p className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
+                                            Noch keine Nebenkosten erfasst.
+                                        </p>
+                                    )}
+                                    {data.costItems.length > 0 && (
+                                        <p className="text-xs text-muted-foreground">
+                                            Nebenkosten aus Detailerfassung berechnet.
+                                        </p>
+                                    )}
+                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                        <NumberField
+                                            label="NK gesamt"
+                                            unit="€"
+                                            value={data.costItems.length > 0 ? String(data.computedTotalCosts ?? 0) : ''}
+                                            placeholder="–"
+                                            disabled
+                                        />
+                                        <NumberField
+                                            label="NK umlagefähig"
+                                            unit="€"
+                                            value={data.costItems.length > 0 ? data.rentalForm.allocableCosts : ''}
+                                            placeholder="–"
+                                            disabled
+                                        />
+                                        <NumberField
+                                            label="NK nicht umlagefähig"
+                                            unit="€"
+                                            value={data.costItems.length > 0 ? data.rentalForm.nonAllocableCosts : ''}
+                                            placeholder="–"
+                                            disabled
+                                        />
+                                    </div>
+                                </div>
+                            </DataCard>
                         </div>
                     </div>
 

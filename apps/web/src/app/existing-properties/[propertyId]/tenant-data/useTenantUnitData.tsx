@@ -166,6 +166,8 @@ export function useTenantUnitData(propertyId: string, property: Property, unit: 
     const [personIndexPendingDelete, setPersonIndexPendingDelete] = useState<number | null>(null);
     const [deposit, setDeposit] = useState('');
     const [startFreshTenancy, setStartFreshTenancy] = useState(false);
+    const [mieterwechselModalOpen, setMieterwechselModalOpen] = useState(false);
+    const [isStartingMieterwechsel, setIsStartingMieterwechsel] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [landlord, setLandlord] = useState<PersonalData | null | undefined>(undefined);
@@ -463,14 +465,35 @@ export function useTenantUnitData(propertyId: string, property: Property, unit: 
         });
     };
 
-    const handleMieterwechsel = () => {
-        setStartFreshTenancy(true);
-        setPersons([EMPTY_PRIMARY_PERSON]);
-        setDeposit('');
-        setDeletedPersonIds([]);
-        setRentalForm(EMPTY_RENTAL_FORM);
-        setCostItems([]);
-        setMaintenanceCosts(null);
+    // "Mieterwechsel" always needs confirmation first — it discards the
+    // currently-shown tenant. The two continue-paths both end the current
+    // tenancy (once Mieterhistorie exists, that's what makes it show up
+    // there); "mit Mieterauszug" leaves the page immediately, so that part
+    // has to be written right away rather than deferred to Speichern like
+    // the "ohne" path (which stays on the page to enter the new tenant).
+    const confirmMieterwechsel = async (withMoveOut: boolean) => {
+        setIsStartingMieterwechsel(true);
+        try {
+            if (withMoveOut) {
+                if (tenancy) {
+                    await updateTenancy(tenancy.tenancyId, { tenancyEndDate: format(new Date(), 'yyyy-MM-dd') });
+                }
+                setMieterwechselModalOpen(false);
+                router.push(`/existing-properties/${propertyId}/tenant-move-out`);
+                return;
+            }
+
+            setStartFreshTenancy(true);
+            setPersons([EMPTY_PRIMARY_PERSON]);
+            setDeposit('');
+            setDeletedPersonIds([]);
+            setRentalForm(EMPTY_RENTAL_FORM);
+            setCostItems([]);
+            setMaintenanceCosts(null);
+            setMieterwechselModalOpen(false);
+        } finally {
+            setIsStartingMieterwechsel(false);
+        }
     };
 
     const backHref = hasMultipleUnits
@@ -1164,7 +1187,8 @@ export function useTenantUnitData(propertyId: string, property: Property, unit: 
         tenancy, persons, deletedPersonIds, personIndexPendingDelete, deposit, startFreshTenancy,
         isSaving, error, landlord, docSortKey, docSortDirection, docColumnFilters, documents,
         pendingDocKey, docPendingDelete, mietvertragIndividual, setMietvertragIndividual,
-        setPersonIndexPendingDelete,
+        setPersonIndexPendingDelete, mieterwechselModalOpen, setMieterwechselModalOpen,
+        isStartingMieterwechsel,
         pendingHref, setPendingHref, maintenanceCosts, rentalForm, setRentalForm, costItems,
         costItemsModalOpen, setCostItemsModalOpen, costItemsDraft, historyModalType, setHistoryModalType,
         historyEntries, isGeneratingLetter, isResolvingAdjustment, setDeposit,
@@ -1177,7 +1201,7 @@ export function useTenantUnitData(propertyId: string, property: Property, unit: 
         draftAllocableSum, draftNonAllocableSum, backHref, generatorBase,
         // handlers
         goTo, confirmDiscard, updatePerson, addPerson, removePerson, handleDeletePersonClick,
-        confirmDeletePerson, makePrimary, handleMieterwechsel, handleSave, handleViewDocument,
+        confirmDeletePerson, makePrimary, confirmMieterwechsel, handleSave, handleViewDocument,
         handleDownloadDocument, confirmDeleteDocument, handleDocSort, handleDocColumnFilterChange,
         renderDocRow, renderFooterUpload, openCostItemsModal, updateCostItemsDraftRow,
         addCostItemsDraftRow, removeCostItemsDraftRow, applyCostItemsDraft,

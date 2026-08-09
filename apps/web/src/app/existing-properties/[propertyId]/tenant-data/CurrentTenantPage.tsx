@@ -2,12 +2,12 @@
 
 import { formatUnitLabel } from '@/components/features/PropertyDisplay';
 import { DataCard } from './DocumentGeneratorParts';
-import { Button, CalendarField, ComingSoonButton, ConfirmDeleteModal, Header, NumberField, SectionLabel, StickyActionBar, Table, Tag, TextField, UnsavedChangesModal, type BreadcrumbItem } from '@/components/ui';
+import { Button, CalendarField, ComingSoonButton, ConfirmDeleteModal, Header, Modal, NumberField, SectionLabel, StickyActionBar, Table, Tag, TextField, UnsavedChangesModal, type BreadcrumbItem } from '@/components/ui';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { ExistingPropertiesUseCases } from '@/constants/ExistingPropertiesUseCases';
 import type { Property, PropertyUnit } from '@immonext/types';
 import { base64ToDataUri } from '@/lib/utils';
-import { BadgeCheck, Eye, FileText, Plus, RefreshCw, Star, Trash2, User } from 'lucide-react';
+import { BadgeCheck, DoorOpen, Eye, FileText, Plus, RefreshCw, Star, Trash2, User } from 'lucide-react';
 import { MIETERBESCHEINIGUNG, personDisplayName, useTenantUnitData } from './useTenantUnitData';
 
 interface CurrentTenantPageProps {
@@ -91,7 +91,7 @@ export function CurrentTenantPage({ propertyId, property, unit, hasMultipleUnits
                                 label="Mieterwechsel"
                                 icon={<RefreshCw className="w-4 h-4" />}
                                 variant="outline"
-                                onClick={data.handleMieterwechsel}
+                                onClick={() => data.setMieterwechselModalOpen(true)}
                             />
                             <Button
                                 label="Person hinzufügen"
@@ -284,6 +284,40 @@ export function CurrentTenantPage({ propertyId, property, unit, hasMultipleUnits
                 onDiscard={data.confirmDiscard}
                 context="an den Mieterdaten"
             />
+
+            <Modal
+                open={data.mieterwechselModalOpen}
+                onClose={() => data.setMieterwechselModalOpen(false)}
+                title="Mieterwechsel starten?"
+                subtitle="Der aktuelle Mieter wird entfernt und die Einheit als unvermietet markiert."
+                footer={
+                    <>
+                        <Button
+                            label="Abbrechen"
+                            variant="outline"
+                            disabled={data.isStartingMieterwechsel}
+                            onClick={() => data.setMieterwechselModalOpen(false)}
+                        />
+                        <Button
+                            label="Ohne Mieterauszug fortfahren"
+                            variant="outline"
+                            disabled={data.isStartingMieterwechsel}
+                            onClick={() => void data.confirmMieterwechsel(false)}
+                        />
+                        <Button
+                            label="Mit Mieterauszug fortfahren"
+                            icon={<DoorOpen className="w-4 h-4" />}
+                            variant="primary"
+                            disabled={data.isStartingMieterwechsel}
+                            onClick={() => void data.confirmMieterwechsel(true)}
+                        />
+                    </>
+                }
+            >
+                <p className="text-sm text-muted-foreground">
+                    Du kannst direkt einen neuen Mieter erfassen, oder zuerst den Mieterauszug für den bisherigen Mieter durchführen.
+                </p>
+            </Modal>
         </div>
     );
 }
