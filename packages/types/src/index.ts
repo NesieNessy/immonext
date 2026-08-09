@@ -386,6 +386,10 @@ export interface Tenancy {
   redecorationClause?: RentalTermsRedecorationClause | null,
   subletAllowed?: RentalTermsSubletAllowed | null,
   additionalTerms?: string | null,
+  /** Move-out checklist, shown on the Mieterhistorie table for ended
+   *  tenancies — both default to false until the landlord ticks them off. */
+  acceptanceProtocol?: boolean,
+  depositPaidOut?: boolean,
   createdAt: string,
   updatedAt: string
 }
@@ -423,7 +427,7 @@ export type TenancyPersonUpdate = Partial<Omit<TenancyPerson, 'tenancyPersonId' 
 // TenancyDocument
 // ----------------------------------------------------------------------------
 
-export type TenancyDocumentType = 'Ausweis' | 'Schufa' | 'Bürgschaft' | 'Mietvertrag' | 'Mieterbescheinigung';
+export type TenancyDocumentType = 'Ausweis' | 'Schufa' | 'Bürgschaft' | 'Mietvertrag' | 'Mieterbescheinigung' | 'Mieterhöhungsschreiben' | 'Sanierungsanpassungsschreiben' | 'Abnahme';
 
 export interface TenancyDocument {
   tenancyDocumentId: number;

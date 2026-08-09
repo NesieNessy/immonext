@@ -196,7 +196,7 @@ export default function NewUnit({ propertyId }: { propertyId: string }) {
                         <SectionLabel>Bezeichnung</SectionLabel>
                         <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-3">
                             <TextField
-                                label="Einheitenbezeichnung *"
+                                label="Bezeichnung *"
                                 placeholder="z.B. Whg. 1"
                                 value={unitLabel}
                                 onChange={(e) => setUnitLabel(e.target.value)}

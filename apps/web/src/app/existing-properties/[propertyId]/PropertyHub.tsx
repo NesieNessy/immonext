@@ -12,7 +12,6 @@ import {
   Database,
   DoorOpen,
   FileSignature,
-  FileText,
   History,
   Home,
   Landmark,
@@ -216,29 +215,20 @@ export default function PropertyHub({ propertyId }: { propertyId: string }) {
     ? PROPERTY_CATEGORY_LABEL[property.propertyCategory] ?? property.propertyCategory
     : null;
 
-  // Generieren shortcuts need a single, unambiguous unit to target — with
-  // several Wohneinheiten the user picks one first via Mieterdaten.
+  // The Mietvertrag shortcut needs a single, unambiguous unit to target —
+  // with several Wohneinheiten the user picks one first via Mieterdaten.
   const singleUnit = units.length === 1 ? units[0] : null;
   const miete: HubCard[] = [
-    ...MIETE,
-    ...(singleUnit ? [
-      {
-        key: 'certificate-generate',
-        title: 'Mieterbescheinigung',
-        description: 'Bescheinigung des Mietverhältnisses für den Mieter erstellen',
-        route: `tenant-data/unit/${singleUnit.propertyUnitId}/certificate`,
-        icon: FileText,
-        colorClass: 'bg-sky-100 text-sky-600 dark:bg-sky-900/30 dark:text-sky-400',
-      },
-      {
-        key: 'rental-agreement-generate',
-        title: 'Mietvertrag',
-        description: 'Mietvertrag für Wohnraum automatisch erstellen',
-        route: `tenant-data/unit/${singleUnit.propertyUnitId}/rental-agreement`,
-        icon: FileSignature,
-        colorClass: 'bg-teal-100 text-teal-600 dark:bg-teal-900/30 dark:text-teal-400',
-      },
-    ] : []),
+    MIETE[0], // Mieterdaten
+    ...(singleUnit ? [{
+      key: 'tenant-agreement',
+      title: 'Mietvertrag',
+      description: 'Mietkonditionen, Anpassungen und Dokumente verwalten',
+      route: `tenant-agreement/${singleUnit.propertyUnitId}`,
+      icon: FileSignature,
+      colorClass: 'bg-teal-100 text-teal-600 dark:bg-teal-900/30 dark:text-teal-400',
+    }] : []),
+    ...MIETE.slice(1),
   ];
 
   const weitereAktionen: HubCard[] = [
