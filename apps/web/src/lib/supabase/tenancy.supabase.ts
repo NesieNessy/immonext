@@ -43,6 +43,8 @@ function toTenancy(row: Record<string, unknown>): Tenancy {
         redecorationClause: row.redecoration_clause as RentalTermsRedecorationClause | null,
         subletAllowed: row.sublet_allowed as RentalTermsSubletAllowed | null,
         additionalTerms: row.additional_terms as string | null,
+        acceptanceProtocol: row.acceptance_protocol as boolean,
+        depositPaidOut: row.deposit_paid_out as boolean,
     };
 }
 
@@ -67,6 +69,13 @@ export async function getCurrentTenancyByUnit(propertyUnitId: number): Promise<T
     const data = await propertyResourceRequest<Record<string, unknown>>('tenancies', {}, { propertyUnitId, current: true, single: true });
     if (!data) return null;
     return toTenancy(data);
+}
+
+/** Every tenancy (current + past) ever recorded for a Wohneinheit — used by
+ *  the Mieterhistorie table, which shows all but the current one. */
+export async function getTenanciesByUnit(propertyUnitId: number): Promise<Tenancy[]> {
+    const data = await propertyResourceRequest<Record<string, unknown>[]>('tenancies', {}, { propertyUnitId });
+    return data?.map(toTenancy) ?? [];
 }
 
 // ----------------------------------------------------------------------------
@@ -139,6 +148,8 @@ export async function updateTenancy(
     if (updates.redecorationClause !== undefined) dbUpdates.redecoration_clause = updates.redecorationClause;
     if (updates.subletAllowed !== undefined) dbUpdates.sublet_allowed = updates.subletAllowed;
     if (updates.additionalTerms !== undefined) dbUpdates.additional_terms = updates.additionalTerms;
+    if (updates.acceptanceProtocol !== undefined) dbUpdates.acceptance_protocol = updates.acceptanceProtocol;
+    if (updates.depositPaidOut !== undefined) dbUpdates.deposit_paid_out = updates.depositPaidOut;
 
     const data = await propertyResourceRequest<Record<string, unknown>>('tenancies', jsonRequest('PATCH', { id: tenancyId, values: dbUpdates }));
     if (!data) return null;

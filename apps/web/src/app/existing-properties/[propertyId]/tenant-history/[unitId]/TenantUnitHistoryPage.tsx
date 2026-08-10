@@ -6,9 +6,9 @@ import { getPropertyById } from '@/lib/supabase/property.supabase';
 import { getPropertyUnitsByProperty } from '@/lib/supabase/property_unit.supabase';
 import type { Property, PropertyUnit } from '@immonext/types';
 
-import { CurrentTenantPage } from '../CurrentTenantPage';
+import { UnitHistoryTable } from '../UnitHistoryTable';
 
-export default function TenantUnitPage({ propertyId, unitId }: { propertyId: string; unitId: string }) {
+export default function TenantUnitHistoryPage({ propertyId, unitId }: { propertyId: string; unitId: string }) {
     const [property, setProperty] = useState<Property | null>(null);
     const [unit, setUnit] = useState<PropertyUnit | null | undefined>(undefined);
 
@@ -27,5 +27,5 @@ export default function TenantUnitPage({ propertyId, unitId }: { propertyId: str
     if (property === null || unit === null) return <PropertyNotFoundPage />;
     if (!property || unit === undefined) return <PropertyLoadingPage />;
 
-    return <CurrentTenantPage propertyId={propertyId} property={property} unit={unit} hasMultipleUnits={true} />;
+    return <UnitHistoryTable propertyId={propertyId} property={property} unit={unit} hasMultipleUnits={true} />;
 }

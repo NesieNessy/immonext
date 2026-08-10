@@ -134,8 +134,14 @@ export default function TenantCertificatePage({ propertyId, unitId }: { property
     const breadcrumbItems: BreadcrumbItem[] = [
         { label: 'Bestandsobjekte', href: '/existing-properties' },
         { label: `${property.street} ${property.houseNumber}, ${property.postalCode} ${property.city}`, href: `/existing-properties/${propertyId}` },
-        ...(hasMultipleUnits ? [{ label: ExistingPropertiesUseCases.TenantData, href: `/existing-properties/${propertyId}/tenant-data` }] : []),
-        { label: unitLabel, href: backHref },
+        ...(hasMultipleUnits
+            ? [
+                { label: ExistingPropertiesUseCases.TenantData, href: `/existing-properties/${propertyId}/tenant-data` },
+                { label: unitLabel, href: backHref },
+            ]
+            : [
+                { label: ExistingPropertiesUseCases.TenantData, href: backHref },
+            ]),
         { label: 'Mieterbescheinigung generieren' },
     ];
 

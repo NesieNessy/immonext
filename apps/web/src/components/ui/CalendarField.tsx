@@ -2,7 +2,7 @@
 
 import React from "react";
 import { cn } from "@/lib/utils";
-import { Calendar as CalendarIcon } from "lucide-react";
+import { Calendar as CalendarIcon, X } from "lucide-react";
 import { useFieldIds } from "./fieldIds";
 import { Calendar } from "../ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
@@ -45,6 +45,14 @@ export function CalendarField({
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value;
     setInputValue(newValue);
+
+    // Clearing the field has to actually clear the value — otherwise blur's
+    // "reset to the current value" snaps the old date right back in, and
+    // the field can never be emptied by deleting its text.
+    if (newValue === "") {
+      onChange?.(undefined);
+      return;
+    }
 
     // Try to parse various date formats
     const parsedDate = parseFlexibleDate(newValue);
@@ -93,7 +101,7 @@ export function CalendarField({
               placeholder={props.placeholder || "dd.mm.yyyy"}
               className={cn(
                 "w-full px-4 py-2 bg-input-background border border-border rounded-lg cursor-text",
-                !props.readOnly && !props.disabled && "pr-10",
+                !props.readOnly && !props.disabled && (value ? "pr-16" : "pr-10"),
                 "focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary",
                 "transition-all duration-200",
                 "disabled:opacity-50 disabled:cursor-not-allowed",
@@ -104,15 +112,31 @@ export function CalendarField({
               {...props}
             />
             {!props.readOnly && !props.disabled && (
-              <button
-                type="button"
-                onClick={() => setOpen(!open)}
-                aria-label={label ? `${label}: Kalender öffnen` : "Kalender öffnen"}
-                aria-expanded={open}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-              >
-                <CalendarIcon size={20} aria-hidden="true" />
-              </button>
+              <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-0.5">
+                {value && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setInputValue("");
+                      onChange?.(undefined);
+                    }}
+                    aria-label={label ? `${label}: Datum löschen` : "Datum löschen"}
+                    className="p-1 rounded text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                  >
+                    <X size={16} aria-hidden="true" />
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setOpen(!open)}
+                  aria-label={label ? `${label}: Kalender öffnen` : "Kalender öffnen"}
+                  aria-expanded={open}
+                  className="p-1 rounded text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                >
+                  <CalendarIcon size={18} aria-hidden="true" />
+                </button>
+              </div>
             )}
           </div>
         </PopoverTrigger>

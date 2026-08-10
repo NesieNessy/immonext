@@ -3,7 +3,6 @@
 import { formatUnitLabel, PropertyLoadingPage, PropertyNotFoundPage } from '@/components/features/PropertyDisplay';
 import { CalendarField, Dropdown, Header, NumberField, StickyActionBar, TextArea, type BreadcrumbItem } from '@/components/ui';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
-import { ExistingPropertiesUseCases } from '@/constants/ExistingPropertiesUseCases';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
 import { htmlToPdfBlob } from '@/lib/pdf/htmlToPdf';
 import { updateTenancy } from '@/lib/supabase/tenancy.supabase';
@@ -226,15 +225,19 @@ export default function RentalAgreementPage({ propertyId, unitId }: { propertyId
     if (isLoading || !property || !unit) return <PropertyLoadingPage />;
 
     const unitLabel = formatUnitLabel(unit.unitLabel, unit.floor, unit.locationNote);
-    const backHref = hasMultipleUnits
+    // Only reachable from the Mietvertrag page now (its "Daten prüfen &
+    // Vorschau" / "PDF generieren" buttons), so Zurück and the breadcrumb
+    // both lead back there — not to Mieterdaten.
+    const currentTenantHref = hasMultipleUnits
         ? `/existing-properties/${propertyId}/tenant-data/${unit.propertyUnitId}`
         : `/existing-properties/${propertyId}/tenant-data`;
+    const backHref = `/existing-properties/${propertyId}/tenant-agreement/${unit.propertyUnitId}`;
 
     const breadcrumbItems: BreadcrumbItem[] = [
         { label: 'Bestandsobjekte', href: '/existing-properties' },
         { label: `${property.street} ${property.houseNumber}, ${property.postalCode} ${property.city}`, href: `/existing-properties/${propertyId}` },
-        ...(hasMultipleUnits ? [{ label: ExistingPropertiesUseCases.TenantData, href: `/existing-properties/${propertyId}/tenant-data` }] : []),
-        { label: unitLabel, href: backHref },
+        ...(hasMultipleUnits ? [{ label: unitLabel, href: currentTenantHref }] : []),
+        { label: 'Mietvertrag', href: backHref },
         { label: 'Mietvertrag generieren' },
     ];
 

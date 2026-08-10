@@ -59,6 +59,7 @@ const RESOURCES: Record<string, ResourceConfig> = {
       'renovation_adjustment_start_date', 'renovation_adjustment_end_date', 'renovation_adjustment_amount',
       'rent_adjustment_reminder_date', 'renovation_adjustment_reminder_date',
       'pets_allowed', 'redecoration_clause', 'sublet_allowed', 'additional_terms',
+      'acceptance_protocol', 'deposit_paid_out',
     ],
     orderBy: 'tenancy_id',
   },
@@ -141,8 +142,12 @@ export async function GET(request: Request, context: RouteContext) {
     'EXISTS (SELECT 1 FROM property p WHERE p.property_id = r.property_id AND p.user_id = $1)',
     ...filters,
   ].join(' AND ');
+  // "Current" prefers an open tenancy (no Auszug/tenancy_end_date) over a
+  // merely-most-recent one — otherwise Mieterhistorie's "Reaktivieren" can
+  // never win back the "current" slot for an older tenancy_start_date, since
+  // clearing its end date alone wouldn't change the ordering.
   const orderBy = url.searchParams.get('current') === 'true' && config.table === 'tenancy'
-    ? ' ORDER BY tenancy_start_date DESC NULLS LAST LIMIT 1'
+    ? ' ORDER BY (tenancy_end_date IS NULL) DESC, tenancy_start_date DESC NULLS LAST LIMIT 1'
     : config.orderBy ? ` ORDER BY ${config.orderBy}` : '';
   const { rows } = await db.query(`SELECT r.* FROM ${config.table} r WHERE ${where}${orderBy}`, values);
 

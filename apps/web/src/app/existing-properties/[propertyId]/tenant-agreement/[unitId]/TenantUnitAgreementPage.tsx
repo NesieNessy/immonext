@@ -6,11 +6,12 @@ import { getPropertyById } from '@/lib/supabase/property.supabase';
 import { getPropertyUnitsByProperty } from '@/lib/supabase/property_unit.supabase';
 import type { Property, PropertyUnit } from '@immonext/types';
 
-import { CurrentTenantPage } from '../CurrentTenantPage';
+import { TenantAgreementPage } from '../TenantAgreementPage';
 
-export default function TenantUnitPage({ propertyId, unitId }: { propertyId: string; unitId: string }) {
+export default function TenantUnitAgreementPage({ propertyId, unitId }: { propertyId: string; unitId: string }) {
     const [property, setProperty] = useState<Property | null>(null);
     const [unit, setUnit] = useState<PropertyUnit | null | undefined>(undefined);
+    const [hasMultipleUnits, setHasMultipleUnits] = useState(true);
 
     useEffect(() => {
         const id = parseInt(propertyId, 10);
@@ -21,11 +22,19 @@ export default function TenantUnitPage({ propertyId, unitId }: { propertyId: str
         ]).then(([foundProperty, units]) => {
             setProperty(foundProperty);
             setUnit(units.find((u) => u.propertyUnitId === targetUnitId) ?? null);
+            setHasMultipleUnits(units.length > 1);
         });
     }, [propertyId, unitId]);
 
     if (property === null || unit === null) return <PropertyNotFoundPage />;
     if (!property || unit === undefined) return <PropertyLoadingPage />;
 
-    return <CurrentTenantPage propertyId={propertyId} property={property} unit={unit} hasMultipleUnits={true} />;
+    return (
+        <TenantAgreementPage
+            propertyId={propertyId}
+            property={property}
+            unit={unit}
+            hasMultipleUnits={hasMultipleUnits}
+        />
+    );
 }

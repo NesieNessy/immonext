@@ -15,7 +15,7 @@ import type { Property, PropertyUnit } from '@immonext/types';
 import { ExternalLink, MoreVertical, Plus, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
-import { TenantUnitDetail } from './TenantUnitDetail';
+import { CurrentTenantPage } from './CurrentTenantPage';
 
 type UnitStatus = 'Vermietet' | 'Unvermietet';
 
@@ -157,7 +157,7 @@ export default function TenantData({ propertyId }: { propertyId: string }) {
     if (units.length <= 1) {
         const unit = units[0];
         if (!unit) return <PropertyNotFoundPage />;
-        return <TenantUnitDetail propertyId={propertyId} property={property} unit={unit} hasMultipleUnits={false} />;
+        return <CurrentTenantPage propertyId={propertyId} property={property} unit={unit} hasMultipleUnits={false} />;
     }
 
     const buildRowMenuItems = (row: { propertyUnitId: number; unitLabel: string }): MenuItem[] => [
