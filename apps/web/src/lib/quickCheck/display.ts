@@ -1,14 +1,16 @@
 // ---------------------------------------------------------------------------
-// Pure (no-JSX) Quick Check display/validation helpers, split out from
-// QuickCheckDisplay.tsx so they're importable from plain .test.ts files —
-// the app's vitest config runs in a JSX-free node environment on purpose
-// (see vitest.config.mts), so anything under test can't live in a module
-// that also defines a component.
+// Quick Check display/validation logic — row→entry mapping, condition/status
+// maps, and the create/edit form's validation rules. Re-exported from
+// components/features/QuickCheckDisplay.tsx (which adds the one JSX piece,
+// KpfBadge) so existing imports of that module keep working. Kept as plain
+// .ts (no JSX) so it's importable from .test.ts files — the app's vitest
+// config runs in a JSX-free node environment on purpose (see
+// vitest.config.mts).
 // ---------------------------------------------------------------------------
 
 import type { TagVariant } from '@/components/ui';
 import type { QuickCheckOverview } from '@/lib/supabase/quick_check.supabase';
-import { isValidConstructionYear } from '@/utils/validation';
+import { isValidConstructionYear } from './validation';
 import { PropertyCondition } from '@immonext/types';
 
 export interface QuickCheckEntry extends Record<string, unknown> {

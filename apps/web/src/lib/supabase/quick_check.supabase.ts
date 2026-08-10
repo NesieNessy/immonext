@@ -12,7 +12,7 @@
 // Note: finalize_quick_check also accepts a p_kpf_multiplier param that, if
 // given, upserts a comparison range into kpf_ranges — but neither call below
 // passes it, and the KPF gauge no longer reads from kpf_ranges (it now uses
-// the fixed classifyKpf() scale in utils/kpf.ts), so that param is unused.
+// the fixed classifyKpf() scale in lib/quickCheck/kpf.ts), so that param is unused.
 // ==============================================================================
 
 import type { PropertyCondition } from '@immonext/types';

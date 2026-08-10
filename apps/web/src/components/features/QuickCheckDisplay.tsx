@@ -5,17 +5,19 @@
 // the same cells (KPF badge, condition tag, portal-ID link, ...).
 //
 // The non-JSX pieces (entry mapping, condition/status maps, form validation)
-// live in ./QuickCheckLogic and are re-exported below so every existing
-// import of this module keeps working — they're split out only so that
-// logic is importable from plain .test.ts files (see QuickCheckLogic.ts).
+// live in @/lib/quickCheck/display and are re-exported below so every
+// existing import of this module keeps working — they're split out only so
+// that logic is importable from plain .test.ts files (see
+// lib/quickCheck/display.ts) and lives alongside the rest of the Quick
+// Check business logic (kpf.ts, validation.ts) instead of under components/.
 // ---------------------------------------------------------------------------
 
-import { classifyKpf } from '@/utils/kpf';
+import { classifyKpf } from '@/lib/quickCheck/kpf';
 
-export * from './QuickCheckLogic';
+export * from '@/lib/quickCheck/display';
 
 // ── KPF badge — coloured pill ───────────────────────────────────────────────
-// Colour is driven by classifyKpf() (utils/kpf.ts) — the same classification
+// Colour is driven by classifyKpf() (lib/quickCheck/kpf.ts) — the same classification
 // KpfAssessmentCard's description text uses — so the badge and the prose
 // description of a given KPF value can never disagree with each other.
 

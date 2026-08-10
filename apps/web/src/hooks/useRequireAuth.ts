@@ -1,7 +1,7 @@
 'use client';
 
-import { clearLoginTime, isSessionExpired, msUntilExpiry } from '@/lib/sessionTimeout';
-import { authBypassUser, isAuthBypassEnabled } from '@/lib/authBypass';
+import { clearLoginTime, isSessionExpired, msUntilExpiry } from '@/lib/auth/sessionTimeout';
+import { authBypassUser, isAuthBypassEnabled } from '@/lib/auth/authBypass';
 import { supabase } from '@/lib/supabase/client.supabase';
 import { getPersonalData } from '@/lib/supabase/personal_data.supabase';
 import type { User } from '@supabase/supabase-js';

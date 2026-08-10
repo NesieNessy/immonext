@@ -22,7 +22,7 @@ import {
     getTenancyPersonsByTenancy,
     updateTenancyPerson,
 } from '@/lib/supabase/tenancy_person.supabase';
-import { createUseCaseMenuItems } from '@/lib/useCaseMenu';
+import { createUseCaseMenuItems } from '@/lib/propertyUseCaseMenu';
 import { base64ToDataUri, cn, deCurrencyFormatter, formatDeDate } from '@/lib/utils';
 import { openAndPrintLetter, renovationAdjustmentLetterHtml, rentIncreaseLetterHtml } from './adjustmentLetters';
 import type { MaintenanceCostItem, MaintenanceCosts, PersonalData, Property, PropertyUnit, Tenancy, TenancyAdjustmentHistoryEntry, TenancyAdjustmentType, TenancyDocument, TenancyDocumentType } from '@immonext/types';

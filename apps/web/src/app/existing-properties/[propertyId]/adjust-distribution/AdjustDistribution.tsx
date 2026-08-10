@@ -8,7 +8,7 @@ import { computePriceSplitIndividual, computePriceSplitStandard } from '@/lib/de
 import { getCityPurchasePriceSplit } from '@/lib/supabase/city_purchase_price_split.supabase';
 import { getPropertyOverviewById, type PropertyOverview } from '@/lib/supabase/property.supabase';
 import { getPropertyPriceSplitByProperty, upsertPropertyPriceSplit } from '@/lib/supabase/property_price_split.supabase';
-import { createUseCaseMenuItems } from '@/lib/useCaseMenu';
+import { createUseCaseMenuItems } from '@/lib/propertyUseCaseMenu';
 import { base64ToDataUri, deCurrencyFormatter, deNumberFormatter } from '@/lib/utils';
 import { Info } from 'lucide-react';
 import { useRouter } from 'next/navigation';

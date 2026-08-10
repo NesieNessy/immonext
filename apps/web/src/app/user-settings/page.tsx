@@ -1,7 +1,7 @@
 "use client";
 
 import { Header, StickyActionBar, TextField, Tile, useToast } from '@/components/ui';
-import { authBypassUser, isAuthBypassEnabled } from '@/lib/authBypass';
+import { authBypassUser, isAuthBypassEnabled } from '@/lib/auth/authBypass';
 import { supabase } from '@/lib/supabase/client.supabase';
 import { getPersonalData, upsertPersonalData } from '@/lib/supabase/personal_data.supabase';
 import type { PersonalData } from '@immonext/types';

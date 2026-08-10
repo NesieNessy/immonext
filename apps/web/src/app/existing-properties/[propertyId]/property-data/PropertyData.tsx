@@ -8,7 +8,7 @@ import { createAcquisitionCosts, getAcquisitionCosts, updateAcquisitionCosts } f
 import { createParkingSpace, deleteParkingSpace, getParkingSpacesByProperty, updateParkingSpace } from '@/lib/supabase/parking_space.supabase';
 import { getPropertyById, updateProperty } from '@/lib/supabase/property.supabase';
 import { getPropertyAcquisitionByProperty, upsertPropertyAcquisition } from '@/lib/supabase/property_acquisition.supabase';
-import { createUseCaseMenuItems } from '@/lib/useCaseMenu';
+import { createUseCaseMenuItems } from '@/lib/propertyUseCaseMenu';
 import { base64ToDataUri } from '@/lib/utils';
 import { EnergyEfficient, type AcquisitionCosts, type ParkingSpace, type Property } from '@immonext/types';
 import { format, parseISO } from 'date-fns';

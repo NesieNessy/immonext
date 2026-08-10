@@ -9,7 +9,7 @@ import { getPropertyById } from '@/lib/supabase/property.supabase';
 import { deletePropertyUnit, getPropertyUnitsByProperty } from '@/lib/supabase/property_unit.supabase';
 import { getCurrentTenancyByUnit } from '@/lib/supabase/tenancy.supabase';
 import { getTenancyPersonsByTenancy } from '@/lib/supabase/tenancy_person.supabase';
-import { createUseCaseMenuItems } from '@/lib/useCaseMenu';
+import { createUseCaseMenuItems } from '@/lib/propertyUseCaseMenu';
 import { base64ToDataUri, deCurrencyFormatter, formatDeDate } from '@/lib/utils';
 import type { Property, PropertyUnit } from '@immonext/types';
 import { ExternalLink, MoreVertical, Plus, Trash2 } from 'lucide-react';

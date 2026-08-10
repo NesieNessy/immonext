@@ -1,3 +1,26 @@
+/**
+ * Vertical offset (in PDF points) for each page's `addImage` call when
+ * slicing one tall rendered image across multiple same-size PDF pages —
+ * page 1 always starts at 0; each following page's offset is negative,
+ * shifting the same image up by one more `pageHeight` so the next unseen
+ * slice lands in view. Always returns at least one offset, even when the
+ * image is shorter than a single page.
+ *
+ * Pulled out of htmlToPdfBlob (below) as the one piece of that function
+ * that's pure arithmetic rather than DOM/canvas rendering — the rest can't
+ * run outside a real browser, but an off-by-one here would silently drop or
+ * duplicate content on every generated PDF, so it's worth pinning down.
+ */
+export function computePdfPageOffsets(imgHeight: number, pageHeight: number): number[] {
+    const offsets: number[] = [0];
+    let heightLeft = imgHeight - pageHeight;
+    while (heightLeft > 0) {
+        offsets.push(heightLeft - imgHeight);
+        heightLeft -= pageHeight;
+    }
+    return offsets;
+}
+
 /** Renders a fragment of print-ready HTML (as produced by the tenant-data
  *  document generators) into an actual PDF file, off-screen, using the same
  *  html2canvas + jsPDF page-slicing recipe the ecosystem generally uses for
@@ -30,16 +53,10 @@ export async function htmlToPdfBlob(bodyHtml: string): Promise<Blob> {
         const imgWidth = pageWidth;
         const imgHeight = (canvas.height * imgWidth) / canvas.width;
 
-        let heightLeft = imgHeight;
-        let position = 0;
-        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-        heightLeft -= pageHeight;
-        while (heightLeft > 0) {
-            position = heightLeft - imgHeight;
-            pdf.addPage();
+        computePdfPageOffsets(imgHeight, pageHeight).forEach((position, index) => {
+            if (index > 0) pdf.addPage();
             pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-            heightLeft -= pageHeight;
-        }
+        });
 
         return pdf.output('blob');
     } finally {

@@ -11,7 +11,7 @@ import {
   toEntry,
   type QuickCheckEntry,
   type QuickCheckFormFields,
-} from './QuickCheckLogic';
+} from './display';
 
 // Base row shared by the toEntry/getPlaceholderPortalUrl tests below —
 // individual tests override only the fields they care about.
