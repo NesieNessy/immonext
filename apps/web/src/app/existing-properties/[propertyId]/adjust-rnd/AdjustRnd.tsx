@@ -12,7 +12,7 @@ import {
 } from '@/lib/detailCheck/depreciation';
 import { getPropertyRndByProperty, upsertPropertyRnd } from '@/lib/supabase/property_rnd.supabase';
 import { getPropertyById } from '@/lib/supabase/property.supabase';
-import { createUseCaseMenuItems } from '@/lib/useCaseMenu';
+import { createUseCaseMenuItems } from '@/lib/propertyUseCaseMenu';
 import { base64ToDataUri, cn, deNumberFormatter } from '@/lib/utils';
 import type { Property, RndMode } from '@immonext/types';
 import { useRouter } from 'next/navigation';

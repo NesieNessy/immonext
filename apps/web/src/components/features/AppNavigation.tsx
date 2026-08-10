@@ -1,8 +1,8 @@
 "use client";
 
 import { NavigationBar } from '@/components/ui/NavigationBar';
-import { authBypassUser, isAuthBypassEnabled } from '@/lib/authBypass';
-import { clearLoginTime } from '@/lib/sessionTimeout';
+import { authBypassUser, isAuthBypassEnabled } from '@/lib/auth/authBypass';
+import { clearLoginTime } from '@/lib/auth/sessionTimeout';
 import { supabase } from '@/lib/supabase/client.supabase';
 import type { User } from '@supabase/supabase-js';
 import { usePathname, useRouter } from 'next/navigation';

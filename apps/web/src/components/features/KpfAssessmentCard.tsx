@@ -2,7 +2,7 @@ import { Icons } from '@/components/common/Icons';
 import { Tile } from '@/components/ui/Tile';
 import { FieldLabels } from '@/constants/FieldLabels';
 import { cn } from '@/lib/utils';
-import { calcPositionPct, classifyKpf, KPF_SCALE_MAX, KPF_SCALE_MIN } from '@/utils/kpf';
+import { calcPositionPct, classifyKpf, KPF_SCALE_MAX, KPF_SCALE_MIN } from '@/lib/quickCheck/kpf';
 import { ArrowDown } from 'lucide-react';
 
 interface Props {

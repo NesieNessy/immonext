@@ -19,7 +19,7 @@ import {
     getTenancyPersonsByTenancy,
     updateTenancyPerson,
 } from '@/lib/supabase/tenancy_person.supabase';
-import { createUseCaseMenuItems } from '@/lib/useCaseMenu';
+import { createUseCaseMenuItems } from '@/lib/propertyUseCaseMenu';
 import { cn, deCurrencyFormatter, formatDeDate } from '@/lib/utils';
 import { renovationAdjustmentLetterHtml, rentIncreaseLetterHtml } from './adjustmentLetters';
 import { htmlToPdfBlob } from '@/lib/pdf/htmlToPdf';

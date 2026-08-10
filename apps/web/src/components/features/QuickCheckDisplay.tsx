@@ -3,62 +3,21 @@
 // Ersteinschätzungen overview (detailCheck = false) and the Detailbewertungen
 // overview (detailCheck = true), which render the same underlying data with
 // the same cells (KPF badge, condition tag, portal-ID link, ...).
+//
+// The non-JSX pieces (entry mapping, condition/status maps, form validation)
+// live in @/lib/quickCheck/display and are re-exported below so every
+// existing import of this module keeps working — they're split out only so
+// that logic is importable from plain .test.ts files (see
+// lib/quickCheck/display.ts) and lives alongside the rest of the Quick
+// Check business logic (kpf.ts, validation.ts) instead of under components/.
 // ---------------------------------------------------------------------------
 
-import type { TagVariant } from '@/components/ui';
-import type { QuickCheckOverview } from '@/lib/supabase/quick_check.supabase';
-import { classifyKpf } from '@/utils/kpf';
-import { isValidConstructionYear } from '@/utils/validation';
-import { PropertyCondition } from '@immonext/types';
+import { classifyKpf } from '@/lib/quickCheck/kpf';
 
-export interface QuickCheckEntry extends Record<string, unknown> {
-  id: number;
-  /** Raw ISO timestamp — not displayed, only used as the default sort key
-   *  (ISO 8601 strings sort correctly lexicographically; a reformatted
-   *  dd.MM.yy string would not, across month/year boundaries). */
-  ingestDate: string;
-  portalId: string;
-  kpfMultiplier: number | null;
-  purchasePrice: number;
-  postalCode: string;
-  constructionYear: number;
-  condition: PropertyCondition;
-  detailCheck: boolean;
-  status: 'aktiv' | 'inaktiv';
-  recommendationScore: number | null;
-  recommendationLevel: string | null;
-}
-
-export const MANUAL_ENTRY_LABEL = 'Manuelle Erfassung';
-
-export function toEntry(row: QuickCheckOverview): QuickCheckEntry {
-  return {
-    id:               row.quickCheckId,
-    ingestDate:       row.ingestDate,
-    portalId:         row.portalId ?? MANUAL_ENTRY_LABEL,
-    kpfMultiplier:    row.kpfMultiplier,
-    purchasePrice:    row.purchasePrice,
-    postalCode:       row.postalCode,
-    constructionYear: row.yearOfConstruction,
-    condition:        row.condition,
-    detailCheck:      row.detailCheck,
-    status:           row.status === 'ACTIVE' ? 'aktiv' : 'inaktiv',
-    recommendationScore: row.recommendationScore,
-    recommendationLevel: row.recommendationLevel,
-  };
-}
-
-// ── Condition → Tag variant ─────────────────────────────────────────────────
-
-export const conditionVariant: Record<PropertyCondition, TagVariant> = {
-  [PropertyCondition.Upscale]:            'purple',
-  [PropertyCondition.Standard]:           'teal',
-  [PropertyCondition.Luxury]:             'violet',
-  [PropertyCondition.InNeedOfRenovation]: 'orange',
-};
+export * from '@/lib/quickCheck/display';
 
 // ── KPF badge — coloured pill ───────────────────────────────────────────────
-// Colour is driven by classifyKpf() (utils/kpf.ts) — the same classification
+// Colour is driven by classifyKpf() (lib/quickCheck/kpf.ts) — the same classification
 // KpfAssessmentCard's description text uses — so the badge and the prose
 // description of a given KPF value can never disagree with each other.
 
@@ -78,93 +37,4 @@ export function KpfBadge({ value }: { value: number | null }) {
       {value.toFixed(1).replace(/\.0$/, '')}
     </span>
   );
-}
-
-/** Dropdown options for the create/edit forms — includes a placeholder. */
-export const CONDITION_OPTIONS = [
-  { value: '', label: 'Bitte auswählen' },
-  ...Object.values(PropertyCondition).map((v) => ({ value: v, label: v })),
-];
-
-export const CONDITION_FILTER_OPTIONS = Object.values(PropertyCondition).map((v) => ({ value: v, label: v }));
-export const STATUS_FILTER_OPTIONS = [
-  { value: 'aktiv', label: 'Aktiv' },
-  { value: 'inaktiv', label: 'Inaktiv' },
-];
-
-/** Shorter labels for the mobile condition-filter pills (limited width). */
-export const CONDITION_PILL_LABEL: Record<PropertyCondition, string> = {
-  [PropertyCondition.InNeedOfRenovation]: 'Sanierung',
-  [PropertyCondition.Standard]:           'Standard',
-  [PropertyCondition.Upscale]:            'Gehoben',
-  [PropertyCondition.Luxury]:             'Luxus',
-};
-
-// Portal import isn't implemented yet — quick_check.portal_id is just an
-// opaque reference, not a real URL. Until the import flow exists, link
-// each portal-sourced row to a placeholder expose page (deterministic per
-// row, so the link doesn't change on re-render) instead of leaving the
-// Portal-ID cell unclickable.
-const PLACEHOLDER_PORTAL_DOMAINS = [
-  'https://www.immobilienscout24.de/expose',
-  'https://www.immowelt.de/expose',
-  'https://www.immonet.de/expose',
-];
-
-export function getPlaceholderPortalUrl(row: QuickCheckEntry): string | null {
-  if (row.portalId === MANUAL_ENTRY_LABEL || row.status === 'inaktiv') return null;
-  const domain = PLACEHOLDER_PORTAL_DOMAINS[row.id % PLACEHOLDER_PORTAL_DOMAINS.length];
-  return `${domain}/${encodeURIComponent(row.portalId)}`;
-}
-
-// ── Create/edit form validation — shared by quick-check/new and
-//    QuickCheckResultView, whose forms have identical fields and rules. ────
-
-export interface QuickCheckFormFields {
-  street: string;
-  postalCode: string;
-  city: string;
-  purchasePrice: string;
-  coldRent: string;
-  yearOfConstruction: string;
-}
-
-/**
- * Per-field validation messages — only populated once a field has been
- * touched (non-empty), so a fresh form doesn't show errors immediately.
- * `purchasePrice`/`coldRent` are passed pre-parsed since callers already
- * need the numeric values for the KPF calculation.
- */
-export function getQuickCheckFieldErrors(
-  fields: QuickCheckFormFields,
-  purchasePrice: number,
-  coldRent: number,
-  currentYear: number
-) {
-  return {
-    street:
-      fields.street.length > 0 && fields.street.trim().length > 120
-        ? 'Maximal 120 Zeichen'
-        : '',
-    postalCode:
-      fields.postalCode.length > 0 && !/^\d{5}$/.test(fields.postalCode)
-        ? 'Genau 5 Ziffern erforderlich'
-        : '',
-    city:
-      fields.city.length > 0 && fields.city.trim().length > 120
-        ? 'Maximal 120 Zeichen'
-        : '',
-    purchasePrice:
-      fields.purchasePrice !== '' && purchasePrice <= 0
-        ? 'Muss größer als 0 sein'
-        : '',
-    coldRent:
-      fields.coldRent !== '' && coldRent <= 0
-        ? 'Muss größer als 0 sein'
-        : '',
-    yearOfConstruction:
-      fields.yearOfConstruction !== '' && !isValidConstructionYear(parseInt(fields.yearOfConstruction, 10), currentYear)
-        ? `Zwischen 1850 und ${currentYear}`
-        : '',
-  };
 }

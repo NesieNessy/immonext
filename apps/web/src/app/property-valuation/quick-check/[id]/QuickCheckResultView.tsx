@@ -16,8 +16,8 @@ import {
   updateQuickCheck,
 } from '@/lib/supabase/quick_check.supabase';
 import { cn } from '@/lib/utils';
-import { calcKpf } from '@/utils/kpf';
-import { isValidConstructionYear } from '@/utils/validation';
+import { calcKpf } from '@/lib/quickCheck/kpf';
+import { isValidConstructionYear } from '@/lib/quickCheck/validation';
 import { PropertyCondition } from '@immonext/types';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';

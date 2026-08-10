@@ -1,7 +1,7 @@
 'use client';
 
 import { Button, TextField } from '@/components/ui';
-import { recordLoginTime } from '@/lib/sessionTimeout';
+import { recordLoginTime } from '@/lib/auth/sessionTimeout';
 import { supabase } from '@/lib/supabase/client.supabase';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';

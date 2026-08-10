@@ -8,7 +8,7 @@ import { getAdjustmentHistoryByTenancy } from '@/lib/supabase/tenancy_adjustment
 import { deleteTenancy, getCurrentTenancyByUnit, getTenanciesByUnit, updateTenancy } from '@/lib/supabase/tenancy.supabase';
 import { deleteTenancyDocument, getTenancyDocumentsByTenancy, getTenancyDocumentUrl } from '@/lib/supabase/tenancy_document.supabase';
 import { getTenancyPersonsByTenancy } from '@/lib/supabase/tenancy_person.supabase';
-import { createUseCaseMenuItems } from '@/lib/useCaseMenu';
+import { createUseCaseMenuItems } from '@/lib/propertyUseCaseMenu';
 import { base64ToDataUri, formatDeDate } from '@/lib/utils';
 import type { Property, PropertyUnit, Tenancy, TenancyDocument, TenancyPerson } from '@immonext/types';
 import { differenceInCalendarMonths, format } from 'date-fns';
