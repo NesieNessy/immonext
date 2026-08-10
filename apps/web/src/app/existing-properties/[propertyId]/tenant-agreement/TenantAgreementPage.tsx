@@ -7,7 +7,7 @@ import { Button, CalendarField, ConfirmDeleteModal, Header, Modal, NumberField, 
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { base64ToDataUri, formatDeDate } from '@/lib/utils';
 import type { Property, PropertyUnit } from '@immonext/types';
-import { Calculator, Eye, FileSignature, FileText, History, ListChecks, Plus, Receipt, Trash2, TrendingUp, Wrench } from 'lucide-react';
+import { Calculator, Eye, FileSignature, FileText, History, ListChecks, Receipt, TrendingUp, Wrench } from 'lucide-react';
 import { euro, useTenantUnitData } from '../tenant-data/useTenantUnitData';
 
 interface TenantAgreementPageProps {
@@ -148,7 +148,9 @@ export function TenantAgreementPage({ propertyId, property, unit, hasMultipleUni
                                         icon={<ListChecks className="w-4 h-4" />}
                                         variant="outline"
                                         size="sm"
-                                        onClick={data.openCostItemsModal}
+                                        onClick={() => data.goTo(hasMultipleUnits
+                                            ? `/existing-properties/${propertyId}/service-charge-settlement/${unit.propertyUnitId}`
+                                            : `/existing-properties/${propertyId}/service-charge-settlement`)}
                                     />
                                 }
                             >
@@ -433,63 +435,6 @@ export function TenantAgreementPage({ propertyId, property, unit, hasMultipleUni
                 onDiscard={data.confirmDiscard}
                 context="am Mietvertrag"
             />
-
-            <Modal
-                open={data.costItemsModalOpen}
-                onClose={() => data.setCostItemsModalOpen(false)}
-                title="Detailerfassung Nebenkosten"
-                subtitle="Positionen gemäß § 2 BetrKV"
-                maxWidth="max-w-2xl"
-                footer={
-                    <>
-                        <Button label="Abbrechen" variant="outline" onClick={() => data.setCostItemsModalOpen(false)} />
-                        <Button label="Übernehmen" variant="primary" onClick={data.applyCostItemsDraft} />
-                    </>
-                }
-            >
-                <div className="flex flex-col gap-2 max-h-[50vh] overflow-y-auto pr-1">
-                    {data.costItemsDraft.map((item) => (
-                        <div key={item.id} className="flex items-center gap-2">
-                            <input
-                                type="text"
-                                value={item.label}
-                                placeholder="Bezeichnung"
-                                onChange={(e) => data.updateCostItemsDraftRow(item.id, { label: e.target.value })}
-                                className="flex-1 min-w-0 rounded-md border-2 border-primary/30 bg-card px-3 py-1.5 text-sm focus:border-primary focus:outline-none"
-                            />
-                            <label className="flex items-center gap-1.5 text-xs text-muted-foreground shrink-0">
-                                <input
-                                    type="checkbox"
-                                    checked={item.allocable}
-                                    onChange={(e) => data.updateCostItemsDraftRow(item.id, { allocable: e.target.checked })}
-                                />
-                                umlagefähig
-                            </label>
-                            <div className="w-28 shrink-0">
-                                <NumberField
-                                    unit="€"
-                                    value={String(item.amount)}
-                                    onChange={(e) => data.updateCostItemsDraftRow(item.id, { amount: Number(e.target.value) || 0 })}
-                                    min={0}
-                                />
-                            </div>
-                            <button
-                                type="button"
-                                onClick={() => data.removeCostItemsDraftRow(item.id)}
-                                aria-label="Position entfernen"
-                                className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors cursor-pointer shrink-0"
-                            >
-                                <Trash2 className="w-4 h-4" />
-                            </button>
-                        </div>
-                    ))}
-                </div>
-                <Button label="Position hinzufügen" icon={<Plus className="w-4 h-4" />} variant="outline" size="sm" onClick={data.addCostItemsDraftRow} />
-                <div className="flex items-center justify-between text-sm pt-3 border-t border-border">
-                    <span>Umlagefähig gesamt: <strong>{euro(data.draftAllocableSum)}</strong></span>
-                    <span>Nicht umlagefähig gesamt: <strong>{euro(data.draftNonAllocableSum)}</strong></span>
-                </div>
-            </Modal>
 
             <Modal
                 open={data.historyModalType !== null}

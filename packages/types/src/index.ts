@@ -427,7 +427,7 @@ export type TenancyPersonUpdate = Partial<Omit<TenancyPerson, 'tenancyPersonId' 
 // TenancyDocument
 // ----------------------------------------------------------------------------
 
-export type TenancyDocumentType = 'Ausweis' | 'Schufa' | 'Bürgschaft' | 'Mietvertrag' | 'Mieterbescheinigung' | 'Mieterhöhungsschreiben' | 'Sanierungsanpassungsschreiben' | 'Abnahme';
+export type TenancyDocumentType = 'Ausweis' | 'Schufa' | 'Bürgschaft' | 'Mietvertrag' | 'Mieterbescheinigung' | 'Mieterhöhungsschreiben' | 'Sanierungsanpassungsschreiben' | 'Abnahme' | 'Nebenkostenabrechnung';
 
 export interface TenancyDocument {
   tenancyDocumentId: number;
@@ -534,6 +534,44 @@ export interface TenancyAdjustmentHistoryEntry {
 }
 
 export type TenancyAdjustmentHistoryInsert = Omit<TenancyAdjustmentHistoryEntry, 'historyId' | 'createdAt' | 'updatedAt'>;
+
+// ----------------------------------------------------------------------------
+// ServiceChargeSettlement (Nebenkostenabrechnung)
+// ----------------------------------------------------------------------------
+
+export interface ServiceChargeSettlement {
+  serviceChargeSettlementId: number;
+  propertyId: number;
+  periodStart: string;
+  periodEnd: string;
+  sourceDocumentName: string | null;
+  sourceDocumentPath: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type ServiceChargeSettlementInsert = Omit<ServiceChargeSettlement, 'serviceChargeSettlementId' | 'createdAt' | 'updatedAt'>;
+export type ServiceChargeSettlementUpdate = Partial<Omit<ServiceChargeSettlement, 'serviceChargeSettlementId' | 'propertyId' | 'createdAt' | 'updatedAt'>>;
+
+export interface ServiceChargeCostItem {
+  serviceChargeCostItemId: number;
+  serviceChargeSettlementId: number;
+  propertyId: number;
+  sortOrder: number;
+  label: string;
+  /** true = umlagefähig (recharged to tenants), false = nicht umlagefähig —
+   *  excluded from the Anteil Wohnung recharge (e.g. Verwaltungskosten). */
+  allocable: boolean;
+  /** Abrechnung <settlement year> — actual incurred cost, whole building. */
+  actualAmount: number | null;
+  /** Wirtschaftsplan <settlement year + 1> — next year's budgeted cost, whole building. */
+  budgetAmount: number | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type ServiceChargeCostItemInsert = Omit<ServiceChargeCostItem, 'serviceChargeCostItemId' | 'createdAt' | 'updatedAt'>;
+export type ServiceChargeCostItemUpdate = Partial<Omit<ServiceChargeCostItem, 'serviceChargeCostItemId' | 'serviceChargeSettlementId' | 'propertyId' | 'createdAt' | 'updatedAt'>>;
 
 // ----------------------------------------------------------------------------
 // Financing

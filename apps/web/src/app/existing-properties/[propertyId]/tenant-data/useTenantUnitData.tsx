@@ -197,8 +197,6 @@ export function useTenantUnitData(propertyId: string, property: Property, unit: 
     const [originalRentalFormSnapshot, setOriginalRentalFormSnapshot] = useState(() => serializeRentalForm(EMPTY_RENTAL_FORM));
     const [costItems, setCostItems] = useState<MaintenanceCostItem[]>([]);
     const [originalCostItemsSnapshot, setOriginalCostItemsSnapshot] = useState('[]');
-    const [costItemsModalOpen, setCostItemsModalOpen] = useState(false);
-    const [costItemsDraft, setCostItemsDraft] = useState<MaintenanceCostItem[]>([]);
     const [historyModalType, setHistoryModalType] = useState<TenancyAdjustmentType | null>(null);
     const [historyEntries, setHistoryEntries] = useState<TenancyAdjustmentHistoryEntry[]>([]);
     const [isGeneratingLetter, setIsGeneratingLetter] = useState<TenancyAdjustmentType | null>(null);
@@ -997,37 +995,6 @@ export function useTenantUnitData(propertyId: string, property: Property, unit: 
 
     const generatorBase = `/existing-properties/${propertyId}/tenant-data/unit/${unit.propertyUnitId}`;
 
-    const openCostItemsModal = () => {
-        setCostItemsDraft(costItems.length > 0 ? costItems : DEFAULT_COST_ITEMS);
-        setCostItemsModalOpen(true);
-    };
-
-    const updateCostItemsDraftRow = (id: string, patch: Partial<MaintenanceCostItem>) => {
-        setCostItemsDraft((prev) => prev.map((item) => item.id === id ? { ...item, ...patch } : item));
-    };
-
-    const addCostItemsDraftRow = () => {
-        setCostItemsDraft((prev) => [...prev, { id: crypto.randomUUID(), label: '', amount: 0, allocable: true }]);
-    };
-
-    const removeCostItemsDraftRow = (id: string) => {
-        setCostItemsDraft((prev) => prev.filter((item) => item.id !== id));
-    };
-
-    const draftAllocableSum = costItemsDraft.filter((i) => i.allocable).reduce((sum, i) => sum + (i.amount || 0), 0);
-    const draftNonAllocableSum = costItemsDraft.filter((i) => !i.allocable).reduce((sum, i) => sum + (i.amount || 0), 0);
-
-    const applyCostItemsDraft = () => {
-        const usedItems = costItemsDraft.filter((i) => i.amount !== 0 || i.label.trim() !== '');
-        setCostItems(usedItems);
-        setRentalForm((prev) => ({
-            ...prev,
-            allocableCosts: String(usedItems.filter((i) => i.allocable).reduce((sum, i) => sum + (i.amount || 0), 0)),
-            nonAllocableCosts: String(usedItems.filter((i) => !i.allocable).reduce((sum, i) => sum + (i.amount || 0), 0)),
-        }));
-        setCostItemsModalOpen(false);
-    };
-
     const buildLetterParty = () => ({
         landlordName: landlord ? `${landlord.firstName} ${landlord.lastName}`.trim() : '',
         landlordStreet: landlord ? `${landlord.street} ${landlord.houseNumber}` : '',
@@ -1213,7 +1180,7 @@ export function useTenantUnitData(propertyId: string, property: Property, unit: 
         setPersonIndexPendingDelete, mieterwechselModalOpen, setMieterwechselModalOpen,
         isStartingMieterwechsel,
         pendingHref, setPendingHref, maintenanceCosts, rentalForm, setRentalForm, costItems,
-        costItemsModalOpen, setCostItemsModalOpen, costItemsDraft, historyModalType, setHistoryModalType,
+        historyModalType, setHistoryModalType,
         historyEntries, isGeneratingLetter, isResolvingAdjustment, setDeposit,
         // computed
         isArchived: Boolean(archivedTenancyId),
@@ -1222,13 +1189,12 @@ export function useTenantUnitData(propertyId: string, property: Property, unit: 
         documentRows, mietvertrag, mietvertragRows, mieterbescheinigungRow,
         rentIncreaseLetterRow, renovationLetterRow, documentColumns, documentTableData,
         useCaseMenuItems, canGenerateRentIncreaseLetter, canGenerateRenovationLetter,
-        draftAllocableSum, draftNonAllocableSum, backHref, generatorBase,
+        backHref, generatorBase,
         // handlers
         goTo, confirmDiscard, updatePerson, addPerson, removePerson, handleDeletePersonClick,
         confirmDeletePerson, makePrimary, confirmMieterwechsel, handleSave, handleViewDocument,
         handleDownloadDocument, confirmDeleteDocument, handleDocSort, handleDocColumnFilterChange,
-        renderDocRow, renderFooterUpload, openCostItemsModal, updateCostItemsDraftRow,
-        addCostItemsDraftRow, removeCostItemsDraftRow, applyCostItemsDraft,
+        renderDocRow, renderFooterUpload,
         handleGenerateRentIncreaseLetter, handleGenerateRenovationLetter,
         handleAcceptRentAdjustment, handleDeclineRentAdjustment,
         handleAcceptRenovationAdjustment, handleDeclineRenovationAdjustment,

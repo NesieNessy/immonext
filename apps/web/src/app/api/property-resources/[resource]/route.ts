@@ -89,6 +89,18 @@ const RESOURCES: Record<string, ResourceConfig> = {
     ],
     upsertProperty: true,
   },
+  'service-charge-settlements': {
+    table: 'service_charge_settlement',
+    primaryKey: 'service_charge_settlement_id',
+    columns: ['property_id', 'period_start', 'period_end', 'source_document_name', 'source_document_path'],
+    orderBy: 'period_start DESC',
+  },
+  'service-charge-cost-items': {
+    table: 'service_charge_cost_item',
+    primaryKey: 'service_charge_cost_item_id',
+    columns: ['service_charge_settlement_id', 'property_id', 'sort_order', 'label', 'allocable', 'actual_amount', 'budget_amount'],
+    orderBy: 'sort_order, service_charge_cost_item_id',
+  },
 };
 
 function getConfig(resource: string): ResourceConfig | null {
@@ -119,6 +131,7 @@ export async function GET(request: Request, context: RouteContext) {
   const propertyId = url.searchParams.get('propertyId');
   const propertyUnitId = url.searchParams.get('propertyUnitId');
   const tenancyId = url.searchParams.get('tenancyId');
+  const settlementId = url.searchParams.get('settlementId');
   const filters: string[] = [];
   const values: unknown[] = [userId];
   if (id) {
@@ -137,6 +150,10 @@ export async function GET(request: Request, context: RouteContext) {
     values.push(Number(tenancyId));
     filters.push(`r.tenancy_id = $${values.length}`);
   }
+  if (settlementId && config.table === 'service_charge_cost_item') {
+    values.push(Number(settlementId));
+    filters.push(`r.service_charge_settlement_id = $${values.length}`);
+  }
 
   const where = [
     'EXISTS (SELECT 1 FROM property p WHERE p.property_id = r.property_id AND p.user_id = $1)',
@@ -146,9 +163,12 @@ export async function GET(request: Request, context: RouteContext) {
   // merely-most-recent one — otherwise Mieterhistorie's "Reaktivieren" can
   // never win back the "current" slot for an older tenancy_start_date, since
   // clearing its end date alone wouldn't change the ordering.
-  const orderBy = url.searchParams.get('current') === 'true' && config.table === 'tenancy'
+  const isCurrent = url.searchParams.get('current') === 'true';
+  const orderBy = isCurrent && config.table === 'tenancy'
     ? ' ORDER BY (tenancy_end_date IS NULL) DESC, tenancy_start_date DESC NULLS LAST LIMIT 1'
-    : config.orderBy ? ` ORDER BY ${config.orderBy}` : '';
+    : isCurrent && config.table === 'service_charge_settlement'
+      ? ' ORDER BY period_end DESC LIMIT 1'
+      : config.orderBy ? ` ORDER BY ${config.orderBy}` : '';
   const { rows } = await db.query(`SELECT r.* FROM ${config.table} r WHERE ${where}${orderBy}`, values);
 
   if (id || url.searchParams.get('single') === 'true') {
