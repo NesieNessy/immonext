@@ -1,9 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
+import { isAuthBypassEnabled } from '@/lib/auth/authBypass';
 import { LOCAL_BYPASS_USER_ID } from '@/lib/auth/localBypass';
-
-export function isServerAuthBypassEnabled(): boolean {
-  return process.env.NEXT_PUBLIC_AUTH_BYPASS === 'true';
-}
 
 export function workflowIdFor(
   userId: string,
@@ -24,7 +21,7 @@ export function workflowIdFor(
 }
 
 export async function requireUserId(request: Request): Promise<string> {
-  if (isServerAuthBypassEnabled()) return LOCAL_BYPASS_USER_ID;
+  if (isAuthBypassEnabled()) return LOCAL_BYPASS_USER_ID;
 
   const authHeader = request.headers.get('authorization') ?? '';
   const token = authHeader.startsWith('Bearer ') ? authHeader.slice('Bearer '.length) : '';
