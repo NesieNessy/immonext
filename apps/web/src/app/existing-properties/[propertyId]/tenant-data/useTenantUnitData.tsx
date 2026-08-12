@@ -85,15 +85,20 @@ function serializeRentalForm(form: RentalForm): string {
     });
 }
 
-/** Common § 2 BetrKV positions, preselected as umlagefähig except the two
- *  that legally never are (Verwaltung, Instandhaltungsrücklage). Amounts
- *  start at 0 — unused rows are simply not summed. */
+/** The full § 2 BetrKV position list — 18 umlagefähig categories (Nr. 1–17
+ *  plus the standard "sonstige Betriebskosten" catch-all), followed by the
+ *  costs that are never allocable to tenants regardless of lease wording
+ *  (Verwaltung, Instandhaltung, Modernisierung, Finanzierung, Rücklagen/AfA,
+ *  Erstanschaffung von Erfassungsgeräten, Rechtskosten). Amounts start at 0
+ *  — unused rows are simply not summed. */
 export const DEFAULT_COST_ITEMS: MaintenanceCostItem[] = [
+    // Umlagefähig — § 2 Nr. 1–17 BetrKV
     { id: 'grundsteuer', label: 'Grundsteuer', amount: 0, allocable: true },
     { id: 'wasser', label: 'Wasserversorgung', amount: 0, allocable: true },
     { id: 'entwaesserung', label: 'Entwässerung', amount: 0, allocable: true },
     { id: 'heizung', label: 'Heizung', amount: 0, allocable: true },
     { id: 'warmwasser', label: 'Warmwasser', amount: 0, allocable: true },
+    { id: 'kombianlage', label: 'Verbundene Heizungs- und Warmwasserversorgungsanlagen', amount: 0, allocable: true },
     { id: 'aufzug', label: 'Aufzug', amount: 0, allocable: true },
     { id: 'strassenreinigung', label: 'Straßenreinigung / Müllabfuhr', amount: 0, allocable: true },
     { id: 'gebaeudereinigung', label: 'Gebäudereinigung / Ungezieferbekämpfung', amount: 0, allocable: true },
@@ -102,10 +107,19 @@ export const DEFAULT_COST_ITEMS: MaintenanceCostItem[] = [
     { id: 'schornstein', label: 'Schornsteinreinigung', amount: 0, allocable: true },
     { id: 'versicherung', label: 'Sach- / Haftpflichtversicherung', amount: 0, allocable: true },
     { id: 'hausmeister', label: 'Hausmeister', amount: 0, allocable: true },
-    { id: 'kabel', label: 'Gemeinschaftsantenne / Kabel', amount: 0, allocable: true },
+    { id: 'kabel', label: 'Gemeinschaftsantenne / Kabelanschluss', amount: 0, allocable: true },
+    { id: 'breitband', label: 'Breitbandanschluss / Internet-Basisversorgung', amount: 0, allocable: true },
+    { id: 'waschkueche', label: 'Waschküchenbetrieb', amount: 0, allocable: true },
     { id: 'sonstige', label: 'Sonstige Betriebskosten', amount: 0, allocable: true },
+    // Nicht umlagefähig
     { id: 'verwaltung', label: 'Verwaltungskosten', amount: 0, allocable: false },
-    { id: 'instandhaltung', label: 'Instandhaltungsrücklage', amount: 0, allocable: false },
+    { id: 'instandhaltung', label: 'Instandhaltung / Instandsetzung', amount: 0, allocable: false },
+    { id: 'modernisierung', label: 'Modernisierungskosten', amount: 0, allocable: false },
+    { id: 'finanzierung', label: 'Finanzierungskosten', amount: 0, allocable: false },
+    { id: 'ruecklagen', label: 'Abschreibungen / Rücklagen', amount: 0, allocable: false },
+    { id: 'verbrauchserfassung', label: 'Verbrauchserfassungseinrichtungen (Erstanschaffung)', amount: 0, allocable: false },
+    { id: 'rechtskosten', label: 'Rechtliche / juristische Kosten', amount: 0, allocable: false },
+    { id: 'sonstige_nicht_umlagefaehig', label: 'Sonstige nicht umlagefähige Kosten', amount: 0, allocable: false },
 ];
 
 export interface PersonForm {
@@ -197,8 +211,6 @@ export function useTenantUnitData(propertyId: string, property: Property, unit: 
     const [originalRentalFormSnapshot, setOriginalRentalFormSnapshot] = useState(() => serializeRentalForm(EMPTY_RENTAL_FORM));
     const [costItems, setCostItems] = useState<MaintenanceCostItem[]>([]);
     const [originalCostItemsSnapshot, setOriginalCostItemsSnapshot] = useState('[]');
-    const [costItemsModalOpen, setCostItemsModalOpen] = useState(false);
-    const [costItemsDraft, setCostItemsDraft] = useState<MaintenanceCostItem[]>([]);
     const [historyModalType, setHistoryModalType] = useState<TenancyAdjustmentType | null>(null);
     const [historyEntries, setHistoryEntries] = useState<TenancyAdjustmentHistoryEntry[]>([]);
     const [isGeneratingLetter, setIsGeneratingLetter] = useState<TenancyAdjustmentType | null>(null);
@@ -997,37 +1009,6 @@ export function useTenantUnitData(propertyId: string, property: Property, unit: 
 
     const generatorBase = `/existing-properties/${propertyId}/tenant-data/unit/${unit.propertyUnitId}`;
 
-    const openCostItemsModal = () => {
-        setCostItemsDraft(costItems.length > 0 ? costItems : DEFAULT_COST_ITEMS);
-        setCostItemsModalOpen(true);
-    };
-
-    const updateCostItemsDraftRow = (id: string, patch: Partial<MaintenanceCostItem>) => {
-        setCostItemsDraft((prev) => prev.map((item) => item.id === id ? { ...item, ...patch } : item));
-    };
-
-    const addCostItemsDraftRow = () => {
-        setCostItemsDraft((prev) => [...prev, { id: crypto.randomUUID(), label: '', amount: 0, allocable: true }]);
-    };
-
-    const removeCostItemsDraftRow = (id: string) => {
-        setCostItemsDraft((prev) => prev.filter((item) => item.id !== id));
-    };
-
-    const draftAllocableSum = costItemsDraft.filter((i) => i.allocable).reduce((sum, i) => sum + (i.amount || 0), 0);
-    const draftNonAllocableSum = costItemsDraft.filter((i) => !i.allocable).reduce((sum, i) => sum + (i.amount || 0), 0);
-
-    const applyCostItemsDraft = () => {
-        const usedItems = costItemsDraft.filter((i) => i.amount !== 0 || i.label.trim() !== '');
-        setCostItems(usedItems);
-        setRentalForm((prev) => ({
-            ...prev,
-            allocableCosts: String(usedItems.filter((i) => i.allocable).reduce((sum, i) => sum + (i.amount || 0), 0)),
-            nonAllocableCosts: String(usedItems.filter((i) => !i.allocable).reduce((sum, i) => sum + (i.amount || 0), 0)),
-        }));
-        setCostItemsModalOpen(false);
-    };
-
     const buildLetterParty = () => ({
         landlordName: landlord ? `${landlord.firstName} ${landlord.lastName}`.trim() : '',
         landlordStreet: landlord ? `${landlord.street} ${landlord.houseNumber}` : '',
@@ -1213,7 +1194,7 @@ export function useTenantUnitData(propertyId: string, property: Property, unit: 
         setPersonIndexPendingDelete, mieterwechselModalOpen, setMieterwechselModalOpen,
         isStartingMieterwechsel,
         pendingHref, setPendingHref, maintenanceCosts, rentalForm, setRentalForm, costItems,
-        costItemsModalOpen, setCostItemsModalOpen, costItemsDraft, historyModalType, setHistoryModalType,
+        historyModalType, setHistoryModalType,
         historyEntries, isGeneratingLetter, isResolvingAdjustment, setDeposit,
         // computed
         isArchived: Boolean(archivedTenancyId),
@@ -1222,13 +1203,12 @@ export function useTenantUnitData(propertyId: string, property: Property, unit: 
         documentRows, mietvertrag, mietvertragRows, mieterbescheinigungRow,
         rentIncreaseLetterRow, renovationLetterRow, documentColumns, documentTableData,
         useCaseMenuItems, canGenerateRentIncreaseLetter, canGenerateRenovationLetter,
-        draftAllocableSum, draftNonAllocableSum, backHref, generatorBase,
+        backHref, generatorBase,
         // handlers
         goTo, confirmDiscard, updatePerson, addPerson, removePerson, handleDeletePersonClick,
         confirmDeletePerson, makePrimary, confirmMieterwechsel, handleSave, handleViewDocument,
         handleDownloadDocument, confirmDeleteDocument, handleDocSort, handleDocColumnFilterChange,
-        renderDocRow, renderFooterUpload, openCostItemsModal, updateCostItemsDraftRow,
-        addCostItemsDraftRow, removeCostItemsDraftRow, applyCostItemsDraft,
+        renderDocRow, renderFooterUpload,
         handleGenerateRentIncreaseLetter, handleGenerateRenovationLetter,
         handleAcceptRentAdjustment, handleDeclineRentAdjustment,
         handleAcceptRenovationAdjustment, handleDeclineRenovationAdjustment,
