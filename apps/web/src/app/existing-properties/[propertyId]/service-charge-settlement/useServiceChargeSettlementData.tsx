@@ -22,7 +22,7 @@ import { getCurrentTenancyByUnit } from '@/lib/supabase/tenancy.supabase';
 import { getTenancyPersonsByTenancy } from '@/lib/supabase/tenancy_person.supabase';
 import { uploadTenancyDocument } from '@/lib/supabase/tenancy_document.supabase';
 import { getPropertyUnitsByProperty } from '@/lib/supabase/property_unit.supabase';
-import { deCurrencyFormatter, formatDeDate } from '@/lib/utils';
+import { formatDeDate } from '@/lib/utils';
 import { htmlToPdfBlob } from '@/lib/pdf/htmlToPdf';
 import type {
     PersonalData,
