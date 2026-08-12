@@ -86,6 +86,8 @@ export function useServiceChargeSettlementData(propertyId: string, property: Pro
     const [isSaving, setIsSaving] = useState(false);
     const [isUploadingSource, setIsUploadingSource] = useState(false);
     const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+    const [previewHtml, setPreviewHtml] = useState<string | null>(null);
+    const [isLoadingPreview, setIsLoadingPreview] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
     const load = useCallback(async () => {
@@ -99,20 +101,24 @@ export function useServiceChargeSettlementData(propertyId: string, property: Pro
         setTenancy(currentTenancy);
         setSettlement(currentSettlement);
 
+        const defaultItems = () => DEFAULT_COST_ITEMS.map((item) => ({ id: null, label: item.label, allocable: item.allocable, actualAmount: '', budgetAmount: '' }));
+
         if (currentSettlement) {
             setPeriodStart(new Date(currentSettlement.periodStart));
             setPeriodEnd(new Date(currentSettlement.periodEnd));
             const loadedItems = (await getCostItemsBySettlement(currentSettlement.serviceChargeSettlementId)).map(toCostItemForm);
-            setCostItems(loadedItems);
-            setOriginalSnapshot(serializeCostItems(loadedItems, new Date(currentSettlement.periodStart), new Date(currentSettlement.periodEnd)));
+            // The settlement row can exist with no saved cost items yet (e.g.
+            // it was created just by uploading a source document, before any
+            // amounts were entered/saved) — the table must still show the
+            // full standard BetrKV list to fill in, not an empty table.
+            const items = loadedItems.length > 0 ? loadedItems : defaultItems();
+            setCostItems(items);
+            setOriginalSnapshot(loadedItems.length > 0 ? serializeCostItems(items, new Date(currentSettlement.periodStart), new Date(currentSettlement.periodEnd)) : '');
         } else {
             const currentYear = new Date().getFullYear();
-            const defaultStart = new Date(currentYear, 0, 1);
-            const defaultEnd = new Date(currentYear, 11, 31);
-            setPeriodStart(defaultStart);
-            setPeriodEnd(defaultEnd);
-            const defaults = DEFAULT_COST_ITEMS.map((item) => ({ id: null, label: item.label, allocable: item.allocable, actualAmount: '', budgetAmount: '' }));
-            setCostItems(defaults);
+            setPeriodStart(new Date(currentYear, 0, 1));
+            setPeriodEnd(new Date(currentYear, 11, 31));
+            setCostItems(defaultItems());
             setOriginalSnapshot('');
         }
         setDeletedCostItemIds([]);
@@ -231,17 +237,49 @@ export function useServiceChargeSettlementData(propertyId: string, property: Pro
     };
 
     // ── Source document upload ──────────────────────────────────────────────
+    // Upload is the primary entry point on a fresh settlement, so it can't
+    // wait for an explicit "Speichern" first — it lazily creates the
+    // settlement row (with the current/default period) the same way Save
+    // does, just without touching the period fields.
+    const ensureSettlement = async (): Promise<ServiceChargeSettlement | null> => {
+        if (settlement) return settlement;
+        const currentYear = new Date().getFullYear();
+        const created = await createSettlement({
+            propertyId: property.propertyId,
+            periodStart: periodStart ? format(periodStart, 'yyyy-MM-dd') : format(new Date(currentYear, 0, 1), 'yyyy-MM-dd'),
+            periodEnd: periodEnd ? format(periodEnd, 'yyyy-MM-dd') : format(new Date(currentYear, 11, 31), 'yyyy-MM-dd'),
+            sourceDocumentName: null,
+            sourceDocumentPath: null,
+        });
+        if (created) setSettlement(created);
+        return created;
+    };
+
     const handleUploadSourceDocument = async (file: File) => {
-        if (!user || !settlement) return;
+        if (!user) return;
         setIsUploadingSource(true);
         try {
+            const activeSettlement = await ensureSettlement();
+            if (!activeSettlement) return;
             const uploaded = await uploadSettlementSourceDocument(user.id, property.propertyId, file);
             if (!uploaded) return;
-            if (settlement.sourceDocumentPath) await removeSettlementSourceDocument(settlement.sourceDocumentPath);
-            const updated = await updateSettlement(settlement.serviceChargeSettlementId, {
+            if (activeSettlement.sourceDocumentPath) await removeSettlementSourceDocument(activeSettlement.sourceDocumentPath);
+            const updated = await updateSettlement(activeSettlement.serviceChargeSettlementId, {
                 sourceDocumentName: uploaded.name,
                 sourceDocumentPath: uploaded.path,
             });
+            if (updated) setSettlement(updated);
+        } finally {
+            setIsUploadingSource(false);
+        }
+    };
+
+    const handleRemoveSourceDocument = async () => {
+        if (!settlement?.sourceDocumentPath) return;
+        setIsUploadingSource(true);
+        try {
+            await removeSettlementSourceDocument(settlement.sourceDocumentPath);
+            const updated = await updateSettlement(settlement.serviceChargeSettlementId, { sourceDocumentName: null, sourceDocumentPath: null });
             if (updated) setSettlement(updated);
         } finally {
             setIsUploadingSource(false);
@@ -254,70 +292,67 @@ export function useServiceChargeSettlementData(propertyId: string, property: Pro
         if (url) window.open(url, '_blank', 'noopener,noreferrer');
     };
 
-    // ── Export (CSV) ─────────────────────────────────────────────────────────
-    const handleExportCsv = () => {
-        const header = ['Kostenposition', `Abrechnung ${settlementYear} Gesamt`, `Abrechnung ${settlementYear} Anteil Whg.`, `Wirtschaftsplan ${settlementYear + 1} Gesamt`, `Wirtschaftsplan ${settlementYear + 1} Anteil Whg.`];
-        const rows = costItems.map((item) => [
-            item.label,
-            item.actualAmount,
-            item.allocable && item.actualAmount !== '' ? String(Math.round(Number(item.actualAmount) * unitShare * 100) / 100) : '',
-            item.budgetAmount,
-            item.allocable && item.budgetAmount !== '' ? String(Math.round(Number(item.budgetAmount) * unitShare * 100) / 100) : '',
-        ]);
-        const csv = [header, ...rows].map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(';')).join('\n');
-        const blob = new Blob([`﻿${csv}`], { type: 'text/csv;charset=utf-8' });
-        const link = document.createElement('a');
-        link.href = URL.createObjectURL(blob);
-        link.download = `Nebenkostenabrechnung_${property.street}_${settlementYear}.csv`;
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
-    };
-
     // ── PDF generation ───────────────────────────────────────────────────────
     const canGeneratePdf = tenancy != null && settlement != null;
+
+    const buildStatementHtml = async (): Promise<string | null> => {
+        if (!tenancy || !settlement) return null;
+        const persons = await getTenancyPersonsByTenancy(tenancy.tenancyId);
+        const tenantNames = persons
+            .filter((p) => (p.lastName ?? '').trim() !== '' || (p.firstName ?? '').trim() !== '')
+            .map((p) => `${p.firstName ?? ''} ${p.lastName ?? ''}`.trim());
+
+        const costRows = costItems.map((item) => ({
+            label: item.label,
+            actualAmount: item.actualAmount === '' ? null : Number(item.actualAmount),
+            actualShare: item.allocable && item.actualAmount !== '' ? Number(item.actualAmount) * unitShare : null,
+            budgetAmount: item.budgetAmount === '' ? null : Number(item.budgetAmount),
+            budgetShare: item.allocable && item.budgetAmount !== '' ? Number(item.budgetAmount) * unitShare : null,
+        }));
+
+        return serviceChargeStatementHtml({
+            landlordName: landlord ? `${landlord.firstName} ${landlord.lastName}`.trim() : '',
+            landlordStreet: landlord ? `${landlord.street} ${landlord.houseNumber}` : '',
+            landlordCity: landlord ? `${landlord.postalCode} ${landlord.city}` : '',
+            propertyAddress: `${property.street} ${property.houseNumber}, ${property.postalCode} ${property.city}`,
+            unitLabel: formatUnitLabel(unit.unitLabel, unit.floor, unit.locationNote),
+            tenantNames: tenantNames.length > 0 ? tenantNames : ['Mieter'],
+            issuePlace: landlord?.city || property.city,
+            issueDate: formatDeDate(new Date().toISOString()),
+            settlementYear,
+            periodStart: settlement.periodStart,
+            periodEnd: settlement.periodEnd,
+            costRows,
+            totalActualCosts: totalActualAllocable,
+            totalBudgetCosts: totalBudgetAllocable,
+            unitActualShare,
+            unitBudgetShare,
+            annualPrepayment,
+            overUnderCoverage,
+            currentMonthlyPrepayment,
+            newMonthlyPrepayment,
+            coldRent: tenancy.coldRent,
+        });
+    };
+
+    const handlePreview = async () => {
+        setIsLoadingPreview(true);
+        try {
+            const html = await buildStatementHtml();
+            setPreviewHtml(html);
+        } finally {
+            setIsLoadingPreview(false);
+        }
+    };
+
+    const closePreview = () => setPreviewHtml(null);
 
     const handleGeneratePdf = async () => {
         if (!user || !tenancy || !settlement) return;
         setIsGeneratingPdf(true);
         try {
-            const persons = await getTenancyPersonsByTenancy(tenancy.tenancyId);
-            const tenantNames = persons
-                .filter((p) => (p.lastName ?? '').trim() !== '' || (p.firstName ?? '').trim() !== '')
-                .map((p) => `${p.firstName ?? ''} ${p.lastName ?? ''}`.trim());
-
-            const costRows = costItems.map((item) => ({
-                label: item.label,
-                actualAmount: item.actualAmount === '' ? null : Number(item.actualAmount),
-                actualShare: item.allocable && item.actualAmount !== '' ? Number(item.actualAmount) * unitShare : null,
-                budgetAmount: item.budgetAmount === '' ? null : Number(item.budgetAmount),
-                budgetShare: item.allocable && item.budgetAmount !== '' ? Number(item.budgetAmount) * unitShare : null,
-            }));
-
-            const html = serviceChargeStatementHtml({
-                landlordName: landlord ? `${landlord.firstName} ${landlord.lastName}`.trim() : '',
-                landlordStreet: landlord ? `${landlord.street} ${landlord.houseNumber}` : '',
-                landlordCity: landlord ? `${landlord.postalCode} ${landlord.city}` : '',
-                propertyAddress: `${property.street} ${property.houseNumber}, ${property.postalCode} ${property.city}`,
-                unitLabel: formatUnitLabel(unit.unitLabel, unit.floor, unit.locationNote),
-                tenantNames: tenantNames.length > 0 ? tenantNames : ['Mieter'],
-                issuePlace: landlord?.city || property.city,
-                issueDate: formatDeDate(new Date().toISOString()),
-                settlementYear,
-                periodStart: settlement.periodStart,
-                periodEnd: settlement.periodEnd,
-                costRows,
-                totalActualCosts: totalActualAllocable,
-                totalBudgetCosts: totalBudgetAllocable,
-                unitActualShare,
-                unitBudgetShare,
-                annualPrepayment,
-                overUnderCoverage,
-                currentMonthlyPrepayment,
-                newMonthlyPrepayment,
-                coldRent: tenancy.coldRent,
-            });
-
+            const html = await buildStatementHtml();
+            if (!html) return;
             const blob = await htmlToPdfBlob(html);
             const file = new File([blob], `Nebenkostenabrechnung_${settlementYear}.pdf`, { type: 'application/pdf' });
             await uploadTenancyDocument(user.id, file, {
@@ -340,7 +375,8 @@ export function useServiceChargeSettlementData(propertyId: string, property: Pro
         // state
         isLoading, isSaving, isUploadingSource, isGeneratingPdf, error,
         settlement, periodStart, setPeriodStart, periodEnd, setPeriodEnd,
-        costItems, tenancy, useCaseMenuItems, backHref,
+        costItems, tenancy, landlord, useCaseMenuItems, backHref,
+        previewHtml, isLoadingPreview,
         // computed
         isEditing, unitShare, totalArea,
         totalActualCostsAll, totalBudgetCostsAll,
@@ -351,7 +387,7 @@ export function useServiceChargeSettlementData(propertyId: string, property: Pro
         canGeneratePdf,
         // handlers
         updateCostItemField, addCostItem, removeCostItem,
-        handleSave, handleUploadSourceDocument, handleViewSourceDocument,
-        handleExportCsv, handleGeneratePdf,
+        handleSave, handleUploadSourceDocument, handleViewSourceDocument, handleRemoveSourceDocument,
+        handleGeneratePdf, handlePreview, closePreview,
     };
 }

@@ -17,7 +17,7 @@ import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { ExistingPropertiesUseCases } from '@/constants/ExistingPropertiesUseCases';
 import { base64ToDataUri } from '@/lib/utils';
 import type { Property, PropertyUnit } from '@immonext/types';
-import { FileDown, FileText, Plus, Trash2, Upload } from 'lucide-react';
+import { Eye, FileText, Plus, RefreshCw, Trash2, Upload } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useRef } from 'react';
 
@@ -84,80 +84,17 @@ export function ServiceChargeSettlementView({ propertyId, property, unit, hasMul
                     )}
 
                     {/* Abrechnungszeitraum */}
-                    <div className="flex flex-wrap items-end justify-between gap-4">
-                        <div>
-                            <SectionLabel>Abrechnungszeitraum</SectionLabel>
-                            <div className="mt-3 flex items-end gap-3">
-                                <div className="w-40">
-                                    <CalendarField label="Von" value={data.periodStart} onChange={data.setPeriodStart} />
-                                </div>
-                                <span className="pb-2.5 text-sm text-muted-foreground">bis</span>
-                                <div className="w-40">
-                                    <CalendarField label="Bis" value={data.periodEnd} onChange={data.setPeriodEnd} />
-                                </div>
+                    <div>
+                        <SectionLabel>Abrechnungszeitraum & Kostenpositionen</SectionLabel>
+                        <div className="mt-3 flex items-end gap-3">
+                            <div className="w-40">
+                                <CalendarField label="Von" value={data.periodStart} onChange={data.setPeriodStart} />
+                            </div>
+                            <span className="pb-2.5 text-sm text-muted-foreground">bis</span>
+                            <div className="w-40">
+                                <CalendarField label="Bis" value={data.periodEnd} onChange={data.setPeriodEnd} />
                             </div>
                         </div>
-                        <div className="flex items-center gap-3">
-                            <input
-                                ref={uploadInputRef}
-                                type="file"
-                                accept=".pdf,.jpg,.jpeg,.png"
-                                className="sr-only"
-                                onChange={(e) => {
-                                    const file = e.target.files?.[0];
-                                    e.target.value = '';
-                                    if (file) void data.handleUploadSourceDocument(file);
-                                }}
-                            />
-                            <span title={!data.settlement ? 'Bitte zuerst speichern' : undefined}>
-                                <Button
-                                    label="Upload"
-                                    icon={<Upload className="w-4 h-4" />}
-                                    variant="outline"
-                                    disabled={!data.settlement || data.isUploadingSource}
-                                    onClick={() => uploadInputRef.current?.click()}
-                                />
-                            </span>
-                            <Button
-                                label="Manuell erfassen"
-                                icon={<FileText className="w-4 h-4" />}
-                                variant="outline"
-                                onClick={data.addCostItem}
-                            />
-                        </div>
-                    </div>
-
-                    {data.settlement?.sourceDocumentName && (
-                        <button
-                            type="button"
-                            onClick={() => void data.handleViewSourceDocument()}
-                            className="inline-flex items-center gap-1.5 text-xs text-primary hover:underline cursor-pointer w-fit"
-                        >
-                            <FileText className="w-3.5 h-3.5" />
-                            {data.settlement.sourceDocumentName}
-                        </button>
-                    )}
-
-                    {/* Exportieren / Abrechnung generieren */}
-                    <div className="flex items-center gap-3">
-                        <Button
-                            label="Exportieren"
-                            icon={<FileDown className="w-4 h-4" />}
-                            variant="outline"
-                            onClick={data.handleExportCsv}
-                        />
-                        <Button
-                            label="Abrechnung generieren"
-                            icon={<FileText className="w-4 h-4" />}
-                            variant="primary"
-                            disabled={!data.canGeneratePdf || data.isGeneratingPdf}
-                            onClick={() => void data.handleGeneratePdf()}
-                        />
-                    </div>
-
-                    {/* Info banner */}
-                    <div className="px-4 py-3 rounded-lg bg-primary/5 border border-primary/20 text-sm text-foreground">
-                        Erfassen Sie alle Kostenpositionen des Abrechnungsjahres. Die Wohnungsanteile und der Wirtschaftsplan werden automatisch berechnet. Fehlende Werte im Wirtschaftsplan können manuell ergänzt werden.
                     </div>
 
                     {/* Stat cards */}
@@ -180,7 +117,86 @@ export function ServiceChargeSettlementView({ propertyId, property, unit, hasMul
                         />
                     </div>
 
+                    <input
+                        ref={uploadInputRef}
+                        type="file"
+                        accept=".pdf,.jpg,.jpeg,.png"
+                        className="sr-only"
+                        onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            e.target.value = '';
+                            if (file) void data.handleUploadSourceDocument(file);
+                        }}
+                    />
+
+                    {data.settlement?.sourceDocumentName ? (
+                        <div className="rounded-lg border border-emerald-200 bg-emerald-50 dark:border-emerald-900/40 dark:bg-emerald-900/10 px-4 py-3 flex items-center justify-between gap-3 flex-wrap">
+                            <div className="flex items-center gap-3 min-w-0">
+                                <FileText className="w-5 h-5 text-emerald-700 dark:text-emerald-400 shrink-0" />
+                                <div className="min-w-0 text-left">
+                                    <button
+                                        type="button"
+                                        onClick={() => void data.handleViewSourceDocument()}
+                                        className="block text-sm font-medium text-foreground hover:underline cursor-pointer truncate"
+                                    >
+                                        {data.settlement.sourceDocumentName}
+                                    </button>
+                                    <p className="text-xs text-muted-foreground">Hochgeladen</p>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-2 shrink-0">
+                                <Button
+                                    label="Ersetzen"
+                                    icon={<RefreshCw className="w-4 h-4" />}
+                                    variant="outline"
+                                    size="sm"
+                                    disabled={data.isUploadingSource}
+                                    onClick={() => uploadInputRef.current?.click()}
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => void data.handleRemoveSourceDocument()}
+                                    disabled={data.isUploadingSource}
+                                    aria-label="Datei entfernen"
+                                    className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
+                                >
+                                    <Trash2 className="w-4 h-4" />
+                                </button>
+                            </div>
+                        </div>
+                    ) : (
+                        <div>
+                            <Button
+                                label="Nebenkostenabrechnung hochladen"
+                                icon={<Upload className="w-4 h-4" />}
+                                variant="outline"
+                                disabled={data.isUploadingSource}
+                                onClick={() => uploadInputRef.current?.click()}
+                                className="w-full mb-3"
+                            />
+                            <div className="flex items-center gap-3">
+                                <div className="flex-1 h-px bg-border" />
+                                <span className="text-xs text-muted-foreground shrink-0">oder manuell erfassen</span>
+                                <div className="flex-1 h-px bg-border" />
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Info banner */}
+                    <div className="px-4 py-3 rounded-lg bg-primary/5 border border-primary/20 text-sm text-foreground">
+                        Erfasse alle Kostenpositionen des Abrechnungsjahres. Die Wohnungsanteile und der Wirtschaftsplan werden automatisch berechnet. Fehlende Werte im Wirtschaftsplan kannst du manuell ergänzen.
+                    </div>
+
                     {/* Cost item table */}
+                    <div className="flex justify-end">
+                        <Button
+                            label="Kostenposition hinzufügen"
+                            icon={<Plus className="w-4 h-4" />}
+                            variant="outline"
+                            size="sm"
+                            onClick={data.addCostItem}
+                        />
+                    </div>
                     <div className="rounded-lg border border-border overflow-hidden">
                         <div className="overflow-x-auto">
                             <table className="w-full text-sm border-collapse">
@@ -201,12 +217,20 @@ export function ServiceChargeSettlementView({ propertyId, property, unit, hasMul
                                 <tbody className="divide-y divide-border">
                                     {data.costItems.map((item, index) => (
                                         <tr key={item.id ?? `new-${index}`}>
-                                            <td className="px-3 py-2 min-w-[200px]">
+                                            <td className="px-3 py-2 min-w-[220px]">
                                                 <TextField
                                                     value={item.label}
                                                     placeholder="Bezeichnung"
                                                     onChange={(e) => data.updateCostItemField(index, { label: e.target.value })}
                                                 />
+                                                <label className="mt-1.5 flex items-center gap-1.5 text-xs text-muted-foreground cursor-pointer w-fit">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={item.allocable}
+                                                        onChange={(e) => data.updateCostItemField(index, { allocable: e.target.checked })}
+                                                    />
+                                                    umlagefähig
+                                                </label>
                                             </td>
                                             <td className="px-3 py-2 border-l border-border w-36">
                                                 <NumberField
@@ -217,8 +241,13 @@ export function ServiceChargeSettlementView({ propertyId, property, unit, hasMul
                                                     min={0}
                                                 />
                                             </td>
-                                            <td className="px-3 py-2 text-right text-muted-foreground whitespace-nowrap">
-                                                {item.allocable && item.actualAmount !== '' ? euro(Number(item.actualAmount) * data.unitShare) : '–'}
+                                            <td className="px-3 py-2 w-36">
+                                                <NumberField
+                                                    unit="€"
+                                                    placeholder="–"
+                                                    value={item.allocable && item.actualAmount !== '' ? String(Math.round(Number(item.actualAmount) * data.unitShare * 100) / 100) : ''}
+                                                    disabled
+                                                />
                                             </td>
                                             <td className="px-3 py-2 border-l border-border w-36">
                                                 <NumberField
@@ -229,8 +258,13 @@ export function ServiceChargeSettlementView({ propertyId, property, unit, hasMul
                                                     min={0}
                                                 />
                                             </td>
-                                            <td className="px-3 py-2 text-right text-muted-foreground whitespace-nowrap">
-                                                {item.allocable && item.budgetAmount !== '' ? euro(Number(item.budgetAmount) * data.unitShare) : '–'}
+                                            <td className="px-3 py-2 w-36">
+                                                <NumberField
+                                                    unit="€"
+                                                    placeholder="–"
+                                                    value={item.allocable && item.budgetAmount !== '' ? String(Math.round(Number(item.budgetAmount) * data.unitShare * 100) / 100) : ''}
+                                                    disabled
+                                                />
                                             </td>
                                             <td className="px-2 py-2">
                                                 <button
@@ -281,14 +315,6 @@ export function ServiceChargeSettlementView({ propertyId, property, unit, hasMul
                         </div>
                     </div>
 
-                    <Button
-                        label="Kostenposition hinzufügen"
-                        icon={<Plus className="w-4 h-4" />}
-                        variant="outline"
-                        size="sm"
-                        onClick={data.addCostItem}
-                    />
-
                     {/* Anpassung Nebenkostenvorauszahlung */}
                     <div>
                         <SectionLabel>Anpassung Nebenkostenvorauszahlung</SectionLabel>
@@ -312,26 +338,42 @@ export function ServiceChargeSettlementView({ propertyId, property, unit, hasMul
                         </div>
                     </div>
 
-                    {/* PDF generation */}
-                    <DataCard
-                        icon={FileText}
-                        title="Nebenkostenabrechnung als PDF"
-                        footer={
-                            <span title={!data.canGeneratePdf ? 'Bitte zuerst Mieterdaten und Abrechnungszeitraum hinterlegen' : undefined}>
-                                <Button
-                                    label="PDF generieren"
-                                    icon={<FileText className="w-4 h-4" />}
-                                    variant="primary"
-                                    disabled={!data.canGeneratePdf || data.isGeneratingPdf}
-                                    onClick={() => void data.handleGeneratePdf()}
-                                />
-                            </span>
-                        }
-                    >
-                        <p className="text-xs text-muted-foreground">
-                            Vollständige Abrechnung inkl. Wirtschaftsplan und NK-Anpassung – wird auch unter Dokumenten abgelegt.
-                        </p>
-                    </DataCard>
+                    {/* Generierbare Dokumente */}
+                    <div>
+                        <SectionLabel>Generierbare Dokumente</SectionLabel>
+                        <div className="mt-3">
+                            <DataCard
+                                icon={FileText}
+                                title="Nebenkostenabrechnung als PDF"
+                                footer={
+                                    <>
+                                        <span title={!data.canGeneratePdf ? 'Bitte zuerst Mieterdaten und Abrechnungszeitraum hinterlegen' : undefined}>
+                                            <Button
+                                                label="Daten prüfen & Vorschau"
+                                                icon={<Eye className="w-4 h-4" />}
+                                                variant="outline"
+                                                disabled={!data.canGeneratePdf}
+                                                onClick={() => router.push(`/existing-properties/${propertyId}/service-charge-settlement/${unit.propertyUnitId}/statement`)}
+                                            />
+                                        </span>
+                                        <span title={!data.canGeneratePdf ? 'Bitte zuerst Mieterdaten und Abrechnungszeitraum hinterlegen' : undefined}>
+                                            <Button
+                                                label="PDF generieren"
+                                                icon={<FileText className="w-4 h-4" />}
+                                                variant="primary"
+                                                disabled={!data.canGeneratePdf || data.isGeneratingPdf}
+                                                onClick={() => void data.handleGeneratePdf()}
+                                            />
+                                        </span>
+                                    </>
+                                }
+                            >
+                                <p className="text-xs text-muted-foreground">
+                                    Vollständige Abrechnung inkl. Wirtschaftsplan und NK-Anpassung
+                                </p>
+                            </DataCard>
+                        </div>
+                    </div>
                 </div>
             </main>
 
