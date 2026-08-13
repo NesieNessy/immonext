@@ -75,6 +75,7 @@ immonext/
 - [Architecture Overview](docs/architecture.md)
 - [Getting Started](docs/getting-started.md)
 - [Vercel Deployment](docs/vercel-deployment.md)
+- [Performance Monitoring](docs/performance-monitoring.md)
 
 ## Scripts
 

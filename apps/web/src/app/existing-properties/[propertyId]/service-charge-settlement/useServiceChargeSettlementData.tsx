@@ -7,21 +7,17 @@ import { getPersonalData } from '@/lib/supabase/personal_data.supabase';
 import {
     createCostItem,
     deleteCostItem,
-    getCostItemsBySettlement,
     updateCostItem,
 } from '@/lib/supabase/service_charge_cost_item.supabase';
 import {
     createSettlement,
-    getCurrentSettlementByProperty,
     getSettlementSourceDocumentUrl,
     removeSettlementSourceDocument,
     updateSettlement,
     uploadSettlementSourceDocument,
 } from '@/lib/supabase/service_charge_settlement.supabase';
-import { getCurrentTenancyByUnit } from '@/lib/supabase/tenancy.supabase';
-import { getTenancyPersonsByTenancy } from '@/lib/supabase/tenancy_person.supabase';
 import { uploadTenancyDocument } from '@/lib/supabase/tenancy_document.supabase';
-import { getPropertyUnitsByProperty } from '@/lib/supabase/property_unit.supabase';
+import { getTenancyPersonsByTenancy } from '@/lib/supabase/tenancy_person.supabase';
 import { formatDeDate } from '@/lib/utils';
 import { htmlToPdfBlob } from '@/lib/pdf/htmlToPdf';
 import type {
@@ -91,22 +87,19 @@ export function useServiceChargeSettlementData(propertyId: string, property: Pro
     const [error, setError] = useState<string | null>(null);
 
     const load = useCallback(async () => {
-        setIsLoading(true);
-        const [loadedUnits, currentSettlement, currentTenancy] = await Promise.all([
-            getPropertyUnitsByProperty(property.propertyId),
-            getCurrentSettlementByProperty(property.propertyId),
-            getCurrentTenancyByUnit(unit.propertyUnitId),
-        ]);
-        setUnits(loadedUnits);
-        setTenancy(currentTenancy);
-        setSettlement(currentSettlement);
+            setIsLoading(true);
+            const { getAggregatedSettlementData } = await import('@/lib/supabase/settlementAggregate.supabase');
+            const { units: loadedUnits, settlement: currentSettlement, tenancy: currentTenancy, costItems: loadedCostItems } = await getAggregatedSettlementData(property.propertyId, unit.propertyUnitId);
+            setUnits(loadedUnits);
+            setTenancy(currentTenancy);
+            setSettlement(currentSettlement);
 
         const defaultItems = () => DEFAULT_COST_ITEMS.map((item) => ({ id: null, label: item.label, allocable: item.allocable, actualAmount: '', budgetAmount: '' }));
 
         if (currentSettlement) {
             setPeriodStart(new Date(currentSettlement.periodStart));
             setPeriodEnd(new Date(currentSettlement.periodEnd));
-            const loadedItems = (await getCostItemsBySettlement(currentSettlement.serviceChargeSettlementId)).map(toCostItemForm);
+            const loadedItems = (loadedCostItems ?? []).map(toCostItemForm);
             // The settlement row can exist with no saved cost items yet (e.g.
             // it was created just by uploading a source document, before any
             // amounts were entered/saved) — the table must still show the
