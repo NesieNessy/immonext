@@ -23,7 +23,7 @@ import {
 import { getDocumentsByUser, getDocumentUrl, uploadDocument } from '@/lib/supabase/document.supabase';
 import type { UserDocument } from '@immonext/types';
 import { format } from 'date-fns';
-import { Eye, FileText, Image as ImageIcon, Upload } from 'lucide-react';
+import { AlertTriangle, Eye, FileText, Image as ImageIcon, Upload } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useEffect, useMemo, useState } from 'react';
 import { PropertyValuationLayout } from '../PropertyValuationLayout';
@@ -91,7 +91,7 @@ function RenovationContent() {
   const [description, setDescription] = useState('');
   const [uploadNames, setUploadNames] = useState<string[]>([]);
   const [documentsById, setDocumentsById] = useState<Record<number, UserDocument>>({});
-  const [previewUrls, setPreviewUrls] = useState<Record<number, string>>({});
+  const [previewUrls, setPreviewUrls] = useState<Record<number, string | null>>({});
   const [isUploadingFiles, setIsUploadingFiles] = useState(false);
   const [uploadFilesError, setUploadFilesError] = useState<string | null>(null);
   const [financingMode, setFinancingMode] = useState<RenovationFinancingMode>('FREMD');
@@ -136,11 +136,31 @@ function RenovationContent() {
 
   useEffect(() => {
     if (!user) return;
+
     getDocumentsByUser(user.id).then(async (documents) => {
       setDocumentsById(Object.fromEntries(documents.map((document) => [document.documentId, document])));
+
       const imageDocuments = documents.filter((document) => document.contentType?.startsWith('image/'));
-      const urls = await Promise.all(imageDocuments.map(async (document) => [document.documentId, await getDocumentUrl(document.storagePath)] as const));
-      setPreviewUrls(Object.fromEntries(urls.filter((entry): entry is readonly [number, string] => Boolean(entry[1]))));
+      if (imageDocuments.length === 0) {
+        setPreviewUrls({});
+        return;
+      }
+
+      const settled = await Promise.allSettled(
+        imageDocuments.map(async (document) => {
+          const url = await getDocumentUrl(document.storagePath);
+          return [document.documentId, url] as const;
+        }),
+      );
+
+      const previewMap = Object.fromEntries(
+        settled
+          .filter((result): result is PromiseFulfilledResult<readonly [number, string | null]> => result.status === 'fulfilled')
+          .map((result) => result.value)
+          .filter((entry): entry is readonly [number, string] => Boolean(entry[1]))
+      );
+
+      setPreviewUrls(previewMap);
     });
   }, [user]);
 
@@ -194,8 +214,18 @@ function RenovationContent() {
     const documentId = Number(reference.replace(/^document:/, ''));
     const document = documentsById[documentId];
     if (!document) return;
+
+    const existingUrl = previewUrls[documentId];
+    if (existingUrl) {
+      window.open(existingUrl, '_blank', 'noopener,noreferrer');
+      return;
+    }
+
     const url = await getDocumentUrl(document.storagePath);
-    if (url) window.open(url, '_blank', 'noopener,noreferrer');
+    setPreviewUrls((prev) => ({ ...prev, [documentId]: url }));
+    if (url) {
+      window.open(url, '_blank', 'noopener,noreferrer');
+    }
   };
 
   const uploadLabel = (reference: string) => {
@@ -470,7 +500,15 @@ function RenovationContent() {
                                       className="group flex max-w-48 items-center gap-2 rounded-md border border-border bg-card p-1.5 text-left text-xs hover:border-primary disabled:cursor-default"
                                       title={document ? `${document.fileName} öffnen` : uploadLabel(reference)}
                                     >
-                                      {previewUrl ? <img src={previewUrl} alt="" className="h-10 w-12 rounded object-cover" /> : document?.contentType?.startsWith('image/') ? <ImageIcon size={18} /> : <FileText size={18} />}
+                                      {previewUrl ? (
+                                        <img src={previewUrl} alt="" className="h-10 w-12 rounded object-cover" />
+                                      ) : document?.contentType?.startsWith('image/') ? (
+                                        <div className="flex h-10 w-12 items-center justify-center rounded bg-muted">
+                                          <AlertTriangle size={16} className="text-amber-500" />
+                                        </div>
+                                      ) : (
+                                        <FileText size={18} />
+                                      )}
                                       <span className="min-w-0 truncate">{uploadLabel(reference)}</span>
                                       {document && <Eye size={14} className="shrink-0 text-muted-foreground group-hover:text-primary" />}
                                     </button>
