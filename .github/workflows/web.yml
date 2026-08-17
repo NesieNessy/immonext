@@ -55,7 +55,6 @@ jobs:
   performance-smoke:
     runs-on: ubuntu-latest
     needs: build-and-test
-    if: ${{ secrets.DATABASE_URL != '' }}
     steps:
       - uses: actions/checkout@v4
 

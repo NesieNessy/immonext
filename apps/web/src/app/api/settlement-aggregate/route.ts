@@ -1,6 +1,5 @@
 import { requireUserId } from '@/lib/server/auth';
 import { db } from '@/lib/server/db';
-import { getRedisClient } from '@/lib/redis';
 import { NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
@@ -14,19 +13,6 @@ export async function GET(request: Request) {
   if (!propertyId) return NextResponse.json({ error: 'propertyId missing' }, { status: 400 });
 
   const values: unknown[] = [userId, Number(propertyId)];
-
-  // Try Redis cache first (cache-aside)
-  const cacheKey = `settlement:user:${userId}:property:${propertyId}:unit:${propertyUnitId ?? '0'}`;
-  try {
-    const redis = getRedisClient();
-    const cached = await redis.get(cacheKey);
-    if (cached) {
-      return NextResponse.json(JSON.parse(cached));
-    }
-  } catch {
-    // ignore cache errors and fall back to DB
-    console.warn('Redis cache unavailable, continuing without cache');
-  }
 
   // Fetch units and current settlement and tenancy in parallel where possible
   const unitsPromise = db.query(
@@ -58,13 +44,6 @@ export async function GET(request: Request) {
     costItems = costRes.rows;
   }
   const result = { units: unitsRes.rows, settlement: settlementRes.rows[0] ?? null, tenancy: tenancyRes.rows[0] ?? null, costItems };
-
-  try {
-    const redis = getRedisClient();
-    await redis.set(cacheKey, JSON.stringify(result), 'EX', 60);
-  } catch {
-    // ignore cache set errors
-  }
 
   return NextResponse.json(result);
 }

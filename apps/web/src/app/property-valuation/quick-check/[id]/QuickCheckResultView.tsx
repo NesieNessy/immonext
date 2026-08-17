@@ -251,7 +251,7 @@ export function QuickCheckResultView({ id }: Props) {
             }
           />
 
-          <div className="mt-3 flex flex-col gap-4">
+          <div className="mt-3 flex flex-col gap-4 lg:grid lg:grid-cols-2 lg:items-start lg:gap-6">
             <MobileResultBanner show={canShowResult} resultId="qc-result" formTopId="qc-form-top" />
 
             {/* Form */}
