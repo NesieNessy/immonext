@@ -16,17 +16,28 @@ import {
     updateSettlement,
     uploadSettlementSourceDocument,
 } from '@/lib/supabase/service_charge_settlement.supabase';
+import { updateTenancy } from '@/lib/supabase/tenancy.supabase';
+import { addAdjustmentHistoryEntry, getAdjustmentHistoryByTenancy } from '@/lib/supabase/tenancy_adjustment_history.supabase';
 import { uploadTenancyDocument } from '@/lib/supabase/tenancy_document.supabase';
 import { getTenancyPersonsByTenancy } from '@/lib/supabase/tenancy_person.supabase';
+import { createMaintenanceCosts, getMaintenanceCostsById, updateMaintenanceCosts } from '@/lib/supabase/maintenance_costs.supabase';
 import { formatDeDate } from '@/lib/utils';
 import { htmlToPdfBlob } from '@/lib/pdf/htmlToPdf';
+import {
+    compareBudgetCoverage,
+    compareSettlementCoverage,
+    prorateAnnualPrepayment,
+    splitByAllocable,
+} from '@/lib/serviceCharge/settlementMath';
 import type {
+    MaintenanceCosts,
     PersonalData,
     Property,
     PropertyUnit,
     ServiceChargeCostItem,
     ServiceChargeSettlement,
     Tenancy,
+    TenancyAdjustmentHistoryEntry,
 } from '@immonext/types';
 import { format } from 'date-fns';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -77,22 +88,32 @@ export function useServiceChargeSettlementData(propertyId: string, property: Pro
     const [deletedCostItemIds, setDeletedCostItemIds] = useState<number[]>([]);
     const [originalSnapshot, setOriginalSnapshot] = useState('');
     const [tenancy, setTenancy] = useState<Tenancy | null>(null);
+    const [miscRentHistory, setMiscRentHistory] = useState<TenancyAdjustmentHistoryEntry[]>([]);
+    const [maintenanceCosts, setMaintenanceCosts] = useState<MaintenanceCosts | null>(null);
     const [landlord, setLandlord] = useState<PersonalData | null | undefined>(undefined);
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
     const [isUploadingSource, setIsUploadingSource] = useState(false);
     const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+    const [isApplyingPrepayment, setIsApplyingPrepayment] = useState(false);
     const [previewHtml, setPreviewHtml] = useState<string | null>(null);
     const [isLoadingPreview, setIsLoadingPreview] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
     const load = useCallback(async () => {
-            setIsLoading(true);
-            const { getAggregatedSettlementData } = await import('@/lib/supabase/settlementAggregate.supabase');
-            const { units: loadedUnits, settlement: currentSettlement, tenancy: currentTenancy, costItems: loadedCostItems } = await getAggregatedSettlementData(property.propertyId, unit.propertyUnitId);
-            setUnits(loadedUnits);
-            setTenancy(currentTenancy);
-            setSettlement(currentSettlement);
+        setIsLoading(true);
+        const { getAggregatedSettlementData } = await import('@/lib/supabase/settlementAggregate.supabase');
+        const { units: loadedUnits, settlement: currentSettlement, tenancy: currentTenancy, costItems: loadedCostItems } = await getAggregatedSettlementData(property.propertyId, unit.propertyUnitId);
+        setUnits(loadedUnits);
+        setTenancy(currentTenancy);
+        setSettlement(currentSettlement);
+
+        const [history, loadedMaintenanceCosts] = await Promise.all([
+            currentTenancy ? getAdjustmentHistoryByTenancy(currentTenancy.tenancyId) : Promise.resolve([]),
+            currentTenancy?.maintenanceCostsId ? getMaintenanceCostsById(currentTenancy.maintenanceCostsId) : Promise.resolve(null),
+        ]);
+        setMiscRentHistory(history.filter((entry) => entry.adjustmentType === 'miscRent'));
+        setMaintenanceCosts(loadedMaintenanceCosts);
 
         const defaultItems = () => DEFAULT_COST_ITEMS.map((item) => ({ id: null, label: item.label, allocable: item.allocable, actualAmount: '', budgetAmount: '' }));
 
@@ -135,21 +156,47 @@ export function useServiceChargeSettlementData(propertyId: string, property: Pro
     const totalArea = useMemo(() => units.reduce((sum, u) => sum + (u.livingAreaM2 ?? 0), 0), [units]);
     const unitShare = unit.livingAreaM2 && totalArea > 0 ? unit.livingAreaM2 / totalArea : 0;
 
-    const totalActualCostsAll = useMemo(() => costItems.reduce((sum, i) => sum + (Number(i.actualAmount) || 0), 0), [costItems]);
-    const totalBudgetCostsAll = useMemo(() => costItems.reduce((sum, i) => sum + (Number(i.budgetAmount) || 0), 0), [costItems]);
-    const totalActualAllocable = useMemo(() => costItems.filter((i) => i.allocable).reduce((sum, i) => sum + (Number(i.actualAmount) || 0), 0), [costItems]);
-    const totalBudgetAllocable = useMemo(() => costItems.filter((i) => i.allocable).reduce((sum, i) => sum + (Number(i.budgetAmount) || 0), 0), [costItems]);
+    // "Total share" (Gesamt Objekt) / "Apartment share" (Anteil Wohnung), split
+    // into apportionable (umlagefähig) and non-apportionable per the table.
+    const actualSplit = useMemo(
+        () => splitByAllocable(costItems.map((item) => ({ amount: Number(item.actualAmount) || 0, allocable: item.allocable }))),
+        [costItems],
+    );
+    const budgetSplit = useMemo(
+        () => splitByAllocable(costItems.map((item) => ({ amount: Number(item.budgetAmount) || 0, allocable: item.allocable }))),
+        [costItems],
+    );
+    const totalActualCostsAll = actualSplit.total;
+    const totalBudgetCostsAll = budgetSplit.total;
+    const totalActualAllocable = actualSplit.allocable;
+    const totalBudgetAllocable = budgetSplit.allocable;
 
+    // (1) Apartment share: sum of allocable actual cost items for this unit.
     const unitActualShare = totalActualAllocable * unitShare;
+    // (3) Budget plan: sum of allocable budgeted cost items for this unit, for the following year.
     const unitBudgetShare = totalBudgetAllocable * unitShare;
 
-    const annualPrepayment = (tenancy?.miscRent ?? 0) * 12;
     const currentMonthlyPrepayment = tenancy?.miscRent ?? 0;
-    /** Negative = Nachzahlung durch Mieter, positive = Guthaben/Rückzahlung. */
+    // (2) Annual total from the tenant's NK-Vorauszahlung, prorated for any
+    // miscRent change that took effect during the settlement period.
+    const annualPrepayment = useMemo(() => {
+        if (!periodStart || !periodEnd) return currentMonthlyPrepayment * 12;
+        const history = miscRentHistory
+            .filter((entry): entry is TenancyAdjustmentHistoryEntry & { effectiveDate: string; amount: number } => entry.effectiveDate != null && entry.amount != null)
+            .map((entry) => ({ effectiveDate: entry.effectiveDate, amount: entry.amount }));
+        return prorateAnnualPrepayment(currentMonthlyPrepayment, history, periodStart, periodEnd);
+    }, [currentMonthlyPrepayment, miscRentHistory, periodStart, periodEnd]);
+
+    // (1) vs (2): shortfall = Nachzahlung durch Mieter, surplus = Guthaben des Mieters.
+    const settlementCoverage = compareSettlementCoverage(unitActualShare, annualPrepayment);
     const overUnderCoverage = unitActualShare - annualPrepayment;
 
+    // (2) vs (3): shortfall = Vorauszahlung zu niedrig (erhöhen), surplus = Vorauszahlung zu hoch (senken).
+    const budgetCoverage = compareBudgetCoverage(annualPrepayment, unitBudgetShare);
+
+    // Budget plan (3) divided by 12, compared against the current monthly NK-Vorauszahlung.
     const newMonthlyPrepayment = totalBudgetAllocable > 0 ? Math.round((unitBudgetShare / 12) * 100) / 100 : null;
-    const prepaymentDelta = newMonthlyPrepayment != null ? newMonthlyPrepayment * 12 - annualPrepayment : null;
+    const prepaymentDelta = newMonthlyPrepayment != null ? newMonthlyPrepayment - currentMonthlyPrepayment : null;
     const newTotalRent = (tenancy?.coldRent ?? 0) + (newMonthlyPrepayment ?? currentMonthlyPrepayment) + (tenancy?.parkingSpaceRent ?? 0);
 
     const settlementYear = periodEnd ? periodEnd.getFullYear() : new Date().getFullYear();
@@ -226,6 +273,67 @@ export function useServiceChargeSettlementData(propertyId: string, property: Pro
             setError('Die Nebenkostenabrechnung konnte nicht gespeichert werden.');
         } finally {
             setIsSaving(false);
+        }
+    };
+
+    // ── Apply new NK-Vorauszahlung ──────────────────────────────────────────
+    // Commits the recommended monthly prepayment (Wirtschaftsplan / 12) to the
+    // tenancy, logs it to the adjustment history so future settlements can
+    // prorate for the change, and writes the apportionable/non-apportionable
+    // split of the Wirtschaftsplan into the tenancy's maintenance_costs record.
+    const canApplyPrepayment = tenancy != null && newMonthlyPrepayment != null && prepaymentDelta !== 0;
+
+    const handleApplyPrepayment = async () => {
+        if (!tenancy || newMonthlyPrepayment == null || prepaymentDelta == null) return;
+        setIsApplyingPrepayment(true);
+        setError(null);
+        try {
+            const updatedTenancy = await updateTenancy(tenancy.tenancyId, { miscRent: newMonthlyPrepayment });
+            if (updatedTenancy) setTenancy(updatedTenancy);
+
+            const effectiveDate = format(new Date(settlementYear + 1, 0, 1), 'yyyy-MM-dd');
+            const historyEntry = await addAdjustmentHistoryEntry({
+                tenancyId: tenancy.tenancyId,
+                propertyId: property.propertyId,
+                adjustmentType: 'miscRent',
+                effectiveDate,
+                amount: prepaymentDelta,
+                note: 'NK-Vorauszahlung aus Nebenkostenabrechnung übernommen',
+            });
+            if (historyEntry) setMiscRentHistory((prev) => [historyEntry, ...prev]);
+
+            const mcPayload = {
+                costBreakdown: true,
+                allocableCosts: budgetSplit.allocable,
+                nonAllocableCosts: budgetSplit.nonAllocable,
+                totalCosts: budgetSplit.total,
+                allocableCostsProjection: true,
+                nonAllocableCostsProjection: true,
+                totalCostsProjection: true,
+                costItems: costItems.map((item, index) => ({
+                    id: item.id != null ? String(item.id) : `new-${index}`,
+                    label: item.label,
+                    amount: Number(item.budgetAmount) || 0,
+                    allocable: item.allocable,
+                })),
+            };
+            if (maintenanceCosts) {
+                const updatedCosts = await updateMaintenanceCosts(maintenanceCosts.maintenanceCostsId, mcPayload);
+                if (updatedCosts) setMaintenanceCosts(updatedCosts);
+            } else {
+                const createdCosts = await createMaintenanceCosts({ propertyId: property.propertyId, houseMoney: null, ...mcPayload });
+                if (createdCosts) {
+                    setMaintenanceCosts(createdCosts);
+                    const tenancyWithCosts = await updateTenancy(tenancy.tenancyId, { maintenanceCostsId: createdCosts.maintenanceCostsId });
+                    if (tenancyWithCosts) setTenancy(tenancyWithCosts);
+                }
+            }
+
+            showToast('Neue NK-Vorauszahlung übernommen.', 'success');
+        } catch {
+            setError('Die NK-Vorauszahlung konnte nicht übernommen werden.');
+        } finally {
+            setIsApplyingPrepayment(false);
         }
     };
 
@@ -366,7 +474,7 @@ export function useServiceChargeSettlementData(propertyId: string, property: Pro
 
     return {
         // state
-        isLoading, isSaving, isUploadingSource, isGeneratingPdf, error,
+        isLoading, isSaving, isUploadingSource, isGeneratingPdf, isApplyingPrepayment, error,
         settlement, periodStart, setPeriodStart, periodEnd, setPeriodEnd,
         costItems, tenancy, landlord, useCaseMenuItems, backHref,
         previewHtml, isLoadingPreview,
@@ -374,13 +482,14 @@ export function useServiceChargeSettlementData(propertyId: string, property: Pro
         isEditing, unitShare, totalArea,
         totalActualCostsAll, totalBudgetCostsAll,
         totalActualAllocable, totalBudgetAllocable,
+        actualSplit, budgetSplit,
         unitActualShare, unitBudgetShare,
-        annualPrepayment, currentMonthlyPrepayment, overUnderCoverage,
+        annualPrepayment, currentMonthlyPrepayment, overUnderCoverage, settlementCoverage, budgetCoverage,
         newMonthlyPrepayment, prepaymentDelta, newTotalRent, settlementYear,
-        canGeneratePdf,
+        canGeneratePdf, canApplyPrepayment,
         // handlers
         updateCostItemField, addCostItem, removeCostItem,
         handleSave, handleUploadSourceDocument, handleViewSourceDocument, handleRemoveSourceDocument,
-        handleGeneratePdf, handlePreview, closePreview,
+        handleGeneratePdf, handlePreview, closePreview, handleApplyPrepayment,
     };
 }

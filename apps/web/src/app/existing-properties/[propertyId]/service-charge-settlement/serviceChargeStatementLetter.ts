@@ -99,7 +99,7 @@ export function serviceChargeStatementHtml(p: ServiceChargeStatementParams): str
         <p style="margin:16px 0;display:flex;justify-content:space-between;"><span>Ihr Anteil</span><strong>${euro(p.unitActualShare)}</strong></p>
         <p style="margin:16px 0;display:flex;justify-content:space-between;"><span>Geleistete Vorauszahlungen</span><strong>${euro(p.annualPrepayment)}</strong></p>
         <p style="margin:16px 0;display:flex;justify-content:space-between;border-top:1px solid #ddd;padding-top:8px;">
-            <span>${p.overUnderCoverage < 0 ? 'Nachzahlung durch Sie' : 'Guthaben zu Ihren Gunsten'}</span>
+            <span>${p.overUnderCoverage > 0 ? 'Nachzahlung durch Sie' : 'Guthaben zu Ihren Gunsten'}</span>
             <strong>${euro(Math.abs(p.overUnderCoverage))}</strong>
         </p>
 

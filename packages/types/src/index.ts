@@ -519,7 +519,7 @@ export type MaintenanceCostsUpdate = Partial<Omit<MaintenanceCosts, 'maintenance
 // TenancyAdjustmentHistory
 // ----------------------------------------------------------------------------
 
-export type TenancyAdjustmentType = 'rent' | 'renovation';
+export type TenancyAdjustmentType = 'rent' | 'renovation' | 'miscRent';
 
 export interface TenancyAdjustmentHistoryEntry {
   historyId: number;
