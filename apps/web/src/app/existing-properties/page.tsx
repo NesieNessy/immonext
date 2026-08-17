@@ -243,7 +243,7 @@ export default function ExistingPropertiesPage() {
 
             {filtered.length > 0 && (
               <>
-                <div className="max-h-[600px] overflow-y-auto pr-1">
+                <div className="max-h-[700px] overflow-y-auto pr-1">
                   {/* Mobile — always the card grid; the grid/list toggle only
                       applies at md+, same md:hidden / hidden md:block split
                       the quick-check overview uses for its mobile cards. */}
