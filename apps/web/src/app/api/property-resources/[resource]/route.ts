@@ -1,25 +1,8 @@
 import { requireUserId } from '@/lib/server/auth';
 import { db } from '@/lib/server/db';
-import { invalidateSettlementCache } from '@/lib/redis';
 import { NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
-
-// Tables whose data feeds the settlement-aggregate cache (GET /api/settlement-aggregate).
-// Writes to any of these must drop that cache so a save is reflected immediately
-// rather than waiting out its 60s TTL.
-const SETTLEMENT_CACHE_TABLES = new Set(['service_charge_settlement', 'service_charge_cost_item', 'tenancy', 'property_unit']);
-
-async function invalidateSettlementCacheFor(table: string, userId: string, propertyId: unknown): Promise<void> {
-  if (!SETTLEMENT_CACHE_TABLES.has(table)) return;
-  const id = Number(propertyId);
-  if (!Number.isInteger(id)) return;
-  try {
-    await invalidateSettlementCache(userId, id);
-  } catch {
-    // best-effort; a stale cache entry is preferable to failing the write
-  }
-}
 
 type ResourceConfig = {
   table: string;
@@ -222,7 +205,6 @@ export async function POST(request: Request, context: RouteContext) {
     `INSERT INTO ${config.table} (${columns.join(', ')}) VALUES (${placeholders.join(', ')})${upsert} RETURNING *`,
     columns.map((column) => valuesByColumn[column]),
   );
-  await invalidateSettlementCacheFor(config.table, userId, valuesByColumn.property_id);
   return NextResponse.json(rows[0], { status: 201 });
 }
 
@@ -245,7 +227,6 @@ export async function PATCH(request: Request, context: RouteContext) {
     [id, userId, ...columns.map((column) => valuesByColumn[column])],
   );
   if (!rows[0]) return NextResponse.json({ error: 'Datensatz nicht gefunden.' }, { status: 404 });
-  await invalidateSettlementCacheFor(config.table, userId, rows[0].property_id);
   return NextResponse.json(rows[0]);
 }
 
@@ -260,10 +241,8 @@ export async function DELETE(request: Request, context: RouteContext) {
   const targetColumn = id ? config.primaryKey : 'property_id';
   const targetValue = Number(id ?? propertyId);
   const result = await db.query(
-    `DELETE FROM ${config.table} r WHERE r.${targetColumn} = $1 AND EXISTS (SELECT 1 FROM property p WHERE p.property_id = r.property_id AND p.user_id = $2) RETURNING r.property_id`,
+    `DELETE FROM ${config.table} r WHERE r.${targetColumn} = $1 AND EXISTS (SELECT 1 FROM property p WHERE p.property_id = r.property_id AND p.user_id = $2)`,
     [targetValue, userId],
   );
-  const affectedPropertyId = targetColumn === 'property_id' ? targetValue : result.rows[0]?.property_id;
-  await invalidateSettlementCacheFor(config.table, userId, affectedPropertyId);
   return NextResponse.json({ deleted: result.rowCount ?? 0 });
 }

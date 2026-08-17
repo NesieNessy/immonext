@@ -102,41 +102,47 @@ export function useServiceChargeSettlementData(propertyId: string, property: Pro
 
     const load = useCallback(async () => {
         setIsLoading(true);
-        const { getAggregatedSettlementData } = await import('@/lib/supabase/settlementAggregate.supabase');
-        const { units: loadedUnits, settlement: currentSettlement, tenancy: currentTenancy, costItems: loadedCostItems } = await getAggregatedSettlementData(property.propertyId, unit.propertyUnitId);
-        setUnits(loadedUnits);
-        setTenancy(currentTenancy);
-        setSettlement(currentSettlement);
+        setError(null);
+        try {
+            const { getAggregatedSettlementData } = await import('@/lib/supabase/settlementAggregate.supabase');
+            const { units: loadedUnits, settlement: currentSettlement, tenancy: currentTenancy, costItems: loadedCostItems } = await getAggregatedSettlementData(property.propertyId, unit.propertyUnitId);
+            setUnits(loadedUnits);
+            setTenancy(currentTenancy);
+            setSettlement(currentSettlement);
 
-        const [history, loadedMaintenanceCosts] = await Promise.all([
-            currentTenancy ? getAdjustmentHistoryByTenancy(currentTenancy.tenancyId) : Promise.resolve([]),
-            currentTenancy?.maintenanceCostsId ? getMaintenanceCostsById(currentTenancy.maintenanceCostsId) : Promise.resolve(null),
-        ]);
-        setMiscRentHistory(history.filter((entry) => entry.adjustmentType === 'miscRent'));
-        setMaintenanceCosts(loadedMaintenanceCosts);
+            const [history, loadedMaintenanceCosts] = await Promise.all([
+                currentTenancy ? getAdjustmentHistoryByTenancy(currentTenancy.tenancyId) : Promise.resolve([]),
+                currentTenancy?.maintenanceCostsId ? getMaintenanceCostsById(currentTenancy.maintenanceCostsId) : Promise.resolve(null),
+            ]);
+            setMiscRentHistory(history.filter((entry) => entry.adjustmentType === 'miscRent'));
+            setMaintenanceCosts(loadedMaintenanceCosts);
 
-        const defaultItems = () => DEFAULT_COST_ITEMS.map((item) => ({ id: null, label: item.label, allocable: item.allocable, actualAmount: '', budgetAmount: '' }));
+            const defaultItems = () => DEFAULT_COST_ITEMS.map((item) => ({ id: null, label: item.label, allocable: item.allocable, actualAmount: '', budgetAmount: '' }));
 
-        if (currentSettlement) {
-            setPeriodStart(new Date(currentSettlement.periodStart));
-            setPeriodEnd(new Date(currentSettlement.periodEnd));
-            const loadedItems = (loadedCostItems ?? []).map(toCostItemForm);
-            // The settlement row can exist with no saved cost items yet (e.g.
-            // it was created just by uploading a source document, before any
-            // amounts were entered/saved) — the table must still show the
-            // full standard BetrKV list to fill in, not an empty table.
-            const items = loadedItems.length > 0 ? loadedItems : defaultItems();
-            setCostItems(items);
-            setOriginalSnapshot(loadedItems.length > 0 ? serializeCostItems(items, new Date(currentSettlement.periodStart), new Date(currentSettlement.periodEnd)) : '');
-        } else {
-            const currentYear = new Date().getFullYear();
-            setPeriodStart(new Date(currentYear, 0, 1));
-            setPeriodEnd(new Date(currentYear, 11, 31));
-            setCostItems(defaultItems());
-            setOriginalSnapshot('');
+            if (currentSettlement) {
+                setPeriodStart(new Date(currentSettlement.periodStart));
+                setPeriodEnd(new Date(currentSettlement.periodEnd));
+                const loadedItems = (loadedCostItems ?? []).map(toCostItemForm);
+                // The settlement row can exist with no saved cost items yet (e.g.
+                // it was created just by uploading a source document, before any
+                // amounts were entered/saved) — the table must still show the
+                // full standard BetrKV list to fill in, not an empty table.
+                const items = loadedItems.length > 0 ? loadedItems : defaultItems();
+                setCostItems(items);
+                setOriginalSnapshot(loadedItems.length > 0 ? serializeCostItems(items, new Date(currentSettlement.periodStart), new Date(currentSettlement.periodEnd)) : '');
+            } else {
+                const currentYear = new Date().getFullYear();
+                setPeriodStart(new Date(currentYear, 0, 1));
+                setPeriodEnd(new Date(currentYear, 11, 31));
+                setCostItems(defaultItems());
+                setOriginalSnapshot('');
+            }
+            setDeletedCostItemIds([]);
+        } catch {
+            setError('Die Nebenkostenabrechnung konnte nicht geladen werden.');
+        } finally {
+            setIsLoading(false);
         }
-        setDeletedCostItemIds([]);
-        setIsLoading(false);
     }, [property.propertyId, unit.propertyUnitId]);
 
     useEffect(() => { void load(); }, [load]);

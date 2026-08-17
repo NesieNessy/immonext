@@ -23,7 +23,7 @@ import {
 import { getDocumentsByUser, getDocumentUrl, uploadDocument } from '@/lib/supabase/document.supabase';
 import type { UserDocument } from '@immonext/types';
 import { format } from 'date-fns';
-import { AlertTriangle, Eye, FileText, Image as ImageIcon, Upload } from 'lucide-react';
+import { AlertTriangle, Eye, FileText, Upload } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useEffect, useMemo, useState } from 'react';
 import { PropertyValuationLayout } from '../PropertyValuationLayout';

@@ -112,8 +112,8 @@ export function ServiceChargeSettlementView({ propertyId, property, unit, hasMul
                         <MetricCard
                             label="Über-/Unterdeckung"
                             value={`${data.overUnderCoverage < 0 ? '-' : '+'}${euro(Math.abs(data.overUnderCoverage))}`}
-                            detail={data.overUnderCoverage < 0 ? 'Nachzahlung durch Mieter' : 'Guthaben des Mieters'}
-                            tone={data.overUnderCoverage < 0 ? 'warning' : 'positive'}
+                            detail={data.settlementCoverage === 'shortfall' ? 'Nachzahlung durch Mieter' : 'Guthaben des Mieters'}
+                            tone={data.settlementCoverage === 'shortfall' ? 'warning' : 'positive'}
                         />
                     </div>
 
@@ -296,9 +296,9 @@ export function ServiceChargeSettlementView({ propertyId, property, unit, hasMul
                                         <td className="px-3 py-2 text-right whitespace-nowrap">{euro(data.annualPrepayment)}</td>
                                         <td></td>
                                     </tr>
-                                    <tr className={data.overUnderCoverage < 0 ? 'text-destructive' : 'text-emerald-600'}>
+                                    <tr className={data.settlementCoverage === 'shortfall' ? 'text-destructive' : 'text-emerald-600'}>
                                         <td className="px-3 py-2 font-medium">
-                                            {data.overUnderCoverage < 0 ? 'Nachzahlung durch Mieter' : 'Guthaben durch Mieter'}
+                                            {data.settlementCoverage === 'shortfall' ? 'Nachzahlung durch Mieter' : 'Guthaben durch Mieter'}
                                         </td>
                                         <td className="px-3 py-2 border-l border-border">–</td>
                                         <td className="px-3 py-2 text-right whitespace-nowrap">
@@ -327,13 +327,22 @@ export function ServiceChargeSettlementView({ propertyId, property, unit, hasMul
                             <MetricCard
                                 label="NK-Vorauszahlung neu"
                                 value={data.newMonthlyPrepayment != null ? euro(data.newMonthlyPrepayment) : '–'}
-                                detail={`aus Wirtschaftsplan ${data.settlementYear + 1}`}
-                                tone="positive"
+                                detail={data.budgetCoverage === 'shortfall' ? 'Erhöhung wegen Unterdeckung' : data.budgetCoverage === 'surplus' ? 'Reduzierung wegen Überdeckung' : `aus Wirtschaftsplan ${data.settlementYear + 1}`}
+                                tone={data.budgetCoverage === 'shortfall' ? 'warning' : 'positive'}
                             />
                             <MetricCard
                                 label="Neue Gesamtmiete"
                                 value={euro(data.newTotalRent)}
                                 detail={`inkl. ${euro(data.tenancy?.coldRent)} Nettomiete`}
+                            />
+                        </div>
+                        <div className="mt-3 flex justify-end">
+                            <Button
+                                label="Neue NK-Vorauszahlung übernehmen"
+                                icon={<RefreshCw className="w-4 h-4" />}
+                                variant="outline"
+                                disabled={!data.canApplyPrepayment || data.isApplyingPrepayment}
+                                onClick={() => void data.handleApplyPrepayment()}
                             />
                         </div>
                     </div>
