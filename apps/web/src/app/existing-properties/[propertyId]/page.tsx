@@ -1,8 +1,8 @@
-import PropertyHub from './PropertyHub';
+import PropertyEntry from './PropertyEntry';
 
 export const dynamic = 'force-dynamic';
 
 export default async function Page({ params }: { params: Promise<{ propertyId: string }> }) {
     const { propertyId } = await params;
-    return <PropertyHub propertyId={propertyId} />;
+    return <PropertyEntry propertyId={propertyId} />;
 }
