@@ -1,6 +1,6 @@
 import React from "react";
 import { cn } from "@/lib/utils";
-import { ChevronDown } from "lucide-react";
+import { Icons } from "@/components/common";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 
 export interface MenuItem {
@@ -96,7 +96,7 @@ export function Button({
         {iconWithSize && iconPosition === "left" && iconWithSize}
         {labelNode}
         {iconWithSize && iconPosition === "right" && iconWithSize}
-        {menuItems && <ChevronDown size={iconSizes[size]} className="ml-1" />}
+        {menuItems && <Icons.ChevronDown size={iconSizes[size]} className="ml-1" />}
       </>
     );
   } else {

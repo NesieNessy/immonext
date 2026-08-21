@@ -7,6 +7,7 @@ import {
     ComingSoonButton,
     Dropdown,
     Header,
+    Icons,
     NumberField,
     SectionLabel,
     StickyActionBar,
@@ -20,7 +21,6 @@ import { DataCard } from '../tenant-data/DocumentGeneratorParts';
 import { MOVE_OUT_ROOM_OPTIONS } from '@/lib/tenantMoveOut/rooms';
 import { base64ToDataUri, deCurrencyFormatter } from '@/lib/utils';
 import type { Property, PropertyUnit } from '@immonext/types';
-import { ExternalLink, Eye, FileText, Plus, Trash2, Upload } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useRef } from 'react';
 
@@ -58,7 +58,7 @@ function DamagePhotoTile({ damage, onUpload, onRemove, isUploading }: {
                         aria-label="Foto entfernen"
                         className="absolute top-1 right-1 p-1 rounded-md bg-card/90 text-muted-foreground hover:text-destructive shadow-sm cursor-pointer"
                     >
-                        <Trash2 className="w-3.5 h-3.5" />
+                        <Icons.Trash2 className="w-3.5 h-3.5" />
                     </button>
                     <p className="mt-1 text-xs text-muted-foreground truncate">{photo.fileName}</p>
                 </div>
@@ -70,7 +70,7 @@ function DamagePhotoTile({ damage, onUpload, onRemove, isUploading }: {
                 aria-label="Foto hinzufügen"
                 className="w-20 h-20 rounded-lg border border-dashed border-border flex items-center justify-center text-muted-foreground hover:border-primary hover:text-primary transition-colors cursor-pointer disabled:opacity-50"
             >
-                <Plus className="w-5 h-5" />
+                <Icons.Plus className="w-5 h-5" />
             </button>
             <input
                 ref={inputRef}
@@ -196,14 +196,14 @@ export function TenantMoveOutView({ propertyId, property, unit, hasMultipleUnits
                                         aria-label="Zähler entfernen"
                                         className="p-2.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors cursor-pointer"
                                     >
-                                        <Trash2 className="w-4 h-4" />
+                                        <Icons.Trash2 className="w-4 h-4" />
                                     </button>
                                 </div>
                             ))}
                         </div>
                         <Button
                             label="Zähler hinzufügen"
-                            icon={<Plus className="w-4 h-4" />}
+                            icon={<Icons.Plus className="w-4 h-4" />}
                             variant="outline"
                             size="sm"
                             className="mt-3"
@@ -225,7 +225,7 @@ export function TenantMoveOutView({ propertyId, property, unit, hasMultipleUnits
                                             aria-label="Schaden entfernen"
                                             className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors cursor-pointer"
                                         >
-                                            <Trash2 className="w-4 h-4" />
+                                            <Icons.Trash2 className="w-4 h-4" />
                                         </button>
                                     </div>
                                     <TextArea
@@ -249,7 +249,7 @@ export function TenantMoveOutView({ propertyId, property, unit, hasMultipleUnits
                         </div>
                         <Button
                             label="Schaden hinzufügen"
-                            icon={<Plus className="w-4 h-4" />}
+                            icon={<Icons.Plus className="w-4 h-4" />}
                             variant="outline"
                             size="sm"
                             className="mt-3"
@@ -262,7 +262,7 @@ export function TenantMoveOutView({ propertyId, property, unit, hasMultipleUnits
                         <SectionLabel>Generierbare Dokumente</SectionLabel>
                         <div className="mt-3">
                             <DataCard
-                                icon={FileText}
+                                icon={Icons.FileText}
                                 title="Abnahmeprotokoll"
                                 footer={
                                     <>
@@ -279,21 +279,21 @@ export function TenantMoveOutView({ propertyId, property, unit, hasMultipleUnits
                                         />
                                         <Button
                                             label="Datei hochladen"
-                                            icon={<Upload className="w-4 h-4" />}
+                                            icon={<Icons.Upload className="w-4 h-4" />}
                                             variant="ghost"
                                             disabled={!data.canGenerateProtocol || data.isUploadingProtocol}
                                             onClick={() => protocolUploadRef.current?.click()}
                                         />
                                         <Button
                                             label="Daten prüfen & Vorschau"
-                                            icon={<Eye className="w-4 h-4" />}
+                                            icon={<Icons.Eye className="w-4 h-4" />}
                                             variant="outline"
                                             disabled={!data.canGenerateProtocol}
                                             onClick={() => data.goTo(`/existing-properties/${propertyId}/tenant-move-out/${unit.propertyUnitId}/protocol`)}
                                         />
                                         <Button
                                             label="Abnahmeprotokoll erstellen"
-                                            icon={<FileText className="w-4 h-4" />}
+                                            icon={<Icons.FileText className="w-4 h-4" />}
                                             variant="primary"
                                             disabled={!data.canGenerateProtocol || data.isGeneratingProtocol}
                                             onClick={() => void data.handleGenerateProtocol()}
@@ -309,7 +309,7 @@ export function TenantMoveOutView({ propertyId, property, unit, hasMultipleUnits
                                             title={data.protocolDocument.fileName}
                                             className="inline-flex w-fit items-center gap-1 px-2 py-0.5 rounded-md bg-primary/10 text-primary text-xs font-medium max-w-full hover:bg-primary/20 transition-colors cursor-pointer"
                                         >
-                                            <FileText className="w-3 h-3 shrink-0" />
+                                            <Icons.FileText className="w-3 h-3 shrink-0" />
                                             <span className="truncate">{data.protocolDocument.fileName}</span>
                                         </button>
                                     )}
@@ -327,7 +327,7 @@ export function TenantMoveOutView({ propertyId, property, unit, hasMultipleUnits
                         <div className="mt-3 flex items-center gap-3 flex-wrap">
                             <ComingSoonButton
                                 label="Mietkaution auflösen"
-                                icon={<ExternalLink className="w-4 h-4" />}
+                                icon={<Icons.ExternalLink className="w-4 h-4" />}
                                 variant="outline"
                             />
                             <p className="text-xs text-muted-foreground">
@@ -343,7 +343,7 @@ export function TenantMoveOutView({ propertyId, property, unit, hasMultipleUnits
                 ghostLabel={BUTTON_DETAILS.Cancel.label}
                 ghostIcon={<BUTTON_DETAILS.Cancel.icon />}
                 onGhost={() => router.push(data.backHref)}
-                primaryLabel="Speichern"
+                primaryLabel={BUTTON_DETAILS.Save.label}
                 primaryIcon={<BUTTON_DETAILS.Save.icon />}
                 primaryDisabled={data.isSaving}
                 onPrimary={() => void data.handleSave()}

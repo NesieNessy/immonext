@@ -1,7 +1,7 @@
 "use client";
 
 import { PropertyNotFoundPage } from '@/components/features/PropertyDisplay';
-import { Button, Header, NumberField, PillOptions, SectionLabel, StickyActionBar, UnsavedChangesModal, useToast } from '@/components/ui';
+import { Button, Header, Icons, NumberField, PillOptions, SectionLabel, StickyActionBar, UnsavedChangesModal, useToast } from '@/components/ui';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { ExistingPropertiesUseCases } from '@/constants/ExistingPropertiesUseCases';
 import { computePriceSplitIndividual, computePriceSplitStandard } from '@/lib/detailCheck/depreciation';
@@ -10,7 +10,6 @@ import { getPropertyOverviewById, type PropertyOverview } from '@/lib/supabase/p
 import { getPropertyPriceSplitByProperty, upsertPropertyPriceSplit } from '@/lib/supabase/property_price_split.supabase';
 import { createUseCaseMenuItems } from '@/lib/propertyUseCaseMenu';
 import { base64ToDataUri, deCurrencyFormatter, deNumberFormatter } from '@/lib/utils';
-import { Info } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 
@@ -233,7 +232,7 @@ export default function AdjustDistribution({ propertyId }: { propertyId: string 
                                 />
                             </div>
                             <p className="mt-3 flex items-center gap-1.5 text-xs text-muted-foreground">
-                                <Info className="w-3.5 h-3.5 shrink-0 text-primary" />
+                                <Icons.Info className="w-3.5 h-3.5 shrink-0 text-primary" />
                                 Tragen Sie die Grundstücksdaten ein um die Aufteilung zu berechnen.
                             </p>
                         </div>

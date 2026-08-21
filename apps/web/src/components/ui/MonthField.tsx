@@ -1,6 +1,7 @@
 "use client";
 
-import { CalendarDays, X } from "lucide-react";
+import { CalendarDays } from "lucide-react";
+import { Icons } from "../common";
 import { useFieldIds } from "./fieldIds";
 
 const MONTH_OPTIONS = [
@@ -85,7 +86,7 @@ export function MonthField({
             aria-label={`${label} löschen`}
             onClick={() => onChange("")}
           >
-            <X size={16} />
+            <Icons.X size={16} />
           </button>
         )}
       </div>

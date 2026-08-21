@@ -1,8 +1,9 @@
 "use client";
 
 import { BESTANDSOBJEKTE_BREADCRUMB_ROOT, PROPERTY_CATEGORY_CREATE_OPTIONS } from '@/components/features/PropertyDisplay';
-import { CalendarField, Dropdown, Header, NumberField, PillOptions, SectionLabel, StickyActionBar, TextField, UnsavedChangesModal, UploadButton, useToast, type BreadcrumbItem } from '@/components/ui';
+import { CalendarField, Dropdown, Header, Icons, NumberField, PillOptions, SectionLabel, StickyActionBar, TextField, UnsavedChangesModal, UploadButton, useToast, type BreadcrumbItem } from '@/components/ui';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
+import { getLabel } from '@/constants/FieldLabels';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
 import { createAcquisitionCosts } from '@/lib/supabase/acquisition_costs.supabase';
 import { createParkingSpace } from '@/lib/supabase/parking_space.supabase';
@@ -11,7 +12,6 @@ import { createPropertyAcquisition } from '@/lib/supabase/property_acquisition.s
 import { base64ToDataUri } from '@/lib/utils';
 import { EnergyEfficient } from '@immonext/types';
 import { format } from 'date-fns';
-import { X } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useRef, useState } from 'react';
 
@@ -227,7 +227,7 @@ function NewPropertyPageContent() {
                     aria-label="Bild entfernen"
                     className="absolute -top-2 -right-2 p-1 rounded-full bg-card border border-border text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
                   >
-                    <X className="w-3.5 h-3.5" />
+                    <Icons.X className="w-3.5 h-3.5" />
                   </button>
                 </div>
               )}
@@ -298,7 +298,7 @@ function NewPropertyPageContent() {
             <SectionLabel>Objektdetails</SectionLabel>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               <NumberField
-                label="Baujahr"
+                label={getLabel('Property', 'YearOfConstruction', 'de')}
                 placeholder="1980"
                 value={baujahr}
                 onChange={(e) => setBaujahr(e.target.value.replace(/\D/g, '').slice(0, 4))}

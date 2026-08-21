@@ -2,6 +2,7 @@
 
 import { Button, Dropdown, Modal } from '@/components/ui';
 import { authFetch } from '@/lib/api/authFetch';
+import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { cn } from '@/lib/utils';
 import { ArrowRight, ClipboardCheck, Edit3 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -157,7 +158,7 @@ export function NewPropertyModal({ open, onClose }: NewPropertyModalProps) {
       subtitle="Möchten Sie Daten aus einer vorhandenen Detailbewertung übernehmen?"
       footer={
         <>
-          <Button label="Abbrechen" variant="outline" onClick={onClose} />
+          <Button label={BUTTON_DETAILS.Cancel.label} variant="outline" onClick={onClose} />
           <Button
             label="Weiter"
             icon={<ArrowRight className="w-4 h-4" />}

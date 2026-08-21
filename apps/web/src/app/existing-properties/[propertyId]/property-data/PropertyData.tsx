@@ -1,9 +1,10 @@
 "use client";
 
 import { PROPERTY_CATEGORY_CREATE_OPTIONS, PropertyNotFoundPage } from '@/components/features/PropertyDisplay';
-import { Button, CalendarField, Dropdown, Header, NumberField, PillOptions, SectionLabel, StickyActionBar, TextField, UnsavedChangesModal, UploadButton, useToast } from '@/components/ui';
+import { Button, CalendarField, Dropdown, Header, Icons, NumberField, PillOptions, SectionLabel, StickyActionBar, TextField, UnsavedChangesModal, UploadButton, useToast } from '@/components/ui';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { ExistingPropertiesUseCases } from '@/constants/ExistingPropertiesUseCases';
+import { getLabel } from '@/constants/FieldLabels';
 import { createAcquisitionCosts, getAcquisitionCosts, updateAcquisitionCosts } from '@/lib/supabase/acquisition_costs.supabase';
 import { createParkingSpace, deleteParkingSpace, getParkingSpacesByProperty, updateParkingSpace } from '@/lib/supabase/parking_space.supabase';
 import { getPropertyById, updateProperty } from '@/lib/supabase/property.supabase';
@@ -12,7 +13,6 @@ import { createUseCaseMenuItems } from '@/lib/propertyUseCaseMenu';
 import { base64ToDataUri } from '@/lib/utils';
 import { EnergyEfficient, type AcquisitionCosts, type ParkingSpace, type Property } from '@immonext/types';
 import { format, parseISO } from 'date-fns';
-import { X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 
@@ -311,7 +311,7 @@ export default function PropertyData({ propertyId }: { propertyId: string }) {
                                         aria-label="Bild entfernen"
                                         className="absolute -top-2 -right-2 p-1 rounded-full bg-card border border-border text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
                                     >
-                                        <X className="w-3.5 h-3.5" />
+                                        <Icons.X className="w-3.5 h-3.5" />
                                     </button>
                                 </div>
                             )}
@@ -386,7 +386,7 @@ export default function PropertyData({ propertyId }: { propertyId: string }) {
                         <SectionLabel>Objektdetails</SectionLabel>
                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                             <NumberField
-                                label="Baujahr"
+                                label={getLabel('Property', 'YearOfConstruction', 'de')}
                                 placeholder="1980"
                                 value={form.baujahr}
                                 onChange={(e) => update({ baujahr: e.target.value.replace(/\D/g, '').slice(0, 4) })}

@@ -1,8 +1,8 @@
 "use client";
 
+import { Icons } from "@/components/common";
 import { Button, Modal } from "@/components/ui";
 import { BUTTON_DETAILS } from "@/constants/ButtonLabels";
-import { AlertTriangle } from "lucide-react";
 
 interface UnsavedChangesModalProps {
   open: boolean;
@@ -20,7 +20,7 @@ export function UnsavedChangesModal({ open, onCancel, onDiscard, context }: Unsa
       open={open}
       onClose={onCancel}
       title="Änderungen verwerfen?"
-      icon={<AlertTriangle />}
+      icon={<Icons.AlertTriangle />}
       footer={
         <>
           <Button

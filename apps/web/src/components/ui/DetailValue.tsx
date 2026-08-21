@@ -1,5 +1,6 @@
-import { Info, LockKeyhole, PencilLine } from 'lucide-react';
+import { LockKeyhole, PencilLine } from 'lucide-react';
 import type { ReactNode } from 'react';
+import { Icons } from '@/components/common';
 import { cn } from '@/lib/utils';
 
 export function DetailFieldLegend() {
@@ -55,7 +56,7 @@ export function ReadOnlyField({
       </div>
       {helperText && (
         <p className="mt-1.5 flex items-start gap-1.5 text-xs leading-5 text-muted-foreground">
-          <Info className="mt-0.5 shrink-0" size={13} aria-hidden="true" />
+          <Icons.Info className="mt-0.5 shrink-0" size={13} aria-hidden="true" />
           <span>{helperText}</span>
         </p>
       )}

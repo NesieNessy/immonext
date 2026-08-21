@@ -2,7 +2,7 @@
 
 import React from "react";
 import { cn } from "@/lib/utils";
-import { ChevronUp, ChevronDown } from "lucide-react";
+import { Icons } from "../common";
 import { useFieldIds } from "./fieldIds";
 
 interface NumberInputProps {
@@ -131,7 +131,7 @@ export function NumberInput({
                 "disabled:opacity-30 disabled:cursor-not-allowed"
               )}
             >
-              <ChevronUp size={14} className="text-muted-foreground" />
+              <Icons.ChevronUp size={14} className="text-muted-foreground" />
             </button>
             <button
               type="button"
@@ -144,7 +144,7 @@ export function NumberInput({
                 "disabled:opacity-30 disabled:cursor-not-allowed"
               )}
             >
-              <ChevronDown size={14} className="text-muted-foreground" />
+              <Icons.ChevronDown size={14} className="text-muted-foreground" />
             </button>
           </div>
         )}

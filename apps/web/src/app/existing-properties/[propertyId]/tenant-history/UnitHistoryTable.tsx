@@ -12,7 +12,7 @@ import { createUseCaseMenuItems } from '@/lib/propertyUseCaseMenu';
 import { base64ToDataUri, formatDeDate } from '@/lib/utils';
 import type { Property, PropertyUnit, Tenancy, TenancyDocument, TenancyPerson } from '@immonext/types';
 import { differenceInCalendarMonths, format } from 'date-fns';
-import { CheckCircle2, Circle, Eye, FileText, MoreVertical, RotateCcw, Trash2 } from 'lucide-react';
+import { Circle, RotateCcw } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 import { euro } from '../tenant-data/useTenantUnitData';
@@ -197,14 +197,14 @@ export function UnitHistoryTable({ propertyId, property, unit, hasMultipleUnits 
             aria-label={value ? 'Als offen markieren' : 'Als erledigt markieren'}
             className="inline-flex items-center justify-center rounded-md p-1 hover:bg-muted/50 transition-colors cursor-pointer"
         >
-            {value ? <CheckCircle2 className="w-4 h-4 text-green-600" /> : <Circle className="w-4 h-4 text-muted-foreground" />}
+            {value ? <Icons.CheckCircle2 className="w-4 h-4 text-green-600" /> : <Circle className="w-4 h-4 text-muted-foreground" />}
         </button>
     );
 
     const rowMenuItems = (row: HistoryRow): MenuItem[] => [
         {
             label: 'Ansehen',
-            icon: <Eye className="w-4 h-4" />,
+            icon: <Icons.Eye className="w-4 h-4" />,
             onClick: () => router.push(`/existing-properties/${propertyId}/tenant-history/${unit.propertyUnitId}/${row.tenancy.tenancyId}`),
         },
         {
@@ -213,8 +213,8 @@ export function UnitHistoryTable({ propertyId, property, unit, hasMultipleUnits 
             onClick: () => setReactivateRow(row),
         },
         {
-            label: 'Löschen',
-            icon: <Trash2 className="w-4 h-4" />,
+            label: BUTTON_DETAILS.Delete.label,
+            icon: <Icons.Trash2 className="w-4 h-4" />,
             destructive: true,
             onClick: () => setDeleteRow(row),
         },
@@ -229,7 +229,7 @@ export function UnitHistoryTable({ propertyId, property, unit, hasMultipleUnits 
                 <div onClick={(e) => e.stopPropagation()}>
                     <Button
                         iconOnly
-                        icon={<MoreVertical className="w-4 h-4" />}
+                        icon={<Icons.MoreVertical className="w-4 h-4" />}
                         variant="ghost"
                         size="sm"
                         menuItems={rowMenuItems(row.historyRow as HistoryRow)}
@@ -320,7 +320,7 @@ export function UnitHistoryTable({ propertyId, property, unit, hasMultipleUnits 
                                 onClick={() => void handleViewDocument(doc)}
                                 className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline cursor-pointer text-left"
                             >
-                                <FileText className="w-3 h-3 shrink-0" />
+                                <Icons.FileText className="w-3 h-3 shrink-0" />
                                 {doc.documentType}
                             </button>
                         ))}
@@ -380,7 +380,7 @@ export function UnitHistoryTable({ propertyId, property, unit, hasMultipleUnits 
                 footer={
                     <>
                         <Button
-                            label="Abbrechen"
+                            label={BUTTON_DETAILS.Cancel.label}
                             variant="outline"
                             disabled={isReactivating}
                             onClick={() => setReactivateRow(null)}

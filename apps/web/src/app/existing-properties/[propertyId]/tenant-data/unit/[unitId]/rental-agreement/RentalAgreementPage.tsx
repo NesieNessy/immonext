@@ -1,7 +1,7 @@
 "use client";
 
 import { formatUnitLabel, PropertyLoadingPage, PropertyNotFoundPage } from '@/components/features/PropertyDisplay';
-import { CalendarField, Dropdown, Header, NumberField, StickyActionBar, TextArea, type BreadcrumbItem } from '@/components/ui';
+import { CalendarField, Dropdown, Header, Icons, NumberField, StickyActionBar, TextArea, type BreadcrumbItem } from '@/components/ui';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
 import { htmlToPdfBlob } from '@/lib/pdf/htmlToPdf';
@@ -10,7 +10,7 @@ import { uploadTenancyDocument } from '@/lib/supabase/tenancy_document.supabase'
 import { deCurrencyFormatter, formatDeDate } from '@/lib/utils';
 import type { RentalTermsPetsAllowed, RentalTermsRedecorationClause, RentalTermsSubletAllowed } from '@immonext/types';
 import { format } from 'date-fns';
-import { AlertTriangle, Eye, FileSignature, FileText, Home, Landmark, ListChecks, PenLine, Upload, Users } from 'lucide-react';
+import { PenLine } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -361,7 +361,7 @@ export default function RentalAgreementPage({ propertyId, unitId }: { propertyId
                             view === 'review' ? 'bg-card shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'
                         }`}
                     >
-                        <ListChecks className="w-4 h-4" />
+                        <Icons.ListChecks className="w-4 h-4" />
                         Daten prüfen
                     </button>
                     <button
@@ -372,7 +372,7 @@ export default function RentalAgreementPage({ propertyId, unitId }: { propertyId
                             view === 'preview' ? 'bg-card shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'
                         }`}
                     >
-                        <Eye className="w-4 h-4" />
+                        <Icons.Eye className="w-4 h-4" />
                         Vorschau
                     </button>
                 </div>
@@ -380,7 +380,7 @@ export default function RentalAgreementPage({ propertyId, unitId }: { propertyId
                 {view === 'review' ? (
                     <div className="mt-6 flex flex-col gap-6">
                         <div className="flex items-start gap-2.5 p-3 rounded-lg border border-border bg-muted/30">
-                            <FileText className="w-4 h-4 shrink-0 text-primary mt-0.5" />
+                            <Icons.FileText className="w-4 h-4 shrink-0 text-primary mt-0.5" />
                             <p className="text-sm text-muted-foreground">
                                 Der Mietvertrag wird automatisch aus den hinterlegten Daten befüllt. Ergänze fehlende Angaben direkt hier, bevor du
                                 das Dokument generierst. Änderungen werden in die jeweiligen Bereiche zurückgespiegelt.
@@ -391,14 +391,14 @@ export default function RentalAgreementPage({ propertyId, unitId }: { propertyId
                             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Vermieter</p>
                             {landlord === null ? (
                                 <div className="flex items-start gap-2.5 p-3 rounded-lg border border-destructive/30 bg-destructive/10">
-                                    <AlertTriangle className="w-4 h-4 shrink-0 text-destructive mt-0.5" />
+                                    <Icons.AlertTriangle className="w-4 h-4 shrink-0 text-destructive mt-0.5" />
                                     <p className="text-sm text-destructive">
                                         Es sind noch keine Vermieterdaten hinterlegt. Bitte ergänze diese in den{' '}
                                         <Link href="/user-settings" className="underline font-medium">Einstellungen</Link>.
                                     </p>
                                 </div>
                             ) : (
-                                <DataCard icon={Landmark} title="Vermieter-Daten" source="Einstellungen">
+                                <DataCard icon={Icons.Landmark} title="Vermieter-Daten" source="Einstellungen">
                                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                                         <Field label="Name" value={landlord ? landlordName : '–'} />
                                         <Field label="Straße & Hausnummer" value={landlord ? landlordStreet : '–'} />
@@ -410,7 +410,7 @@ export default function RentalAgreementPage({ propertyId, unitId }: { propertyId
 
                         <div>
                             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Mietobjekt</p>
-                            <DataCard icon={Home} title="Objektdaten" source="Bestandsobjekt · Objektdaten">
+                            <DataCard icon={Icons.Home} title="Objektdaten" source="Bestandsobjekt · Objektdaten">
                                 <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
                                     <Field label="Straße & Hausnummer" value={propertyStreet} />
                                     <Field label="PLZ & Ort" value={propertyCity} />
@@ -424,7 +424,7 @@ export default function RentalAgreementPage({ propertyId, unitId }: { propertyId
 
                         <div>
                             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Mietpartei(en)</p>
-                            <DataCard icon={Users} title="Mieterdaten" source="Bestandsobjekt · Mieterdaten">
+                            <DataCard icon={Icons.Users} title="Mieterdaten" source="Bestandsobjekt · Mieterdaten">
                                 <div className="flex flex-col gap-2">
                                     {namedPersons.length === 0 && <p className="text-sm text-muted-foreground">Keine Mieterdaten hinterlegt.</p>}
                                     {namedPersons.map((person, index) => (
@@ -447,7 +447,7 @@ export default function RentalAgreementPage({ propertyId, unitId }: { propertyId
 
                         <div>
                             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Mietkonditionen</p>
-                            <DataCard icon={FileSignature} title="Mietvertrag" source="Bestandsobjekt · Mieterdaten">
+                            <DataCard icon={Icons.FileSignature} title="Mietvertrag" source="Bestandsobjekt · Mieterdaten">
                                 <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
                                     <Field label="Mietbeginn" value={mietbeginn} />
                                     <div>
@@ -465,7 +465,7 @@ export default function RentalAgreementPage({ propertyId, unitId }: { propertyId
 
                         <div>
                             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Mietanpassung & Sonderregelungen</p>
-                            <DataCard icon={FileSignature} title="Anpassungsregelungen" source="Bestandsobjekt · Mietvertrag">
+                            <DataCard icon={Icons.FileSignature} title="Anpassungsregelungen" source="Bestandsobjekt · Mietvertrag">
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                     <CalendarField
                                         label="Nächste Mietanpassung"
@@ -557,7 +557,7 @@ export default function RentalAgreementPage({ propertyId, unitId }: { propertyId
                                     />
                                     <label htmlFor="signature-upload-rental">
                                         <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border-2 border-primary text-primary text-sm font-medium cursor-pointer transition-colors hover:bg-primary hover:text-primary-foreground">
-                                            <Upload className="w-4 h-4" />
+                                            <Icons.Upload className="w-4 h-4" />
                                             Unterschrift hochladen
                                         </span>
                                     </label>
@@ -595,7 +595,7 @@ export default function RentalAgreementPage({ propertyId, unitId }: { propertyId
                 ghostLabel={BUTTON_DETAILS.Back.label}
                 ghostIcon={<BUTTON_DETAILS.Back.icon />}
                 primaryLabel={isSaving ? 'Wird erstellt…' : 'PDF generieren'}
-                primaryIcon={<FileText className="w-4 h-4" />}
+                primaryIcon={<Icons.FileText className="w-4 h-4" />}
                 primaryDisabled={!canGenerate || isSaving}
             />
         </div>

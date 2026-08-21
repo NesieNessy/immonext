@@ -2,7 +2,7 @@
 
 import React from "react";
 import { cn } from "@/lib/utils";
-import { Calendar as CalendarIcon, X } from "lucide-react";
+import { Icons } from "../common";
 import { useFieldIds } from "./fieldIds";
 import { Calendar } from "../ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
@@ -124,7 +124,7 @@ export function CalendarField({
                     aria-label={label ? `${label}: Datum löschen` : "Datum löschen"}
                     className="p-1 rounded text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
                   >
-                    <X size={16} aria-hidden="true" />
+                    <Icons.X size={16} aria-hidden="true" />
                   </button>
                 )}
                 <button
@@ -134,7 +134,7 @@ export function CalendarField({
                   aria-expanded={open}
                   className="p-1 rounded text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
                 >
-                  <CalendarIcon size={18} aria-hidden="true" />
+                  <Icons.Calendar size={18} aria-hidden="true" />
                 </button>
               </div>
             )}

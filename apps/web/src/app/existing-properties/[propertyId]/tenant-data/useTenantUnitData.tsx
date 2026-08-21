@@ -1,7 +1,8 @@
 "use client";
 
 import { formatUnitLabel } from '@/components/features/PropertyDisplay';
-import { Button, useToast, type SortDirection, type TableColumn } from '@/components/ui';
+import { Button, Icons, useToast, type SortDirection, type TableColumn } from '@/components/ui';
+import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
 import { createTenancy, getCurrentTenancyByUnit, getTenancyById, updateTenancy } from '@/lib/supabase/tenancy.supabase';
 import { getPersonalData } from '@/lib/supabase/personal_data.supabase';
@@ -25,7 +26,6 @@ import { renovationAdjustmentLetterHtml, rentIncreaseLetterHtml } from './adjust
 import { htmlToPdfBlob } from '@/lib/pdf/htmlToPdf';
 import type { MaintenanceCostItem, MaintenanceCosts, PersonalData, Property, PropertyUnit, Tenancy, TenancyAdjustmentHistoryEntry, TenancyAdjustmentType, TenancyDocument, TenancyDocumentType } from '@immonext/types';
 import { format } from 'date-fns';
-import { Download, Eye, FileText, Trash2, Upload } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 
@@ -792,7 +792,7 @@ export function useTenantUnitData(propertyId: string, property: Property, unit: 
                                 aria-label={`${row.document as string} ansehen`}
                                 className="p-1.5 rounded-md text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors cursor-pointer"
                             >
-                                <Eye className="w-4 h-4" />
+                                <Icons.Eye className="w-4 h-4" />
                             </button>
                             <button
                                 type="button"
@@ -800,7 +800,7 @@ export function useTenantUnitData(propertyId: string, property: Property, unit: 
                                 aria-label={`${row.document as string} herunterladen`}
                                 className="p-1.5 rounded-md text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors cursor-pointer"
                             >
-                                <Download className="w-4 h-4" />
+                                <Icons.Download className="w-4 h-4" />
                             </button>
                             {!readOnly && (
                                 <button
@@ -810,7 +810,7 @@ export function useTenantUnitData(propertyId: string, property: Property, unit: 
                                     aria-label={`${row.document as string} löschen`}
                                     className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
                                 >
-                                    <Trash2 className="w-4 h-4" />
+                                    <Icons.Trash2 className="w-4 h-4" />
                                 </button>
                             )}
                         </div>
@@ -827,7 +827,7 @@ export function useTenantUnitData(propertyId: string, property: Property, unit: 
                             <span title="Bitte zuerst speichern">
                                 <Button
                                     iconOnly
-                                    icon={<Upload className="w-4 h-4" />}
+                                    icon={<Icons.Upload className="w-4 h-4" />}
                                     variant="outline"
                                     size="sm"
                                     disabled
@@ -864,7 +864,7 @@ export function useTenantUnitData(propertyId: string, property: Property, unit: 
                                 isPending && "opacity-50 pointer-events-none"
                             )}
                         >
-                            <Upload className="w-4 h-4" />
+                            <Icons.Upload className="w-4 h-4" />
                         </label>
                     </div>
                 );
@@ -894,7 +894,7 @@ export function useTenantUnitData(propertyId: string, property: Property, unit: 
                             title={row.doc.fileName}
                             className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-primary/10 text-primary text-xs font-medium max-w-[180px] hover:bg-primary/20 transition-colors cursor-pointer"
                         >
-                            <FileText className="w-3 h-3 shrink-0" />
+                            <Icons.FileText className="w-3 h-3 shrink-0" />
                             <span className="truncate">{row.doc.fileName}</span>
                         </button>
                     ) : !showUploadInRow && (
@@ -910,23 +910,23 @@ export function useTenantUnitData(propertyId: string, property: Property, unit: 
                                 aria-label="Herunterladen"
                                 className="p-1.5 rounded-md text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors cursor-pointer"
                             >
-                                <Download className="w-4 h-4" />
+                                <Icons.Download className="w-4 h-4" />
                             </button>
                             {!readOnly && (
                                 <button
                                     type="button"
                                     onClick={() => setDocPendingDelete({ key: row.key, doc: row.doc!, label: `${documentType} von ${row.tenant}` })}
                                     disabled={isPending}
-                                    aria-label="Löschen"
+                                    aria-label={BUTTON_DETAILS.Delete.label}
                                     className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
                                 >
-                                    <Trash2 className="w-4 h-4" />
+                                    <Icons.Trash2 className="w-4 h-4" />
                                 </button>
                             )}
                         </>
                     ) : !showUploadInRow || readOnly ? null : !row.canUpload || blocked ? (
                         <span title={blocked ? 'Bitte zuerst Vermieterdaten in den Einstellungen hinterlegen' : 'Bitte zuerst speichern'}>
-                            <Button iconOnly icon={<Upload className="w-4 h-4" />} variant="outline" size="sm" disabled aria-label="Hochladen" />
+                            <Button iconOnly icon={<Icons.Upload className="w-4 h-4" />} variant="outline" size="sm" disabled aria-label="Hochladen" />
                         </span>
                     ) : (
                         <>
@@ -950,7 +950,7 @@ export function useTenantUnitData(propertyId: string, property: Property, unit: 
                                     isPending && "opacity-50 pointer-events-none"
                                 )}
                             >
-                                <Upload className="w-4 h-4" />
+                                <Icons.Upload className="w-4 h-4" />
                             </label>
                         </>
                     )}
@@ -975,7 +975,7 @@ export function useTenantUnitData(propertyId: string, property: Property, unit: 
         if (!row.canUpload || blocked) {
             return (
                 <span key={row.key} title={blocked ? 'Bitte zuerst Vermieterdaten in den Einstellungen hinterlegen' : 'Bitte zuerst speichern'}>
-                    <Button label={label} icon={<Upload className="w-5 h-5" />} variant="ghost" disabled />
+                    <Button label={label} icon={<Icons.Upload className="w-5 h-5" />} variant="ghost" disabled />
                 </span>
             );
         }
@@ -1000,7 +1000,7 @@ export function useTenantUnitData(propertyId: string, property: Property, unit: 
                         isPending && "opacity-50 pointer-events-none"
                     )}
                 >
-                    <Upload className="w-5 h-5" />
+                    <Icons.Upload className="w-5 h-5" />
                     {label}
                 </label>
             </span>

@@ -9,7 +9,6 @@ import { getCurrentTenancyByUnit } from '@/lib/supabase/tenancy.supabase';
 import { getTenancyPersonsByTenancy } from '@/lib/supabase/tenancy_person.supabase';
 import { base64ToDataUri, deCurrencyFormatter, formatDeDate } from '@/lib/utils';
 import type { Property, PropertyUnit } from '@immonext/types';
-import { Plus } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 import PropertyHub from './PropertyHub';
@@ -218,7 +217,7 @@ export default function PropertyEntry({ propertyId }: { propertyId: string }) {
                         </div>
                         <Button
                             label="Einheit hinzufügen"
-                            icon={<Plus className="w-4 h-4" />}
+                            icon={<Icons.Plus className="w-4 h-4" />}
                             variant="primary"
                             hideLabelOnMobile
                             onClick={() => router.push(`/existing-properties/${propertyId}/tenant-data/new`)}

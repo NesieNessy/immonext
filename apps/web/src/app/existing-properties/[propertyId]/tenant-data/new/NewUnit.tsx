@@ -4,12 +4,12 @@ import { useEffect, useState } from 'react';
 
 import { formatUnitLabel, PropertyLoadingPage, PropertyNotFoundPage } from '@/components/features/PropertyDisplay';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
-import { Header, NumberField, PillOptions, SectionLabel, StickyActionBar, TextField, UnsavedChangesModal, useToast, type BreadcrumbItem } from '@/components/ui';
+import { Header, Icons, NumberField, PillOptions, SectionLabel, StickyActionBar, TextField, UnsavedChangesModal, useToast, type BreadcrumbItem } from '@/components/ui';
 import { getPropertyById } from '@/lib/supabase/property.supabase';
 import { createPropertyUnit, getPropertyUnitsByProperty } from '@/lib/supabase/property_unit.supabase';
 import { base64ToDataUri, deNumberFormatter } from '@/lib/utils';
 import { type Property, UnitUsageType } from '@immonext/types';
-import { Archive, Briefcase, Car, Check, DoorOpen, Home, MoreHorizontal } from 'lucide-react';
+import { Car, MoreHorizontal } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 interface UsageTypeOption {
@@ -20,14 +20,14 @@ interface UsageTypeOption {
 }
 
 const WOHNEINHEITEN_OPTIONS: UsageTypeOption[] = [
-    { value: UnitUsageType.Wohnung, label: 'Wohnung', description: 'Eigenständige Mietwohnung – z.B. in einem Mehrfamilienhaus oder Einfamilienhaus', icon: Home },
-    { value: UnitUsageType.Einliegerwohnung, label: 'Einliegerwohnung', description: 'Untergeordnete Einheit im EFH oder ZFH, baulich an die Haupteinheit gebunden', icon: DoorOpen },
+    { value: UnitUsageType.Wohnung, label: 'Wohnung', description: 'Eigenständige Mietwohnung – z.B. in einem Mehrfamilienhaus oder Einfamilienhaus', icon: Icons.Home },
+    { value: UnitUsageType.Einliegerwohnung, label: 'Einliegerwohnung', description: 'Untergeordnete Einheit im EFH oder ZFH, baulich an die Haupteinheit gebunden', icon: Icons.DoorOpen },
 ];
 
 const SONSTIGE_EINHEITEN_OPTIONS: UsageTypeOption[] = [
     { value: UnitUsageType.Stellplatz, label: 'Stellplatz / Garage', description: 'Nur Parkfläche, kein Wohnraum', icon: Car },
-    { value: UnitUsageType.Gewerbeflaeche, label: 'Gewerbefläche', description: 'Büro, Laden oder gewerbliche Nutzung', icon: Briefcase },
-    { value: UnitUsageType.Lager, label: 'Lager / Keller', description: 'Nicht-Wohnfläche zur Lagerung', icon: Archive },
+    { value: UnitUsageType.Gewerbeflaeche, label: 'Gewerbefläche', description: 'Büro, Laden oder gewerbliche Nutzung', icon: Icons.Briefcase },
+    { value: UnitUsageType.Lager, label: 'Lager / Keller', description: 'Nicht-Wohnfläche zur Lagerung', icon: Icons.Archive },
     { value: UnitUsageType.Sonstige, label: 'Sonstige', description: 'Andere Nutzungsart', icon: MoreHorizontal },
 ];
 
@@ -274,7 +274,7 @@ export default function NewUnit({ propertyId }: { propertyId: string }) {
                 ghostLabel={BUTTON_DETAILS.Back.label}
                 ghostIcon={<BUTTON_DETAILS.Back.icon />}
                 primaryLabel="Einheit speichern"
-                primaryIcon={<Check className="w-4 h-4" />}
+                primaryIcon={<Icons.Check className="w-4 h-4" />}
                 primaryDisabled={!isEditing || !isValid || isSaving}
             />
 

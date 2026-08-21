@@ -1,29 +1,11 @@
 "use client";
 
 import { BESTANDSOBJEKTE_BREADCRUMB_ROOT, formatUnitLabel, PROPERTY_CATEGORY_LABEL, PropertyLoadingPage } from '@/components/features/PropertyDisplay';
-import { ConfirmDeleteModal, Header, SectionLabel, Tag, type BreadcrumbItem } from '@/components/ui';
+import { ConfirmDeleteModal, Header, Icons, SectionLabel, Tag, type BreadcrumbItem } from '@/components/ui';
 import { deleteProperty, getPropertyOverviewById, type PropertyOverview } from '@/lib/supabase/property.supabase';
 import { getPropertyUnitsByProperty } from '@/lib/supabase/property_unit.supabase';
 import { base64ToDataUri, cn } from '@/lib/utils';
 import type { PropertyUnit } from '@immonext/types';
-import {
-  BarChart3,
-  Clock,
-  Database,
-  DoorOpen,
-  FileSignature,
-  History,
-  Home,
-  Landmark,
-  PieChart,
-  Plus,
-  Receipt,
-  ShoppingCart,
-  Trash2,
-  TrendingUp,
-  Users,
-  Wrench,
-} from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
@@ -52,7 +34,7 @@ const OBJEKTVERWALTUNG: HubCard[] = [
     description: 'Adresse, Fläche, Baujahr und weitere Stammdaten pflegen',
     route: 'property-data',
     scope: 'property',
-    icon: Database,
+    icon: Icons.Database,
     colorClass: 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400',
   },
   {
@@ -61,7 +43,7 @@ const OBJEKTVERWALTUNG: HubCard[] = [
     description: 'Restnutzungsdauer für die Abschreibung individuell festlegen',
     route: 'adjust-rnd',
     scope: 'property',
-    icon: Clock,
+    icon: Icons.Clock,
     colorClass: 'bg-cyan-100 text-cyan-600 dark:bg-cyan-900/30 dark:text-cyan-400',
   },
   {
@@ -70,7 +52,7 @@ const OBJEKTVERWALTUNG: HubCard[] = [
     description: 'Prozentuale Kaufpreisverteilung für die Abschreibung',
     route: 'adjust-distribution',
     scope: 'property',
-    icon: PieChart,
+    icon: Icons.PieChart,
     colorClass: 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400',
   },
   {
@@ -79,7 +61,7 @@ const OBJEKTVERWALTUNG: HubCard[] = [
     description: 'Weitere Wohn-, Gewerbe- oder Stellplatzeinheiten anlegen',
     route: 'tenant-data/new',
     scope: 'property',
-    icon: Plus,
+    icon: Icons.Plus,
     colorClass: 'bg-primary/10 text-primary',
   },
 ];
@@ -91,7 +73,7 @@ const MIETE: HubCard[] = [
     description: 'Kontaktdaten und Unterlagen des aktuellen Mieters verwalten',
     route: 'tenant-data',
     scope: 'unit',
-    icon: Users,
+    icon: Icons.Users,
     colorClass: 'bg-violet-100 text-violet-600 dark:bg-violet-900/30 dark:text-violet-400',
   },
   {
@@ -100,7 +82,7 @@ const MIETE: HubCard[] = [
     description: 'Mietkonditionen, Anpassungen und Dokumente verwalten',
     route: 'tenant-agreement',
     scope: 'unit',
-    icon: FileSignature,
+    icon: Icons.FileSignature,
     colorClass: 'bg-teal-100 text-teal-600 dark:bg-teal-900/30 dark:text-teal-400',
   },
   {
@@ -109,7 +91,7 @@ const MIETE: HubCard[] = [
     description: 'Alle bisherigen Mietverhältnisse und Mieterwechsel einsehen',
     route: 'tenant-history',
     scope: 'unit',
-    icon: History,
+    icon: Icons.History,
     colorClass: 'bg-muted text-muted-foreground',
   },
   {
@@ -118,7 +100,7 @@ const MIETE: HubCard[] = [
     description: 'Entwicklung der Mietpreise über die Zeit analysieren',
     route: 'rental-trends',
     scope: 'unit',
-    icon: TrendingUp,
+    icon: Icons.TrendingUp,
     colorClass: 'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400',
   },
   {
@@ -127,7 +109,7 @@ const MIETE: HubCard[] = [
     description: 'Abnahmeprotokoll erstellen und Übergabe dokumentieren',
     route: 'tenant-move-out',
     scope: 'unit',
-    icon: DoorOpen,
+    icon: Icons.DoorOpen,
     colorClass: 'bg-rose-100 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400',
   },
 ];
@@ -139,7 +121,7 @@ const FINANZEN_DOKUMENTE: HubCard[] = [
     description: 'Jährliche Nebenkostenabrechnungen erstellen und verwalten',
     route: 'service-charge-settlement',
     scope: 'unit',
-    icon: Receipt,
+    icon: Icons.Receipt,
     colorClass: 'bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400',
   },
   {
@@ -148,7 +130,7 @@ const FINANZEN_DOKUMENTE: HubCard[] = [
     description: 'Belege und Dokumente für die Steuererklärung sammeln',
     route: 'tax-documents',
     scope: 'property',
-    icon: Landmark,
+    icon: Icons.Landmark,
     colorClass: 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400',
   },
   {
@@ -157,7 +139,7 @@ const FINANZEN_DOKUMENTE: HubCard[] = [
     description: 'Rendite, KPF und weitere Kennzahlen im Überblick auswerten',
     route: 'key-metrics',
     scope: 'property',
-    icon: BarChart3,
+    icon: Icons.BarChart3,
     colorClass: 'bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400',
   },
   {
@@ -166,7 +148,7 @@ const FINANZEN_DOKUMENTE: HubCard[] = [
     description: 'Handwerksaufträge verwalten und Angebote einholen',
     route: 'contractors',
     scope: 'property',
-    icon: Wrench,
+    icon: Icons.Wrench,
     colorClass: 'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400',
   },
 ];
@@ -178,7 +160,7 @@ const WEITERE_AKTIONEN: HubCard[] = [
     description: 'Verkaufsprozess einleiten und Unterlagen vorbereiten',
     route: 'sale',
     scope: 'property',
-    icon: ShoppingCart,
+    icon: Icons.ShoppingCart,
     colorClass: 'bg-muted text-muted-foreground',
   },
 ];
@@ -280,7 +262,7 @@ export default function PropertyHub({ propertyId, unitId }: { propertyId: string
       description: 'Bestandsobjekt und alle Daten endgültig entfernen',
       route: '',
       scope: 'property',
-      icon: Trash2,
+      icon: Icons.Trash2,
       colorClass: 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400',
       onClick: () => setDeleteModalOpen(true),
     },
@@ -301,7 +283,7 @@ export default function PropertyHub({ propertyId, unitId }: { propertyId: string
               {photo ? (
                 <img src={photo} alt="" className="w-full h-full object-cover" />
               ) : (
-                <Home className="w-5 h-5 text-primary" />
+                <Icons.Home className="w-5 h-5 text-primary" />
               )}
             </div>
           }

@@ -3,11 +3,10 @@
 import { formatUnitLabel } from '@/components/features/PropertyDisplay';
 import { AdjustmentStatusBox } from '../tenant-data/AdjustmentStatusBox';
 import { DataCard } from '../tenant-data/DocumentGeneratorParts';
-import { Button, CalendarField, ConfirmDeleteModal, Header, Modal, NumberField, SectionLabel, StickyActionBar, Switch, Tag, UnsavedChangesModal, type BreadcrumbItem } from '@/components/ui';
+import { Button, CalendarField, ConfirmDeleteModal, Header, Icons, Modal, NumberField, SectionLabel, StickyActionBar, Switch, Tag, UnsavedChangesModal, type BreadcrumbItem } from '@/components/ui';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { base64ToDataUri, formatDeDate } from '@/lib/utils';
 import type { Property, PropertyUnit } from '@immonext/types';
-import { Calculator, Eye, FileSignature, FileText, History, ListChecks, Receipt, TrendingUp, Wrench } from 'lucide-react';
 import { euro, useTenantUnitData } from '../tenant-data/useTenantUnitData';
 
 interface TenantAgreementPageProps {
@@ -140,12 +139,12 @@ export function TenantAgreementPage({ propertyId, property, unit, hasMultipleUni
 
                         <div className="mt-3">
                             <DataCard
-                                icon={Receipt}
+                                icon={Icons.Receipt}
                                 title="Nebenkosten"
                                 actions={
                                     <Button
                                         label="Detailerfassung Nebenkosten"
-                                        icon={<ListChecks className="w-4 h-4" />}
+                                        icon={<Icons.ListChecks className="w-4 h-4" />}
                                         variant="outline"
                                         size="sm"
                                         onClick={() => data.goTo(hasMultipleUnits
@@ -197,14 +196,14 @@ export function TenantAgreementPage({ propertyId, property, unit, hasMultipleUni
                         <SectionLabel>Anpassungen</SectionLabel>
                         <div className="mt-3 flex flex-col gap-4">
                             <DataCard
-                                icon={TrendingUp}
+                                icon={Icons.TrendingUp}
                                 title="Nächste Mietanpassung"
                                 actions={
                                     <div className="flex items-center gap-2">
                                         <span title="Es besteht keine Verknüpfung zwischen diesem Objekt und einem Kalkulator-Ergebnis.">
-                                            <Button label="Vorschlag aus Kalkulator übernehmen" icon={<Calculator className="w-4 h-4" />} variant="outline" size="sm" disabled />
+                                            <Button label="Vorschlag aus Kalkulator übernehmen" icon={<Icons.Calculator className="w-4 h-4" />} variant="outline" size="sm" disabled />
                                         </span>
-                                        <Button label="Historie" icon={<History className="w-4 h-4" />} variant="outline" size="sm" onClick={() => data.setHistoryModalType('rent')} />
+                                        <Button label="Historie" icon={<Icons.History className="w-4 h-4" />} variant="outline" size="sm" onClick={() => data.setHistoryModalType('rent')} />
                                     </div>
                                 }
                                 footer={
@@ -213,7 +212,7 @@ export function TenantAgreementPage({ propertyId, property, unit, hasMultipleUni
                                         <span title={!data.canGenerateRentIncreaseLetter ? 'Bitte zuerst Datum, Höhe und Vermieterdaten hinterlegen' : undefined}>
                                             <Button
                                                 label="Schreiben erstellen"
-                                                icon={<FileText className="w-4 h-4" />}
+                                                icon={<Icons.FileText className="w-4 h-4" />}
                                                 variant="outline"
                                                 size="sm"
                                                 disabled={!data.canGenerateRentIncreaseLetter || data.isGeneratingLetter === 'rent'}
@@ -254,14 +253,14 @@ export function TenantAgreementPage({ propertyId, property, unit, hasMultipleUni
                             </DataCard>
 
                             <DataCard
-                                icon={Wrench}
+                                icon={Icons.Wrench}
                                 title="Sanierungsanpassung"
                                 actions={
                                     <div className="flex items-center gap-2">
                                         <span title="Es besteht keine Verknüpfung zwischen diesem Objekt und einem Kalkulator-Ergebnis.">
-                                            <Button label="Vorschlag aus Kalkulator übernehmen" icon={<Calculator className="w-4 h-4" />} variant="outline" size="sm" disabled />
+                                            <Button label="Vorschlag aus Kalkulator übernehmen" icon={<Icons.Calculator className="w-4 h-4" />} variant="outline" size="sm" disabled />
                                         </span>
-                                        <Button label="Historie" icon={<History className="w-4 h-4" />} variant="outline" size="sm" onClick={() => data.setHistoryModalType('renovation')} />
+                                        <Button label="Historie" icon={<Icons.History className="w-4 h-4" />} variant="outline" size="sm" onClick={() => data.setHistoryModalType('renovation')} />
                                     </div>
                                 }
                                 footer={
@@ -270,7 +269,7 @@ export function TenantAgreementPage({ propertyId, property, unit, hasMultipleUni
                                         <span title={!data.canGenerateRenovationLetter ? 'Bitte zuerst Start/Abschluss, Höhe und Vermieterdaten hinterlegen' : undefined}>
                                             <Button
                                                 label="Schreiben erstellen"
-                                                icon={<FileText className="w-4 h-4" />}
+                                                icon={<Icons.FileText className="w-4 h-4" />}
                                                 variant="outline"
                                                 size="sm"
                                                 disabled={!data.canGenerateRenovationLetter || data.isGeneratingLetter === 'renovation'}
@@ -335,14 +334,14 @@ export function TenantAgreementPage({ propertyId, property, unit, hasMultipleUni
                                 data.mietvertragRows.map((row) => (
                                     <DataCard
                                         key={row.key}
-                                        icon={FileSignature}
+                                        icon={Icons.FileSignature}
                                         title={`Mietvertrag – ${row.tenant}`}
                                         footer={
                                             <>
                                                 {data.renderFooterUpload(row, data.mietvertrag, data.landlordMissing)}
                                                 <Button
                                                     label="Daten prüfen & Vorschau"
-                                                    icon={<Eye className="w-4 h-4" />}
+                                                    icon={<Icons.Eye className="w-4 h-4" />}
                                                     variant="outline"
                                                     disabled={data.landlordMissing || data.tenancy == null || row.tenancyPersonId == null}
                                                     title={row.tenancyPersonId == null ? 'Bitte zuerst speichern' : undefined}
@@ -350,7 +349,7 @@ export function TenantAgreementPage({ propertyId, property, unit, hasMultipleUni
                                                 />
                                                 <Button
                                                     label="PDF generieren"
-                                                    icon={<FileText className="w-4 h-4" />}
+                                                    icon={<Icons.FileText className="w-4 h-4" />}
                                                     variant="primary"
                                                     disabled={data.landlordMissing || data.tenancy == null || row.tenancyPersonId == null}
                                                     title={row.tenancyPersonId == null ? 'Bitte zuerst speichern' : undefined}
@@ -369,21 +368,21 @@ export function TenantAgreementPage({ propertyId, property, unit, hasMultipleUni
                                 ))
                             ) : (
                                 <DataCard
-                                    icon={FileSignature}
+                                    icon={Icons.FileSignature}
                                     title="Mietvertrag"
                                     footer={
                                         <>
                                             {data.renderFooterUpload(data.mietvertragRows[0], data.mietvertrag, data.landlordMissing)}
                                             <Button
                                                 label="Daten prüfen & Vorschau"
-                                                icon={<Eye className="w-4 h-4" />}
+                                                icon={<Icons.Eye className="w-4 h-4" />}
                                                 variant="outline"
                                                 disabled={data.landlordMissing || data.tenancy == null}
                                                 onClick={() => data.goTo(`${data.generatorBase}/rental-agreement`)}
                                             />
                                             <Button
                                                 label="PDF generieren"
-                                                icon={<FileText className="w-4 h-4" />}
+                                                icon={<Icons.FileText className="w-4 h-4" />}
                                                 variant="primary"
                                                 disabled={data.landlordMissing || data.tenancy == null}
                                                 onClick={() => data.goTo(`${data.generatorBase}/rental-agreement?autoGenerate=1`)}
