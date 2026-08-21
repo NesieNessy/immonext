@@ -42,8 +42,8 @@ export function ServiceChargeSettlementView({ propertyId, property, unit, hasMul
         ? [
             { label: 'Bestandsobjekte', href: '/existing-properties' },
             { label: address, href: `/existing-properties/${propertyId}` },
-            { label: ExistingPropertiesUseCases.ServiceChargeSettlement, href: `/existing-properties/${propertyId}/service-charge-settlement` },
-            { label: unitLabel },
+            { label: unitLabel, href: `/existing-properties/${propertyId}/${unit.propertyUnitId}` },
+            { label: ExistingPropertiesUseCases.ServiceChargeSettlement },
         ]
         : [
             { label: 'Bestandsobjekte', href: '/existing-properties' },

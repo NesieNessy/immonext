@@ -6,9 +6,9 @@ import { getPropertyById } from '@/lib/supabase/property.supabase';
 import { getPropertyUnitsByProperty } from '@/lib/supabase/property_unit.supabase';
 import type { Property, PropertyUnit } from '@immonext/types';
 
-import { ServiceChargeSettlementView } from '../ServiceChargeSettlementView';
+import { TenantMoveOutView } from '../TenantMoveOutView';
 
-export default function ServiceChargeSettlementUnitPage({ propertyId, unitId }: { propertyId: string; unitId: string }) {
+export default function TenantUnitMoveOutPage({ propertyId, unitId }: { propertyId: string; unitId: string }) {
     const [property, setProperty] = useState<Property | null>(null);
     const [unit, setUnit] = useState<PropertyUnit | null | undefined>(undefined);
     const [hasMultipleUnits, setHasMultipleUnits] = useState(true);
@@ -29,5 +29,5 @@ export default function ServiceChargeSettlementUnitPage({ propertyId, unitId }: 
     if (property === null || unit === null) return <PropertyNotFoundPage />;
     if (!property || unit === undefined) return <PropertyLoadingPage />;
 
-    return <ServiceChargeSettlementView propertyId={propertyId} property={property} unit={unit} hasMultipleUnits={hasMultipleUnits} />;
+    return <TenantMoveOutView propertyId={propertyId} property={property} unit={unit} hasMultipleUnits={hasMultipleUnits} />;
 }

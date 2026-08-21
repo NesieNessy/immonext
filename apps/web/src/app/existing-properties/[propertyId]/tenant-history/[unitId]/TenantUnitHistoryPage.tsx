@@ -11,6 +11,7 @@ import { UnitHistoryTable } from '../UnitHistoryTable';
 export default function TenantUnitHistoryPage({ propertyId, unitId }: { propertyId: string; unitId: string }) {
     const [property, setProperty] = useState<Property | null>(null);
     const [unit, setUnit] = useState<PropertyUnit | null | undefined>(undefined);
+    const [hasMultipleUnits, setHasMultipleUnits] = useState(true);
 
     useEffect(() => {
         const id = parseInt(propertyId, 10);
@@ -21,11 +22,12 @@ export default function TenantUnitHistoryPage({ propertyId, unitId }: { property
         ]).then(([foundProperty, units]) => {
             setProperty(foundProperty);
             setUnit(units.find((u) => u.propertyUnitId === targetUnitId) ?? null);
+            setHasMultipleUnits(units.length > 1);
         });
     }, [propertyId, unitId]);
 
     if (property === null || unit === null) return <PropertyNotFoundPage />;
     if (!property || unit === undefined) return <PropertyLoadingPage />;
 
-    return <UnitHistoryTable propertyId={propertyId} property={property} unit={unit} hasMultipleUnits={true} />;
+    return <UnitHistoryTable propertyId={propertyId} property={property} unit={unit} hasMultipleUnits={hasMultipleUnits} />;
 }

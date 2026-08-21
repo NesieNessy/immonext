@@ -154,16 +154,27 @@ export async function GET(request: Request, context: RouteContext) {
     values.push(Number(settlementId));
     filters.push(`r.service_charge_settlement_id = $${values.length}`);
   }
+  // "Current" excludes a tenancy whose Auszugsdatum has already passed
+  // entirely, rather than merely deprioritizing it — a unit whose only
+  // tenancy has moved out must resolve to no current tenancy (Unvermietet),
+  // not fall back to the stale one. This is also what makes a Mieterauszug
+  // take effect automatically once its date is reached: nothing has to move
+  // the record anywhere, it just stops matching here and Mieterhistorie's
+  // "not current" query picks it up.
+  const isCurrent = url.searchParams.get('current') === 'true';
+  if (isCurrent && config.table === 'tenancy') {
+    filters.push('(r.tenancy_end_date IS NULL OR r.tenancy_end_date >= CURRENT_DATE)');
+  }
 
   const where = [
     'EXISTS (SELECT 1 FROM property p WHERE p.property_id = r.property_id AND p.user_id = $1)',
     ...filters,
   ].join(' AND ');
-  // "Current" prefers an open tenancy (no Auszug/tenancy_end_date) over a
-  // merely-most-recent one — otherwise Mieterhistorie's "Reaktivieren" can
-  // never win back the "current" slot for an older tenancy_start_date, since
-  // clearing its end date alone wouldn't change the ordering.
-  const isCurrent = url.searchParams.get('current') === 'true';
+  // Among the still-active candidates left by the filter above, an
+  // open-ended tenancy (no Auszugsdatum) always outranks one that merely
+  // hasn't ended YET (e.g. the tenancy Reaktivieren just displaced, whose
+  // end date lands on today) — otherwise a later tenancy_start_date on the
+  // displaced row could beat the one actually being reactivated.
   const orderBy = isCurrent && config.table === 'tenancy'
     ? ' ORDER BY (tenancy_end_date IS NULL) DESC, tenancy_start_date DESC NULLS LAST LIMIT 1'
     : isCurrent && config.table === 'service_charge_settlement'

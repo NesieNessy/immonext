@@ -54,11 +54,11 @@ export function CurrentTenantPage({ propertyId, property, unit, hasMultipleUnits
                     onClick: (e) => { if (data.isEditing) { e.preventDefault(); data.goTo(`/existing-properties/${propertyId}`); } },
                 },
                 {
-                    label: ExistingPropertiesUseCases.TenantData,
-                    href: `/existing-properties/${propertyId}/tenant-data`,
-                    onClick: (e) => { if (data.isEditing) { e.preventDefault(); data.goTo(`/existing-properties/${propertyId}/tenant-data`); } },
+                    label: unitLabel,
+                    href: `/existing-properties/${propertyId}/${unit.propertyUnitId}`,
+                    onClick: (e) => { if (data.isEditing) { e.preventDefault(); data.goTo(`/existing-properties/${propertyId}/${unit.propertyUnitId}`); } },
                 },
-                { label: unitLabel },
+                { label: ExistingPropertiesUseCases.TenantData },
             ]
             : [
                 {

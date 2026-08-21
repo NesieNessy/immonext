@@ -102,7 +102,6 @@ export function UnitHistoryTable({ propertyId, property, unit, hasMultipleUnits 
         ? [
             { label: 'Bestandsobjekte', href: '/existing-properties' },
             { label: `${property.street} ${property.houseNumber}, ${property.postalCode} ${property.city}`, href: `/existing-properties/${propertyId}` },
-            { label: 'Wohneinheiten', href: `/existing-properties/${propertyId}/tenant-history` },
             { label: formatUnitLabel(unit.unitLabel, unit.floor, unit.locationNote), href: currentTenantHref },
             { label: 'Mieterhistorie' },
         ]
