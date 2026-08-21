@@ -105,8 +105,8 @@ function ServiceChargeStatementContent({
         { label: `${property.street} ${property.houseNumber}, ${property.postalCode} ${property.city}`, href: `/existing-properties/${propertyId}` },
         ...(hasMultipleUnits
             ? [
-                { label: ExistingPropertiesUseCases.ServiceChargeSettlement, href: `/existing-properties/${propertyId}/service-charge-settlement` },
-                { label: unitLabel, href: settlementHref },
+                { label: unitLabel, href: `/existing-properties/${propertyId}/${unit.propertyUnitId}` },
+                { label: ExistingPropertiesUseCases.ServiceChargeSettlement, href: settlementHref },
             ]
             : [
                 { label: ExistingPropertiesUseCases.ServiceChargeSettlement, href: settlementHref },

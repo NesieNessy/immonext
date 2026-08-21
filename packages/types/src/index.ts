@@ -445,6 +445,40 @@ export interface TenancyDocument {
 
 export type TenancyDocumentInsert = Omit<TenancyDocument, 'tenancyDocumentId' | 'createdAt' | 'updatedAt'>;
 
+// ----------------------------------------------------------------------------
+// TenancyMoveOut (Mieterauszug)
+// ----------------------------------------------------------------------------
+
+export interface MoveOutMeterReading {
+  id: string;
+  room: string;
+  value: number | null;
+}
+
+export interface MoveOutDamagePhoto {
+  path: string;
+  fileName: string;
+}
+
+export interface MoveOutDamage {
+  id: string;
+  description: string;
+  photos: MoveOutDamagePhoto[];
+}
+
+export interface TenancyMoveOut {
+  tenancyMoveOutId: number;
+  tenancyId: number;
+  propertyId: number;
+  meterReadings: MoveOutMeterReading[];
+  damages: MoveOutDamage[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type TenancyMoveOutInsert = Omit<TenancyMoveOut, 'tenancyMoveOutId' | 'createdAt' | 'updatedAt'>;
+export type TenancyMoveOutUpdate = Partial<Omit<TenancyMoveOut, 'tenancyMoveOutId' | 'tenancyId' | 'propertyId' | 'createdAt' | 'updatedAt'>>;
+
 export enum DataEntryTypeValues {
   ImportFromRealEstatePortal = 'Aus Immobilienportal importieren',
   ManualEntry = 'Manuell erfassen',
