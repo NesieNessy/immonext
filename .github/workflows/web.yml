@@ -124,25 +124,36 @@ jobs:
         if: steps.playwright-cache.outputs.cache-hit == 'true'
         run: npx playwright install-deps chromium
 
-      # NEXT_PUBLIC_* vars are baked in at build time, so this job builds
-      # fresh against the local stack rather than reusing build-and-test's
-      # artifact (which is built against the real project's public keys).
-      - name: Build
+      # Next.js's own incremental compilation cache (separate from the
+      # Playwright/Docker caching above) — without this, every run recompiles
+      # every route from nothing ("⚠ No build cache found" in the build log).
+      # Keyed on the lockfile + source files so it invalidates when either
+      # changes; restore-keys falls back to the last cache for this lockfile
+      # so even a source change still gets a warm (if slightly stale) cache
+      # to incrementally build from, rather than a fully cold one.
+      - name: Cache Next.js build cache
+        uses: actions/cache@v4
+        with:
+          path: apps/web/.next/cache
+          key: nextjs-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-${{ hashFiles('apps/web/src/**', 'packages/**/src/**') }}
+          restore-keys: |
+            nextjs-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-
+
+      # No separate "Build" step here — playwright.config.ts's webServer
+      # already runs `next build --turbopack && npm run start` itself
+      # (reuseExistingServer is false under CI, so it always builds fresh).
+      # An explicit build step before this one used to run a full second
+      # build that got immediately thrown away, doubling the build cost
+      # for nothing every single run.
+      - name: Run e2e smoke suite
         working-directory: apps/web
-        run: npm run build
+        run: npm run test:e2e
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ env.API_URL }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ env.ANON_KEY }}
           NEXT_PUBLIC_AUTH_BYPASS: 'true'
           DATABASE_URL: ${{ env.DB_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ env.SERVICE_ROLE_KEY }}
-
-      - name: Run e2e smoke suite
-        working-directory: apps/web
-        run: npm run test:e2e
-        env:
-          DATABASE_URL: ${{ env.DB_URL }}
-          NEXT_PUBLIC_AUTH_BYPASS: 'true'
 
       - uses: actions/upload-artifact@v4
         if: failure()
