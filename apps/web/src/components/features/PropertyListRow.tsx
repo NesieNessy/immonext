@@ -49,6 +49,7 @@ export function PropertyListRow({ property, colorIndex, menuItems, onClick }: Pr
             <Tag
               label={categoryLabel}
               variant={PROPERTY_CATEGORY_VARIANT[property.propertyCategory!] ?? 'default'}
+              size="md"
             />
           )}
         </div>
@@ -73,7 +74,7 @@ export function PropertyListRow({ property, colorIndex, menuItems, onClick }: Pr
       </div>
 
       <div className="hidden md:block shrink-0">
-        <Tag label={property.isRented ? 'Vermietet' : 'Unvermietet'} variant={property.isRented ? 'success' : 'warning'} />
+        <Tag label={property.isRented ? 'Vermietet' : 'Unvermietet'} variant={property.isRented ? 'success' : 'warning'} size="md" />
       </div>
 
       <div className="shrink-0" onClick={(e) => e.stopPropagation()}>

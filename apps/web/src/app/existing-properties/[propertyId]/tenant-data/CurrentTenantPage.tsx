@@ -101,14 +101,14 @@ export function CurrentTenantPage({ propertyId, property, unit, hasMultipleUnits
                         <div className="flex items-center gap-2">
                             {data.isArchived ? (
                                 <>
-                                    <Tag label="Archiviert" variant="muted" />
+                                    <Tag label="Archiviert" variant="muted" size="md" />
                                     <Icons.Archive className="w-3.5 h-3.5 text-muted-foreground" />
                                     <span className="text-sm text-muted-foreground">
                                         Auszugsdatum: {formatDeDate(data.tenancy?.tenancyEndDate)}
                                     </span>
                                 </>
                             ) : (
-                                <Tag label={data.status} variant={data.status === 'Vermietet' ? 'success' : 'muted'} />
+                                <Tag label={data.status} variant={data.status === 'Vermietet' ? 'success' : 'muted'} size="md" />
                             )}
                         </div>
                         {!data.isArchived && (

@@ -289,10 +289,10 @@ export default function PropertyHub({ propertyId, unitId }: { propertyId: string
           }
         />
         <div className="flex items-center gap-2 flex-wrap">
-          {categoryLabel && <Tag label={categoryLabel} variant="muted" />}
-          <Tag label={`${property.squareMeters} m²`} variant="muted" />
-          <Tag label={`Baujahr ${property.yearOfConstruction}`} variant="muted" />
-          <Tag label={property.isRented ? 'Vermietet' : 'Unvermietet'} variant={property.isRented ? 'success' : 'warning'} />
+          {categoryLabel && <Tag label={categoryLabel} variant="muted" size="md" />}
+          <Tag label={`${property.squareMeters} m²`} variant="muted" size="md" />
+          <Tag label={`Baujahr ${property.yearOfConstruction}`} variant="muted" size="md" />
+          <Tag label={property.isRented ? 'Vermietet' : 'Unvermietet'} variant={property.isRented ? 'success' : 'warning'} size="md" />
         </div>
 
         {!showUnitSections && (
