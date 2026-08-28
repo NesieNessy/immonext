@@ -1,6 +1,6 @@
 "use client";
 
-import { CalculatedPanel, ReadOnlyField, StickyActionBar, TextField } from '@/components/ui';
+import { CalculatedPanel, LoadingScreen, ReadOnlyField, StickyActionBar, TextField } from '@/components/ui';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { authFetch } from '@/lib/api/authFetch';
 import {
@@ -246,7 +246,7 @@ function AcquisitionCostsContent() {
         )}
 
         {isLoading ? (
-          <p className="text-sm text-muted-foreground">Kaufkosten werden geladen...</p>
+          <LoadingScreen message="Kaufkosten werden geladen…" fullScreen={false} />
         ) : (
           <div className="space-y-6">
             <section>

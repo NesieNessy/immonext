@@ -6,7 +6,7 @@ import { NewPropertyModal } from '@/components/features/NewPropertyModal';
 import { PropertyCard } from '@/components/features/PropertyCard';
 import { PropertyListRow } from '@/components/features/PropertyListRow';
 import type { MenuItem } from '@/components/ui';
-import { Button, ConfirmDeleteModal, Header, Icons, PAGE_CONTAINER_CLASS, TextFieldWithIcon } from '@/components/ui';
+import { Button, ConfirmDeleteModal, Header, Icons, LoadingScreen, PAGE_CONTAINER_CLASS, TextFieldWithIcon } from '@/components/ui';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { useProperties } from '@/hooks/useProperties';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
@@ -200,11 +200,7 @@ export default function ExistingPropertiesPage() {
           </div>
         </div>
 
-        {(authLoading || isLoading) && (
-          <div className="mt-8 text-center text-sm text-muted-foreground">
-            Daten werden geladen…
-          </div>
-        )}
+        {(authLoading || isLoading) && <LoadingScreen fullScreen={false} />}
 
         {error && !isLoading && (
           <div className="mt-4 px-4 py-3 bg-destructive/10 border border-destructive/30 rounded-lg text-sm text-destructive">

@@ -10,8 +10,9 @@ interface LoadingScreenProps {
   className?: string;
 }
 
-/** The app-wide loading state — the ImmoNext mark gently pulsing in place
- *  of a generic spinner or "Wird geladen…" text. */
+/** The app-wide loading state — the ImmoNext mark's three glyphs (i, n, b)
+ *  revealing in sequence, looping, in place of a generic spinner or
+ *  "Wird geladen…" text. */
 export function LoadingScreen({ message = "Wird geladen…", fullScreen = true, className }: LoadingScreenProps) {
   return (
     <div
@@ -23,7 +24,7 @@ export function LoadingScreen({ message = "Wird geladen…", fullScreen = true, 
         className
       )}
     >
-      <LogoMark size={48} className="loading-mark-pulse" />
+      <LogoMark size={48} animated />
       {message && <p className="text-sm text-muted-foreground">{message}</p>}
     </div>
   );
