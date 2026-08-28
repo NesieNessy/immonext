@@ -26,10 +26,23 @@ jobs:
         node-version: '20'
         cache: 'npm'
         cache-dependency-path: package-lock.json
-    
+
+    # setup-node's cache: 'npm' above only caches npm's download cache
+    # (~/.npm), not the linked node_modules tree — npm ci still does the full
+    # extract/link/postinstall work every run regardless of that cache. This
+    # caches node_modules itself, keyed on the lockfile, so an unchanged
+    # lockfile skips npm ci entirely instead of just skipping the download.
+    - name: Cache node_modules
+      id: node-modules-cache
+      uses: actions/cache@v4
+      with:
+        path: node_modules
+        key: node-modules-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
     - name: Install dependencies
+      if: steps.node-modules-cache.outputs.cache-hit != 'true'
       run: npm ci --include=optional
-    
+
     - name: Type check
       working-directory: apps/web
       run: npm run type-check
@@ -68,7 +81,17 @@ jobs:
           cache: 'npm'
           cache-dependency-path: package-lock.json
 
+      # See the identical step in build-and-test for why this exists
+      # alongside setup-node's own npm cache.
+      - name: Cache node_modules
+        id: node-modules-cache
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: node-modules-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
       - name: Install dependencies
+        if: steps.node-modules-cache.outputs.cache-hit != 'true'
         run: npm ci --include=optional
 
       - uses: supabase/setup-cli@v1
@@ -175,7 +198,17 @@ jobs:
           cache: 'npm'
           cache-dependency-path: package-lock.json
 
+      # See the identical step in build-and-test for why this exists
+      # alongside setup-node's own npm cache.
+      - name: Cache node_modules
+        id: node-modules-cache
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: node-modules-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
       - name: Install dependencies
+        if: steps.node-modules-cache.outputs.cache-hit != 'true'
         run: npm ci --include=optional
 
       - name: Run performance smoke test
