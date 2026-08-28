@@ -72,7 +72,7 @@ export async function getCurrentTenancyByUnit(propertyUnitId: number): Promise<T
 }
 
 /** Every tenancy (current + past) ever recorded for a unit — used by
- *  the Mieterhistorie table, which shows all but the current one. */
+ *  the tenancy history table, which shows all but the current one. */
 export async function getTenanciesByUnit(propertyUnitId: number): Promise<Tenancy[]> {
     const data = await propertyResourceRequest<Record<string, unknown>[]>('tenancies', {}, { propertyUnitId });
     return data?.map(toTenancy) ?? [];

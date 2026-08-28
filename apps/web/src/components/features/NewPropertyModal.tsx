@@ -23,7 +23,7 @@ interface DetailCheckApiRow {
 /** Data available to prefill the /existing-properties/new form from when
  *  the user picked an existing detail-check — a subset of the
  *  /api/detail-checks row shape. Detail-check data has no purchase-date
- *  concept, so Kaufdatum is never prefilled either way. */
+ *  concept, so the purchase date is never prefilled either way. */
 interface DetailCheckPrefill {
   streetHouseNumber: string | null;
   postalCode: string | null;

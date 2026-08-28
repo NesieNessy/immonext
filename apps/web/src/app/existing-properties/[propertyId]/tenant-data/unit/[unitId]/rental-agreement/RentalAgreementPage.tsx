@@ -227,7 +227,7 @@ export default function RentalAgreementPage({ propertyId, unitId }: { propertyId
     const unitLabel = formatUnitLabel(unit.unitLabel, unit.floor, unit.locationNote);
     // Only reachable from the rental-agreement page now (its "Daten prüfen &
     // Vorschau" / "PDF generieren" buttons), so the back button and the
-    // breadcrumb both lead back there — not to Mieterdaten.
+    // breadcrumb both lead back there — not to tenant data.
     const currentTenantHref = hasMultipleUnits
         ? `/existing-properties/${propertyId}/tenant-data/${unit.propertyUnitId}`
         : `/existing-properties/${propertyId}/tenant-data`;

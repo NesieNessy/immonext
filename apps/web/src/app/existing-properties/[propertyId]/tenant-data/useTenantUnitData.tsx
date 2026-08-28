@@ -164,7 +164,7 @@ function serializePersons(persons: PersonForm[]): string {
 /**
  * All the state, data-loading, and mutation logic shared by the
  * current-tenant and rental-agreement pages — they're separate
- * routes/components now (see TenantMieterPage / TenantMietvertragPage),
+ * routes/components now (see CurrentTenantPage / TenantAgreementPage),
  * but both edit the same underlying tenancy/persons/maintenance_costs
  * records and share one save flow, so that part stays in one place
  * rather than being duplicated or awkwardly synced between two copies.
@@ -319,12 +319,12 @@ export function useTenantUnitData(propertyId: string, property: Property, unit: 
 
     // Upload is only possible once the underlying row is actually saved —
     // a draft person (id === null) or a unit with no tenancy yet has
-    // nothing to attach the document to. Mietvertrag is either one shared
-    // row (default) or one row per person — never both — toggled via
-    // mietvertragIndividual; every Mietvertrag row carries the toggle
+    // nothing to attach the document to. The rental agreement is either one
+    // shared row (default) or one row per person — never both — toggled via
+    // mietvertragIndividual; every rental-agreement row carries the toggle
     // button so switching modes is reachable from any of them.
-    // Mietvertrag can't meaningfully be generated without the landlord's own
-    // (landlord) data, so the whole row — upload, toggle and generate —
+    // The rental agreement can't meaningfully be generated without the
+    // landlord's own data, so the whole row — upload, toggle and generate —
     // stays disabled until user-settings has been filled in.
     const landlordMissing = !landlord;
 
@@ -340,9 +340,9 @@ export function useTenantUnitData(propertyId: string, property: Property, unit: 
     const defaultRenovationReminderDate = rentalForm.renovationAdjustmentStartDate ? addMonthsSafe(rentalForm.renovationAdjustmentStartDate, -4) : undefined;
     const effectiveRenovationReminderDate = rentalForm.renovationAdjustmentReminderDate ?? defaultRenovationReminderDate;
 
-    // Ausweis/Schufa/Bürgschaft only — Mietvertrag and Mieterbescheinigung
-    // moved to the "Generierbare Dokumente" section below, where the
-    // generate action can be a lot more prominent than a table icon.
+    // Ausweis/Schufa/Bürgschaft only — the rental agreement and tenant
+    // certificate moved to the "Generierbare Dokumente" section below,
+    // where the generate action can be a lot more prominent than a table icon.
     const documentRows = useMemo(() => (
         persons.flatMap((person, personIndex) =>
             PER_PERSON_DOCUMENTS.map((document) => ({
@@ -535,9 +535,9 @@ export function useTenantUnitData(propertyId: string, property: Property, unit: 
             const depositValue = deposit !== '' ? Number(deposit) : null;
             const hasAnyPersonData = persons.some((p) => p.lastName.trim() !== '' || p.firstName.trim() !== '');
 
-            // The Hauptmieter's own Einzugsdatum (persons[0].moveInDate) is the
-            // single source of truth for the tenancy's move-in date — the
-            // Mietvertrag tab's Einzugsdatum field edits that same value.
+            // The primary tenant's own move-in date (persons[0].moveInDate) is
+            // the single source of truth for the tenancy's move-in date — the
+            // rental-agreement tab's move-in date field edits that same value.
             const primaryMoveInDate = persons[0]?.moveInDate;
             const startDateValue = primaryMoveInDate ? format(primaryMoveInDate, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd');
             const endDateValue = rentalForm.tenancyEndDate ? format(rentalForm.tenancyEndDate, 'yyyy-MM-dd') : null;
@@ -552,8 +552,8 @@ export function useTenantUnitData(propertyId: string, property: Property, unit: 
                 renovationAdjustmentAmount: rentalForm.renovationAdjustmentAmount !== '' ? Number(rentalForm.renovationAdjustmentAmount) : null,
                 renovationAdjustmentReminderDate: rentalForm.renovationAdjustmentReminderDate ? format(rentalForm.renovationAdjustmentReminderDate, 'yyyy-MM-dd') : null,
                 // Only ever forces this to true (renovation fields filled in here);
-                // never clobbers an explicit false set on the Mietvertrag-generieren
-                // page when this tab's renovation fields are left untouched.
+                // never clobbers an explicit false set on the rental-agreement
+                // generation page when this tab's renovation fields are left untouched.
                 renovationAdjustmentPlanned: (rentalForm.renovationAdjustmentStartDate || rentalForm.renovationAdjustmentEndDate || rentalForm.renovationAdjustmentAmount !== '') ? true : undefined,
             };
 
@@ -873,10 +873,10 @@ export function useTenantUnitData(propertyId: string, property: Property, unit: 
         },
     ];
 
-    // Shared row renderer for the Mietvertrag/Mieterbescheinigung cards in
-    // "Generierbare Dokumente" — same view/download/delete/upload logic as
-    // the documents table's action column, just inside a card row instead
-    // of a table cell.
+    // Shared row renderer for the rental-agreement/tenant-certificate cards
+    // in "Generierbare Dokumente" — same view/download/delete/upload logic
+    // as the documents table's action column, just inside a card row
+    // instead of a table cell.
     const renderDocRow = (
         row: { key: string; tenant: string; tenancyPersonId?: number | null; canUpload: boolean; doc?: TenancyDocument },
         documentType: TenancyDocumentType,
