@@ -56,6 +56,7 @@ import {
   Navigation,
   Network,
   Package,
+  PencilLine,
   Phone,
   PieChart,
   PiggyBank,
@@ -189,6 +190,7 @@ export const Icons = {
   RefreshCw,
   MoreVertical,
   Eye,
+  Rename: PencilLine,
 
   // Status
   AlertTriangle,

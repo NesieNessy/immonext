@@ -50,6 +50,28 @@ export async function POST(request: Request) {
   return NextResponse.json({ document: rows[0], previousStoragePath }, { status: 201 });
 }
 
+export async function PATCH(request: Request) {
+  const userId = await requireUserId(request);
+  const input = await request.json();
+  const id = Number(input.tenancy_document_id);
+  const fileName = String(input.file_name ?? '').trim();
+  if (!id || !fileName) return NextResponse.json({ error: 'Ungültiger Dateiname.' }, { status: 400 });
+
+  const { rows } = await db.query(
+    `
+      UPDATE tenancy_document td SET file_name = $2, updated_at = NOW()
+      WHERE td.tenancy_document_id = $1 AND EXISTS (
+        SELECT 1 FROM tenancy t JOIN property p ON p.property_id = t.property_id
+        WHERE t.tenancy_id = td.tenancy_id AND p.user_id = $3
+      )
+      RETURNING *
+    `,
+    [id, fileName, userId],
+  );
+  if (!rows[0]) return NextResponse.json({ error: 'Dokument nicht gefunden.' }, { status: 404 });
+  return NextResponse.json({ document: rows[0] });
+}
+
 export async function DELETE(request: Request) {
   const userId = await requireUserId(request);
   const id = Number(new URL(request.url).searchParams.get('id'));
