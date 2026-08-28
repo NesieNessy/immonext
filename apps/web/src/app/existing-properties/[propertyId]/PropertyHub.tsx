@@ -4,7 +4,7 @@ import { BESTANDSOBJEKTE_BREADCRUMB_ROOT, formatUnitLabel, PROPERTY_CATEGORY_LAB
 import { ConfirmDeleteModal, Header, Icons, PAGE_CONTAINER_CLASS, SectionLabel, Tag, type BreadcrumbItem } from '@/components/ui';
 import { deleteProperty, getPropertyOverviewById, type PropertyOverview } from '@/lib/supabase/property.supabase';
 import { getPropertyUnitsByProperty } from '@/lib/supabase/property_unit.supabase';
-import { base64ToDataUri, cn } from '@/lib/utils';
+import { resolvePropertyImageSrc, cn } from '@/lib/utils';
 import type { PropertyUnit } from '@immonext/types';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -232,7 +232,7 @@ export default function PropertyHub({ propertyId, unitId }: { propertyId: string
     );
   }
 
-  const photo = base64ToDataUri(property.imageUrl);
+  const photo = resolvePropertyImageSrc(property.imageUrl);
   const categoryLabel = property.propertyCategory
     ? PROPERTY_CATEGORY_LABEL[property.propertyCategory] ?? property.propertyCategory
     : null;

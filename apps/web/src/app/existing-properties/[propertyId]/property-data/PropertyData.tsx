@@ -1,7 +1,8 @@
 "use client";
 
 import { PROPERTY_CATEGORY_CREATE_OPTIONS, PropertyNotFoundPage } from '@/components/features/PropertyDisplay';
-import { Button, CalendarField, Dropdown, Header, Icons, NumberField, PAGE_CONTAINER_CLASS, PillOptions, SectionLabel, StickyActionBar, TextField, UnsavedChangesModal, UploadButton, useToast } from '@/components/ui';
+import { PropertyImageGallery } from '@/components/features/PropertyImageGallery';
+import { Button, CalendarField, Dropdown, Header, NumberField, PAGE_CONTAINER_CLASS, PillOptions, SectionLabel, StickyActionBar, TextField, UnsavedChangesModal, useToast } from '@/components/ui';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { ExistingPropertiesUseCases } from '@/constants/ExistingPropertiesUseCases';
 import { getLabel } from '@/constants/FieldLabels';
@@ -10,25 +11,11 @@ import { createParkingSpace, deleteParkingSpace, getParkingSpacesByProperty, upd
 import { getPropertyById, updateProperty } from '@/lib/supabase/property.supabase';
 import { getPropertyAcquisitionByProperty, upsertPropertyAcquisition } from '@/lib/supabase/property_acquisition.supabase';
 import { createUseCaseMenuItems } from '@/lib/propertyUseCaseMenu';
-import { base64ToDataUri } from '@/lib/utils';
+import { resolvePropertyImageSrc } from '@/lib/utils';
 import { EnergyEfficient, type AcquisitionCosts, type ParkingSpace, type Property } from '@immonext/types';
 import { format, parseISO } from 'date-fns';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
-
-/** Strips the "data:image/...;base64," prefix — Property.imageUrl stores
- *  raw base64 only; base64ToDataUri() re-adds the right prefix for display. */
-function readFileAsRawBase64(file: File): Promise<string> {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => {
-            const result = reader.result as string;
-            resolve(result.slice(result.indexOf(',') + 1));
-        };
-        reader.onerror = () => reject(reader.error);
-        reader.readAsDataURL(file);
-    });
-}
 
 const ENERGY_OPTIONS = [
     { value: '', label: '–' },
@@ -48,7 +35,6 @@ interface FormState {
     anzahlZimmer: string;
     stellplaetze: string;
     energieeffizienz: string;
-    bildBase64: string | null;
 }
 
 const EMPTY_FORM: FormState = {
@@ -64,7 +50,6 @@ const EMPTY_FORM: FormState = {
     anzahlZimmer: '',
     stellplaetze: '0',
     energieeffizienz: '',
-    bildBase64: null,
 };
 
 export default function PropertyData({ propertyId }: { propertyId: string }) {
@@ -79,6 +64,7 @@ export default function PropertyData({ propertyId }: { propertyId: string }) {
     const [isSaving, setIsSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [pendingHref, setPendingHref] = useState<string | null>(null);
+    const [coverImageUrl, setCoverImageUrl] = useState<string | null>(null);
 
     useEffect(() => {
         const id = parseInt(propertyId, 10);
@@ -107,7 +93,6 @@ export default function PropertyData({ propertyId }: { propertyId: string }) {
                 anzahlZimmer: foundProperty.numberOfRooms != null ? String(foundProperty.numberOfRooms) : '',
                 stellplaetze: existingParking?.numberOfParkingSpaces ? String(existingParking.numberOfParkingSpaces) : '0',
                 energieeffizienz: foundProperty.energyEfficient ?? '',
-                bildBase64: foundProperty.imageUrl,
             };
 
             setProperty(foundProperty);
@@ -115,6 +100,7 @@ export default function PropertyData({ propertyId }: { propertyId: string }) {
             setAcquisitionCosts(existingAcquisitionCosts);
             setForm(initial);
             setOriginal(initial);
+            setCoverImageUrl(foundProperty.imageUrl);
         });
 
         return () => { cancelled = true; };
@@ -138,12 +124,6 @@ export default function PropertyData({ propertyId }: { propertyId: string }) {
     };
 
     const update = (patch: Partial<FormState>) => setForm((prev) => ({ ...prev, ...patch }));
-
-    const handleImageSelect = async (files: FileList | null) => {
-        const file = files?.[0];
-        if (!file) return;
-        update({ bildBase64: await readFileAsRawBase64(file) });
-    };
 
     const currentYear = new Date().getFullYear();
     const isValid =
@@ -176,7 +156,6 @@ export default function PropertyData({ propertyId }: { propertyId: string }) {
                 yearOfConstruction: Number(form.baujahr),
                 energyEfficient: (form.energieeffizienz || null) as EnergyEfficient | null,
                 propertyCategory: form.objektkategorie,
-                imageUrl: form.bildBase64,
             });
             if (!updated) {
                 setError('Objekt konnte nicht gespeichert werden.');
@@ -276,7 +255,7 @@ export default function PropertyData({ propertyId }: { propertyId: string }) {
                         },
                         { label: ExistingPropertiesUseCases.PropertyData },
                     ]}
-                    image={form.bildBase64 ? <img src={base64ToDataUri(form.bildBase64)!} alt={`${property.street} ${property.houseNumber}`} className="w-10 h-10 object-cover rounded-lg" /> : undefined}
+                    image={coverImageUrl ? <img src={resolvePropertyImageSrc(coverImageUrl)!} alt={`${property.street} ${property.houseNumber}`} className="w-10 h-10 object-cover rounded-lg" /> : undefined}
                     actions={
                         <Button
                             label={BUTTON_DETAILS.UseCases.label}
@@ -296,31 +275,8 @@ export default function PropertyData({ propertyId }: { propertyId: string }) {
                     )}
 
                     <div className="flex flex-col gap-2">
-                        <SectionLabel>Objektbild (opt.)</SectionLabel>
-                        <div className="flex items-center gap-4">
-                            {form.bildBase64 && (
-                                <div className="relative shrink-0">
-                                    <img
-                                        src={base64ToDataUri(form.bildBase64)!}
-                                        alt=""
-                                        className="w-20 h-20 object-cover rounded-lg border border-border"
-                                    />
-                                    <button
-                                        type="button"
-                                        onClick={() => update({ bildBase64: null })}
-                                        aria-label="Bild entfernen"
-                                        className="absolute -top-2 -right-2 p-1 rounded-full bg-card border border-border text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-                                    >
-                                        <Icons.X className="w-3.5 h-3.5" />
-                                    </button>
-                                </div>
-                            )}
-                            <UploadButton
-                                buttonText={form.bildBase64 ? 'Anderes Bild wählen' : 'Bild hochladen'}
-                                accept="image/*"
-                                onFileSelect={(files) => void handleImageSelect(files)}
-                            />
-                        </div>
+                        <SectionLabel>Objektbilder</SectionLabel>
+                        <PropertyImageGallery propertyId={property.propertyId} onCoverChange={setCoverImageUrl} />
                     </div>
 
                     <div className="flex flex-col gap-2">

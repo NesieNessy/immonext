@@ -1,6 +1,6 @@
 "use client";
 
-import { formatUnitLabel } from '@/components/features/PropertyDisplay';
+import { formatUnitLabel, propertyThumbnail } from '@/components/features/PropertyDisplay';
 import { DataCard } from '../tenant-data/DocumentGeneratorParts';
 import {
     Button,
@@ -17,7 +17,6 @@ import {
 } from '@/components/ui';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { ExistingPropertiesUseCases } from '@/constants/ExistingPropertiesUseCases';
-import { base64ToDataUri } from '@/lib/utils';
 import type { Property, PropertyUnit } from '@immonext/types';
 import { useRouter } from 'next/navigation';
 import { useRef } from 'react';
@@ -65,7 +64,7 @@ export function ServiceChargeSettlementView({ propertyId, property, unit, hasMul
             <main className={PAGE_CONTAINER_CLASS}>
                 <Header
                     items={breadcrumbItems}
-                    image={property.imageUrl ? <img src={base64ToDataUri(property.imageUrl)!} alt={`${property.street} ${property.houseNumber}`} className="w-10 h-10 object-cover rounded-lg" /> : undefined}
+                    image={propertyThumbnail(property)}
                     actions={
                         <Button
                             label={BUTTON_DETAILS.UseCases.label}

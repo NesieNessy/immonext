@@ -2,12 +2,12 @@
 
 import { useEffect, useState } from 'react';
 
-import { formatUnitLabel, PropertyLoadingPage, PropertyNotFoundPage } from '@/components/features/PropertyDisplay';
+import { formatUnitLabel, PropertyLoadingPage, PropertyNotFoundPage, propertyThumbnail } from '@/components/features/PropertyDisplay';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { Header, Icons, NumberField, PAGE_CONTAINER_CLASS, PillOptions, SectionLabel, StickyActionBar, TextField, UnsavedChangesModal, useToast, type BreadcrumbItem } from '@/components/ui';
 import { getPropertyById } from '@/lib/supabase/property.supabase';
 import { createPropertyUnit, getPropertyUnitsByProperty } from '@/lib/supabase/property_unit.supabase';
-import { base64ToDataUri, deNumberFormatter } from '@/lib/utils';
+import { deNumberFormatter } from '@/lib/utils';
 import { type Property, UnitUsageType } from '@immonext/types';
 import { Car, MoreHorizontal } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -168,7 +168,7 @@ export default function NewUnit({ propertyId }: { propertyId: string }) {
             <main className={PAGE_CONTAINER_CLASS}>
                 <Header
                     items={breadcrumbItems}
-                    image={property.imageUrl ? <img src={base64ToDataUri(property.imageUrl)!} alt="" className="w-10 h-10 object-cover rounded-lg" /> : undefined}
+                    image={propertyThumbnail(property)}
                 />
 
                 <div className="space-y-6">

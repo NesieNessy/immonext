@@ -155,10 +155,12 @@ export function Table<T extends Record<string, unknown> = Record<string, unknown
       <div
         className={cn(
           "w-full overflow-x-auto",
-          // Only cap/scroll the body once a page holds more than the default
-          // 10 rows (i.e. the user bumped "Zeilen pro Seite" to 25/50) — a
-          // full page of 10 should render in full, not get clipped.
-          paginationEnabled && rowsPerPage > 10 && "max-h-[600px] overflow-y-auto",
+          // Fixed regardless of the selected page size — otherwise switching
+          // "Zeilen pro Seite" between 10/25/50 resized the table on every
+          // change. Tall enough to fit 10 full rows (plus header and, where
+          // present, the filter row) without an inner scrollbar; 25/50 just
+          // scroll within this same fixed viewport instead of growing it.
+          paginationEnabled && "max-h-[680px] overflow-y-auto",
           renderMobileCard && "hidden md:block"
         )}
       >

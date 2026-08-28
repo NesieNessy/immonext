@@ -3,7 +3,7 @@
 import { getPropertyCardColor, PROPERTY_CATEGORY_LABEL, PROPERTY_CATEGORY_VARIANT } from '@/components/features/PropertyDisplay';
 import { Button, Icons, Tag, type MenuItem } from '@/components/ui';
 import type { PropertyOverview } from '@/lib/supabase/property.supabase';
-import { base64ToDataUri, cn } from '@/lib/utils';
+import { resolvePropertyImageSrc, cn } from '@/lib/utils';
 
 interface PropertyCardProps {
   property: PropertyOverview;
@@ -16,7 +16,7 @@ interface PropertyCardProps {
 }
 
 export function PropertyCard({ property, colorIndex, menuItems, onClick }: PropertyCardProps) {
-  const photo = base64ToDataUri(property.imageUrl);
+  const photo = resolvePropertyImageSrc(property.imageUrl);
   const categoryLabel = property.propertyCategory
     ? PROPERTY_CATEGORY_LABEL[property.propertyCategory] ?? property.propertyCategory
     : null;

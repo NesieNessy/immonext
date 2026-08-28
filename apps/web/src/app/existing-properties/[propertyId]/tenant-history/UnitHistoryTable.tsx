@@ -1,7 +1,7 @@
 "use client";
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
-import { formatUnitLabel } from '@/components/features/PropertyDisplay';
+import { formatUnitLabel, propertyThumbnail } from '@/components/features/PropertyDisplay';
 import { Button, ConfirmDeleteModal, Header, Icons, Modal, PAGE_CONTAINER_CLASS, Table, TextFieldWithIcon, type BreadcrumbItem, type MenuItem, type TableColumn } from '@/components/ui';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { getAdjustmentHistoryByTenancy } from '@/lib/supabase/tenancy_adjustment_history.supabase';
@@ -9,7 +9,7 @@ import { deleteTenancy, getCurrentTenancyByUnit, getTenanciesByUnit, updateTenan
 import { deleteTenancyDocument, getTenancyDocumentsByTenancy, getTenancyDocumentUrl } from '@/lib/supabase/tenancy_document.supabase';
 import { getTenancyPersonsByTenancy } from '@/lib/supabase/tenancy_person.supabase';
 import { createUseCaseMenuItems } from '@/lib/propertyUseCaseMenu';
-import { base64ToDataUri, formatDeDate } from '@/lib/utils';
+import { formatDeDate } from '@/lib/utils';
 import type { Property, PropertyUnit, Tenancy, TenancyDocument, TenancyPerson } from '@immonext/types';
 import { differenceInCalendarMonths, format } from 'date-fns';
 import { Circle, RotateCcw } from 'lucide-react';
@@ -337,7 +337,7 @@ export function UnitHistoryTable({ propertyId, property, unit, hasMultipleUnits 
             <main className={PAGE_CONTAINER_CLASS}>
                 <Header
                     items={breadcrumbItems}
-                    image={property.imageUrl ? <img src={base64ToDataUri(property.imageUrl)!} alt={`${property.street} ${property.houseNumber}`} className="w-10 h-10 object-cover rounded-lg" /> : undefined}
+                    image={propertyThumbnail(property)}
                     actions={
                         <Button
                             label={BUTTON_DETAILS.UseCases.label}

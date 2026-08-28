@@ -1,13 +1,13 @@
 "use client";
 import { useCallback, useEffect, useState } from 'react';
 
-import { BESTANDSOBJEKTE_BREADCRUMB_ROOT, formatUnitLabel, PropertyLoadingPage, PropertyNotFoundPage } from '@/components/features/PropertyDisplay';
+import { BESTANDSOBJEKTE_BREADCRUMB_ROOT, formatUnitLabel, PropertyLoadingPage, PropertyNotFoundPage, propertyThumbnail } from '@/components/features/PropertyDisplay';
 import { Button, Header, Icons, PAGE_CONTAINER_CLASS, Table, Tag, TextFieldWithIcon, type SortDirection, type TableColumn } from '@/components/ui';
 import { getPropertyById } from '@/lib/supabase/property.supabase';
 import { getPropertyUnitsByProperty } from '@/lib/supabase/property_unit.supabase';
 import { getCurrentTenancyByUnit } from '@/lib/supabase/tenancy.supabase';
 import { getTenancyPersonsByTenancy } from '@/lib/supabase/tenancy_person.supabase';
-import { base64ToDataUri, deCurrencyFormatter, formatDeDate } from '@/lib/utils';
+import { deCurrencyFormatter, formatDeDate } from '@/lib/utils';
 import type { Property, PropertyUnit } from '@immonext/types';
 import { useRouter } from 'next/navigation';
 
@@ -201,7 +201,7 @@ export default function PropertyEntry({ propertyId }: { propertyId: string }) {
                         BESTANDSOBJEKTE_BREADCRUMB_ROOT,
                         { label: `${property.street} ${property.houseNumber}, ${property.postalCode} ${property.city}` },
                     ]}
-                    image={property.imageUrl ? <img src={base64ToDataUri(property.imageUrl)!} alt={`${property.street} ${property.houseNumber}`} className="w-10 h-10 object-cover rounded-lg" /> : undefined}
+                    image={propertyThumbnail(property)}
                 />
 
                 <div className="space-y-3">

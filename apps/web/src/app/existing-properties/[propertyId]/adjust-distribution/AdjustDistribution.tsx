@@ -1,6 +1,6 @@
 "use client";
 
-import { PropertyNotFoundPage } from '@/components/features/PropertyDisplay';
+import { PropertyNotFoundPage, propertyThumbnail } from '@/components/features/PropertyDisplay';
 import { Button, Header, Icons, NumberField, PAGE_CONTAINER_CLASS, PillOptions, SectionLabel, StickyActionBar, UnsavedChangesModal, useToast } from '@/components/ui';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { ExistingPropertiesUseCases } from '@/constants/ExistingPropertiesUseCases';
@@ -9,7 +9,7 @@ import { getCityPurchasePriceSplit } from '@/lib/supabase/city_purchase_price_sp
 import { getPropertyOverviewById, type PropertyOverview } from '@/lib/supabase/property.supabase';
 import { getPropertyPriceSplitByProperty, upsertPropertyPriceSplit } from '@/lib/supabase/property_price_split.supabase';
 import { createUseCaseMenuItems } from '@/lib/propertyUseCaseMenu';
-import { base64ToDataUri, deCurrencyFormatter, deNumberFormatter } from '@/lib/utils';
+import { deCurrencyFormatter, deNumberFormatter } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 
@@ -163,7 +163,7 @@ export default function AdjustDistribution({ propertyId }: { propertyId: string 
                         },
                         { label: ExistingPropertiesUseCases.SplitPurchasePrice },
                     ]}
-                    image={property.imageUrl ? <img src={base64ToDataUri(property.imageUrl)!} alt={`${property.street} ${property.houseNumber}`} className="w-10 h-10 object-cover rounded-lg" /> : undefined}
+                    image={propertyThumbnail(property)}
                     actions={
                         <Button
                             label={BUTTON_DETAILS.UseCases.label}

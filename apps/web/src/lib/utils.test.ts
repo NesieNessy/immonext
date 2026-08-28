@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { base64ToDataUri, cn, deCurrencyFormatter, deNumberFormatter, formatDeDate } from './utils';
+import { base64ToDataUri, cn, deCurrencyFormatter, deNumberFormatter, formatDeDate, resolvePropertyImageSrc } from './utils';
 
 describe('cn', () => {
     it('merges class names, letting later Tailwind classes win over earlier conflicting ones', () => {
@@ -78,5 +78,22 @@ describe('base64ToDataUri', () => {
 
     it('falls back to JPEG for an unrecognized prefix', () => {
         expect(base64ToDataUri('unknownPrefix')).toBe('data:image/jpeg;base64,unknownPrefix');
+    });
+});
+
+describe('resolvePropertyImageSrc', () => {
+    it('returns null for falsy input', () => {
+        expect(resolvePropertyImageSrc(null)).toBeNull();
+        expect(resolvePropertyImageSrc(undefined)).toBeNull();
+        expect(resolvePropertyImageSrc('')).toBeNull();
+    });
+
+    it('passes a Storage public URL through unchanged', () => {
+        const url = 'https://example.supabase.co/storage/v1/object/public/property-images/u/1/photo.jpg';
+        expect(resolvePropertyImageSrc(url)).toBe(url);
+    });
+
+    it('falls back to base64ToDataUri for a pre-gallery raw base64 value', () => {
+        expect(resolvePropertyImageSrc('/9j/4AAQ')).toBe('data:image/jpeg;base64,/9j/4AAQ');
     });
 });
