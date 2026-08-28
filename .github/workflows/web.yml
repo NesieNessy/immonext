@@ -90,9 +90,15 @@ jobs:
         working-directory: supabase
         run: supabase start -x studio,imgproxy,edge-runtime
 
+      # `-o env` prints shell-style KEY="value" lines, but $GITHUB_ENV takes
+      # everything after `=` verbatim — it doesn't strip quotes like a shell
+      # would. Piping the raw output in directly leaves every value wrapped
+      # in literal quote characters (e.g. API_URL becomes the 22-character
+      # string `"http://127.0.0.1:54321"`, quotes included), which breaks
+      # every URL built from it downstream. Strip the quotes before writing.
       - name: Export local Supabase connection details
         working-directory: supabase
-        run: supabase status -o env >> "$GITHUB_ENV"
+        run: supabase status -o env | sed -E 's/^([A-Z_0-9]+)="(.*)"$/\1=\2/' >> "$GITHUB_ENV"
 
       - name: Get installed Playwright version
         id: playwright-version
