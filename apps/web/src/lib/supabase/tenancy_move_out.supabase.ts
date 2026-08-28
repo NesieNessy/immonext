@@ -1,64 +1,50 @@
 import { supabase } from '@/lib/supabase/client.supabase';
-import type { MoveOutDamage, MoveOutMeterReading, TenancyMoveOut, TenancyMoveOutInsert, TenancyMoveOutUpdate } from '@immonext/types';
+import { authFetch } from '@/lib/api/authFetch';
+import type { TenancyMoveOut, TenancyMoveOutInsert, TenancyMoveOutUpdate } from '@immonext/types';
 
 const BUCKET = 'tenancy-documents';
 
-function toTenancyMoveOut(row: Record<string, unknown>): TenancyMoveOut {
-  return {
-    tenancyMoveOutId: row.tenancy_move_out_id as number,
-    tenancyId:        row.tenancy_id as number,
-    propertyId:       row.property_id as number,
-    meterReadings:    (row.meter_readings as MoveOutMeterReading[] | null) ?? [],
-    damages:          (row.damages as MoveOutDamage[] | null) ?? [],
-    createdAt:        row.created_at as string,
-    updatedAt:        row.updated_at as string,
-  };
-}
+// get/create/update go through /api/tenancy-move-out (server-side, service-role
+// DB pool) rather than the browser Supabase client directly — the RLS policies
+// on this table check auth.uid(), which is never set under auth-bypass mode
+// (no real Supabase Auth session backs the bypass user), so a direct client
+// call silently fails there. It previously did: createTenancyMoveOut/
+// updateTenancyMoveOut returned null on any error, and the caller
+// (useTenantMoveOutData's handleSave) showed a "saved" toast regardless,
+// masking the failure completely — confirmed by a real save never reaching
+// the database. Matches the pattern already used by quick_check.supabase.ts.
 
 export async function getTenancyMoveOutByTenancy(tenancyId: number): Promise<TenancyMoveOut | null> {
-  const { data, error } = await supabase
-    .from('tenancy_move_out')
-    .select('*')
-    .eq('tenancy_id', tenancyId)
-    .maybeSingle();
-  if (error || !data) return null;
-  return toTenancyMoveOut(data);
+  const res = await authFetch(`/api/tenancy-move-out?tenancyId=${tenancyId}`);
+  if (!res.ok) return null;
+  return res.json();
 }
 
 export async function createTenancyMoveOut(payload: TenancyMoveOutInsert): Promise<TenancyMoveOut | null> {
-  const { data, error } = await supabase
-    .from('tenancy_move_out')
-    .insert({
-      tenancy_id:     payload.tenancyId,
-      property_id:    payload.propertyId,
-      meter_readings: payload.meterReadings,
-      damages:        payload.damages,
-    })
-    .select()
-    .single();
-  if (error || !data) return null;
-  return toTenancyMoveOut(data);
+  const res = await authFetch('/api/tenancy-move-out', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) return null;
+  return res.json();
 }
 
 export async function updateTenancyMoveOut(tenancyMoveOutId: number, updates: TenancyMoveOutUpdate): Promise<TenancyMoveOut | null> {
-  const dbUpdates: Record<string, unknown> = {};
-  if (updates.meterReadings !== undefined) dbUpdates.meter_readings = updates.meterReadings;
-  if (updates.damages !== undefined)       dbUpdates.damages        = updates.damages;
-  const { data, error } = await supabase
-    .from('tenancy_move_out')
-    .update(dbUpdates)
-    .eq('tenancy_move_out_id', tenancyMoveOutId)
-    .select()
-    .single();
-  if (error || !data) return null;
-  return toTenancyMoveOut(data);
+  const res = await authFetch('/api/tenancy-move-out', {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ tenancyMoveOutId, ...updates }),
+  });
+  if (!res.ok) return null;
+  return res.json();
 }
 
 // ----------------------------------------------------------------------------
 // Damage photos — stored directly in the tenancy-documents bucket (RLS is
 // folder-based on userId, no tenancy_document row needed) since each damage
 // can carry several photos and re-uploading must never replace an existing
-// one, unlike the single-slot Ausweis/Schufa/… documents.
+// one, unlike the single-slot ID/credit-report/… documents.
 // ----------------------------------------------------------------------------
 
 export async function uploadMoveOutDamagePhoto(userId: string, tenancyId: number, file: File): Promise<{ path: string; fileName: string } | null> {

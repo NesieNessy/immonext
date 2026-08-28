@@ -1,4 +1,4 @@
--- The Mieterbescheinigung generator now also occupies a row in the
+-- The tenant-certificate (Mieterbescheinigung) generator now also occupies a row in the
 -- "Unterlagen" table (for the signed/uploaded copy), so it needs to be an
 -- allowed document_type alongside Ausweis/Schufa/Bürgschaft/Mietvertrag.
 

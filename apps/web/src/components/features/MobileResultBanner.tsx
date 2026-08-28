@@ -1,7 +1,7 @@
 "use client";
 
 import { Icons } from '@/components/common/Icons';
-import { ArrowDown, ArrowUp } from 'lucide-react';
+import { ArrowUp } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
 interface Props {
@@ -54,7 +54,7 @@ export function MobileResultBanner({ show, resultId, formTopId }: Props) {
       </span>
       <span className="flex items-center gap-1 font-medium">
         {resultVisible ? 'Nach oben' : 'Zum Ergebnis'}
-        {resultVisible ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />}
+        {resultVisible ? <ArrowUp className="w-4 h-4" /> : <Icons.ArrowDown className="w-4 h-4" />}
       </span>
     </button>
   );

@@ -3,21 +3,21 @@
 import React from "react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
-import { ChevronDown, Home, LogOut, Menu, Network, Search, Settings, User, X } from "lucide-react";
+import { LogOut, Menu } from "lucide-react";
 import { Icons } from "../common";
 
 // Icon mapping
 const iconMap = {
-  home: Home,
+  home: Icons.Home,
   existingProperties: Icons.ExistingProperties,
   quickCheck: Icons.QuickCheck,
   detailCheck: Icons.DetailCheck,
   propertyValuation: Icons.PropertyValuation,
   documents: Icons.Documents,
-  network: Network,
-  settings: Settings,
-  search: Search,
-  user: User,
+  network: Icons.Network,
+  settings: Icons.Settings,
+  search: Icons.Search,
+  user: Icons.User,
   logout: LogOut,
 };
 
@@ -124,7 +124,7 @@ export function NavigationBar({ items, logo, actions }: NavigationBarProps) {
                         >
                           {Icon && <Icon size={20} className="text-primary" />}
                           <span>{item.label}</span>
-                          {hasSubItems && <ChevronDown size={16} className={cn("transition-transform", isOpen && "rotate-180")} />}
+                          {hasSubItems && <Icons.ChevronDown size={16} className={cn("transition-transform", isOpen && "rotate-180")} />}
                         </button>
                       ) : (
                         <Link
@@ -275,7 +275,7 @@ export function NavigationBar({ items, logo, actions }: NavigationBarProps) {
                 aria-label="Navigation schließen"
                 className="p-2 rounded-full border border-border hover:bg-muted transition-colors"
               >
-                <X size={18} className="text-foreground" />
+                <Icons.X size={18} className="text-foreground" />
               </button>
             </div>
 
@@ -308,7 +308,7 @@ export function NavigationBar({ items, logo, actions }: NavigationBarProps) {
                       >
                         {Icon && <Icon size={20} className="text-primary" />}
                         <span className="flex-1 text-left font-medium text-foreground">{item.label}</span>
-                        <ChevronDown size={16} className={cn("transition-transform", isExpanded && "rotate-180")} />
+                        <Icons.ChevronDown size={16} className={cn("transition-transform", isExpanded && "rotate-180")} />
                       </button>
                       {isExpanded && (
                         <div className="flex flex-col gap-1">

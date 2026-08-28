@@ -104,7 +104,7 @@ immonext/
 4. `requireUserId()` validates the token and every query filters by the resulting user id
 
 ### Property Valuation Flow
-1. User initiates a valuation (Ersteinschätzung / quick check, or a full Detailbewertung / detail check)
+1. User initiates a valuation (a quick check, or a full detail check)
 2. Frontend validates input with the shared form components
 3. Quick-check and detail-check data are written through protected Next.js API routes
 4. Results are read back and rendered in the UI

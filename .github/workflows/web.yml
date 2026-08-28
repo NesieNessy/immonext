@@ -26,10 +26,23 @@ jobs:
         node-version: '20'
         cache: 'npm'
         cache-dependency-path: package-lock.json
-    
+
+    # setup-node's cache: 'npm' above only caches npm's download cache
+    # (~/.npm), not the linked node_modules tree — npm ci still does the full
+    # extract/link/postinstall work every run regardless of that cache. This
+    # caches node_modules itself, keyed on the lockfile, so an unchanged
+    # lockfile skips npm ci entirely instead of just skipping the download.
+    - name: Cache node_modules
+      id: node-modules-cache
+      uses: actions/cache@v4
+      with:
+        path: node_modules
+        key: node-modules-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
     - name: Install dependencies
+      if: steps.node-modules-cache.outputs.cache-hit != 'true'
       run: npm ci --include=optional
-    
+
     - name: Type check
       working-directory: apps/web
       run: npm run type-check
@@ -52,6 +65,126 @@ jobs:
         DATABASE_URL: ${{ secrets.DATABASE_URL }}
         SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
 
+  e2e-smoke:
+    runs-on: ubuntu-latest
+    # No `needs: build-and-test` — this job builds its own fresh artifact
+    # against the local stack's keys anyway (see the Build step below), so
+    # it doesn't depend on that job's output. Running in parallel instead of
+    # after it cuts wall-clock time roughly in half.
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: package-lock.json
+
+      # See the identical step in build-and-test for why this exists
+      # alongside setup-node's own npm cache.
+      - name: Cache node_modules
+        id: node-modules-cache
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: node-modules-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
+      - name: Install dependencies
+        if: steps.node-modules-cache.outputs.cache-hit != 'true'
+        run: npm ci --include=optional
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      # Isolated local stack (Postgres + Auth), not the shared remote
+      # project — the auth-bypass user only exists here (seeded by
+      # supabase/migrations/20260224_zz_dev_user.sql), and property.user_id
+      # FKs to a real auth.users row so the bypass user can't own data on
+      # the remote project at all.
+      #
+      # -x excludes services nothing in the app or this suite ever touches:
+      # studio (dashboard UI), imgproxy (image transforms), edge-runtime (no
+      # Supabase Edge Functions here). Skipping them cuts both the image-pull
+      # count and container-startup time. logflare/vector (analytics) and
+      # the pooler are already disabled via supabase/config.toml.
+      - name: Start local Supabase stack
+        working-directory: supabase
+        run: supabase start -x studio,imgproxy,edge-runtime
+
+      # `-o env` prints shell-style KEY="value" lines, but $GITHUB_ENV takes
+      # everything after `=` verbatim — it doesn't strip quotes like a shell
+      # would. Piping the raw output in directly leaves every value wrapped
+      # in literal quote characters (e.g. API_URL becomes the 22-character
+      # string `"http://127.0.0.1:54321"`, quotes included), which breaks
+      # every URL built from it downstream. Strip the quotes before writing.
+      - name: Export local Supabase connection details
+        working-directory: supabase
+        run: supabase status -o env | sed -E 's/^([A-Z_0-9]+)="(.*)"$/\1=\2/' >> "$GITHUB_ENV"
+
+      - name: Get installed Playwright version
+        id: playwright-version
+        working-directory: apps/web
+        run: echo "version=$(node -e "console.log(require('@playwright/test/package.json').version)")" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Playwright browsers
+        id: playwright-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.playwright-version.outputs.version }}
+
+      # --with-deps installs OS-level apt packages too, which aren't part of
+      # the cached path and don't persist between runs on a fresh runner
+      # image, so those always need reinstalling — only the (much larger)
+      # browser binary download is worth skipping on a cache hit.
+      - name: Install Playwright Chromium (fresh)
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps chromium
+
+      - name: Install Playwright OS dependencies (cache hit)
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
+        run: npx playwright install-deps chromium
+
+      # Next.js's own incremental compilation cache (separate from the
+      # Playwright/Docker caching above) — without this, every run recompiles
+      # every route from nothing ("⚠ No build cache found" in the build log).
+      # Keyed on the lockfile + source files so it invalidates when either
+      # changes; restore-keys falls back to the last cache for this lockfile
+      # so even a source change still gets a warm (if slightly stale) cache
+      # to incrementally build from, rather than a fully cold one.
+      - name: Cache Next.js build cache
+        uses: actions/cache@v4
+        with:
+          path: apps/web/.next/cache
+          key: nextjs-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-${{ hashFiles('apps/web/src/**', 'packages/**/src/**') }}
+          restore-keys: |
+            nextjs-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-
+
+      # No separate "Build" step here — playwright.config.ts's webServer
+      # already runs `next build --turbopack && npm run start` itself
+      # (reuseExistingServer is false under CI, so it always builds fresh).
+      # An explicit build step before this one used to run a full second
+      # build that got immediately thrown away, doubling the build cost
+      # for nothing every single run.
+      - name: Run e2e smoke suite
+        working-directory: apps/web
+        run: npm run test:e2e
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ env.API_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ env.ANON_KEY }}
+          NEXT_PUBLIC_AUTH_BYPASS: 'true'
+          DATABASE_URL: ${{ env.DB_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ env.SERVICE_ROLE_KEY }}
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: apps/web/playwright-report/
+          retention-days: 7
+
   performance-smoke:
     runs-on: ubuntu-latest
     needs: build-and-test
@@ -65,7 +198,17 @@ jobs:
           cache: 'npm'
           cache-dependency-path: package-lock.json
 
+      # See the identical step in build-and-test for why this exists
+      # alongside setup-node's own npm cache.
+      - name: Cache node_modules
+        id: node-modules-cache
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: node-modules-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
       - name: Install dependencies
+        if: steps.node-modules-cache.outputs.cache-hit != 'true'
         run: npm ci --include=optional
 
       - name: Run performance smoke test

@@ -3,7 +3,6 @@ import { Tile } from '@/components/ui/Tile';
 import { FieldLabels } from '@/constants/FieldLabels';
 import { cn } from '@/lib/utils';
 import { calcPositionPct, classifyKpf, KPF_SCALE_MAX, KPF_SCALE_MIN } from '@/lib/quickCheck/kpf';
-import { ArrowDown } from 'lucide-react';
 
 interface Props {
   street:             string;
@@ -116,7 +115,7 @@ function KpfDetails({
             style={{ left: `${positionPct}%` }}
             title={`Dein KPF: ${kpf.toFixed(1)}`}
           >
-            <ArrowDown className="w-4 h-4 text-foreground" />
+            <Icons.ArrowDown className="w-4 h-4 text-foreground" />
           </div>
         </div>
 

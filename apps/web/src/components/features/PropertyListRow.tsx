@@ -1,10 +1,9 @@
 "use client";
 
 import { getPropertyCardColor, PROPERTY_CATEGORY_LABEL, PROPERTY_CATEGORY_VARIANT } from '@/components/features/PropertyDisplay';
-import { Button, Tag, type MenuItem } from '@/components/ui';
+import { Button, Icons, Tag, type MenuItem } from '@/components/ui';
 import type { PropertyOverview } from '@/lib/supabase/property.supabase';
 import { base64ToDataUri, cn } from '@/lib/utils';
-import { Home, MoreVertical } from 'lucide-react';
 
 interface PropertyListRowProps {
   property: PropertyOverview;
@@ -37,7 +36,7 @@ export function PropertyListRow({ property, colorIndex, menuItems, onClick }: Pr
             className="w-full h-full object-cover"
           />
         ) : (
-          <Home className="w-7 h-7 text-white/85" strokeWidth={1.5} />
+          <Icons.Home className="w-7 h-7 text-white/85" strokeWidth={1.5} />
         )}
       </div>
 
@@ -80,7 +79,7 @@ export function PropertyListRow({ property, colorIndex, menuItems, onClick }: Pr
       <div className="shrink-0" onClick={(e) => e.stopPropagation()}>
         <Button
           iconOnly
-          icon={<MoreVertical className="w-4 h-4" />}
+          icon={<Icons.MoreVertical className="w-4 h-4" />}
           variant="ghost"
           size="sm"
           menuItems={menuItems}

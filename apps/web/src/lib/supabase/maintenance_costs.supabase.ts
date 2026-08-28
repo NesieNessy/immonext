@@ -1,6 +1,7 @@
 // ==============================================================================
 // ImmoNext – Supabase Client: maintenance_costs
 // ==============================================================================
+import { authFetch } from '@/lib/api/authFetch';
 import { supabase } from '@/lib/supabase/client.supabase';
 import type { MaintenanceCosts, MaintenanceCostsInsert, MaintenanceCostsUpdate, MaintenanceCostItem } from '@immonext/types';
 
@@ -22,6 +23,10 @@ function toMaintenanceCosts(row: Record<string, unknown>): MaintenanceCosts {
   };
 }
 
+// getMaintenanceCosts (list) and deleteMaintenanceCosts are unused elsewhere in
+// the app — left on the direct Supabase client since converting dead code
+// isn't part of this fix.
+
 export async function getMaintenanceCosts(propertyId: number): Promise<MaintenanceCosts[]> {
   const { data, error } = await supabase
     .from('maintenance_costs')
@@ -32,54 +37,40 @@ export async function getMaintenanceCosts(propertyId: number): Promise<Maintenan
   return data.map(toMaintenanceCosts);
 }
 
-export async function getMaintenanceCostsById(maintenanceCostsId: number): Promise<MaintenanceCosts | null> {
-  const { data, error } = await supabase
-    .from('maintenance_costs')
-    .select('*')
-    .eq('maintenance_costs_id', maintenanceCostsId)
-    .single();
-  if (error || !data) return null;
-  return toMaintenanceCosts(data);
-}
-
-export async function createMaintenanceCosts(payload: MaintenanceCostsInsert): Promise<MaintenanceCosts | null> {
-  const { data, error } = await supabase
-    .from('maintenance_costs')
-    .insert({
-      property_id:                    payload.propertyId,
-      cost_breakdown:                 payload.costBreakdown,
-      allocable_costs:                payload.allocableCosts ?? null,
-      non_allocable_costs:            payload.nonAllocableCosts ?? null,
-      total_costs:                    payload.totalCosts ?? null,
-      house_money:                    payload.houseMoney ?? null,
-      allocable_costs_projection:     payload.allocableCostsProjection,
-      non_allocable_costs_projection: payload.nonAllocableCostsProjection,
-      total_costs_projection:         payload.totalCostsProjection,
-      cost_items:                     payload.costItems ?? null,
-    })
-    .select()
-    .single();
-  if (error || !data) return null;
-  return toMaintenanceCosts(data);
-}
-
-export async function updateMaintenanceCosts(maintenanceCostsId: number, updates: MaintenanceCostsUpdate): Promise<MaintenanceCosts | null> {
-  const dbUpdates: Record<string, unknown> = {};
-  if (updates.costBreakdown !== undefined)               dbUpdates.cost_breakdown                  = updates.costBreakdown;
-  if (updates.allocableCosts !== undefined)              dbUpdates.allocable_costs                 = updates.allocableCosts;
-  if (updates.nonAllocableCosts !== undefined)           dbUpdates.non_allocable_costs             = updates.nonAllocableCosts;
-  if (updates.totalCosts !== undefined)                  dbUpdates.total_costs                     = updates.totalCosts;
-  if (updates.houseMoney !== undefined)                  dbUpdates.house_money                     = updates.houseMoney;
-  if (updates.allocableCostsProjection !== undefined)    dbUpdates.allocable_costs_projection      = updates.allocableCostsProjection;
-  if (updates.nonAllocableCostsProjection !== undefined) dbUpdates.non_allocable_costs_projection  = updates.nonAllocableCostsProjection;
-  if (updates.totalCostsProjection !== undefined)        dbUpdates.total_costs_projection          = updates.totalCostsProjection;
-  if (updates.costItems !== undefined)                   dbUpdates.cost_items                      = updates.costItems;
-  const { data, error } = await supabase.from('maintenance_costs').update(dbUpdates).eq('maintenance_costs_id', maintenanceCostsId).select().single();
-  if (error || !data) return null;
-  return toMaintenanceCosts(data);
-}
-
 export async function deleteMaintenanceCosts(maintenanceCostsId: number): Promise<boolean> {
   const { error } = await supabase.from('maintenance_costs').delete().eq('maintenance_costs_id', maintenanceCostsId);
   return !error;
+}
+
+// get-by-id/create/update go through /api/maintenance-costs (server-side,
+// service-role DB pool) rather than the browser Supabase client directly —
+// same reasoning as tenancy_move_out.supabase.ts: the RLS policies on this
+// table check auth.uid(), which is never set under auth-bypass mode, so a
+// direct client call silently fails there, and the callers (useTenantUnitData
+// and useServiceChargeSettlementData) showed a "saved" toast regardless.
+
+export async function getMaintenanceCostsById(maintenanceCostsId: number): Promise<MaintenanceCosts | null> {
+  const res = await authFetch(`/api/maintenance-costs?id=${maintenanceCostsId}`);
+  if (!res.ok) return null;
+  return res.json();
+}
+
+export async function createMaintenanceCosts(payload: MaintenanceCostsInsert): Promise<MaintenanceCosts | null> {
+  const res = await authFetch('/api/maintenance-costs', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) return null;
+  return res.json();
+}
+
+export async function updateMaintenanceCosts(maintenanceCostsId: number, updates: MaintenanceCostsUpdate): Promise<MaintenanceCosts | null> {
+  const res = await authFetch('/api/maintenance-costs', {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ maintenanceCostsId, ...updates }),
+  });
+  if (!res.ok) return null;
+  return res.json();
 }

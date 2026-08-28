@@ -2,10 +2,10 @@
 -- ImmoNext – property_overview.is_rented: date-aware instead of the stored flag
 --
 -- is_rented previously checked tenancy.is_rented = TRUE, a column that's only
--- ever set explicitly (on tenancy creation, and by Mieterhistorie's
+-- ever set explicitly (on tenancy creation, and by the tenant-history page's
 -- "Reaktivieren") and never cleared back to FALSE when a tenant moves out —
 -- so a property kept showing "Vermietet" forever after its last tenant's
--- Auszugsdatum passed. Recomputed from tenancy_end_date instead, matching
+-- move-out date passed. Recomputed from tenancy_end_date instead, matching
 -- the same "current tenancy" rule used by property-resources' current=true
 -- query: a tenancy counts as active while tenancy_end_date is NULL or still
 -- in the future.

@@ -1,5 +1,5 @@
+import { Icons } from "@/components/common";
 import { cn } from "@/lib/utils";
-import { Check } from "lucide-react";
 
 interface Step {
   label: string;
@@ -120,7 +120,7 @@ export function Stepper({
                   style={isArriving ? { animationDelay: `${pointArrivalDelay}ms` } : undefined}
                 >
                   {isCompleted ? (
-                    <Check size={20} />
+                    <Icons.Check size={20} />
                   ) : (
                     <span>{index + 1}</span>
                   )}

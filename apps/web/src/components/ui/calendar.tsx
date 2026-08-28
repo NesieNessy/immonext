@@ -1,10 +1,10 @@
 "use client";
 
 import * as React from "react";
-import { ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
 import { DayPicker } from "react-day-picker";
 
 import { cn } from "@/lib/utils";
+import { Icons } from "@/components/common";
 
 // Simple button variant styles
 const buttonVariants = (props: { variant?: string }) => {
@@ -84,9 +84,9 @@ function Calendar({
           // Also used (with orientation="down") for the month/year dropdown
           // triggers, not just the prev/next nav buttons — previously always
           // rendered a right-pointing arrow there since only "left" was handled.
-          if (orientation === "left") return <ChevronLeft className="size-4" />;
-          if (orientation === "down") return <ChevronDown className="size-4" />;
-          return <ChevronRight className="size-4" />;
+          if (orientation === "left") return <Icons.ChevronLeft className="size-4" />;
+          if (orientation === "down") return <Icons.ChevronDown className="size-4" />;
+          return <Icons.ChevronRight className="size-4" />;
         },
       }}
       {...props}

@@ -19,27 +19,52 @@
 
 CREATE SCHEMA IF NOT EXISTS storage;
 
-CREATE TABLE IF NOT EXISTS storage.buckets (
-    id                 TEXT PRIMARY KEY,
-    name               TEXT NOT NULL,
-    public             BOOLEAN NOT NULL DEFAULT FALSE,
-    file_size_limit    BIGINT,
-    allowed_mime_types TEXT[],
-    created_at         TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
-);
+-- Under `supabase start`, storage.buckets/storage.objects already exist as
+-- the real Storage-API-managed tables (owned by supabase_admin), and our
+-- migration role has no CREATE privilege on that schema — plain
+-- `CREATE TABLE IF NOT EXISTS` still attempts the DDL and fails with
+-- "permission denied for schema storage" before reaching its own existence
+-- check (same issue as the auth shim). Gating the whole stand-in section on
+-- one existence check, and running every statement here (including the
+-- GRANTs below, which would equally be denied against the real, differently-
+-- owned tables) via EXECUTE inside the same DO block, keeps this a true
+-- no-op against the real stack.
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_tables WHERE schemaname = 'storage' AND tablename = 'objects') THEN
+        EXECUTE $sql$
+            CREATE TABLE storage.buckets (
+                id                 TEXT PRIMARY KEY,
+                name               TEXT NOT NULL,
+                public             BOOLEAN NOT NULL DEFAULT FALSE,
+                file_size_limit    BIGINT,
+                allowed_mime_types TEXT[],
+                created_at         TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+            )
+        $sql$;
 
-CREATE TABLE IF NOT EXISTS storage.objects (
-    id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    bucket_id  TEXT REFERENCES storage.buckets(id),
-    name       TEXT NOT NULL,
-    owner      UUID,
-    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
-);
+        EXECUTE $sql$
+            CREATE TABLE storage.objects (
+                id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                bucket_id  TEXT REFERENCES storage.buckets(id),
+                name       TEXT NOT NULL,
+                owner      UUID,
+                created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+                updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+            )
+        $sql$;
 
--- The migrations that follow define per-user policies on storage.objects;
--- without RLS enabled those policies would exist but never be enforced.
-ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY;
+        -- The migrations that follow define per-user policies on
+        -- storage.objects; without RLS enabled those policies would exist
+        -- but never be enforced.
+        EXECUTE 'ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY';
+
+        EXECUTE 'GRANT USAGE ON SCHEMA storage TO anon, authenticated, service_role';
+        EXECUTE 'GRANT SELECT, INSERT, UPDATE, DELETE ON storage.objects TO anon, authenticated';
+        EXECUTE 'GRANT SELECT ON storage.buckets TO anon, authenticated';
+    END IF;
+END
+$$;
 
 -- Splits an object path into its segments. Every storage policy in this
 -- project scopes access via (storage.foldername(name))[1] = auth.uid()::text.
@@ -63,7 +88,3 @@ BEGIN
     END IF;
 END
 $shim$;
-
-GRANT USAGE ON SCHEMA storage TO anon, authenticated, service_role;
-GRANT SELECT, INSERT, UPDATE, DELETE ON storage.objects TO anon, authenticated;
-GRANT SELECT ON storage.buckets TO anon, authenticated;

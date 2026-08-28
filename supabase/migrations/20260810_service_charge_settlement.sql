@@ -1,8 +1,8 @@
--- Nebenkostenabrechnung: annual property-wide service-charge settlement.
+-- Annual, property-wide service-charge settlement (Nebenkostenabrechnung).
 -- One settlement row per property per billing period, holding the shared
 -- cost-position line items (each with both the settlement year's actual
--- amount and next year's Wirtschaftsplan/budget amount side by side, as
--- shown on the settlement screen). Per-Wohneinheit shares are computed at
+-- amount and next year's budget amount (Wirtschaftsplan) side by side, as
+-- shown on the settlement screen). Per-unit shares are computed at
 -- read time from living-area proportions — not stored, so they stay correct
 -- if a unit's living area is ever corrected after the fact.
 
@@ -14,9 +14,9 @@ CREATE TABLE IF NOT EXISTS service_charge_settlement (
     property_id                   INT                         NOT NULL REFERENCES property(property_id) ON DELETE CASCADE,
     period_start                  DATE                        NOT NULL,
     period_end                    DATE                        NOT NULL,
-    -- Optional attached source document (the utility/Hausverwaltung invoice
+    -- Optional attached source document (the utility/property-management invoice
     -- this settlement was built from) — a single reference file, not a full
-    -- Unterlagen table like tenancy_document; uploaded via the "Upload" action.
+    -- documents table like tenancy_document; uploaded via the "Upload" action.
     source_document_name          TEXT,
     source_document_path          TEXT,
 
@@ -72,14 +72,14 @@ CREATE TABLE IF NOT EXISTS service_charge_cost_item (
     property_id                   INT                         NOT NULL REFERENCES property(property_id) ON DELETE CASCADE,
     sort_order                    INT                         NOT NULL DEFAULT 0,
     label                         TEXT                        NOT NULL,
-    -- true = umlagefähig (recharged to tenants), false = nicht umlagefähig
-    -- (e.g. Verwaltungskosten, Instandhaltungsrücklage) — excluded from the
-    -- Anteil Wohnung recharge, matching the same distinction already used
-    -- for the per-tenancy Nebenkosten breakdown (maintenance_costs.cost_items).
+    -- true = allocable (recharged to tenants), false = non-allocable
+    -- (e.g. management costs, maintenance reserve contributions) — excluded from the
+    -- per-unit share recharge, matching the same distinction already used
+    -- for the per-tenancy service-charge breakdown (maintenance_costs.cost_items).
     allocable                     BOOLEAN                     NOT NULL DEFAULT TRUE,
-    -- Abrechnung <settlement year> — the actual incurred cost, whole building.
+    -- Settlement <settlement year> — the actual incurred cost, whole building.
     actual_amount                 NUMERIC(12, 2),
-    -- Wirtschaftsplan <settlement year + 1> — next year's budgeted cost, whole building.
+    -- Budget plan <settlement year + 1> — next year's budgeted cost, whole building.
     budget_amount                 NUMERIC(12, 2),
 
     created_at                    TIMESTAMP WITH TIME ZONE    DEFAULT NOW(),
@@ -122,8 +122,8 @@ CREATE TRIGGER service_charge_cost_item_updated_at
     FOR EACH ROW EXECUTE FUNCTION update_service_charge_cost_item_updated_at();
 
 -- ==============================================================================
--- tenancy_document: PDF generieren attaches the finished statement here too
--- (per "wird auch unter Dokumenten abgelegt"), same as Mieterhöhungsschreiben.
+-- tenancy_document: generating the PDF attaches the finished statement here too
+-- (per "also gets filed under Documents"), same as Mieterhöhungsschreiben.
 -- ==============================================================================
 ALTER TABLE tenancy_document DROP CONSTRAINT tenancy_document_document_type_check;
 ALTER TABLE tenancy_document ADD CONSTRAINT tenancy_document_document_type_check

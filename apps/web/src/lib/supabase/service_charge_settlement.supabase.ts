@@ -3,9 +3,9 @@ import { supabase } from '@/lib/supabase/client.supabase';
 import type { ServiceChargeSettlement, ServiceChargeSettlementInsert, ServiceChargeSettlementUpdate } from '@immonext/types';
 
 /** Reuses the tenancy-documents bucket for the settlement's optional source
- *  document (the Hausverwaltung/utility invoice this Abrechnung was built
- *  from) — same "{userId}/..." ownership prefix, just a different subpath,
- *  so no dedicated bucket/policies are needed for this one attachment. */
+ *  document (the property-management/utility invoice this settlement was
+ *  built from) — same "{userId}/..." ownership prefix, just a different
+ *  subpath, so no dedicated bucket/policies are needed for this one attachment. */
 const BUCKET = 'tenancy-documents';
 
 function toSettlement(row: Record<string, unknown>): ServiceChargeSettlement {
@@ -30,8 +30,8 @@ export async function getSettlementsByProperty(propertyId: number): Promise<Serv
     return data?.map(toSettlement) ?? [];
 }
 
-/** The most recent settlement (by Abrechnungszeitraum end date) for a
- *  property — null means no Nebenkostenabrechnung has been started yet. */
+/** The most recent settlement (by settlement-period end date) for a
+ *  property — null means no service charge settlement has been started yet. */
 export async function getCurrentSettlementByProperty(propertyId: number): Promise<ServiceChargeSettlement | null> {
     const data = await propertyResourceRequest<Record<string, unknown>>('service-charge-settlements', {}, { propertyId, current: true, single: true });
     if (!data) return null;

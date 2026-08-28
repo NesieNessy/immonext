@@ -40,7 +40,7 @@ export interface TableProps<T extends Record<string, unknown> = Record<string, u
   /** Per-column filter values: { [columnKey]: filterString } */
   columnFilters?: Record<string, string>;
   onColumnFilterChange?: (key: string, value: string) => void;
-  /** Footer left text, e.g. "5 Einträge" */
+  /** Footer left text, e.g. "5 Einträge" (meaning "5 entries") */
   footerLeft?: React.ReactNode;
   /** Footer right text */
   footerRight?: React.ReactNode;

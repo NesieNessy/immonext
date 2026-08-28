@@ -19,12 +19,11 @@ import { useQuickChecks } from '@/hooks/useQuickChecks';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
 import { cn } from '@/lib/utils';
 import { PropertyCondition } from '@immonext/types';
-import { ChevronLeft, ChevronRight, MoreVertical } from 'lucide-react';
 import Link from 'next/link';
 import { useCallback, useMemo, useRef, useState } from 'react';
 
 interface QuickCheckOverviewTableProps {
-  /** false = Ersteinschätzungen (not yet detail-checked), true = Detailbewertungen. */
+  /** false = quick-check overview (not yet detail-checked), true = detail-check overview. */
   detailCheck: boolean;
   breadcrumbItems: BreadcrumbItem[];
   addHref: string;
@@ -41,7 +40,7 @@ interface QuickCheckOverviewTableProps {
 }
 
 /**
- * The Ersteinschätzungen and Detailbewertungen overview pages render the
+ * The quick-check and detail-check overview pages render the
  * same data (QuickCheckOverview rows) through the same table, search box,
  * mobile filter pills, and card layout — the only real differences are which
  * `detail_check` bucket they show and what each page's row menu can do
@@ -113,7 +112,7 @@ export function QuickCheckOverviewTable({
         <div onClick={(e) => e.stopPropagation()}>
           <Button
             iconOnly
-            icon={<MoreVertical className="w-4 h-4" />}
+            icon={<Icons.MoreVertical className="w-4 h-4" />}
             variant="ghost"
             size="sm"
             menuItems={rowMenuItems(row)}
@@ -287,7 +286,7 @@ export function QuickCheckOverviewTable({
             className="shrink-0 p-1.5 rounded-full border border-border text-muted-foreground hover:bg-muted transition-colors"
             aria-label="Nach links scrollen"
           >
-            <ChevronLeft className="w-4 h-4" />
+            <Icons.ChevronLeft className="w-4 h-4" />
           </button>
 
           <div ref={pillScrollRef} className="flex-1 flex items-center gap-2 overflow-x-auto no-scrollbar">
@@ -356,7 +355,7 @@ export function QuickCheckOverviewTable({
             className="shrink-0 p-1.5 rounded-full border border-border text-muted-foreground hover:bg-muted transition-colors"
             aria-label="Nach rechts scrollen"
           >
-            <ChevronRight className="w-4 h-4" />
+            <Icons.ChevronRight className="w-4 h-4" />
           </button>
         </div>
 
@@ -446,7 +445,7 @@ export function QuickCheckOverviewTable({
                       <div onClick={(e) => e.stopPropagation()}>
                         <Button
                           iconOnly
-                          icon={<MoreVertical className="w-4 h-4" />}
+                          icon={<Icons.MoreVertical className="w-4 h-4" />}
                           variant="ghost"
                           size="sm"
                           menuItems={rowMenuItems(row)}

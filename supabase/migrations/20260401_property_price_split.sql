@@ -1,5 +1,5 @@
--- Persists the Kaufpreisaufteilung (Gebäude/Grund und Boden split) shown on
--- the adjust-distribution page — mirrors the property_rnd 1:1 child-table
+-- Persists the purchase-price allocation (Kaufpreisaufteilung; building/land
+-- split) shown on the adjust-distribution page — mirrors the property_rnd 1:1 child-table
 -- pattern. Only the raw inputs are stored; both Standard and Individual
 -- percentages are cheap to recompute from purchase price + city share +
 -- these fields, so nothing derived is cached here.

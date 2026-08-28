@@ -2,6 +2,7 @@
 
 import { Button, Dropdown, Modal } from '@/components/ui';
 import { authFetch } from '@/lib/api/authFetch';
+import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { cn } from '@/lib/utils';
 import { ArrowRight, ClipboardCheck, Edit3 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -20,9 +21,9 @@ interface DetailCheckApiRow {
 }
 
 /** Data available to prefill the /existing-properties/new form from when
- *  the user picked an existing Detailbewertung — a subset of the
+ *  the user picked an existing detail-check — a subset of the
  *  /api/detail-checks row shape. Detail-check data has no purchase-date
- *  concept, so Kaufdatum is never prefilled either way. */
+ *  concept, so the purchase date is never prefilled either way. */
 interface DetailCheckPrefill {
   streetHouseNumber: string | null;
   postalCode: string | null;
@@ -92,8 +93,8 @@ function OptionCard({
 /**
  * "Neues Objekt anlegen" — first step of the (not yet built) property
  * creation flow. Lets the user choose between a blank form or pre-filling
- * from an existing Detailbewertung, sourced from the same /api/detail-checks
- * route the Detailbewertungen overview uses.
+ * from an existing detail-check, sourced from the same /api/detail-checks
+ * route the detail-check overview uses.
  */
 export function NewPropertyModal({ open, onClose }: NewPropertyModalProps) {
   const router = useRouter();
@@ -157,7 +158,7 @@ export function NewPropertyModal({ open, onClose }: NewPropertyModalProps) {
       subtitle="Möchten Sie Daten aus einer vorhandenen Detailbewertung übernehmen?"
       footer={
         <>
-          <Button label="Abbrechen" variant="outline" onClick={onClose} />
+          <Button label={BUTTON_DETAILS.Cancel.label} variant="outline" onClick={onClose} />
           <Button
             label="Weiter"
             icon={<ArrowRight className="w-4 h-4" />}

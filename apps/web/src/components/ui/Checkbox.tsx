@@ -2,7 +2,7 @@
 
 import React, { useId } from "react";
 import { cn } from "@/lib/utils";
-import { Check } from "lucide-react";
+import { Icons } from "@/components/common";
 
 interface CheckboxProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'type'> {
   label?: string;
@@ -43,7 +43,7 @@ export function Checkbox({
             className
           )}
         >
-          <Check className="w-3 h-3 text-primary-foreground opacity-0" aria-hidden="true" />
+          <Icons.Check className="w-3 h-3 text-primary-foreground opacity-0" aria-hidden="true" />
         </label>
       </div>
       {label && (

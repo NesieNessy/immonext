@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, Check } from 'lucide-react';
+import { Icons } from '@/components/ui';
 
 export function readFileAsDataUrl(file: File): Promise<string> {
     return new Promise((resolve, reject) => {
@@ -20,7 +20,7 @@ export function Pill({ ok, label }: { ok: boolean; label: string }) {
         <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium ${
             ok ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
         }`}>
-            {ok ? <Check className="w-3 h-3" /> : <AlertTriangle className="w-3 h-3" />}
+            {ok ? <Icons.Check className="w-3 h-3" /> : <Icons.AlertTriangle className="w-3 h-3" />}
             {label}
         </span>
     );

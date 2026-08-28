@@ -25,7 +25,7 @@ describe('rentIncreaseLetterHtml', () => {
     effectiveDate: '2026-06-01',
   };
 
-  it('cites § 558 BGB and titles the document Mieterhöhungsschreiben', () => {
+  it('cites § 558 BGB and titles the document "Mieterhöhungsschreiben"', () => {
     const html = rentIncreaseLetterHtml(params);
     expect(html).toContain('§ 558 BGB');
     expect(html).toContain('<title>Mieterhöhungsschreiben</title>');
@@ -87,7 +87,7 @@ describe('renovationAdjustmentLetterHtml', () => {
     effectiveDate: '2026-05-01',
   };
 
-  it('cites §§ 555b and 559 BGB and titles the document Sanierungsanpassungsschreiben', () => {
+  it('cites §§ 555b and 559 BGB and titles the document "Sanierungsanpassungsschreiben"', () => {
     const html = renovationAdjustmentLetterHtml(params);
     expect(html).toContain('§ 555b BGB');
     expect(html).toContain('§ 559 BGB');
@@ -106,7 +106,7 @@ describe('renovationAdjustmentLetterHtml', () => {
     expect(html).toContain('75 €');
   });
 
-  it('states the statutory Kappungsgrenze (3,00 € / 2,00 € per m²)', () => {
+  it('states the statutory rent-increase cap (3,00 € / 2,00 € per m²)', () => {
     const html = renovationAdjustmentLetterHtml(params);
     expect(html).toContain('3,00 €');
     expect(html).toContain('2,00 €');

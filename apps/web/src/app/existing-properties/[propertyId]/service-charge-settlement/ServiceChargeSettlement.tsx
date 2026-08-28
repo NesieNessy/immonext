@@ -42,7 +42,7 @@ export default function ServiceChargeSettlement({ propertyId }: { propertyId: st
     if (isLoading) return <PropertyLoadingPage />;
     if (!property) return <PropertyNotFoundPage />;
 
-    // Exactly one Wohneinheit — skip the picker and go straight to it. The
+    // Exactly one unit — skip the picker and go straight to it. The
     // settlement's cost data is property-wide either way (see the data hook);
     // this just decides whether a unit-picker step is needed first.
     if (units.length <= 1) {

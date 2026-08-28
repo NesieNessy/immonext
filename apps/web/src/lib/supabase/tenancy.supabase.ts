@@ -63,7 +63,7 @@ export async function getTenancyById(tenancyId: number): Promise<Tenancy | null>
     return toTenancy(data);
 }
 
-/** The current (or most recent) tenancy for a Wohneinheit — null means the
+/** The current (or most recent) tenancy for a unit — null means the
  *  unit has never had one, i.e. it's vacant (Leerstand). */
 export async function getCurrentTenancyByUnit(propertyUnitId: number): Promise<Tenancy | null> {
     const data = await propertyResourceRequest<Record<string, unknown>>('tenancies', {}, { propertyUnitId, current: true, single: true });
@@ -71,8 +71,8 @@ export async function getCurrentTenancyByUnit(propertyUnitId: number): Promise<T
     return toTenancy(data);
 }
 
-/** Every tenancy (current + past) ever recorded for a Wohneinheit — used by
- *  the Mieterhistorie table, which shows all but the current one. */
+/** Every tenancy (current + past) ever recorded for a unit — used by
+ *  the tenancy history table, which shows all but the current one. */
 export async function getTenanciesByUnit(propertyUnitId: number): Promise<Tenancy[]> {
     const data = await propertyResourceRequest<Record<string, unknown>[]>('tenancies', {}, { propertyUnitId });
     return data?.map(toTenancy) ?? [];

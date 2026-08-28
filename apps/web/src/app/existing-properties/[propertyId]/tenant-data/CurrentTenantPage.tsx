@@ -2,12 +2,11 @@
 
 import { formatUnitLabel } from '@/components/features/PropertyDisplay';
 import { DataCard } from './DocumentGeneratorParts';
-import { Button, CalendarField, ComingSoonButton, ConfirmDeleteModal, Header, Modal, NumberField, SectionLabel, StickyActionBar, Table, Tag, TextField, UnsavedChangesModal, type BreadcrumbItem } from '@/components/ui';
+import { Button, CalendarField, ComingSoonButton, ConfirmDeleteModal, Header, Icons, Modal, NumberField, SectionLabel, StickyActionBar, Table, Tag, TextField, UnsavedChangesModal, type BreadcrumbItem } from '@/components/ui';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { ExistingPropertiesUseCases } from '@/constants/ExistingPropertiesUseCases';
 import type { Property, PropertyUnit } from '@immonext/types';
 import { base64ToDataUri, formatDeDate } from '@/lib/utils';
-import { Archive, BadgeCheck, DoorOpen, Eye, FileText, Plus, RefreshCw, Star, Trash2, User } from 'lucide-react';
 import { MIETERBESCHEINIGUNG, personDisplayName, useTenantUnitData } from './useTenantUnitData';
 
 interface CurrentTenantPageProps {
@@ -15,17 +14,17 @@ interface CurrentTenantPageProps {
     property: Property;
     unit: PropertyUnit;
     hasMultipleUnits: boolean;
-    /** Set when reached from Mieterhistorie's "Ansehen" action — renders
+    /** Set when reached from the tenant history's "Ansehen" action — renders
      *  this same page for a past tenancy instead of the unit's current one,
-     *  with an "Archiviert" indicator and the Auszugsdatum surfaced. */
+     *  with an "Archiviert" indicator and the move-out date surfaced. */
     archivedTenancyId?: number;
 }
 
-/** The Aktueller Mieter page: person data, Unterlagen, Mieterbescheinigung,
- *  Mietkaution. Mietvertrag lives entirely on its own independent page/route
- *  now (see ../tenant-agreement/TenantAgreementPage) — the two are
- *  deliberately not sharing chrome (breadcrumb, header actions, sticky bar)
- *  beyond the data layer. */
+/** The current-tenant page: person data, documents, tenant certificate,
+ *  deposit. The rental agreement lives entirely on its own independent
+ *  page/route now (see ../tenant-agreement/TenantAgreementPage) — the two
+ *  are deliberately not sharing chrome (breadcrumb, header actions, sticky
+ *  bar) beyond the data layer. */
 export function CurrentTenantPage({ propertyId, property, unit, hasMultipleUnits, archivedTenancyId }: CurrentTenantPageProps) {
     const data = useTenantUnitData(propertyId, property, unit, hasMultipleUnits, archivedTenancyId);
 
@@ -103,7 +102,7 @@ export function CurrentTenantPage({ propertyId, property, unit, hasMultipleUnits
                             {data.isArchived ? (
                                 <>
                                     <Tag label="Archiviert" variant="muted" />
-                                    <Archive className="w-3.5 h-3.5 text-muted-foreground" />
+                                    <Icons.Archive className="w-3.5 h-3.5 text-muted-foreground" />
                                     <span className="text-sm text-muted-foreground">
                                         Auszugsdatum: {formatDeDate(data.tenancy?.tenancyEndDate)}
                                     </span>
@@ -116,13 +115,13 @@ export function CurrentTenantPage({ propertyId, property, unit, hasMultipleUnits
                             <div className="flex items-center gap-3">
                                 <Button
                                     label="Mieterwechsel"
-                                    icon={<RefreshCw className="w-4 h-4" />}
+                                    icon={<Icons.RefreshCw className="w-4 h-4" />}
                                     variant="outline"
-                                    onClick={() => data.setMieterwechselModalOpen(true)}
+                                    onClick={() => data.setTenantChangeModalOpen(true)}
                                 />
                                 <Button
                                     label="Person hinzufügen"
-                                    icon={<Plus className="w-4 h-4" />}
+                                    icon={<Icons.Plus className="w-4 h-4" />}
                                     variant="primary"
                                     onClick={data.addPerson}
                                 />
@@ -136,7 +135,7 @@ export function CurrentTenantPage({ propertyId, property, unit, hasMultipleUnits
                             <div key={index} className="p-4 rounded-lg border border-border bg-card">
                                 <div className="flex items-center justify-between gap-3 mb-3">
                                     <div className="flex items-center gap-2">
-                                        <User className="w-4 h-4 text-muted-foreground" />
+                                        <Icons.User className="w-4 h-4 text-muted-foreground" />
                                         <span className="text-sm font-semibold text-foreground">Person {index + 1}</span>
                                         {person.isPrimary && <Tag label="Hauptmieter" variant="primary" />}
                                     </div>
@@ -149,7 +148,7 @@ export function CurrentTenantPage({ propertyId, property, unit, hasMultipleUnits
                                                 title="Zum Hauptmieter machen"
                                                 className="p-1.5 rounded-md text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors cursor-pointer"
                                             >
-                                                <Star className="w-4 h-4" />
+                                                <Icons.Star className="w-4 h-4" />
                                             </button>
                                             <button
                                                 type="button"
@@ -157,7 +156,7 @@ export function CurrentTenantPage({ propertyId, property, unit, hasMultipleUnits
                                                 aria-label="Person entfernen"
                                                 className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors cursor-pointer"
                                             >
-                                                <Trash2 className="w-4 h-4" />
+                                                <Icons.Trash2 className="w-4 h-4" />
                                             </button>
                                         </div>
                                     )}
@@ -193,7 +192,7 @@ export function CurrentTenantPage({ propertyId, property, unit, hasMultipleUnits
                         ))}
                     </div>
 
-                    {/* Unterlagen */}
+                    {/* Documents */}
                     <div>
                         <SectionLabel>Unterlagen</SectionLabel>
                         <div className="mt-3">
@@ -210,19 +209,19 @@ export function CurrentTenantPage({ propertyId, property, unit, hasMultipleUnits
                         </div>
                     </div>
 
-                    {/* Generierbare Dokumente */}
+                    {/* Generatable documents */}
                     <div>
                         <SectionLabel>Generierbare Dokumente</SectionLabel>
                         <div className="mt-3 flex flex-col gap-4">
                             <DataCard
-                                icon={BadgeCheck}
+                                icon={Icons.BadgeCheck}
                                 title="Mieterbescheinigung"
                                 footer={
                                     <>
                                         {data.renderFooterUpload(data.mieterbescheinigungRow, MIETERBESCHEINIGUNG, false)}
                                         <Button
                                             label="Daten prüfen & Vorschau"
-                                            icon={<Eye className="w-4 h-4" />}
+                                            icon={<Icons.Eye className="w-4 h-4" />}
                                             variant="outline"
                                             disabled={data.tenancy == null}
                                             onClick={() => data.goTo(`${data.generatorBase}/certificate`)}
@@ -230,7 +229,7 @@ export function CurrentTenantPage({ propertyId, property, unit, hasMultipleUnits
                                         {!data.isArchived && (
                                             <Button
                                                 label="PDF generieren"
-                                                icon={<FileText className="w-4 h-4" />}
+                                                icon={<Icons.FileText className="w-4 h-4" />}
                                                 variant="primary"
                                                 disabled={data.tenancy == null}
                                                 onClick={() => data.goTo(`${data.generatorBase}/certificate?autoGenerate=1`)}
@@ -251,7 +250,7 @@ export function CurrentTenantPage({ propertyId, property, unit, hasMultipleUnits
                         </div>
                     </div>
 
-                    {/* Mietkaution */}
+                    {/* Security deposit */}
                     <div>
                         <SectionLabel>Mietkaution</SectionLabel>
                         <div className="mt-3 flex flex-col sm:flex-row items-start sm:items-end gap-3">
@@ -323,30 +322,30 @@ export function CurrentTenantPage({ propertyId, property, unit, hasMultipleUnits
             />
 
             <Modal
-                open={data.mieterwechselModalOpen}
-                onClose={() => data.setMieterwechselModalOpen(false)}
+                open={data.tenantChangeModalOpen}
+                onClose={() => data.setTenantChangeModalOpen(false)}
                 title="Mieterwechsel starten?"
                 subtitle="Der aktuelle Mieter wird entfernt und die Einheit als unvermietet markiert."
                 footer={
                     <>
                         <Button
-                            label="Abbrechen"
+                            label={BUTTON_DETAILS.Cancel.label}
                             variant="outline"
-                            disabled={data.isStartingMieterwechsel}
-                            onClick={() => data.setMieterwechselModalOpen(false)}
+                            disabled={data.isStartingTenantChange}
+                            onClick={() => data.setTenantChangeModalOpen(false)}
                         />
                         <Button
                             label="Ohne Mieterauszug fortfahren"
                             variant="outline"
-                            disabled={data.isStartingMieterwechsel}
-                            onClick={() => void data.confirmMieterwechsel(false)}
+                            disabled={data.isStartingTenantChange}
+                            onClick={() => void data.confirmTenantChange(false)}
                         />
                         <Button
                             label="Mit Mieterauszug fortfahren"
-                            icon={<DoorOpen className="w-4 h-4" />}
+                            icon={<Icons.DoorOpen className="w-4 h-4" />}
                             variant="primary"
-                            disabled={data.isStartingMieterwechsel}
-                            onClick={() => void data.confirmMieterwechsel(true)}
+                            disabled={data.isStartingTenantChange}
+                            onClick={() => void data.confirmTenantChange(true)}
                         />
                     </>
                 }

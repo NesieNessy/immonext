@@ -2,12 +2,11 @@
 import { useEffect, useState } from 'react';
 
 import { formatUnitLabel, PropertyLoadingPage, PropertyNotFoundPage } from '@/components/features/PropertyDisplay';
-import { Header, StickyActionBar, type BreadcrumbItem } from '@/components/ui';
+import { Header, Icons, StickyActionBar, type BreadcrumbItem } from '@/components/ui';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { getPropertyById } from '@/lib/supabase/property.supabase';
 import { getPropertyUnitsByProperty } from '@/lib/supabase/property_unit.supabase';
 import type { Property, PropertyUnit } from '@immonext/types';
-import { FileText } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 import { useTenantMoveOutData } from '../../useTenantMoveOutData';
@@ -115,7 +114,7 @@ function TenantMoveOutProtocolContent({
                 ghostLabel={BUTTON_DETAILS.Back.label}
                 ghostIcon={<BUTTON_DETAILS.Back.icon />}
                 primaryLabel={data.isGeneratingProtocol ? 'Wird erstellt…' : 'Abnahmeprotokoll erstellen'}
-                primaryIcon={<FileText className="w-4 h-4" />}
+                primaryIcon={<Icons.FileText className="w-4 h-4" />}
                 primaryDisabled={!data.canGenerateProtocol || data.isGeneratingProtocol}
             />
         </div>

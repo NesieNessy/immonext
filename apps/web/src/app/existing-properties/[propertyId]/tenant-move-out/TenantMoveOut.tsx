@@ -92,7 +92,7 @@ export default function TenantMoveOut({ propertyId }: { propertyId: string }) {
     if (isLoading) return <PropertyLoadingPage />;
     if (!property) return <PropertyNotFoundPage />;
 
-    // Exactly one Wohneinheit — skip the overview and go straight to it.
+    // Exactly one unit — skip the overview and go straight to it.
     if (units.length <= 1) {
         const unit = units[0];
         if (!unit) return <PropertyNotFoundPage />;
