@@ -525,7 +525,7 @@ export default function DocumentsPage() {
                 />
                 {uploadCategory !== 'Persönlich' && (
                     <Dropdown
-                        label="Objekt (opt.)"
+                        label="Objekt"
                         options={[{ value: '', label: 'Kein Objekt verknüpft' }, ...uploadObjectOptions]}
                         value={uploadObjectId}
                         onChange={(e) => setUploadObjectId(e.target.value)}

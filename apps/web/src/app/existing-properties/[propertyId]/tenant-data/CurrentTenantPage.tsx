@@ -163,26 +163,26 @@ export function CurrentTenantPage({ propertyId, property, unit, hasMultipleUnits
                                 </div>
                                 <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
                                     <TextField
-                                        label={person.isPrimary ? 'Nachname *' : 'Nachname (opt.)'}
+                                        label={person.isPrimary ? 'Nachname *' : 'Nachname'}
                                         value={person.lastName}
                                         onChange={(e) => data.updatePerson(index, { lastName: e.target.value })}
                                         disabled={data.isArchived}
                                     />
                                     <TextField
-                                        label={person.isPrimary ? 'Vorname *' : 'Vorname (opt.)'}
+                                        label={person.isPrimary ? 'Vorname *' : 'Vorname'}
                                         value={person.firstName}
                                         onChange={(e) => data.updatePerson(index, { firstName: e.target.value })}
                                         disabled={data.isArchived}
                                     />
                                     <TextField
-                                        label={person.isPrimary ? 'Steuer-ID *' : 'Steuer-ID (opt.)'}
+                                        label={person.isPrimary ? 'Steuer-ID *' : 'Steuer-ID'}
                                         placeholder="00 000 000 000"
                                         value={person.taxId}
                                         onChange={(e) => data.updatePerson(index, { taxId: e.target.value })}
                                         disabled={data.isArchived}
                                     />
                                     <CalendarField
-                                        label={person.isPrimary ? 'Einzugsdatum *' : 'Einzugsdatum (opt.)'}
+                                        label={person.isPrimary ? 'Einzugsdatum *' : 'Einzugsdatum'}
                                         value={person.moveInDate}
                                         onChange={(date) => data.updatePerson(index, { moveInDate: date })}
                                         disabled={data.isArchived}

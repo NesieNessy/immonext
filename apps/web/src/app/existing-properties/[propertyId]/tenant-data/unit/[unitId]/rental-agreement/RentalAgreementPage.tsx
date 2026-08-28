@@ -496,7 +496,7 @@ export default function RentalAgreementPage({ propertyId, unitId }: { propertyId
                         </div>
 
                         <div>
-                            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Zusätzliche Klauseln (opt.)</p>
+                            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Zusätzliche Klauseln</p>
                             <DataCard icon={PenLine} title="Individuelle Vereinbarungen" source="Ergänzbar">
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                     <Dropdown
@@ -512,7 +512,7 @@ export default function RentalAgreementPage({ propertyId, unitId }: { propertyId
                                         onChange={(e) => setSubletAllowed(e.target.value as RentalTermsSubletAllowed | '')}
                                     />
                                     <TextArea
-                                        label="Sonstige Vereinbarungen (opt.)"
+                                        label="Sonstige Vereinbarungen"
                                         placeholder="Freitext für individuelle Vereinbarungen…"
                                         className="sm:col-span-2"
                                         value={additionalTerms}

@@ -202,13 +202,13 @@ export default function NewUnit({ propertyId }: { propertyId: string }) {
                                 onChange={(e) => setUnitLabel(e.target.value)}
                             />
                             <TextField
-                                label="Etage (opt.)"
+                                label="Etage"
                                 placeholder="z.B. EG"
                                 value={floor}
                                 onChange={(e) => setFloor(e.target.value)}
                             />
                             <TextField
-                                label="Lage (opt.)"
+                                label="Lage"
                                 placeholder="z.B. links"
                                 value={locationNote}
                                 onChange={(e) => setLocationNote(e.target.value)}
@@ -228,7 +228,7 @@ export default function NewUnit({ propertyId }: { propertyId: string }) {
                                 min={0}
                             />
                             <NumberField
-                                label="Zimmeranzahl (opt.)"
+                                label="Zimmeranzahl"
                                 placeholder="–"
                                 value={numberOfRooms}
                                 onChange={(e) => setNumberOfRooms(e.target.value)}
@@ -240,7 +240,7 @@ export default function NewUnit({ propertyId }: { propertyId: string }) {
                     {/* Parking spaces — only relevant for units people occupy or run a business out of */}
                     {showParking && (
                         <div>
-                            <SectionLabel>Stellplätze (opt.)</SectionLabel>
+                            <SectionLabel>Stellplätze</SectionLabel>
                             <div className="mt-3">
                                 <PillOptions options={PARKING_OPTIONS} value={numberOfParkingSpaces} onChange={setNumberOfParkingSpaces} />
                             </div>

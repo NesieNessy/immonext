@@ -300,7 +300,7 @@ export default function PropertyData({ propertyId }: { propertyId: string }) {
                                 min={0}
                             />
                             <CalendarField
-                                label="Kaufdatum (opt.)"
+                                label="Kaufdatum"
                                 value={form.kaufdatum ? parseISO(form.kaufdatum) : undefined}
                                 onChange={(date) => update({ kaufdatum: date ? format(date, 'yyyy-MM-dd') : '' })}
                             />
@@ -309,7 +309,7 @@ export default function PropertyData({ propertyId }: { propertyId: string }) {
 
                     <div className="flex flex-col gap-2">
                         <SectionLabel>Adresse</SectionLabel>
-                        <div className="grid grid-cols-1 sm:grid-cols-[2fr_1fr_1fr] gap-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-[2fr_1fr_1fr_1fr] gap-3">
                             <TextField
                                 label="Straße & Hausnummer"
                                 placeholder="Beispielstraße 123"
@@ -329,18 +329,17 @@ export default function PropertyData({ propertyId }: { propertyId: string }) {
                                 onChange={(e) => update({ ort: e.target.value })}
                             />
                             <TextField
-                                label="Bundesland (opt.)"
+                                label="Bundesland"
                                 placeholder="Bayern"
                                 value={form.bundesland}
                                 onChange={(e) => update({ bundesland: e.target.value })}
-                                className="sm:col-span-2"
                             />
                         </div>
                     </div>
 
                     <div className="flex flex-col gap-2">
                         <SectionLabel>Objektdetails</SectionLabel>
-                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                        <div className="grid grid-cols-2 sm:grid-cols-[3fr_3fr_2fr_2fr_2fr] gap-3">
                             <NumberField
                                 label={getLabel('Property', 'YearOfConstruction', 'de')}
                                 placeholder="1980"
@@ -356,7 +355,7 @@ export default function PropertyData({ propertyId }: { propertyId: string }) {
                                 min={0}
                             />
                             <NumberField
-                                label="Anzahl Zimmer (opt.)"
+                                label="Anzahl Zimmer"
                                 placeholder="3"
                                 value={form.anzahlZimmer}
                                 onChange={(e) => update({ anzahlZimmer: e.target.value })}
@@ -370,7 +369,7 @@ export default function PropertyData({ propertyId }: { propertyId: string }) {
                                 min={0}
                             />
                             <Dropdown
-                                label="Energieeffizienz (opt.)"
+                                label="Energieeffizienz"
                                 options={ENERGY_OPTIONS}
                                 value={form.energieeffizienz}
                                 onChange={(e) => update({ energieeffizienz: e.target.value })}

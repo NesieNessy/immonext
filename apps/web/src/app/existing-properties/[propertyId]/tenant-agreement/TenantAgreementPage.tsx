@@ -102,7 +102,7 @@ export function TenantAgreementPage({ propertyId, property, unit, hasMultipleUni
                             />
                             <div>
                                 <CalendarField
-                                    label="Auszugsdatum (opt.)"
+                                    label="Auszugsdatum"
                                     value={data.rentalForm.tenancyEndDate}
                                     onChange={(date) => data.setRentalForm((prev) => ({ ...prev, tenancyEndDate: date }))}
                                 />
@@ -122,14 +122,14 @@ export function TenantAgreementPage({ propertyId, property, unit, hasMultipleUni
                                 min={0}
                             />
                             <NumberField
-                                label="Stellplatz (opt.)"
+                                label="Stellplatz"
                                 unit="€"
                                 value={data.rentalForm.parkingSpaceRent}
                                 onChange={(e) => data.setRentalForm((prev) => ({ ...prev, parkingSpaceRent: e.target.value }))}
                                 min={0}
                             />
                             <NumberField
-                                label="WEG (opt.)"
+                                label="WEG"
                                 unit="€"
                                 value={data.rentalForm.houseMoney}
                                 onChange={(e) => data.setRentalForm((prev) => ({ ...prev, houseMoney: e.target.value }))}
