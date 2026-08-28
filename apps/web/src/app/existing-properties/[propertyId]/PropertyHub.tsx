@@ -238,7 +238,7 @@ export default function PropertyHub({ propertyId, unitId }: { propertyId: string
     : null;
 
   // Unit-scoped tiles (Mieterdaten, Mietvertrag, Nebenkostenabrechnung, …) only
-  // make sense once an Einheit is selected — with none yet, only property-wide
+  // make sense once a unit is selected — with none yet, only property-wide
   // setup actions (Objektdaten, Neue Einheit, …) are shown.
   const showUnitSections = unit !== null;
   const addressHref = units.length > 1 ? `/existing-properties/${propertyId}` : undefined;

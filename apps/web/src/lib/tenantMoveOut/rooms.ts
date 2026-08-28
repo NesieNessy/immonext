@@ -1,4 +1,4 @@
-/** Zähler room/space options for the Mieterauszug page — order matches the spec. */
+/** Meter room/space options for the tenant move-out page — order matches the spec. */
 export const MOVE_OUT_ROOM_OPTIONS = [
     'Wohnzimmer',
     'Schlafzimmer',

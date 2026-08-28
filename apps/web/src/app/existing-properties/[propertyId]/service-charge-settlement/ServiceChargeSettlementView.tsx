@@ -315,7 +315,7 @@ export function ServiceChargeSettlementView({ propertyId, property, unit, hasMul
                         </div>
                     </div>
 
-                    {/* Anpassung Nebenkostenvorauszahlung */}
+                    {/* Service charge prepayment adjustment */}
                     <div>
                         <SectionLabel>Anpassung Nebenkostenvorauszahlung</SectionLabel>
                         <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -347,7 +347,7 @@ export function ServiceChargeSettlementView({ propertyId, property, unit, hasMul
                         </div>
                     </div>
 
-                    {/* Generierbare Dokumente */}
+                    {/* Generatable documents */}
                     <div>
                         <SectionLabel>Generierbare Dokumente</SectionLabel>
                         <div className="mt-3">

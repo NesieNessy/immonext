@@ -123,7 +123,7 @@ export default function PropertyData({ propertyId }: { propertyId: string }) {
     const isEditing = JSON.stringify(form) !== JSON.stringify(original);
 
     // Any navigation away from an unsaved edit is routed through here so it
-    // can be confirmed first (breadcrumb links, Abbrechen, Anwendungsfall).
+    // can be confirmed first (breadcrumb links, the cancel button, use-case menu).
     const goTo = (href: string) => {
         if (isEditing) {
             setPendingHref(href);

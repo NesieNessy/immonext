@@ -85,14 +85,14 @@ function serializeRentalForm(form: RentalForm): string {
     });
 }
 
-/** The full § 2 BetrKV position list — 18 umlagefähig categories (Nr. 1–17
- *  plus the standard "sonstige Betriebskosten" catch-all), followed by the
+/** The full § 2 BetrKV position list — 18 apportionable categories (Nr. 1–17
+ *  plus the standard "Sonstige Betriebskosten" catch-all), followed by the
  *  costs that are never allocable to tenants regardless of lease wording
  *  (Verwaltung, Instandhaltung, Modernisierung, Finanzierung, Rücklagen/AfA,
  *  Erstanschaffung von Erfassungsgeräten, Rechtskosten). Amounts start at 0
  *  — unused rows are simply not summed. */
 export const DEFAULT_COST_ITEMS: MaintenanceCostItem[] = [
-    // Umlagefähig — § 2 Nr. 1–17 BetrKV
+    // Apportionable — § 2 Nr. 1–17 BetrKV
     { id: 'grundsteuer', label: 'Grundsteuer', amount: 0, allocable: true },
     { id: 'wasser', label: 'Wasserversorgung', amount: 0, allocable: true },
     { id: 'entwaesserung', label: 'Entwässerung', amount: 0, allocable: true },
@@ -111,7 +111,7 @@ export const DEFAULT_COST_ITEMS: MaintenanceCostItem[] = [
     { id: 'breitband', label: 'Breitbandanschluss / Internet-Basisversorgung', amount: 0, allocable: true },
     { id: 'waschkueche', label: 'Waschküchenbetrieb', amount: 0, allocable: true },
     { id: 'sonstige', label: 'Sonstige Betriebskosten', amount: 0, allocable: true },
-    // Nicht umlagefähig
+    // Non-apportionable
     { id: 'verwaltung', label: 'Verwaltungskosten', amount: 0, allocable: false },
     { id: 'instandhaltung', label: 'Instandhaltung / Instandsetzung', amount: 0, allocable: false },
     { id: 'modernisierung', label: 'Modernisierungskosten', amount: 0, allocable: false },
@@ -134,13 +134,13 @@ export interface PersonForm {
 const EMPTY_PRIMARY_PERSON: PersonForm = { id: null, lastName: '', firstName: '', taxId: '', isPrimary: true, moveInDate: undefined };
 
 /** Ausweis/Schufa/Bürgschaft are always per person. Mietvertrag defaults to
- *  one shared contract for the whole tenancy (single row); the "Individuell"
+ *  one shared contract for the whole tenancy (single row); the "individual"
  *  toggle swaps that row for one per person, for cases where each tenant
  *  signed a separate contract. */
 const PER_PERSON_DOCUMENTS: TenancyDocumentType[] = ['Ausweis', 'Schufa', 'Bürgschaft'];
 const SHARED_DOCUMENTS: TenancyDocumentType[] = ['Mietvertrag'];
 /** Mieterbescheinigung is always one shared row for the whole tenancy — it
- *  has no Individuell/Gemeinsam toggle since the certificate always lists
+ *  has no individual/shared toggle since the certificate always lists
  *  every tenant. */
 export const MIETERBESCHEINIGUNG: TenancyDocumentType = 'Mieterbescheinigung';
 
@@ -162,25 +162,25 @@ function serializePersons(persons: PersonForm[]): string {
 }
 
 /**
- * All the state, data-loading, and mutation logic shared by the Aktueller
- * Mieter and Mietvertrag pages — they're separate routes/components now
- * (see TenantMieterPage / TenantMietvertragPage), but both edit the same
- * underlying tenancy/persons/maintenance_costs records and share one
- * Speichern flow, so that part stays in one place rather than being
- * duplicated or awkwardly synced between two copies.
+ * All the state, data-loading, and mutation logic shared by the
+ * current-tenant and rental-agreement pages — they're separate
+ * routes/components now (see TenantMieterPage / TenantMietvertragPage),
+ * but both edit the same underlying tenancy/persons/maintenance_costs
+ * records and share one save flow, so that part stays in one place
+ * rather than being duplicated or awkwardly synced between two copies.
  */
 /**
  * `archivedTenancyId` switches this from the unit's current tenancy (the
- * normal Mieterdaten/Mietvertrag flow) to a specific past one — used by
- * Mieterhistorie's "Ansehen" action, which reuses this same page/hook
+ * normal tenant-data/rental-agreement flow) to a specific past one — used by
+ * the tenant history's "Ansehen" action, which reuses this same page/hook
  * instead of a bespoke read view so archived tenants get the exact same
- * layout as the current one, just with the Auszug surfaced.
+ * layout as the current one, just with the move-out surfaced.
  */
 export function useTenantUnitData(propertyId: string, property: Property, unit: PropertyUnit, hasMultipleUnits: boolean, archivedTenancyId?: number) {
     const router = useRouter();
     const { user } = useRequireAuth();
     const { showToast } = useToast();
-    // Archived (Mieterhistorie "Ansehen") view: same page, but nothing that
+    // Archived (tenant history "Ansehen") view: same page, but nothing that
     // mutates the record — upload/delete document controls fall back to
     // their disabled/no-affordance branch below.
     const readOnly = Boolean(archivedTenancyId);
@@ -191,8 +191,8 @@ export function useTenantUnitData(propertyId: string, property: Property, unit: 
     const [personIndexPendingDelete, setPersonIndexPendingDelete] = useState<number | null>(null);
     const [deposit, setDeposit] = useState('');
     const [startFreshTenancy, setStartFreshTenancy] = useState(false);
-    const [mieterwechselModalOpen, setMieterwechselModalOpen] = useState(false);
-    const [isStartingMieterwechsel, setIsStartingMieterwechsel] = useState(false);
+    const [tenantChangeModalOpen, setTenantChangeModalOpen] = useState(false);
+    const [isStartingTenantChange, setIsStartingTenantChange] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [landlord, setLandlord] = useState<PersonalData | null | undefined>(undefined);
@@ -303,7 +303,7 @@ export function useTenantUnitData(propertyId: string, property: Property, unit: 
         || JSON.stringify(costItems) !== originalCostItemsSnapshot;
 
     // Any navigation away from an unsaved edit is routed through here so it
-    // can be confirmed first (breadcrumb links, Zurück, Anwendungsfall).
+    // can be confirmed first (breadcrumb links, the back button, the use-case menu).
     const goTo = (href: string) => {
         if (isEditing) {
             setPendingHref(href);
@@ -324,11 +324,11 @@ export function useTenantUnitData(propertyId: string, property: Property, unit: 
     // mietvertragIndividual; every Mietvertrag row carries the toggle
     // button so switching modes is reachable from any of them.
     // Mietvertrag can't meaningfully be generated without the landlord's own
-    // (Vermieter) data, so the whole row — upload, toggle and Generieren —
+    // (landlord) data, so the whole row — upload, toggle and generate —
     // stays disabled until user-settings has been filled in.
     const landlordMissing = !landlord;
 
-    // Nebenkosten gesamt is computed as the sum of the two breakdown fields
+    // Total service charges is computed as the sum of the two breakdown fields
     // whenever either is filled in — otherwise it stays freely editable.
     const costBreakdownActive = rentalForm.allocableCosts !== '' || rentalForm.nonAllocableCosts !== '';
     const computedTotalCosts = costBreakdownActive
@@ -489,20 +489,21 @@ export function useTenantUnitData(propertyId: string, property: Property, unit: 
         });
     };
 
-    // "Mieterwechsel" always needs confirmation first — it discards the
+    // A tenant change always needs confirmation first — it discards the
     // currently-shown tenant. The two continue-paths both end the current
-    // tenancy (once Mieterhistorie exists, that's what makes it show up
-    // there); "mit Mieterauszug" leaves the page immediately, so that part
-    // has to be written right away rather than deferred to Speichern like
-    // the "ohne" path (which stays on the page to enter the new tenant).
-    const confirmMieterwechsel = async (withMoveOut: boolean) => {
-        setIsStartingMieterwechsel(true);
+    // tenancy (once the tenancy history record exists, that's what makes it
+    // show up there); leaving with a move-out navigates away immediately, so
+    // that part has to be written right away rather than deferred to the
+    // save handler like the "without move-out" path (which stays on the
+    // page to enter the new tenant).
+    const confirmTenantChange = async (withMoveOut: boolean) => {
+        setIsStartingTenantChange(true);
         try {
             if (withMoveOut) {
                 if (tenancy) {
                     await updateTenancy(tenancy.tenancyId, { tenancyEndDate: format(new Date(), 'yyyy-MM-dd') });
                 }
-                setMieterwechselModalOpen(false);
+                setTenantChangeModalOpen(false);
                 router.push(`/existing-properties/${propertyId}/tenant-move-out`);
                 return;
             }
@@ -514,9 +515,9 @@ export function useTenantUnitData(propertyId: string, property: Property, unit: 
             setRentalForm(EMPTY_RENTAL_FORM);
             setCostItems([]);
             setMaintenanceCosts(null);
-            setMieterwechselModalOpen(false);
+            setTenantChangeModalOpen(false);
         } finally {
-            setIsStartingMieterwechsel(false);
+            setIsStartingTenantChange(false);
         }
     };
 
@@ -874,7 +875,7 @@ export function useTenantUnitData(propertyId: string, property: Property, unit: 
 
     // Shared row renderer for the Mietvertrag/Mieterbescheinigung cards in
     // "Generierbare Dokumente" — same view/download/delete/upload logic as
-    // the Unterlagen table's action column, just inside a card row instead
+    // the documents table's action column, just inside a card row instead
     // of a table cell.
     const renderDocRow = (
         row: { key: string; tenant: string; tenancyPersonId?: number | null; canUpload: boolean; doc?: TenancyDocument },
@@ -1094,10 +1095,10 @@ export function useTenantUnitData(propertyId: string, property: Property, unit: 
         }
     };
 
-    // Accepting applies the change (rent adjustments bump Netto-Mieteinnahmen;
-    // Sanierungsanpassung has no single field to bump) and logs it to the
-    // Historie. Declining just clears the pending fields — nothing is ever
-    // written to the Historie unless the client actually accepted it.
+    // Accepting applies the change (rent adjustments bump net rental income;
+    // renovation adjustment has no single field to bump) and logs it to the
+    // history. Declining just clears the pending fields — nothing is ever
+    // written to the history unless the client actually accepted it.
     const handleAcceptRentAdjustment = async () => {
         if (!tenancy) return;
         setIsResolvingAdjustment('rent');
@@ -1191,8 +1192,8 @@ export function useTenantUnitData(propertyId: string, property: Property, unit: 
         tenancy, persons, deletedPersonIds, personIndexPendingDelete, deposit, startFreshTenancy,
         isSaving, error, landlord, docSortKey, docSortDirection, docColumnFilters, documents,
         pendingDocKey, docPendingDelete, mietvertragIndividual, setMietvertragIndividual,
-        setPersonIndexPendingDelete, mieterwechselModalOpen, setMieterwechselModalOpen,
-        isStartingMieterwechsel,
+        setPersonIndexPendingDelete, tenantChangeModalOpen, setTenantChangeModalOpen,
+        isStartingTenantChange,
         pendingHref, setPendingHref, maintenanceCosts, rentalForm, setRentalForm, costItems,
         historyModalType, setHistoryModalType,
         historyEntries, isGeneratingLetter, isResolvingAdjustment, setDeposit,
@@ -1206,7 +1207,7 @@ export function useTenantUnitData(propertyId: string, property: Property, unit: 
         backHref, generatorBase,
         // handlers
         goTo, confirmDiscard, updatePerson, addPerson, removePerson, handleDeletePersonClick,
-        confirmDeletePerson, makePrimary, confirmMieterwechsel, handleSave, handleViewDocument,
+        confirmDeletePerson, makePrimary, confirmTenantChange, handleSave, handleViewDocument,
         handleDownloadDocument, confirmDeleteDocument, handleDocSort, handleDocColumnFilterChange,
         renderDocRow, renderFooterUpload,
         handleGenerateRentIncreaseLetter, handleGenerateRenovationLetter,

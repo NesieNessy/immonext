@@ -1,5 +1,5 @@
 /**
- * Kaufpreisfaktor = Kaufpreis / (Kaltmiete × 12), rounded to 1 decimal place.
+ * Purchase price factor = purchase price / (cold rent × 12), rounded to 1 decimal place.
  * Returns null when either input is ≤ 0.
  */
 export function calcKpf(purchasePrice: number, coldRent: number): number | null {

@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------------
 // Shared display-layer helpers for QuickCheckOverview rows — used by both the
-// Ersteinschätzungen overview (detailCheck = false) and the Detailbewertungen
+// quick-check overview (detailCheck = false) and the detail-check
 // overview (detailCheck = true), which render the same underlying data with
 // the same cells (KPF badge, condition tag, portal-ID link, ...).
 //

@@ -100,7 +100,7 @@ function NewPropertyPageContent() {
     bildBase64 !== initial.bildBase64;
 
   // Any navigation away from an unsaved draft is routed through here so
-  // it can be confirmed first (breadcrumb links, Zurück).
+  // it can be confirmed first (breadcrumb links, the back button).
   const goTo = (href: string) => {
     if (isEditing) {
       setPendingHref(href);

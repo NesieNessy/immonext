@@ -62,7 +62,7 @@ describe('serviceChargeStatementHtml', () => {
         expect(html).toContain('<strong>01.01.2025</strong> bis <strong>31.12.2025</strong>');
     });
 
-    it('renders one cost row per item in both the Abrechnung and Wirtschaftsplan tables', () => {
+    it('renders one cost row per item in both the actuals and budget-plan tables', () => {
         const html = serviceChargeStatementHtml(baseParams);
         expect(html).toContain('<td>Grundsteuer</td><td>620 €</td><td>158 €</td>');
         expect(html).toContain('<td>Grundsteuer</td><td>650 €</td><td>166 €</td>');
@@ -76,26 +76,26 @@ describe('serviceChargeStatementHtml', () => {
         expect(html).toContain('<td>Sonstiges</td><td>–</td><td>–</td>');
     });
 
-    it('labels a positive over/under coverage as Nachzahlung (shortfall)', () => {
+    it('labels a positive over/under coverage as a shortfall ("Nachzahlung durch Sie")', () => {
         const html = serviceChargeStatementHtml({ ...baseParams, overUnderCoverage: 445.06 });
         expect(html).toContain('Nachzahlung durch Sie');
         expect(html).not.toContain('Guthaben zu Ihren Gunsten');
         expect(html).toContain('445 €');
     });
 
-    it('labels a negative over/under coverage as Guthaben (surplus) and shows the absolute amount', () => {
+    it('labels a negative over/under coverage as a credit ("Guthaben zu Ihren Gunsten") and shows the absolute amount', () => {
         const html = serviceChargeStatementHtml({ ...baseParams, overUnderCoverage: -300 });
         expect(html).toContain('Guthaben zu Ihren Gunsten');
         expect(html).not.toContain('Nachzahlung durch Sie');
         expect(html).toContain('300 €');
     });
 
-    it('treats an exact break-even (zero) as Guthaben, matching the non-positive branch', () => {
+    it('treats an exact break-even (zero) as a credit, matching the non-positive branch', () => {
         const html = serviceChargeStatementHtml({ ...baseParams, overUnderCoverage: 0 });
         expect(html).toContain('Guthaben zu Ihren Gunsten');
     });
 
-    it('titles the Wirtschaftsplan section with the following year', () => {
+    it('titles the budget-plan section with the following year', () => {
         const html = serviceChargeStatementHtml(baseParams);
         expect(html).toContain('<h2>Wirtschaftsplan 2026</h2>');
     });

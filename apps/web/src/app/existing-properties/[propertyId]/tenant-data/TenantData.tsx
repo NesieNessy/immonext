@@ -152,7 +152,7 @@ export default function TenantData({ propertyId }: { propertyId: string }) {
 
     if (!property) return <PropertyNotFoundPage />;
 
-    // Exactly one Wohneinheit — skip the overview and go straight to it.
+    // Exactly one unit — skip the overview and go straight to it.
     if (units.length <= 1) {
         const unit = units[0];
         if (!unit) return <PropertyNotFoundPage />;

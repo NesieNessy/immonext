@@ -1,5 +1,5 @@
--- Full "Mietvertrag" tab: Sanierungsanpassung scheduling (start/end/amount),
--- reminder-date overrides for both adjustment types, an itemized Nebenkosten
+-- Full "Mietvertrag" tab: renovation-adjustment scheduling (start/end/amount),
+-- reminder-date overrides for both adjustment types, an itemized service-charge
 -- breakdown on maintenance_costs, and a lightweight adjustment history log
 -- used by the "Historie" buttons.
 
@@ -15,8 +15,8 @@ ALTER TABLE maintenance_costs
 
 -- ==============================================================================
 -- CREATE TABLE: tenancy_adjustment_history
--- Append-only log of accepted rent/Sanierungs adjustments, shown in the
--- "Historie" modal next to each Anpassung. property_id is denormalized from
+-- Append-only log of accepted rent/renovation adjustments, shown in the
+-- "Historie" modal next to each adjustment. property_id is denormalized from
 -- tenancy so the resource can be served by the generic property-resources
 -- dispatcher (which requires a property_id column on every table it serves).
 -- ==============================================================================

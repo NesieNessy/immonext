@@ -21,7 +21,7 @@ interface DetailCheckApiRow {
 }
 
 /** Data available to prefill the /existing-properties/new form from when
- *  the user picked an existing Detailbewertung — a subset of the
+ *  the user picked an existing detail-check — a subset of the
  *  /api/detail-checks row shape. Detail-check data has no purchase-date
  *  concept, so Kaufdatum is never prefilled either way. */
 interface DetailCheckPrefill {
@@ -93,8 +93,8 @@ function OptionCard({
 /**
  * "Neues Objekt anlegen" — first step of the (not yet built) property
  * creation flow. Lets the user choose between a blank form or pre-filling
- * from an existing Detailbewertung, sourced from the same /api/detail-checks
- * route the Detailbewertungen overview uses.
+ * from an existing detail-check, sourced from the same /api/detail-checks
+ * route the detail-check overview uses.
  */
 export function NewPropertyModal({ open, onClose }: NewPropertyModalProps) {
   const router = useRouter();

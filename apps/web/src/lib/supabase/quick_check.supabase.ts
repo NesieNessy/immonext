@@ -131,8 +131,8 @@ function mapOverview(row: Record<string, unknown>): QuickCheckOverview {
 
 /**
  * Get the latest 100 QuickChecks for the current user, filtered by
- * detail_check — false for the Ersteinschätzungen overview, true for the
- * Detailbewertungen overview. Filtering server-side (rather than fetching
+ * detail_check — false for the quick-check overview, true for the
+ * detail-check overview. Filtering server-side (rather than fetching
  * everything and discarding half client-side) also means the 100-row cap
  * applies per list, not split across both.
  */
@@ -176,7 +176,7 @@ export async function updateQuickCheck(
 
 // ── Finalise ──────────────────────────────────────────────────────────────────
 
-/** "Verwerfen" button — sets finalised_action = 'DISCARD'. */
+/** The "Verwerfen" (discard) button — sets finalised_action = 'DISCARD'. */
 export async function discardQuickCheck(quickCheckId: number, userId: string): Promise<void> {
     void userId;
     const res = await authFetch('/api/quick-checks', {
@@ -187,7 +187,7 @@ export async function discardQuickCheck(quickCheckId: number, userId: string): P
 }
 
 /**
- * "Übernehmen" button.
+ * The "Übernehmen" (accept) button.
  * DB steps (atomic):
  *   1. finalised_action = 'ACCEPT'
  *   2. INSERT property — using the street/city/postal_code/year already

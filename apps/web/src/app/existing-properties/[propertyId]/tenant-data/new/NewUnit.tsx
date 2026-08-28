@@ -48,7 +48,7 @@ const PARKING_OPTIONS = [
     { value: '4', label: '4+' },
 ];
 
-// Stellplätze only make sense for units people actually occupy or run a
+// Parking spaces only make sense for units people actually occupy or run a
 // business out of — not for a Stellplatz/Lager unit itself.
 const USAGE_TYPES_WITH_PARKING = new Set<UnitUsageType>([
     UnitUsageType.Wohnung,
@@ -109,7 +109,7 @@ export default function NewUnit({ propertyId }: { propertyId: string }) {
         numberOfRooms !== '' || numberOfParkingSpaces !== '0' || usageType !== UnitUsageType.Wohnung;
 
     // Any navigation away from an unsaved draft is routed through here so
-    // it can be confirmed first (breadcrumb links, Zurück).
+    // it can be confirmed first (breadcrumb links, the back button).
     const goTo = (href: string) => {
         if (isEditing) {
             setPendingHref(href);
@@ -172,7 +172,7 @@ export default function NewUnit({ propertyId }: { propertyId: string }) {
                 />
 
                 <div className="mt-8 space-y-6">
-                    {/* Nutzungsart */}
+                    {/* Usage type */}
                     <div>
                         <SectionLabel>Nutzungsart</SectionLabel>
 
@@ -191,7 +191,7 @@ export default function NewUnit({ propertyId }: { propertyId: string }) {
                         </div>
                     </div>
 
-                    {/* Bezeichnung */}
+                    {/* Label */}
                     <div>
                         <SectionLabel>Bezeichnung</SectionLabel>
                         <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -216,7 +216,7 @@ export default function NewUnit({ propertyId }: { propertyId: string }) {
                         </div>
                     </div>
 
-                    {/* Fläche & Details */}
+                    {/* Area & Details */}
                     <div>
                         <SectionLabel>Fläche & Details</SectionLabel>
                         <div className="mt-3 grid grid-cols-2 gap-3">
@@ -237,7 +237,7 @@ export default function NewUnit({ propertyId }: { propertyId: string }) {
                         </div>
                     </div>
 
-                    {/* Stellplätze — only relevant for units people occupy or run a business out of */}
+                    {/* Parking spaces — only relevant for units people occupy or run a business out of */}
                     {showParking && (
                         <div>
                             <SectionLabel>Stellplätze (opt.)</SectionLabel>
@@ -247,7 +247,7 @@ export default function NewUnit({ propertyId }: { propertyId: string }) {
                         </div>
                     )}
 
-                    {/* Zusammenfassung */}
+                    {/* Summary */}
                     <div>
                         <SectionLabel>Zusammenfassung</SectionLabel>
                         <div className="mt-3 rounded-lg border border-border divide-y divide-border overflow-hidden">

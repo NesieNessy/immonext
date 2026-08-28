@@ -78,7 +78,7 @@ export default function AdjustRnd({ propertyId }: { propertyId: string }) {
     }, [rndMode, modernization, originalRndMode, originalModernization]);
 
     // Any navigation away from an unsaved edit is routed through here so it
-    // can be confirmed first (breadcrumb links, Abbrechen, Anwendungsfall).
+    // can be confirmed first (breadcrumb links, the cancel button, use-case menu).
     const goTo = (href: string) => {
         if (isEditing) {
             setPendingHref(href);

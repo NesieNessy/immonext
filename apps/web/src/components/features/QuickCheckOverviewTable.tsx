@@ -23,7 +23,7 @@ import Link from 'next/link';
 import { useCallback, useMemo, useRef, useState } from 'react';
 
 interface QuickCheckOverviewTableProps {
-  /** false = Ersteinschätzungen (not yet detail-checked), true = Detailbewertungen. */
+  /** false = quick-check overview (not yet detail-checked), true = detail-check overview. */
   detailCheck: boolean;
   breadcrumbItems: BreadcrumbItem[];
   addHref: string;
@@ -40,7 +40,7 @@ interface QuickCheckOverviewTableProps {
 }
 
 /**
- * The Ersteinschätzungen and Detailbewertungen overview pages render the
+ * The quick-check and detail-check overview pages render the
  * same data (QuickCheckOverview rows) through the same table, search box,
  * mobile filter pills, and card layout — the only real differences are which
  * `detail_check` bucket they show and what each page's row menu can do

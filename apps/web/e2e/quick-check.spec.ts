@@ -2,7 +2,7 @@ import { Client } from 'pg';
 import { expect, Page, test } from '@playwright/test';
 
 /**
- * Quick Check (Ersteinschätzung) isn't part of the property/unit fixture —
+ * Quick Check isn't part of the property/unit fixture —
  * unlike the other smoke tests, these create their own record through the
  * UI itself (create → save → reopen), since that's the actual flow under
  * test (the create form, the overview table, and the edit/detail view all
@@ -45,7 +45,7 @@ test.beforeAll(async () => {
     }
 });
 
-test('create an Ersteinschätzung and see it in the overview', async ({ page }) => {
+test('create a quick check and see it in the overview', async ({ page }) => {
     await page.goto('/property-valuation/quick-check');
     await page.getByRole('button', { name: 'Neue Ersteinschätzung' }).click();
 
@@ -71,7 +71,7 @@ test('create an Ersteinschätzung and see it in the overview', async ({ page }) 
     await expect(visibleText(page, POSTAL_CODE)).toBeVisible();
 });
 
-test('opening an Ersteinschätzung row loads its data', async ({ page }) => {
+test('opening a quick check row loads its data', async ({ page }) => {
     await page.goto('/property-valuation/quick-check');
     await visibleText(page, POSTAL_CODE).click();
 

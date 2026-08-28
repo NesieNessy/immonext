@@ -163,7 +163,7 @@ export function useServiceChargeSettlementData(propertyId: string, property: Pro
     const unitShare = unit.livingAreaM2 && totalArea > 0 ? unit.livingAreaM2 / totalArea : 0;
 
     // "Total share" (Gesamt Objekt) / "Apartment share" (Anteil Wohnung), split
-    // into apportionable (umlagefähig) and non-apportionable per the table.
+    // into apportionable and non-apportionable per the table.
     const actualSplit = useMemo(
         () => splitByAllocable(costItems.map((item) => ({ amount: Number(item.actualAmount) || 0, allocable: item.allocable }))),
         [costItems],
@@ -193,11 +193,11 @@ export function useServiceChargeSettlementData(propertyId: string, property: Pro
         return prorateAnnualPrepayment(currentMonthlyPrepayment, history, periodStart, periodEnd);
     }, [currentMonthlyPrepayment, miscRentHistory, periodStart, periodEnd]);
 
-    // (1) vs (2): shortfall = Nachzahlung durch Mieter, surplus = Guthaben des Mieters.
+    // (1) vs (2): shortfall = "Nachzahlung durch Mieter", surplus = "Guthaben des Mieters".
     const settlementCoverage = compareSettlementCoverage(unitActualShare, annualPrepayment);
     const overUnderCoverage = unitActualShare - annualPrepayment;
 
-    // (2) vs (3): shortfall = Vorauszahlung zu niedrig (erhöhen), surplus = Vorauszahlung zu hoch (senken).
+    // (2) vs (3): shortfall = prepayment too low (increase), surplus = prepayment too high (decrease).
     const budgetCoverage = compareBudgetCoverage(annualPrepayment, unitBudgetShare);
 
     // Budget plan (3) divided by 12, compared against the current monthly NK-Vorauszahlung.
@@ -283,10 +283,10 @@ export function useServiceChargeSettlementData(propertyId: string, property: Pro
     };
 
     // ── Apply new NK-Vorauszahlung ──────────────────────────────────────────
-    // Commits the recommended monthly prepayment (Wirtschaftsplan / 12) to the
+    // Commits the recommended monthly prepayment (budget plan / 12) to the
     // tenancy, logs it to the adjustment history so future settlements can
     // prorate for the change, and writes the apportionable/non-apportionable
-    // split of the Wirtschaftsplan into the tenancy's maintenance_costs record.
+    // split of the budget plan into the tenancy's maintenance_costs record.
     const canApplyPrepayment = tenancy != null && newMonthlyPrepayment != null && prepaymentDelta !== 0;
 
     const handleApplyPrepayment = async () => {
@@ -345,7 +345,7 @@ export function useServiceChargeSettlementData(propertyId: string, property: Pro
 
     // ── Source document upload ──────────────────────────────────────────────
     // Upload is the primary entry point on a fresh settlement, so it can't
-    // wait for an explicit "Speichern" first — it lazily creates the
+    // wait for an explicit "Speichern" (save) first — it lazily creates the
     // settlement row (with the current/default period) the same way Save
     // does, just without touching the period fields.
     const ensureSettlement = async (): Promise<ServiceChargeSettlement | null> => {

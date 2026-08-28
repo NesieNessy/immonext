@@ -225,9 +225,9 @@ export default function RentalAgreementPage({ propertyId, unitId }: { propertyId
     if (isLoading || !property || !unit) return <PropertyLoadingPage />;
 
     const unitLabel = formatUnitLabel(unit.unitLabel, unit.floor, unit.locationNote);
-    // Only reachable from the Mietvertrag page now (its "Daten prüfen &
-    // Vorschau" / "PDF generieren" buttons), so Zurück and the breadcrumb
-    // both lead back there — not to Mieterdaten.
+    // Only reachable from the rental-agreement page now (its "Daten prüfen &
+    // Vorschau" / "PDF generieren" buttons), so the back button and the
+    // breadcrumb both lead back there — not to Mieterdaten.
     const currentTenantHref = hasMultipleUnits
         ? `/existing-properties/${propertyId}/tenant-data/${unit.propertyUnitId}`
         : `/existing-properties/${propertyId}/tenant-data`;

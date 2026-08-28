@@ -16,11 +16,11 @@ interface TenantAgreementPageProps {
     hasMultipleUnits: boolean;
 }
 
-/** The Mietvertrag page: Mietzeiten, Miete & Nebenkosten, Anpassungen and
- *  generated documents. An independent page/route — not nested under
- *  Mieterdaten (tenant-data) either in the URL or in the breadcrumb, and
- *  not a tab of Aktueller Mieter — see ../tenant-data/CurrentTenantPage for
- *  that side. Only the data layer (useTenantUnitData) is shared. */
+/** The rental-agreement page: lease term, rent & service charges,
+ *  adjustments and generated documents. An independent page/route — not
+ *  nested under tenant-data either in the URL or in the breadcrumb, and
+ *  not a tab of the current-tenant page — see ../tenant-data/CurrentTenantPage
+ *  for that side. Only the data layer (useTenantUnitData) is shared. */
 export function TenantAgreementPage({ propertyId, property, unit, hasMultipleUnits }: TenantAgreementPageProps) {
     const data = useTenantUnitData(propertyId, property, unit, hasMultipleUnits);
 
@@ -28,9 +28,9 @@ export function TenantAgreementPage({ propertyId, property, unit, hasMultipleUni
         ? `/existing-properties/${propertyId}/tenant-data/${unit.propertyUnitId}`
         : `/existing-properties/${propertyId}/tenant-data`;
 
-    // No "Mieterdaten" crumb — Mietvertrag is a sibling page, not nested
-    // under it. With several Wohneinheiten the unit label still needs to
-    // show which unit this is, linking back to that unit's Aktueller Mieter.
+    // No "Mieterdaten" crumb — the rental agreement is a sibling page, not
+    // nested under it. With several units the unit label still needs to
+    // show which unit this is, linking back to that unit's current-tenant page.
     const breadcrumbItems: BreadcrumbItem[] = hasMultipleUnits
         ? [
             {

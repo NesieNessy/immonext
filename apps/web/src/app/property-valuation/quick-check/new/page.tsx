@@ -80,7 +80,7 @@ export default function QuickCheckPage() {
   const isEditing = portalUrl !== '' || Object.values(form).some((value) => value !== '');
 
   // Any navigation away from an unsaved draft is routed through here so
-  // it can be confirmed first (breadcrumb links, Zurück).
+  // it can be confirmed first (breadcrumb links, the back button).
   const goTo = (href: string) => {
     if (isEditing) {
       setPendingHref(href);
@@ -95,7 +95,7 @@ export default function QuickCheckPage() {
   };
 
   // Shared by "Übernehmen" and "Detailbewertung starten" — both need the
-  // quick-check saved first; they just navigate somewhere different after.
+  // quick-check saved first; they just navigate to a different place after.
   const saveQuickCheck = async () => {
     if (!isFormValid || isSaving || !user) return null;
     const computedKpf = calcKpf(purchasePrice, coldRent);

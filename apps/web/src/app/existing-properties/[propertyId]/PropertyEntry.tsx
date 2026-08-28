@@ -51,10 +51,10 @@ async function loadUnitRow(unit: PropertyUnit): Promise<UnitRow> {
 }
 
 /**
- * Entry point for a property. With exactly one Einheit it goes straight into
+ * Entry point for a property. With exactly one unit it goes straight into
  * that unit's hub — there's no picking to do. With several, it shows the
- * Einheiten table first so the whole hub (Mieterdaten, Mietvertrag,
- * Nebenkostenabrechnung, …) can be entered already scoped to one Einheit.
+ * units table first so the whole hub (Mieterdaten, Mietvertrag,
+ * Nebenkostenabrechnung, …) can be entered already scoped to one unit.
  * With none yet, it falls through to the hub in property-only mode so
  * "Neue Einheit" is still reachable.
  */
@@ -87,7 +87,7 @@ export default function PropertyEntry({ propertyId }: { propertyId: string }) {
 
     useEffect(() => { void load(); }, [load]);
 
-    // Exactly one Einheit — no picking needed, go straight to its hub.
+    // Exactly one unit — no picking needed, go straight to its hub.
     useEffect(() => {
         if (!isLoading && units.length === 1) {
             router.replace(`/existing-properties/${propertyId}/${units[0].propertyUnitId}`);
@@ -98,7 +98,7 @@ export default function PropertyEntry({ propertyId }: { propertyId: string }) {
 
     if (!property) return <PropertyNotFoundPage />;
 
-    // No Einheiten yet — show the hub in property-only mode so setup actions
+    // No units yet — show the hub in property-only mode so setup actions
     // (Objektdaten, Neue Einheit, …) stay reachable.
     if (units.length === 0) {
         return <PropertyHub propertyId={propertyId} unitId={null} />;

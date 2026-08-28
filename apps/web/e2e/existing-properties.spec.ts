@@ -21,7 +21,7 @@ test('property list renders and a property can be opened', async ({ page }) => {
 
     await visibleText(page, propertyAddress).click();
 
-    // Two seeded units -> lands on the Einheiten picker, not stuck loading
+    // Two seeded units -> lands on the unit picker, not stuck loading
     // or "not found" — this is exactly the routing chain that regressed
     // earlier this session (redundant fetches, hardcoded hasMultipleUnits).
     await expect(page.getByText(E2E_FIXTURE.unit1Label, { exact: true })).toBeVisible();
@@ -29,7 +29,7 @@ test('property list renders and a property can be opened', async ({ page }) => {
     await expect(page.getByText('Objekt nicht gefunden')).not.toBeVisible();
 });
 
-test('unit hub -> Mieterdaten shows the real tenant', async ({ page }) => {
+test('unit hub -> tenant data page shows the real tenant', async ({ page }) => {
     await page.goto('/existing-properties');
     await visibleText(page, propertyAddress).click();
     await page.getByText(E2E_FIXTURE.unit1Label, { exact: true }).click();
@@ -39,16 +39,16 @@ test('unit hub -> Mieterdaten shows the real tenant', async ({ page }) => {
     await expect(page.getByText('Mieterdaten', { exact: true })).toBeVisible();
     await page.getByText('Mieterdaten', { exact: true }).click();
 
-    // The tenant's full name also appears in the Unterlagen table (a filter
-    // option plus one cell per document row) and the Mieterbescheinigung
-    // card, so asserting on the editable Vorname/Nachname fields themselves
+    // The tenant's full name also appears in the documents table (a filter
+    // option plus one cell per document row) and the tenant-certificate
+    // card, so asserting on the editable first-/last-name fields themselves
     // is the precise way to check the real tenant loaded — a plain text
     // search for the combined name is ambiguous on this page.
     await expect(page.getByLabel('Vorname *')).toHaveValue(E2E_FIXTURE.tenantFirstName);
     await expect(page.getByLabel('Nachname *')).toHaveValue(E2E_FIXTURE.tenantLastName);
 });
 
-test('a meter reading on Mieterauszug persists after reload', async ({ page }) => {
+test('a meter reading on the tenant move-out page persists after reload', async ({ page }) => {
     await page.goto('/existing-properties');
     await visibleText(page, propertyAddress).click();
     await page.getByText(E2E_FIXTURE.unit1Label, { exact: true }).click();

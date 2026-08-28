@@ -16,7 +16,7 @@ import { useEffect, useMemo, useState } from 'react';
 type ViewMode = 'list' | 'byObject' | 'byCategory';
 
 /** Unifies rows from the `document` table (uploaded/generated here) and
- *  `tenancy_document` (uploaded from the Mieterdaten Unterlagen table) into
+ *  `tenancy_document` (uploaded from the tenant-data documents table) into
  *  one shape so both render in the same list — the storage bucket differs
  *  per source, so it travels with the row for view/download/delete. */
 interface DisplayDocument {
@@ -146,7 +146,7 @@ export default function DocumentsPage() {
 
     // The actual linked object, or "–" when the document has none (every
     // Persönlich document, plus any Bestandsobjekt/Detailbewertung document
-    // that wasn't linked to one) — this is what the Objekt table column shows.
+    // that wasn't linked to one) — this is what the "Objekt" table column shows.
     const resolveObject = useMemo(() => {
         const propertyById = new Map(properties.map((p) => [p.propertyId, p]));
         const quickCheckById = new Map(quickChecks.map((q) => [q.quickCheckId, q]));

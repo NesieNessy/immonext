@@ -74,7 +74,7 @@ export default function AdjustDistribution({ propertyId }: { propertyId: string 
         coOwnershipDenominator !== originalCoOwnershipDenominator;
 
     // Any navigation away from an unsaved edit is routed through here so it
-    // can be confirmed first (breadcrumb links, Abbrechen, Anwendungsfall).
+    // can be confirmed first (breadcrumb links, the cancel button, use-case menu).
     const goTo = (href: string) => {
         if (isEditing) {
             setPendingHref(href);

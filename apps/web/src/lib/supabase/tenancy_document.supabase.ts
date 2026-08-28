@@ -41,8 +41,8 @@ export interface TenancyDocumentForUser {
 }
 
 /**
- * Documents uploaded per-tenancy on the Mieterdaten page (Ausweis/Schufa/
- * Bürgschaft/Mietvertrag) — surfaced here too so the global Dokumente page
+ * Documents uploaded per-tenancy on the tenant-data page (ID/credit report/
+ * guarantee/lease agreement) — surfaced here too so the global documents page
  * doesn't miss them. tenancy_document has no user_id of its own, so this
  * joins through tenancy → property client-side; RLS on both tables already
  * scopes everything to the caller, so no explicit user filter is needed.

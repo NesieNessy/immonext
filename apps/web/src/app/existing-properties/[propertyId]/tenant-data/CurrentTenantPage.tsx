@@ -14,17 +14,17 @@ interface CurrentTenantPageProps {
     property: Property;
     unit: PropertyUnit;
     hasMultipleUnits: boolean;
-    /** Set when reached from Mieterhistorie's "Ansehen" action — renders
+    /** Set when reached from the tenant history's "Ansehen" action — renders
      *  this same page for a past tenancy instead of the unit's current one,
-     *  with an "Archiviert" indicator and the Auszugsdatum surfaced. */
+     *  with an "Archiviert" indicator and the move-out date surfaced. */
     archivedTenancyId?: number;
 }
 
-/** The Aktueller Mieter page: person data, Unterlagen, Mieterbescheinigung,
- *  Mietkaution. Mietvertrag lives entirely on its own independent page/route
- *  now (see ../tenant-agreement/TenantAgreementPage) — the two are
- *  deliberately not sharing chrome (breadcrumb, header actions, sticky bar)
- *  beyond the data layer. */
+/** The current-tenant page: person data, documents, tenant certificate,
+ *  deposit. The rental agreement lives entirely on its own independent
+ *  page/route now (see ../tenant-agreement/TenantAgreementPage) — the two
+ *  are deliberately not sharing chrome (breadcrumb, header actions, sticky
+ *  bar) beyond the data layer. */
 export function CurrentTenantPage({ propertyId, property, unit, hasMultipleUnits, archivedTenancyId }: CurrentTenantPageProps) {
     const data = useTenantUnitData(propertyId, property, unit, hasMultipleUnits, archivedTenancyId);
 
@@ -117,7 +117,7 @@ export function CurrentTenantPage({ propertyId, property, unit, hasMultipleUnits
                                     label="Mieterwechsel"
                                     icon={<Icons.RefreshCw className="w-4 h-4" />}
                                     variant="outline"
-                                    onClick={() => data.setMieterwechselModalOpen(true)}
+                                    onClick={() => data.setTenantChangeModalOpen(true)}
                                 />
                                 <Button
                                     label="Person hinzufügen"
@@ -192,7 +192,7 @@ export function CurrentTenantPage({ propertyId, property, unit, hasMultipleUnits
                         ))}
                     </div>
 
-                    {/* Unterlagen */}
+                    {/* Documents */}
                     <div>
                         <SectionLabel>Unterlagen</SectionLabel>
                         <div className="mt-3">
@@ -209,7 +209,7 @@ export function CurrentTenantPage({ propertyId, property, unit, hasMultipleUnits
                         </div>
                     </div>
 
-                    {/* Generierbare Dokumente */}
+                    {/* Generatable documents */}
                     <div>
                         <SectionLabel>Generierbare Dokumente</SectionLabel>
                         <div className="mt-3 flex flex-col gap-4">
@@ -250,7 +250,7 @@ export function CurrentTenantPage({ propertyId, property, unit, hasMultipleUnits
                         </div>
                     </div>
 
-                    {/* Mietkaution */}
+                    {/* Security deposit */}
                     <div>
                         <SectionLabel>Mietkaution</SectionLabel>
                         <div className="mt-3 flex flex-col sm:flex-row items-start sm:items-end gap-3">
@@ -322,8 +322,8 @@ export function CurrentTenantPage({ propertyId, property, unit, hasMultipleUnits
             />
 
             <Modal
-                open={data.mieterwechselModalOpen}
-                onClose={() => data.setMieterwechselModalOpen(false)}
+                open={data.tenantChangeModalOpen}
+                onClose={() => data.setTenantChangeModalOpen(false)}
                 title="Mieterwechsel starten?"
                 subtitle="Der aktuelle Mieter wird entfernt und die Einheit als unvermietet markiert."
                 footer={
@@ -331,21 +331,21 @@ export function CurrentTenantPage({ propertyId, property, unit, hasMultipleUnits
                         <Button
                             label={BUTTON_DETAILS.Cancel.label}
                             variant="outline"
-                            disabled={data.isStartingMieterwechsel}
-                            onClick={() => data.setMieterwechselModalOpen(false)}
+                            disabled={data.isStartingTenantChange}
+                            onClick={() => data.setTenantChangeModalOpen(false)}
                         />
                         <Button
                             label="Ohne Mieterauszug fortfahren"
                             variant="outline"
-                            disabled={data.isStartingMieterwechsel}
-                            onClick={() => void data.confirmMieterwechsel(false)}
+                            disabled={data.isStartingTenantChange}
+                            onClick={() => void data.confirmTenantChange(false)}
                         />
                         <Button
                             label="Mit Mieterauszug fortfahren"
                             icon={<Icons.DoorOpen className="w-4 h-4" />}
                             variant="primary"
-                            disabled={data.isStartingMieterwechsel}
-                            onClick={() => void data.confirmMieterwechsel(true)}
+                            disabled={data.isStartingTenantChange}
+                            onClick={() => void data.confirmTenantChange(true)}
                         />
                     </>
                 }

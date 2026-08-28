@@ -44,7 +44,7 @@ export async function updateTenancyMoveOut(tenancyMoveOutId: number, updates: Te
 // Damage photos — stored directly in the tenancy-documents bucket (RLS is
 // folder-based on userId, no tenancy_document row needed) since each damage
 // can carry several photos and re-uploading must never replace an existing
-// one, unlike the single-slot Ausweis/Schufa/… documents.
+// one, unlike the single-slot ID/credit-report/… documents.
 // ----------------------------------------------------------------------------
 
 export async function uploadMoveOutDamagePhoto(userId: string, tenancyId: number, file: File): Promise<{ path: string; fileName: string } | null> {

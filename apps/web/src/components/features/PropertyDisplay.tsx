@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------
-// Shared display-layer helpers for the Bestandsobjekte overview — property
+// Shared display-layer helpers for the existing-properties overview — property
 // category labels/tag colors/filter options (sourced from
 // detail_check_property_data's propertyCategory, itself defined in the
 // detail-check property-data form), rental-status filter options, and a
@@ -9,7 +9,7 @@
 import type { BreadcrumbItem, TagVariant } from '@/components/ui';
 
 // ---------------------------------------------------------------------------
-// Breadcrumb — every property sub-page starts with "Bestandsobjekte" › the
+// Breadcrumb — every property sub-page starts with "Bestandsobjekte" (existing properties) › the
 // property's address (linking back to its hub page) › the current use case.
 // Shared here so the address-href fix doesn't have to be copy-pasted again.
 // ---------------------------------------------------------------------------
@@ -116,7 +116,7 @@ export function getPropertyCardColor(index: number): string {
   return CARD_COLOR_PALETTE[index % CARD_COLOR_PALETTE.length];
 }
 
-/** "Whg. 1" + "EG" + "links" → "Whg. 1, EG links" — Etage/Lage are optional
+/** "Whg. 1" + "EG" + "links" → "Whg. 1, EG links" — floor/location are optional
  *  and only appended (comma-separated from the label) when present. */
 export function formatUnitLabel(unitLabel: string, floor?: string | null, locationNote?: string | null): string {
   const details = [floor, locationNote].filter((v): v is string => !!v && v.trim() !== '').join(' ');

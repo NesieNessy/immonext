@@ -157,8 +157,8 @@ export function UnitHistoryTable({ propertyId, property, unit, hasMultipleUnits 
         if (url) window.open(url, '_blank', 'noopener,noreferrer');
     };
 
-    // Clears the tenancy's Auszug so it becomes the unit's current tenancy
-    // again — undoes an accidental Mieterwechsel/Mieterauszug. If another
+    // Clears the tenancy's move-out so it becomes the unit's current tenancy
+    // again — undoes an accidental tenant change/tenant move-out. If another
     // tenancy is currently active on this unit, that one is ended (today)
     // first so the unit doesn't end up with two open-ended tenancies.
     const handleConfirmReactivate = async () => {
