@@ -82,7 +82,7 @@ export function NavigationBar({ items, logo, actions }: NavigationBarProps) {
             {logo && (
               <Link href={logo.href} className="flex-shrink-0">
                 <div className="flex items-center gap-2">
-                  {logo.iconName && React.createElement(iconMap[logo.iconName], { size: 24, className: "text-primary" })}
+                  {logo.iconName && React.createElement(iconMap[logo.iconName], { size: 24, className: "text-accent" })}
                   <span className="text-xl font-bold text-foreground">{logo.text}</span>
                 </div>
               </Link>
@@ -122,7 +122,7 @@ export function NavigationBar({ items, logo, actions }: NavigationBarProps) {
                               : "text-foreground hover:bg-muted"
                           )}
                         >
-                          {Icon && <Icon size={20} className="text-primary" />}
+                          {Icon && <Icon size={20} className="text-accent" />}
                           <span>{item.label}</span>
                           {hasSubItems && <Icons.ChevronDown size={16} className={cn("transition-transform", isOpen && "rotate-180")} />}
                         </button>
@@ -136,7 +136,7 @@ export function NavigationBar({ items, logo, actions }: NavigationBarProps) {
                               : "text-foreground hover:bg-muted"
                           )}
                         >
-                          {Icon && <Icon size={20} className="text-primary" />}
+                          {Icon && <Icon size={20} className="text-accent" />}
                           <span>{item.label}</span>
                         </Link>
                       )}
@@ -156,7 +156,7 @@ export function NavigationBar({ items, logo, actions }: NavigationBarProps) {
                               const SubItemContent = (
                                 <>
                                   {SubIcon && (
-                                    <SubIcon size={20} className="text-primary mt-0.5 flex-shrink-0" />
+                                    <SubIcon size={20} className="text-accent mt-0.5 flex-shrink-0" />
                                   )}
                                   <div className="flex-1 min-w-0">
                                     <div className="font-medium text-foreground">{subItem.label}</div>
@@ -199,7 +199,7 @@ export function NavigationBar({ items, logo, actions }: NavigationBarProps) {
 
                     {/* Active indicator */}
                     {item.active && (
-                      <span className="absolute left-4 right-4 bottom-0 h-0.5 bg-primary" />
+                      <span className="absolute left-4 right-4 bottom-0 h-0.5 bg-accent" />
                     )}
                   </div>
                 );
@@ -224,7 +224,7 @@ export function NavigationBar({ items, logo, actions }: NavigationBarProps) {
                   >
                     {action.iconName && React.createElement(iconMap[action.iconName], {
                       size: 20,
-                      className: action.active ? "" : "text-primary"
+                      className: action.active ? "" : "text-accent"
                     })}
                   </Link>
                 ) : (
@@ -240,7 +240,7 @@ export function NavigationBar({ items, logo, actions }: NavigationBarProps) {
                   >
                     {action.iconName && React.createElement(iconMap[action.iconName], {
                       size: 20,
-                      className: action.active ? "" : "text-primary"
+                      className: action.active ? "" : "text-accent"
                     })}
                   </button>
                 )}
@@ -254,7 +254,7 @@ export function NavigationBar({ items, logo, actions }: NavigationBarProps) {
               aria-label="Navigation öffnen"
               className="md:hidden p-2 rounded-lg transition-colors hover:bg-muted"
             >
-              <Menu size={20} className="text-primary" />
+              <Menu size={20} className="text-accent" />
             </button>
           </div>
         </div>
@@ -286,7 +286,7 @@ export function NavigationBar({ items, logo, actions }: NavigationBarProps) {
                   onClick={() => setMobileMenuOpen(false)}
                   className="flex items-center gap-3 px-4 py-3 rounded-xl border border-border hover:bg-muted transition-colors"
                 >
-                  {logo.iconName && React.createElement(iconMap[logo.iconName], { size: 20, className: "text-primary" })}
+                  {logo.iconName && React.createElement(iconMap[logo.iconName], { size: 20, className: "text-accent" })}
                   <span className="font-medium text-foreground">{logo.text}</span>
                 </Link>
               )}
@@ -306,7 +306,7 @@ export function NavigationBar({ items, logo, actions }: NavigationBarProps) {
                           item.active ? "bg-muted" : "hover:bg-muted"
                         )}
                       >
-                        {Icon && <Icon size={20} className="text-primary" />}
+                        {Icon && <Icon size={20} className="text-accent" />}
                         <span className="flex-1 text-left font-medium text-foreground">{item.label}</span>
                         <Icons.ChevronDown size={16} className={cn("transition-transform", isExpanded && "rotate-180")} />
                       </button>
@@ -316,7 +316,7 @@ export function NavigationBar({ items, logo, actions }: NavigationBarProps) {
                             const SubIcon = subItem.iconName ? iconMap[subItem.iconName] : null;
                             const subContent = (
                               <>
-                                {SubIcon && <SubIcon size={18} className="text-primary" />}
+                                {SubIcon && <SubIcon size={18} className="text-accent" />}
                                 <span className="font-medium text-foreground">{subItem.label}</span>
                               </>
                             );
@@ -350,7 +350,7 @@ export function NavigationBar({ items, logo, actions }: NavigationBarProps) {
 
                 const content = (
                   <>
-                    {Icon && <Icon size={20} className={item.active ? "" : "text-primary"} />}
+                    {Icon && <Icon size={20} className={item.active ? "" : "text-accent"} />}
                     <span className="font-medium">{item.label}</span>
                   </>
                 );

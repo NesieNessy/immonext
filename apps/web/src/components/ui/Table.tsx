@@ -171,7 +171,7 @@ export function Table<T extends Record<string, unknown> = Record<string, unknown
         <table className="w-full border-separate border-spacing-0">
           <thead className={cn(paginationEnabled && "sticky top-0 z-10")}>
             {/* ── Sort / label row ──────────────────────────────────── */}
-            <tr className="bg-muted border-b border-border">
+            <tr className="bg-primary/8 border-b border-border">
               {columns.map((col) => (
                 <th
                   key={col.key}
@@ -202,7 +202,7 @@ export function Table<T extends Record<string, unknown> = Record<string, unknown
                  Solid (not translucent) so the sticky header can't let a
                  scrolled-past row show through it. ── */}
             {hasFilterRow && (
-              <tr className="bg-muted border-b border-border">
+              <tr className="bg-primary/8 border-b border-border">
                 {columns.map((col) => (
                   <th
                     key={col.key}

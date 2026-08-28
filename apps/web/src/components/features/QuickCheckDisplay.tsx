@@ -27,10 +27,10 @@ export function KpfBadge({ value }: { value: number | null }) {
   const { label } = classifyKpf(value);
   const color =
     label === 'Sehr teuer'
-      ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+      ? 'bg-destructive/15 text-destructive'
       : label === 'Hochpreisig'
-      ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
-      : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400';
+      ? 'bg-warning/15 text-warning'
+      : 'bg-success/15 text-success';
 
   return (
     <span className={`inline-flex items-center justify-center font-semibold rounded-lg px-2.5 py-1 text-sm min-w-[3rem] ${color}`}>

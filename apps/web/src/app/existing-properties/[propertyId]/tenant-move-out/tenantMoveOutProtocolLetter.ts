@@ -27,13 +27,13 @@ function letterFrame(title: string, bodyHtml: string): string {
 <meta charset="utf-8" />
 <title>${title}</title>
 <style>
-    body { font-family: Arial, Helvetica, sans-serif; color: #111; max-width: 760px; margin: 48px auto; line-height: 1.5; }
+    body { font-family: Arial, Helvetica, sans-serif; color: #101828; max-width: 760px; margin: 48px auto; line-height: 1.5; }
     h1 { font-size: 18px; margin: 32px 0 16px; }
     h2 { font-size: 14px; margin: 24px 0 8px; }
     table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 8px; }
-    th, td { padding: 6px 8px; text-align: left; border-bottom: 1px solid #eee; }
-    thead th { border-bottom: 1px solid #999; color: #555; font-weight: 600; }
-    .muted { color: #555; }
+    th, td { padding: 6px 8px; text-align: left; border-bottom: 1px solid #d0d5dd; }
+    thead th { border-bottom: 1px solid #98a2b3; color: #475467; font-weight: 600; }
+    .muted { color: #475467; }
 </style>
 </head>
 <body>${bodyHtml}</body>

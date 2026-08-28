@@ -25,7 +25,7 @@ export function RatingScale({ value, label, className }: RatingScaleProps) {
           className="absolute inset-0 rounded-full"
           style={{
             background:
-              'linear-gradient(to right, #22c55e, #84cc16, #eab308, #f97316, #ef4444)',
+              'linear-gradient(to right, var(--success), var(--warning), var(--destructive))',
           }}
         />
 

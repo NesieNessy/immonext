@@ -155,7 +155,7 @@ export function TenantAgreementPage({ propertyId, property, unit, hasMultipleUni
                             >
                                 <div className="flex flex-col gap-3">
                                     {data.costItems.length === 0 && (
-                                        <p className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
+                                        <p className="text-xs text-warning bg-warning/10 border border-warning/30 rounded-md px-3 py-2">
                                             Noch keine Nebenkosten erfasst.
                                         </p>
                                     )}

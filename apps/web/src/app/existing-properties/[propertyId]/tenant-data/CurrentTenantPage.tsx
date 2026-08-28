@@ -137,7 +137,7 @@ export function CurrentTenantPage({ propertyId, property, unit, hasMultipleUnits
                                     <div className="flex items-center gap-2">
                                         <Icons.User className="w-4 h-4 text-muted-foreground" />
                                         <span className="text-sm font-semibold text-foreground">Person {index + 1}</span>
-                                        {person.isPrimary && <Tag label="Hauptmieter" variant="primary" />}
+                                        {person.isPrimary && <Tag label="Hauptmieter" variant="gold" />}
                                     </div>
                                     {index > 0 && !data.isArchived && (
                                         <div className="flex items-center gap-1">
@@ -146,7 +146,7 @@ export function CurrentTenantPage({ propertyId, property, unit, hasMultipleUnits
                                                 onClick={() => data.makePrimary(index)}
                                                 aria-label="Zum Hauptmieter machen"
                                                 title="Zum Hauptmieter machen"
-                                                className="p-1.5 rounded-md text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors cursor-pointer"
+                                                className="p-1.5 rounded-md text-muted-foreground hover:text-accent hover:bg-accent/10 transition-colors cursor-pointer"
                                             >
                                                 <Icons.Star className="w-4 h-4" />
                                             </button>

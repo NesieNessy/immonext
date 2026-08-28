@@ -40,9 +40,9 @@ export function Gauge({
         >
           {/* Three-color gradient background */}
           <div className="absolute inset-0 flex">
-            <div className="flex-1 bg-[#2d7a4f]" style={{ width: '33.33%' }} />
-            <div className="flex-1 bg-[#d4a574]" style={{ width: '33.33%' }} />
-            <div className="flex-1 bg-[#ef4444]" style={{ width: '33.34%' }} />
+            <div className="flex-1 bg-success" style={{ width: '33.33%' }} />
+            <div className="flex-1 bg-warning" style={{ width: '33.33%' }} />
+            <div className="flex-1 bg-destructive" style={{ width: '33.34%' }} />
           </div>
         </div>
         

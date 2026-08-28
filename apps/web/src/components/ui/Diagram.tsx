@@ -17,7 +17,10 @@ export function Diagram({ title, data, type = "bar", className }: DiagramProps) 
   const maxValue = Math.max(...data.map(d => d.value));
   const total = data.reduce((sum, d) => sum + d.value, 0);
 
-  const defaultColors = ["#0f4c81", "#2d7a4f", "#d4a574", "#60a5fa", "#34d399"];
+  const defaultColors = [
+    "var(--chart-1)", "var(--chart-2)", "var(--chart-3)", "var(--chart-4)",
+    "var(--chart-5)", "var(--chart-6)", "var(--chart-7)", "var(--chart-8)",
+  ];
 
   if (type === "bar") {
     return (
@@ -67,7 +70,7 @@ export function Diagram({ title, data, type = "bar", className }: DiagramProps) 
                 <div
                   key={index}
                   className="flex items-center justify-center rounded-lg p-3"
-                  style={{ backgroundColor: color + "20", borderLeft: `4px solid ${color}` }}
+                  style={{ backgroundColor: `color-mix(in srgb, ${color} 20%, transparent)`, borderLeft: `4px solid ${color}` }}
                 >
                   <div className="text-center">
                     <div className="text-xs text-foreground mb-1">{item.label}</div>

@@ -38,7 +38,7 @@ function ScoreBar({ label, score, light }: { label: string; score: number; light
       <div className="h-3 overflow-hidden rounded-full bg-muted">
         <div
           className={`h-full rounded-full ${
-            light === 'GREEN' ? 'bg-green-600' : light === 'YELLOW' ? 'bg-yellow-500' : 'bg-red-600'
+            light === 'GREEN' ? 'bg-success' : light === 'YELLOW' ? 'bg-warning' : 'bg-destructive'
           }`}
           style={{ width: `${Math.max(0, Math.min(100, score))}%` }}
         />
@@ -54,7 +54,7 @@ function CategoryPanel({ item }: { item: LocationCategoryScore }) {
       <p className="mt-3 text-sm text-muted-foreground">{item.summary}</p>
       <div className="mt-4 overflow-hidden rounded-lg border border-border">
         <table className="w-full text-left text-sm">
-          <thead className="bg-muted">
+          <thead className="bg-primary/8">
             <tr>
               <th className="px-3 py-2 font-medium">Unterfaktor</th>
               <th className="px-3 py-2 font-medium">Wert / Daten</th>

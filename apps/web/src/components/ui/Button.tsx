@@ -13,7 +13,7 @@ export interface MenuItem {
 }
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: "primary" | "secondary" | "accent" | "outline" | "ghost";
+  variant?: "primary" | "secondary" | "accent" | "outline" | "ghost" | "dark";
   size?: "sm" | "md" | "lg";
   label?: string;
   icon?: React.ReactNode;
@@ -54,6 +54,7 @@ export function Button({
     accent: "bg-accent text-accent-foreground hover:bg-accent/90",
     outline: "border-2 border-primary text-primary bg-transparent hover:bg-primary hover:text-primary-foreground",
     ghost: "bg-transparent text-foreground hover:bg-muted",
+    dark: "bg-brand-navy text-brand-navy-foreground hover:bg-brand-navy/90",
   };
 
   // Different padding for icon-only vs regular buttons; hideLabelOnMobile

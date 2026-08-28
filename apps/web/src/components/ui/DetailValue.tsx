@@ -45,14 +45,14 @@ export function ReadOnlyField({
       )}
       <div
         className={cn(
-          'flex min-h-11 items-center gap-3 rounded-md border border-[#c9d5e2] bg-[#eef3f8] px-3 py-2 text-foreground',
+          'flex min-h-11 items-center gap-3 rounded-md border border-primary/20 bg-primary/5 px-3 py-2 text-foreground',
           align === 'right' && 'justify-end text-right',
           emphasis && 'font-semibold',
         )}
       >
         <output className="min-w-0 flex-1 break-words">{value || '-'}</output>
         {suffix && <span className="shrink-0 text-muted-foreground">{suffix}</span>}
-        {!label && <LockKeyhole className="shrink-0 text-[#8291a3]" size={14} aria-hidden="true" />}
+        {!label && <LockKeyhole className="shrink-0 text-muted-foreground" size={14} aria-hidden="true" />}
       </div>
       {helperText && (
         <p className="mt-1.5 flex items-start gap-1.5 text-xs leading-5 text-muted-foreground">
@@ -76,7 +76,7 @@ export function MetricCard({
   tone?: 'neutral' | 'positive' | 'warning';
 }) {
   return (
-    <div className="min-w-0 rounded-md border border-[#d2dce7] bg-card p-4 shadow-sm">
+    <div className="min-w-0 rounded-md border border-primary/15 bg-card p-4 shadow-sm">
       <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
         <span>{label}</span>
         <LockKeyhole size={13} aria-hidden="true" />
@@ -86,8 +86,8 @@ export function MetricCard({
         <p
           className={cn(
             'mt-1.5 text-sm font-medium leading-5',
-            tone === 'positive' && 'text-[#2c8c70]',
-            tone === 'warning' && 'text-[#a26818]',
+            tone === 'positive' && 'text-success',
+            tone === 'warning' && 'text-warning',
             tone === 'neutral' && 'text-muted-foreground',
           )}
         >
@@ -108,9 +108,9 @@ export function CalculatedPanel({
   children: ReactNode;
 }) {
   return (
-    <section className="border-y border-[#c9d5e2] bg-[#eef3f8]/80 px-4 py-5 sm:px-6">
+    <section className="border-y border-primary/20 bg-primary/5 px-4 py-5 sm:px-6">
       <div className="mb-5 flex items-start gap-3">
-        <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-[#dce5ef] text-[#566579]">
+        <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
           <LockKeyhole size={18} aria-hidden="true" />
         </span>
         <div>

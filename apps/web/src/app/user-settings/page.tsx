@@ -146,13 +146,13 @@ function SettingsPageContent() {
                 />
 
                 {isOnboarding && (
-                    <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg text-blue-700 text-sm">
+                    <div className="p-4 bg-info/10 border border-info/30 rounded-lg text-info text-sm">
                         Bitte vervollständigen Sie zunächst Ihre Benutzereinstellungen, bevor Sie ImmoNext nutzen können.
                     </div>
                 )}
 
                 {error && (
-                    <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+                    <div className="mt-4 p-4 bg-destructive/10 border border-destructive/30 rounded-lg text-destructive text-sm">
                         {error}
                     </div>
                 )}

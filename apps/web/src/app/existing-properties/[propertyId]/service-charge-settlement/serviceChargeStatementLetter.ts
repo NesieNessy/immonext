@@ -46,15 +46,15 @@ function letterFrame(title: string, bodyHtml: string): string {
 <meta charset="utf-8" />
 <title>${title}</title>
 <style>
-    body { font-family: Arial, Helvetica, sans-serif; color: #111; max-width: 760px; margin: 48px auto; line-height: 1.5; }
+    body { font-family: Arial, Helvetica, sans-serif; color: #101828; max-width: 760px; margin: 48px auto; line-height: 1.5; }
     h1 { font-size: 18px; margin: 32px 0 16px; }
     h2 { font-size: 14px; margin: 24px 0 8px; }
     table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 8px; }
-    th, td { padding: 6px 8px; text-align: right; border-bottom: 1px solid #eee; }
+    th, td { padding: 6px 8px; text-align: right; border-bottom: 1px solid #d0d5dd; }
     th:first-child, td:first-child { text-align: left; }
-    thead th { border-bottom: 1px solid #999; color: #555; font-weight: 600; }
-    tfoot td { font-weight: 700; border-top: 1px solid #999; }
-    .muted { color: #555; }
+    thead th { border-bottom: 1px solid #98a2b3; color: #475467; font-weight: 600; }
+    tfoot td { font-weight: 700; border-top: 1px solid #98a2b3; }
+    .muted { color: #475467; }
 </style>
 </head>
 <body>${bodyHtml}</body>
@@ -98,7 +98,7 @@ export function serviceChargeStatementHtml(p: ServiceChargeStatementParams): str
         <p style="margin:16px 0;display:flex;justify-content:space-between;"><span>Gesamtkosten Objekt (umlagefähig)</span><strong>${euro(p.totalActualCosts)}</strong></p>
         <p style="margin:16px 0;display:flex;justify-content:space-between;"><span>Ihr Anteil</span><strong>${euro(p.unitActualShare)}</strong></p>
         <p style="margin:16px 0;display:flex;justify-content:space-between;"><span>Geleistete Vorauszahlungen</span><strong>${euro(p.annualPrepayment)}</strong></p>
-        <p style="margin:16px 0;display:flex;justify-content:space-between;border-top:1px solid #ddd;padding-top:8px;">
+        <p style="margin:16px 0;display:flex;justify-content:space-between;border-top:1px solid #d0d5dd;padding-top:8px;">
             <span>${p.overUnderCoverage > 0 ? 'Nachzahlung durch Sie' : 'Guthaben zu Ihren Gunsten'}</span>
             <strong>${euro(Math.abs(p.overUnderCoverage))}</strong>
         </p>
@@ -110,7 +110,7 @@ export function serviceChargeStatementHtml(p: ServiceChargeStatementParams): str
 
         <h2>Anpassung der Nebenkostenvorauszahlung</h2>
         <p style="margin:16px 0;display:flex;justify-content:space-between;"><span>Bisherige monatliche Vorauszahlung</span><strong>${euro(p.currentMonthlyPrepayment)}</strong></p>
-        <p style="margin:16px 0;display:flex;justify-content:space-between;border-top:1px solid #ddd;padding-top:8px;"><span>Neue monatliche Vorauszahlung ab ${formatDeDate(new Date(new Date(p.periodEnd).getFullYear() + 1, 0, 1).toISOString())}</span><strong>${euro(p.newMonthlyPrepayment)}</strong></p>
+        <p style="margin:16px 0;display:flex;justify-content:space-between;border-top:1px solid #d0d5dd;padding-top:8px;"><span>Neue monatliche Vorauszahlung ab ${formatDeDate(new Date(new Date(p.periodEnd).getFullYear() + 1, 0, 1).toISOString())}</span><strong>${euro(p.newMonthlyPrepayment)}</strong></p>
         <p class="muted">
             Grundlage für die neue Vorauszahlung ist der oben stehende Wirtschaftsplan gemäß § 560 BGB.
             Ihre Nettokaltmiete bleibt hiervon unberührt.

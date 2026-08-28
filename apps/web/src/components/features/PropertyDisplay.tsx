@@ -84,16 +84,14 @@ export const PROPERTY_CATEGORY_LABEL: Record<string, string> = {
   DENKMALGESCHUETZT: 'Denkmalgeschützt',
 };
 
-export const PROPERTY_CATEGORY_VARIANT: Record<string, TagVariant> = {
-  EIGENTUMSWOHNUNG: 'info',
-  EINFAMILIENHAUS: 'success',
-  MEHRFAMILIENHAUS: 'purple',
-  DOPPELHAUS: 'teal',
-  GEWERBE: 'warning',
-  GRUNDSTUECK: 'muted',
-  HOLZBAUWEISE: 'orange',
-  DENKMALGESCHUETZT: 'violet',
-};
+// One consistent color for every category — the tag marks "this is a
+// category label", not a status, so it shouldn't compete for attention
+// with the semantic success/warning coloring of the Vermietet/Unvermietet tag.
+const PROPERTY_CATEGORY_TAG_VARIANT: TagVariant = 'primary';
+
+export const PROPERTY_CATEGORY_VARIANT: Record<string, TagVariant> = Object.fromEntries(
+  Object.keys(PROPERTY_CATEGORY_LABEL).map((key) => [key, PROPERTY_CATEGORY_TAG_VARIANT])
+);
 
 export const PROPERTY_CATEGORY_FILTER_OPTIONS = Object.entries(PROPERTY_CATEGORY_LABEL).map(
   ([value, label]) => ({ value, label })
@@ -121,12 +119,14 @@ export const RENTAL_STATUS_FILTER_OPTIONS = [
 // Rotates by card position — not tied to category (properties of the same
 // category shouldn't all look visually identical in the grid).
 const CARD_COLOR_PALETTE = [
-  'bg-blue-500',
-  'bg-orange-500',
-  'bg-green-500',
-  'bg-purple-500',
-  'bg-red-500',
-  'bg-teal-500',
+  'bg-primary',
+  'bg-accent-terracotta',
+  'bg-secondary',
+  'bg-accent-violet',
+  'bg-accent',
+  'bg-accent-sage',
+  'bg-accent-sky',
+  'bg-accent-coral',
 ];
 
 export function getPropertyCardColor(index: number): string {

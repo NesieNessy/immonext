@@ -254,9 +254,9 @@ function TimelineRangeBar({
       <div />
       <div>
         <div className="relative h-10 touch-none select-none" data-timeline-range>
-          <div className="absolute inset-x-0 top-4 h-2 rounded-full bg-[#dce7f2]" />
+          <div className="absolute inset-x-0 top-4 h-2 rounded-full bg-[#c8d2e5]" />
           <div
-            className="absolute top-3 h-4 cursor-grab rounded border-2 border-[#3b92e8] bg-[#d9ebff] active:cursor-grabbing"
+            className="absolute top-3 h-4 cursor-grab rounded border-2 border-[#224b96] bg-[#e9edf4] active:cursor-grabbing"
             style={{ left: `${startPercent}%`, width: `${spanPercent}%` }}
             onPointerDown={(event) => handlePointerDown(event, 'window')}
             onPointerMove={handlePointerMove}
@@ -265,7 +265,7 @@ function TimelineRangeBar({
             title={`Gemeinsame Ansicht: ${viewportLabel(startYyyymm, viewport)}`}
           />
           <div
-            className="absolute top-2 h-6 w-3 -translate-x-1/2 cursor-ew-resize rounded bg-[#3b92e8]"
+            className="absolute top-2 h-6 w-3 -translate-x-1/2 cursor-ew-resize rounded bg-[#224b96]"
             style={{ left: `${startPercent}%` }}
             onPointerDown={(event) => handlePointerDown(event, 'start')}
             onPointerMove={handlePointerMove}
@@ -278,7 +278,7 @@ function TimelineRangeBar({
             aria-valuenow={viewport.start}
           />
           <div
-            className="absolute top-2 h-6 w-3 -translate-x-1/2 cursor-ew-resize rounded bg-[#3b92e8]"
+            className="absolute top-2 h-6 w-3 -translate-x-1/2 cursor-ew-resize rounded bg-[#224b96]"
             style={{ left: `${startPercent + spanPercent}%` }}
             onPointerDown={(event) => handlePointerDown(event, 'end')}
             onPointerMove={handlePointerMove}
@@ -344,38 +344,38 @@ function CalculatorChart({ rows, showRentIndex, viewport }: { rows: ChartRow[]; 
         <div><div className="text-lg font-medium text-foreground">Cashflow-Entwicklung</div><div className="text-sm text-muted-foreground">{chartMode === 'monthly' ? 'Monatliche Einnahmen und Ausgaben mit Steuerwirkung' : 'Kumulierter Cashflow nach Steuern'}</div></div>
         <div className="flex flex-wrap items-center justify-end gap-x-5 gap-y-2">
           <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
-            {chartMode === 'monthly' && <span className="inline-flex items-center gap-2"><span className="h-0.5 w-5 bg-[#2c9b7b]" />Einnahmen</span>}
-            <span className="inline-flex items-center gap-2"><span className="h-0.5 w-5 bg-[#d65b58]" />{chartMode === 'monthly' ? 'Ausgaben inkl. Steuern' : 'Cashflow nach Steuern'}</span>
-            <span className="inline-flex items-center gap-2"><span className="h-0.5 w-5 bg-[#d9a441]" />{chartMode === 'monthly' ? 'Ausgaben ohne Steuerwirkung' : 'Cashflow ohne Steuerwirkung'}</span>
-            {showRentIndex && chartMode === 'monthly' && <span className="inline-flex items-center gap-2"><span className="h-0.5 w-5 border-t-2 border-dotted border-[#8069bd]" />Mietspiegel</span>}
+            {chartMode === 'monthly' && <span className="inline-flex items-center gap-2"><span className="h-0.5 w-5 bg-[#2e7d5b]" />Einnahmen</span>}
+            <span className="inline-flex items-center gap-2"><span className="h-0.5 w-5 bg-[#b54747]" />{chartMode === 'monthly' ? 'Ausgaben inkl. Steuern' : 'Cashflow nach Steuern'}</span>
+            <span className="inline-flex items-center gap-2"><span className="h-0.5 w-5 bg-[#c18424]" />{chartMode === 'monthly' ? 'Ausgaben ohne Steuerwirkung' : 'Cashflow ohne Steuerwirkung'}</span>
+            {showRentIndex && chartMode === 'monthly' && <span className="inline-flex items-center gap-2"><span className="h-0.5 w-5 border-t-2 border-dotted border-[#7a5aa6]" />Mietspiegel</span>}
           </div>
           <div className="inline-flex rounded-md border border-border bg-muted p-1"><button className={`rounded px-3 py-1.5 text-sm ${chartMode === 'monthly' ? 'bg-card font-semibold text-foreground shadow-sm' : 'text-muted-foreground'}`} onClick={() => setChartMode('monthly')}>Monatlich</button><button className={`rounded px-3 py-1.5 text-sm ${chartMode === 'cumulative' ? 'bg-card font-semibold text-foreground shadow-sm' : 'text-muted-foreground'}`} onClick={() => setChartMode('cumulative')}>Kumuliert</button></div>
         </div>
       </div>
-      <div className="relative overflow-hidden bg-[#fbfcfe]">
+      <div className="relative overflow-hidden bg-[#fbf6f0]">
         <svg className="h-auto w-full" viewBox={`0 0 ${width} 342`} role="img" aria-labelledby="calculator-chart-title calculator-chart-description">
           <title id="calculator-chart-title">Cashflow-Entwicklung über {CALCULATION_HORIZON_YEARS} Jahre</title>
           <desc id="calculator-chart-description">Interaktive Darstellung der monatlichen oder kumulierten Einnahmen und Ausgaben.</desc>
           <defs>
             <linearGradient id="calculator-tax-band" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0" stopColor="#e2b85d" stopOpacity=".34" />
-              <stop offset="1" stopColor="#f3dca4" stopOpacity=".16" />
+              <stop offset="0" stopColor="#daaa64" stopOpacity=".34" />
+              <stop offset="1" stopColor="#e5c492" stopOpacity=".16" />
             </linearGradient>
           </defs>
           <text x="20" y="24" className="fill-foreground text-sm font-medium">{chartMode === 'monthly' ? 'Betrag / Monat' : 'Kumulierter Cashflow'}</text>
           {[0, .25, .5, .75, 1].map((ratio) => <line key={ratio} x1={left} x2={left + plotWidth} y1={top + ratio * height} y2={top + ratio * height} className="stroke-border" strokeWidth="1" />)}
           <text x="20" y={top + 4} className="fill-muted-foreground text-xs">{formatAxisCurrency(domain.max)}</text><text x="20" y={top + height + 4} className="fill-muted-foreground text-xs">{formatAxisCurrency(domain.min)}</text>
-          {chartMode === 'cumulative' && <line x1={left} x2={left + plotWidth} y1={zeroY} y2={zeroY} stroke="#d99432" strokeWidth="1.5" strokeDasharray="5 4" />}
+          {chartMode === 'cumulative' && <line x1={left} x2={left + plotWidth} y1={zeroY} y2={zeroY} stroke="#c18424" strokeWidth="1.5" strokeDasharray="5 4" />}
           <line x1={left} x2={left} y1={top} y2={top + height} className="stroke-muted-foreground" strokeWidth="1" />
           <path d={chartBandPath(primaryValues, comparisonValues, domain.min, domain.max, left, top, plotWidth, height)} fill="url(#calculator-tax-band)" />
-          {chartMode === 'monthly' && <path d={chartPath(visibleRows.map((row) => row.income), domain.min, domain.max, left, top, plotWidth, height)} fill="none" stroke="#2c9b7b" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />}
-          <path d={chartPath(comparisonValues, domain.min, domain.max, left, top, plotWidth, height)} fill="none" stroke="#d9a441" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-          <path d={chartPath(primaryValues, domain.min, domain.max, left, top, plotWidth, height)} fill="none" stroke="#d65b58" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
-          {showRentIndex && chartMode === 'monthly' && <path d={chartPath(visibleRows.map((row) => row.rentTotalWithRentIndex), domain.min, domain.max, left, top, plotWidth, height)} fill="none" stroke="#8069bd" strokeWidth="2" strokeDasharray="3 4" />}
-          {eventRows.map((row) => { const index = visibleRows.indexOf(row); const x = xAt(index); const title = row.renovationPayment > 0 ? 'Sanierungszahlung' : row.delta559 > 0 ? 'Mieterhöhung aufgrund Sanierung' : 'Mieterhöhung aufgrund Mietspiegel'; const detail = row.renovationPayment > 0 ? `${row.yyyymm}: ${formatCurrency(row.renovationPayment)} Zahlung` : `${row.yyyymm}: +${formatCurrency(row.delta559 > 0 ? row.delta559 : row.delta558)} monatlich`; const isRent = row.renovationPayment === 0; const eventValue = isRent ? row.income : chartExpenses(row); return <g key={`event-${row.yyyymm}`} onMouseEnter={() => setHoveredEvent({ x: (x / width) * 100, title, detail })} onMouseLeave={() => setHoveredEvent(null)}><circle cx={x} cy={chartMode === 'monthly' ? yAt(eventValue) : yAt(row.afterTaxCumulative)} r="6" fill={isRent ? '#2c9b7b' : '#d65b58'} stroke="var(--card)" strokeWidth="2" /></g>; })}
-          {breakEvenIndex >= 0 && chartMode === 'cumulative' && <><line x1={xAt(breakEvenIndex)} x2={xAt(breakEvenIndex)} y1={top} y2={top + height} stroke="#d99432" strokeWidth="1.5" strokeDasharray="5 4" /><circle cx={xAt(breakEvenIndex)} cy={zeroY} r="6" fill="#d99432" stroke="var(--card)" strokeWidth="2" /></>}
+          {chartMode === 'monthly' && <path d={chartPath(visibleRows.map((row) => row.income), domain.min, domain.max, left, top, plotWidth, height)} fill="none" stroke="#2e7d5b" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />}
+          <path d={chartPath(comparisonValues, domain.min, domain.max, left, top, plotWidth, height)} fill="none" stroke="#c18424" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+          <path d={chartPath(primaryValues, domain.min, domain.max, left, top, plotWidth, height)} fill="none" stroke="#b54747" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+          {showRentIndex && chartMode === 'monthly' && <path d={chartPath(visibleRows.map((row) => row.rentTotalWithRentIndex), domain.min, domain.max, left, top, plotWidth, height)} fill="none" stroke="#7a5aa6" strokeWidth="2" strokeDasharray="3 4" />}
+          {eventRows.map((row) => { const index = visibleRows.indexOf(row); const x = xAt(index); const title = row.renovationPayment > 0 ? 'Sanierungszahlung' : row.delta559 > 0 ? 'Mieterhöhung aufgrund Sanierung' : 'Mieterhöhung aufgrund Mietspiegel'; const detail = row.renovationPayment > 0 ? `${row.yyyymm}: ${formatCurrency(row.renovationPayment)} Zahlung` : `${row.yyyymm}: +${formatCurrency(row.delta559 > 0 ? row.delta559 : row.delta558)} monatlich`; const isRent = row.renovationPayment === 0; const eventValue = isRent ? row.income : chartExpenses(row); return <g key={`event-${row.yyyymm}`} onMouseEnter={() => setHoveredEvent({ x: (x / width) * 100, title, detail })} onMouseLeave={() => setHoveredEvent(null)}><circle cx={x} cy={chartMode === 'monthly' ? yAt(eventValue) : yAt(row.afterTaxCumulative)} r="6" fill={isRent ? '#2e7d5b' : '#b54747'} stroke="var(--card)" strokeWidth="2" /></g>; })}
+          {breakEvenIndex >= 0 && chartMode === 'cumulative' && <><line x1={xAt(breakEvenIndex)} x2={xAt(breakEvenIndex)} y1={top} y2={top + height} stroke="#c18424" strokeWidth="1.5" strokeDasharray="5 4" /><circle cx={xAt(breakEvenIndex)} cy={zeroY} r="6" fill="#c18424" stroke="var(--card)" strokeWidth="2" /></>}
         </svg>
-        {hoveredEvent && <div className="pointer-events-none absolute top-4 z-30 w-56 rounded-md bg-[#172434] px-3 py-2 text-xs text-white shadow-lg" style={{ left: `clamp(8px, ${hoveredEvent.x}%, calc(100% - 232px))` }}><strong className="block">{hoveredEvent.title}</strong><span className="text-[#cfdae7]">{hoveredEvent.detail}</span></div>}
+        {hoveredEvent && <div className="pointer-events-none absolute top-4 z-30 w-56 rounded-md bg-[#0e1e3c] px-3 py-2 text-xs text-white shadow-lg" style={{ left: `clamp(8px, ${hoveredEvent.x}%, calc(100% - 232px))` }}><strong className="block">{hoveredEvent.title}</strong><span className="text-[#9caed0]">{hoveredEvent.detail}</span></div>}
       </div>
     </div>
   );
@@ -398,14 +398,14 @@ function TimelineEventConnectors({ rows, viewport }: { rows: ChartRow[]; viewpor
           className="absolute inset-y-0 border-l border-dashed opacity-55"
           style={{
             left: `${leftForIndex(index)}%`,
-            borderColor: row.renovationPayment > 0 ? '#d65b58' : '#2c9b7b',
+            borderColor: row.renovationPayment > 0 ? '#b54747' : '#2e7d5b',
           }}
         />
       ))}
       {breakEvenIndex >= 0 && (
         <div
           className="absolute inset-y-0 border-l-2 opacity-60"
-          style={{ left: `${leftForIndex(breakEvenIndex)}%`, borderColor: '#d99432' }}
+          style={{ left: `${leftForIndex(breakEvenIndex)}%`, borderColor: '#c18424' }}
         />
       )}
     </div>
@@ -444,8 +444,8 @@ function SaveStatusIndicator({ isSaving, isDirty }: { isSaving: boolean; isDirty
   }
   if (isDirty) {
     return (
-      <span className="inline-flex items-center gap-1.5 text-xs text-amber-600" role="status">
-        <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-amber-500" aria-hidden="true" />
+      <span className="inline-flex items-center gap-1.5 text-xs text-warning" role="status">
+        <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-warning" aria-hidden="true" />
         Nicht gespeicherte Änderungen
       </span>
     );
@@ -637,7 +637,7 @@ const Bar = memo(function Bar({
 }: BarProps) {
   return (
     <div
-      className={`absolute flex h-8 min-w-[94px] touch-none cursor-grab items-center gap-1 rounded-md border-2 px-2 text-[11px] font-semibold text-white shadow-sm active:cursor-grabbing ${kind === 'rent' ? 'border-[#9fd7c5] bg-[#2c9b7b]' : 'border-[#efb1ae] bg-[#d65b58]'} ${isDragging ? 'ring-2 ring-[#d99432] ring-offset-2' : ''}`}
+      className={`absolute flex h-8 min-w-[94px] touch-none cursor-grab items-center gap-1 rounded-md border-2 px-2 text-[11px] font-semibold text-white shadow-sm active:cursor-grabbing ${kind === 'rent' ? 'border-[#9ed2bb] bg-[#2e7d5b]' : 'border-[#e3afac] bg-[#b54747]'} ${isDragging ? 'ring-2 ring-[#c18424] ring-offset-2' : ''}`}
       style={{
         left: `${left}%`,
         top: `${TRACK_PADDING_PX + lane * LANE_STEP_PX}px`,
@@ -1146,7 +1146,7 @@ function PlanEditor({
     amount: item.monthlyDelta,
     maxAmount: item.legalMaximum,
   })));
-  const blockedPattern = 'bg-[repeating-linear-gradient(135deg,rgba(100,116,139,.16),rgba(100,116,139,.16)_5px,transparent_5px,transparent_10px)]';
+  const blockedPattern = 'bg-[repeating-linear-gradient(135deg,rgba(71,84,103,.16),rgba(71,84,103,.16)_5px,transparent_5px,transparent_10px)]';
 
   return (
     <div className="relative border-t border-border pt-5">
@@ -1164,7 +1164,7 @@ function PlanEditor({
             >
               {viewport.start === 0 && (
                 <div
-                  className="absolute inset-y-0 left-0 w-[2.5%] bg-[repeating-linear-gradient(135deg,rgba(100,116,139,.12),rgba(100,116,139,.12)_5px,transparent_5px,transparent_10px)]"
+                  className="absolute inset-y-0 left-0 w-[2.5%] bg-[repeating-linear-gradient(135deg,rgba(71,84,103,.12),rgba(71,84,103,.12)_5px,transparent_5px,transparent_10px)]"
                   title="Vor dem Startmonat gesperrt"
                 />
               )}
@@ -1210,11 +1210,11 @@ function PlanEditor({
                   cannot be moved into and names the rule responsible. */}
               {draggedBlock && draggedBlockWidth > 0 && (
                 <div
-                  className="absolute inset-y-0 left-0 z-30 flex items-center justify-end overflow-hidden border-r-2 border-[#d65b58] bg-[rgba(100,116,139,.22)] pr-2"
+                  className="absolute inset-y-0 left-0 z-30 flex items-center justify-end overflow-hidden border-r-2 border-[#b54747] bg-[rgba(71,84,103,.22)] pr-2"
                   style={{ width: `${draggedBlockWidth}%` }}
                   title={`Nicht möglich: ${draggedBlock.reason}`}
                 >
-                  <span className="truncate text-[10px] font-medium text-[#4b5563]">Nicht möglich</span>
+                  <span className="truncate text-[10px] font-medium text-[#475467]">Nicht möglich</span>
                 </div>
               )}
               {increases558Track.nodes}
@@ -1229,7 +1229,7 @@ function PlanEditor({
               onPointerUp={handleBarPointerUp}
             >
               <div
-                className={`absolute top-2 z-10 h-8 touch-none cursor-ns-resize overflow-hidden rounded-md border-2 border-[#9bbbd3] bg-[#245b88] px-2 py-2 text-[11px] font-semibold text-white shadow-sm ${dragging?.id === 'financing-rate' ? 'ring-2 ring-[#d99432] ring-offset-2' : ''}`}
+                className={`absolute top-2 z-10 h-8 touch-none cursor-ns-resize overflow-hidden rounded-md border-2 border-[#9caed0] bg-[#1d4080] px-2 py-2 text-[11px] font-semibold text-white shadow-sm ${dragging?.id === 'financing-rate' ? 'ring-2 ring-[#c18424] ring-offset-2' : ''}`}
                 style={{ left: `${fixedInterestLeft}%`, width: `${fixedInterestWidth}%` }}
                 onPointerDown={(event) => beginDrag(event, 'financing-rate', 'finance', fixedInterestLeft, draftFinancingRate, 25, false)}
                 onPointerMove={handlePointerMove}
@@ -1241,7 +1241,7 @@ function PlanEditor({
               </div>
               {refinancingWidth > 0 && refinancingLeft < 100 && (
                 <div
-                  className={`absolute top-2 z-20 h-8 touch-none cursor-ns-resize overflow-hidden rounded-md border-2 border-[#c2b8df] bg-[#8069bd] px-2 py-2 text-[11px] font-semibold text-white shadow-sm ${dragging?.id === 'refinancing-rate' ? 'ring-2 ring-[#d99432] ring-offset-2' : ''}`}
+                  className={`absolute top-2 z-20 h-8 touch-none cursor-ns-resize overflow-hidden rounded-md border-2 border-[#c3b7dd] bg-[#7a5aa6] px-2 py-2 text-[11px] font-semibold text-white shadow-sm ${dragging?.id === 'refinancing-rate' ? 'ring-2 ring-[#c18424] ring-offset-2' : ''}`}
                   style={{ left: `${refinancingLeft}%`, width: `${refinancingWidth}%` }}
                   onPointerDown={(event) => beginDrag(event, 'refinancing-rate', 'finance', refinancingLeft, draftRefinancingRate, 25, false)}
                   onPointerMove={handlePointerMove}
@@ -1258,7 +1258,7 @@ function PlanEditor({
             <div className="py-4 pr-3 font-medium">Steuern</div>
             <div data-gantt-track="true" className="relative h-14 bg-[repeating-linear-gradient(90deg,transparent,transparent_calc(20%-1px),theme(colors.border)_calc(20%-1px),theme(colors.border)_20%)]" onPointerMove={handlePointerMove} onPointerUp={() => void finishDrag()}>
               <div
-                className={`absolute inset-x-0 top-2 z-20 flex h-8 touch-none cursor-ns-resize items-center rounded-md border-2 border-[#f2d799] bg-[#d9a441] px-3 text-[11px] font-semibold text-[#34260b] shadow-sm ${dragging?.id === 'tax-rate' ? 'ring-2 ring-[#d65b58] ring-offset-2' : ''}`}
+                className={`absolute inset-x-0 top-2 z-20 flex h-8 touch-none cursor-ns-resize items-center rounded-md border-2 border-[#e5c492] bg-[#c18424] px-3 text-[11px] font-semibold text-[#574428] shadow-sm ${dragging?.id === 'tax-rate' ? 'ring-2 ring-[#b54747] ring-offset-2' : ''}`}
                 onPointerDown={(event) => beginDrag(event, 'tax-rate', 'tax', 0, draftTaxRate, 45, false)}
                 onPointerMove={handlePointerMove}
                 onPointerUp={handleBarPointerUp}
@@ -1308,7 +1308,7 @@ function PlanEditor({
                   role="switch"
                   aria-checked={draftLossesOffsettable}
                   aria-label="Steuerliche Verluste verrechenbar"
-                  className={`relative h-6 w-11 rounded-full transition-colors ${draftLossesOffsettable ? 'bg-[#d9a441]' : 'bg-muted-foreground/35'}`}
+                  className={`relative h-6 w-11 rounded-full transition-colors ${draftLossesOffsettable ? 'bg-[#c18424]' : 'bg-muted-foreground/35'}`}
                   onClick={() => {
                     const nextValue = !draftLossesOffsettable;
                     setDraftLossesOffsettable(nextValue);
@@ -1337,7 +1337,7 @@ function PlanEditor({
         </div>
       </div>
       <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
-        <span className={`text-sm ${draggedIntoBlock ? 'font-medium text-[#d65b58]' : 'text-muted-foreground'}`}>
+        <span className={`text-sm ${draggedIntoBlock ? 'font-medium text-[#b54747]' : 'text-muted-foreground'}`}>
           {/* While the bar sits inside a blocked zone, this shows the reason
               live — the grey overlay itself is too narrow to fit readable
               text, and waiting for the drop (or a hover tooltip) delays the
@@ -1403,9 +1403,9 @@ function PlanEditor({
                     {renovationChanges.map((change) => (
                       <div key={change.planItem.id} className="space-y-2 px-4 py-3">
                         <div className="font-medium">{change.planItem.title}</div>
-                        {change.originalDate !== change.currentDate && <div className="flex justify-between gap-4"><span>Wirksamkeit: {change.originalDate}</span><strong className="rounded bg-red-50 px-2 py-0.5 text-red-700">{change.currentDate}</strong></div>}
-                        {change.originalCost !== change.currentCost && <div className="flex justify-between gap-4"><span>Betrag: {formatCurrency(change.originalCost)}</span><strong className="rounded bg-red-50 px-2 py-0.5 text-red-700">{formatCurrency(change.currentCost)}</strong></div>}
-                        {change.source.zeitpunkt !== change.currentTiming && <div className="flex justify-between gap-4"><span>Planung: {change.source.zeitpunkt === 'SOFORT' ? 'Sofort' : 'Flexibel'}</span><strong className="rounded bg-red-50 px-2 py-0.5 text-red-700">{change.currentTiming === 'SOFORT' ? 'Sofort' : 'Flexibel'}</strong></div>}
+                        {change.originalDate !== change.currentDate && <div className="flex justify-between gap-4"><span>Wirksamkeit: {change.originalDate}</span><strong className="rounded bg-warning/15 px-2 py-0.5 text-warning">{change.currentDate}</strong></div>}
+                        {change.originalCost !== change.currentCost && <div className="flex justify-between gap-4"><span>Betrag: {formatCurrency(change.originalCost)}</span><strong className="rounded bg-warning/15 px-2 py-0.5 text-warning">{formatCurrency(change.currentCost)}</strong></div>}
+                        {change.source.zeitpunkt !== change.currentTiming && <div className="flex justify-between gap-4"><span>Planung: {change.source.zeitpunkt === 'SOFORT' ? 'Sofort' : 'Flexibel'}</span><strong className="rounded bg-warning/15 px-2 py-0.5 text-warning">{change.currentTiming === 'SOFORT' ? 'Sofort' : 'Flexibel'}</strong></div>}
                       </div>
                     ))}
                   </div>
@@ -1415,7 +1415,7 @@ function PlanEditor({
                 <details className="rounded-md border border-border">
                   <summary className="cursor-pointer px-4 py-3 font-medium">§558-Mieterhöhungen ({rentChanges.length})</summary>
                   <div className="divide-y divide-border border-t border-border">
-                    {rentChanges.map(([id, change]) => <div key={id} className="flex flex-wrap justify-between gap-3 px-4 py-3"><span>{id}</span><span className="space-x-2">{change.effectiveYyyymm && <strong className="rounded bg-red-50 px-2 py-0.5 text-red-700">{change.effectiveYyyymm}</strong>}{change.monthlyDelta != null && <strong className="rounded bg-red-50 px-2 py-0.5 text-red-700">+{formatCurrency(change.monthlyDelta)} / Monat</strong>}</span></div>)}
+                    {rentChanges.map(([id, change]) => <div key={id} className="flex flex-wrap justify-between gap-3 px-4 py-3"><span>{id}</span><span className="space-x-2">{change.effectiveYyyymm && <strong className="rounded bg-warning/15 px-2 py-0.5 text-warning">{change.effectiveYyyymm}</strong>}{change.monthlyDelta != null && <strong className="rounded bg-warning/15 px-2 py-0.5 text-warning">+{formatCurrency(change.monthlyDelta)} / Monat</strong>}</span></div>)}
                   </div>
                 </details>
               )}
@@ -1423,9 +1423,9 @@ function PlanEditor({
                 <details className="rounded-md border border-border" open>
                   <summary className="cursor-pointer px-4 py-3 font-medium">Finanzierung</summary>
                   <div className="space-y-2 border-t border-border px-4 py-3">
-                    {financingChanged && <div className="flex justify-between gap-4"><span>Zins: {numberFormatter.format(initialValuesRef.current.financingRate)} %</span><strong className="rounded bg-red-50 px-2 py-0.5 text-red-700">{numberFormatter.format(draftFinancingRate)} %</strong></div>}
-                    {refinancingChanged && <div className="flex justify-between gap-4"><span>Anschlusszins: {numberFormatter.format(initialValuesRef.current.refinancingRate)} %</span><strong className="rounded bg-red-50 px-2 py-0.5 text-red-700">{numberFormatter.format(draftRefinancingRate)} %</strong></div>}
-                    {equityChanged && <div className="flex justify-between gap-4"><span>Eigenkapital: {initialValuesRef.current.equityIncluded ? 'berücksichtigt' : 'nicht berücksichtigt'}</span><strong className="rounded bg-red-50 px-2 py-0.5 text-red-700">{draftEquity ? 'berücksichtigt' : 'nicht berücksichtigt'}</strong></div>}
+                    {financingChanged && <div className="flex justify-between gap-4"><span>Zins: {numberFormatter.format(initialValuesRef.current.financingRate)} %</span><strong className="rounded bg-warning/15 px-2 py-0.5 text-warning">{numberFormatter.format(draftFinancingRate)} %</strong></div>}
+                    {refinancingChanged && <div className="flex justify-between gap-4"><span>Anschlusszins: {numberFormatter.format(initialValuesRef.current.refinancingRate)} %</span><strong className="rounded bg-warning/15 px-2 py-0.5 text-warning">{numberFormatter.format(draftRefinancingRate)} %</strong></div>}
+                    {equityChanged && <div className="flex justify-between gap-4"><span>Eigenkapital: {initialValuesRef.current.equityIncluded ? 'berücksichtigt' : 'nicht berücksichtigt'}</span><strong className="rounded bg-warning/15 px-2 py-0.5 text-warning">{draftEquity ? 'berücksichtigt' : 'nicht berücksichtigt'}</strong></div>}
                   </div>
                 </details>
               )}
@@ -1433,8 +1433,8 @@ function PlanEditor({
                 <details className="rounded-md border border-border" open>
                   <summary className="cursor-pointer px-4 py-3 font-medium">Steuern</summary>
                   <div className="space-y-2 border-t border-border px-4 py-3">
-                    {taxRateChanged && <div className="flex justify-between gap-4"><span>Grenzsteuersatz: {numberFormatter.format(initialValuesRef.current.taxRate)} %</span><strong className="rounded bg-red-50 px-2 py-0.5 text-red-700">{numberFormatter.format(draftTaxRate)} %</strong></div>}
-                    {lossesOffsettableChanged && <div className="flex justify-between gap-4"><span>Verlustverrechnung: {initialValuesRef.current.taxableLossesOffsettable ? 'An' : 'Aus'}</span><strong className="rounded bg-red-50 px-2 py-0.5 text-red-700">{draftLossesOffsettable ? 'An' : 'Aus'}</strong></div>}
+                    {taxRateChanged && <div className="flex justify-between gap-4"><span>Grenzsteuersatz: {numberFormatter.format(initialValuesRef.current.taxRate)} %</span><strong className="rounded bg-warning/15 px-2 py-0.5 text-warning">{numberFormatter.format(draftTaxRate)} %</strong></div>}
+                    {lossesOffsettableChanged && <div className="flex justify-between gap-4"><span>Verlustverrechnung: {initialValuesRef.current.taxableLossesOffsettable ? 'An' : 'Aus'}</span><strong className="rounded bg-warning/15 px-2 py-0.5 text-warning">{draftLossesOffsettable ? 'An' : 'Aus'}</strong></div>}
                   </div>
                 </details>
               )}
@@ -2053,7 +2053,7 @@ function CalculatorContent() {
     >
       <div className="pb-24">
         {upstreamResetNotice && (
-          <div className="mb-4 flex items-start justify-between gap-4 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-700/60 dark:bg-amber-950/40 dark:text-amber-200">
+          <div className="mb-4 flex items-start justify-between gap-4 rounded-lg border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
             <p>
               Da sich zugrunde liegende Daten (z.&nbsp;B. Objektdaten, Finanzierung oder Sanierung) seit der letzten
               Speicherung geändert haben, wurden manuelle Anpassungen im Kalkulator (Platzierungen, Zinssatz-Override,
@@ -2062,7 +2062,7 @@ function CalculatorContent() {
             <button
               type="button"
               onClick={() => setUpstreamResetNotice(false)}
-              className="shrink-0 text-amber-900/70 hover:text-amber-900 dark:text-amber-200/70 dark:hover:text-amber-200"
+              className="shrink-0 text-warning/70 hover:text-warning"
               aria-label="Hinweis schließen"
             >
               ✕
@@ -2275,7 +2275,7 @@ function CalculatorContent() {
                 {openTables.timeline && (
                   <div className="mt-4 max-h-[420px] overflow-auto rounded-lg border border-border">
                     <table className="w-full min-w-[820px] text-left text-sm">
-                      <thead className="sticky top-0 bg-muted">
+                      <thead className="sticky top-0 bg-primary/8">
                         <tr>
                           <th className="px-4 py-3 font-medium">Monat</th>
                           <th className="px-4 py-3 text-right font-medium">Miete gesamt</th>
@@ -2293,7 +2293,7 @@ function CalculatorContent() {
                             <td className="px-4 py-3 text-right">{row.delta558 > 0 ? formatCurrency(row.delta558) : '-'}</td>
                             <td className="px-4 py-3 text-right">{row.delta559 > 0 ? formatCurrency(row.delta559) : '-'}</td>
                             <td className="px-4 py-3 text-right">{row.renovationPayment > 0 ? formatCurrency(row.renovationPayment) : '-'}</td>
-                            <td className={`px-4 py-3 text-right ${row.monthlyDelta >= 0 ? 'text-emerald-700' : 'text-destructive'}`}>
+                            <td className={`px-4 py-3 text-right ${row.monthlyDelta >= 0 ? 'text-success' : 'text-destructive'}`}>
                               {formatCurrency(row.monthlyDelta)}
                             </td>
                           </tr>
@@ -2312,7 +2312,7 @@ function CalculatorContent() {
                 {openTables.modernization && (
                   <div className="mt-4 overflow-hidden rounded-lg border border-border">
                     <table className="w-full text-left text-sm">
-                      <thead className="bg-muted">
+                      <thead className="bg-primary/8">
                         <tr>
                           <th className="px-4 py-3 font-medium">Maßnahme</th>
                           <th className="px-4 py-3 font-medium">Zahlung</th>
@@ -2347,7 +2347,7 @@ function CalculatorContent() {
                 {openTables.increases && (
                   <div className="mt-4 overflow-hidden rounded-lg border border-border">
                     <table className="w-full text-left text-sm">
-                      <thead className="bg-muted">
+                      <thead className="bg-primary/8">
                         <tr>
                           <th className="px-4 py-3 font-medium">Wirksam ab</th>
                           <th className="px-4 py-3 text-right font-medium">Monat +</th>
@@ -2378,7 +2378,7 @@ function CalculatorContent() {
                 {openTables.cashflow && (
                   <div className="mt-4 max-h-[360px] overflow-auto rounded-lg border border-border">
                     <table className="w-full min-w-[900px] text-left text-sm">
-                      <thead className="sticky top-0 bg-muted">
+                      <thead className="sticky top-0 bg-primary/8">
                         <tr>
                           <th className="px-4 py-3 font-medium">Monat</th>
                           <th className="px-4 py-3 text-right font-medium">Einnahmen</th>

@@ -469,7 +469,7 @@ function RenovationContent() {
               {cases.length > 0 && (
                 <div className="mt-6 overflow-hidden rounded-lg border border-border">
                   <table className="w-full text-left text-sm">
-                    <thead className="bg-muted">
+                    <thead className="bg-primary/8">
                       <tr>
                         <th className="px-4 py-3 font-medium">Kategorie</th>
                         <th className="px-4 py-3 font-medium">Maßnahme</th>
@@ -504,7 +504,7 @@ function RenovationContent() {
                                         <img src={previewUrl} alt="" className="h-10 w-12 rounded object-cover" />
                                       ) : document?.contentType?.startsWith('image/') ? (
                                         <div className="flex h-10 w-12 items-center justify-center rounded bg-muted">
-                                          <AlertTriangle size={16} className="text-amber-500" />
+                                          <AlertTriangle size={16} className="text-warning" />
                                         </div>
                                       ) : (
                                         <FileText size={18} />
@@ -545,7 +545,7 @@ function RenovationContent() {
                   </div>
                   <div className="overflow-hidden rounded-lg border border-border">
                     <table className="w-full text-left text-sm">
-                      <thead className="bg-muted">
+                      <thead className="bg-primary/8">
                         <tr>
                           <th className="px-4 py-3 font-medium">Auswahl</th>
                           <th className="px-4 py-3 font-medium">Maßnahme</th>
@@ -619,7 +619,7 @@ function RenovationContent() {
                   </div>
                   <div className="overflow-hidden rounded-lg border border-border">
                     <table className="w-full text-left text-sm">
-                      <thead className="bg-muted">
+                      <thead className="bg-primary/8">
                         <tr>
                           <th className="px-4 py-3 font-medium">Maßnahme</th>
                           <th className="px-4 py-3 text-right font-medium">Kosten</th>

@@ -79,14 +79,14 @@ export function AdjustmentStatusBox({
 
     if (acceptedEntry) {
         return (
-            <div className="flex items-center justify-between gap-3 p-3 rounded-lg bg-green-50 border border-green-200 text-xs text-green-800">
+            <div className="flex items-center justify-between gap-3 p-3 rounded-lg bg-success/10 border border-success/30 text-xs text-success">
                 <div className="flex items-center gap-2">
                     <Icons.Check className="w-4 h-4 shrink-0" />
                     <span>
                         {label} übernommen{currentValue != null ? ` — Nettomiete angepasst auf ${euro(currentValue)}` : ''}
                     </span>
                 </div>
-                <span className="shrink-0 text-green-700">{format(new Date(acceptedEntry.createdAt), 'dd.MM.yyyy')}</span>
+                <span className="shrink-0 text-success">{format(new Date(acceptedEntry.createdAt), 'dd.MM.yyyy')}</span>
             </div>
         );
     }
@@ -100,11 +100,11 @@ export function AdjustmentStatusBox({
 
     if (!isActive) {
         return (
-            <div className="flex items-start gap-2 p-3 rounded-lg bg-blue-50 border border-blue-200 text-xs text-blue-800">
+            <div className="flex items-start gap-2 p-3 rounded-lg bg-info/10 border border-info/30 text-xs text-info">
                 <Bell className="w-4 h-4 shrink-0 mt-0.5" />
                 <span>
                     <strong>{format(reminderDate, 'dd.MM.yyyy')}</strong>{' '}
-                    <span className="text-blue-600">{dayLabel}</span> · Du erhältst zu diesem Datum eine Benachrichtigung.
+                    <span className="text-info">{dayLabel}</span> · Du erhältst zu diesem Datum eine Benachrichtigung.
                 </span>
             </div>
         );
@@ -116,13 +116,13 @@ export function AdjustmentStatusBox({
     return (
         <div className={cn(
             "flex flex-col gap-2 p-3 rounded-lg border text-xs",
-            isRed ? "bg-red-50 border-red-200 text-red-800" : "bg-amber-50 border-amber-200 text-amber-800"
+            isRed ? "bg-destructive/10 border-destructive/30 text-destructive" : "bg-warning/10 border-warning/30 text-warning"
         )}>
             <div className="flex items-start gap-2">
                 {isRed ? <Icons.AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" /> : <Icons.Clock className="w-4 h-4 shrink-0 mt-0.5" />}
                 <span>
                     <strong>{format(reminderDate, 'dd.MM.yyyy')}</strong>{' '}
-                    <span className={isRed ? "text-red-600" : "text-amber-600"}>{dayLabel}</span>
+                    <span className={isRed ? "text-destructive" : "text-warning"}>{dayLabel}</span>
                     {' · '}
                     {isRed ? 'Erinnerungsdatum überschritten – bitte jetzt entscheiden.' : 'Erinnerung aktiv · Schreiben vorbereiten und Entscheidung treffen.'}
                 </span>

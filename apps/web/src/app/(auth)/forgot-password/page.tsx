@@ -54,7 +54,7 @@ export default function ForgotPasswordPage() {
 
       <form onSubmit={handleSubmit} className="space-y-4">
         {error && (
-          <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+          <div className="p-3 bg-destructive/10 border border-destructive/30 rounded-lg text-destructive text-sm">
             {error}
           </div>
         )}
@@ -75,7 +75,7 @@ export default function ForgotPasswordPage() {
 
       <p className="text-center text-sm text-gray-600">
         Passwort wieder erinnerlich?{' '}
-        <Link href="/login" className="text-blue-600 hover:text-blue-800">
+        <Link href="/login" className="text-primary hover:text-primary/80">
           Anmelden
         </Link>
       </p>
