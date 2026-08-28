@@ -13,7 +13,7 @@ import { useTenantMoveOutData } from '../../useTenantMoveOutData';
 
 export default function TenantMoveOutProtocolPage({ propertyId, unitId }: { propertyId: string; unitId: string }) {
     const router = useRouter();
-    const [property, setProperty] = useState<Property | null>(null);
+    const [property, setProperty] = useState<Property | null | undefined>(undefined);
     const [unit, setUnit] = useState<PropertyUnit | null | undefined>(undefined);
     const [hasMultipleUnits, setHasMultipleUnits] = useState(false);
 
@@ -30,8 +30,8 @@ export default function TenantMoveOutProtocolPage({ propertyId, unitId }: { prop
         });
     }, [propertyId, unitId]);
 
+    if (property === undefined || unit === undefined) return <PropertyLoadingPage />;
     if (property === null || unit === null) return <PropertyNotFoundPage />;
-    if (!property || unit === undefined) return <PropertyLoadingPage />;
 
     return (
         <TenantMoveOutProtocolContent

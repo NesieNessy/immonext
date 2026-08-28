@@ -410,25 +410,26 @@
   animation-duration: 180ms;
 }
 
-/* LoadingScreen's logo mark — the three glyph groups (i / n / b) reveal in
-   sequence rather than the whole mark spinning or pulsing as one piece.
-   Same total-cycle duration on all three; each keyframe only differs in
-   *when* its visible window falls within that cycle, so restarting the
-   animation (at 100%→0%) keeps the stagger on every loop, not just the first. */
+/* LoadingScreen's logo mark — cumulative build-up: i, then i+n, then i+n+b,
+   held together briefly, then all three clear at once before the loop
+   restarts. Once a glyph appears it stays until the shared fade-out at the
+   end of the cycle, rather than each one disappearing before the next. Same
+   total-cycle duration on all three, so restarting (100%→0%) repeats the
+   same build-up on every loop, not just the first. */
 @keyframes logo-reveal-i {
   0%, 4%    { opacity: 0; transform: translateY(3px); }
-  10%, 28%  { opacity: 1; transform: translateY(0); }
-  34%, 100% { opacity: 0; transform: translateY(3px); }
+  10%, 86%  { opacity: 1; transform: translateY(0); }
+  92%, 100% { opacity: 0; transform: translateY(3px); }
 }
 @keyframes logo-reveal-n {
   0%, 34%   { opacity: 0; transform: translateY(3px); }
-  40%, 58%  { opacity: 1; transform: translateY(0); }
-  64%, 100% { opacity: 0; transform: translateY(3px); }
+  40%, 86%  { opacity: 1; transform: translateY(0); }
+  92%, 100% { opacity: 0; transform: translateY(3px); }
 }
 @keyframes logo-reveal-b {
   0%, 64%   { opacity: 0; transform: translateY(3px); }
-  70%, 88%  { opacity: 1; transform: translateY(0); }
-  94%, 100% { opacity: 0; transform: translateY(3px); }
+  70%, 86%  { opacity: 1; transform: translateY(0); }
+  92%, 100% { opacity: 0; transform: translateY(3px); }
 }
 
 .logo-reveal-i, .logo-reveal-n, .logo-reveal-b {
