@@ -74,14 +74,18 @@ describe('getPlaceholderPortalUrl', () => {
     expect(getPlaceholderPortalUrl({ ...entry, status: 'inaktiv' })).toBeNull();
   });
 
-  it('returns a URL containing the encoded portal ID for an active, portal-sourced row', () => {
-    const url = getPlaceholderPortalUrl(entry);
-    expect(url).not.toBeNull();
-    expect(url).toContain(encodeURIComponent(entry.portalId));
+  it('returns null for an opaque, non-URL portal reference — no fabricated link to an unrelated domain', () => {
+    expect(getPlaceholderPortalUrl({ ...entry, portalId: 'IS24-12345' })).toBeNull();
   });
 
-  it('is deterministic — the same row always maps to the same placeholder domain', () => {
-    expect(getPlaceholderPortalUrl(entry)).toBe(getPlaceholderPortalUrl(entry));
+  it('returns the portal ID itself when it is a real, absolute URL', () => {
+    const realUrl = 'https://www.immobilienscout24.de/expose/123456789';
+    expect(getPlaceholderPortalUrl({ ...entry, portalId: realUrl })).toBe(realUrl);
+  });
+
+  it('is case-insensitive about the http(s) scheme', () => {
+    const realUrl = 'HTTPS://www.immowelt.de/expose/123';
+    expect(getPlaceholderPortalUrl({ ...entry, portalId: realUrl })).toBe(realUrl);
   });
 });
 
