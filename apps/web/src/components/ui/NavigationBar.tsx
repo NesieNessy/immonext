@@ -4,11 +4,11 @@ import React from "react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { LogOut, Menu } from "lucide-react";
-import { Icons } from "../common";
+import { Icons, LogoMark } from "../common";
 
 // Icon mapping
 const iconMap = {
-  home: Icons.Home,
+  home: LogoMark,
   existingProperties: Icons.ExistingProperties,
   quickCheck: Icons.QuickCheck,
   detailCheck: Icons.DetailCheck,
@@ -25,7 +25,7 @@ type IconName = keyof typeof iconMap;
 
 interface Logo {
   iconName: IconName;
-  text: string;
+  text?: string;
   href: string;
 }
 
@@ -80,10 +80,10 @@ export function NavigationBar({ items, logo, actions }: NavigationBarProps) {
         <div className="flex items-center justify-between h-full">
           <div className="flex items-center gap-8 h-full">
             {logo && (
-              <Link href={logo.href} className="flex-shrink-0">
+              <Link href={logo.href} aria-label="Startseite" className="flex-shrink-0">
                 <div className="flex items-center gap-2">
                   {logo.iconName && React.createElement(iconMap[logo.iconName], { size: 24, className: "text-accent" })}
-                  <span className="text-xl font-bold text-foreground">{logo.text}</span>
+                  {logo.text && <span className="text-xl font-bold text-foreground">{logo.text}</span>}
                 </div>
               </Link>
             )}
@@ -118,7 +118,7 @@ export function NavigationBar({ items, logo, actions }: NavigationBarProps) {
                           className={cn(
                             "px-4 py-2 rounded-lg transition-all duration-200 flex items-center gap-2 cursor-pointer",
                             item.active
-                              ? "text-primary"
+                              ? "text-accent-text"
                               : "text-foreground hover:bg-muted"
                           )}
                         >
@@ -132,7 +132,7 @@ export function NavigationBar({ items, logo, actions }: NavigationBarProps) {
                           className={cn(
                             "px-4 py-2 rounded-lg transition-all duration-200 flex items-center gap-2 cursor-pointer",
                             item.active
-                              ? "text-primary"
+                              ? "text-accent-text"
                               : "text-foreground hover:bg-muted"
                           )}
                         >
@@ -218,7 +218,7 @@ export function NavigationBar({ items, logo, actions }: NavigationBarProps) {
                     className={cn(
                       "p-2 rounded-lg transition-colors block",
                       action.active
-                        ? "bg-primary text-primary-foreground"
+                        ? "bg-accent text-accent-foreground"
                         : "hover:bg-muted"
                     )}
                   >
@@ -234,7 +234,7 @@ export function NavigationBar({ items, logo, actions }: NavigationBarProps) {
                     className={cn(
                       "p-2 rounded-lg transition-colors",
                       action.active
-                        ? "bg-primary text-primary-foreground"
+                        ? "bg-accent text-accent-foreground"
                         : "hover:bg-muted"
                     )}
                   >
@@ -287,7 +287,7 @@ export function NavigationBar({ items, logo, actions }: NavigationBarProps) {
                   className="flex items-center gap-3 px-4 py-3 rounded-xl border border-border hover:bg-muted transition-colors"
                 >
                   {logo.iconName && React.createElement(iconMap[logo.iconName], { size: 20, className: "text-accent" })}
-                  <span className="font-medium text-foreground">{logo.text}</span>
+                  {logo.text && <span className="font-medium text-foreground">{logo.text}</span>}
                 </Link>
               )}
 
@@ -303,7 +303,7 @@ export function NavigationBar({ items, logo, actions }: NavigationBarProps) {
                         onClick={() => setMobileExpanded(isExpanded ? null : index)}
                         className={cn(
                           "flex items-center gap-3 px-4 py-3 rounded-xl border border-border transition-colors cursor-pointer",
-                          item.active ? "bg-muted" : "hover:bg-muted"
+                          item.active ? "bg-accent/15" : "hover:bg-muted"
                         )}
                       >
                         {Icon && <Icon size={20} className="text-accent" />}
@@ -362,7 +362,7 @@ export function NavigationBar({ items, logo, actions }: NavigationBarProps) {
                     onClick={() => setMobileMenuOpen(false)}
                     className={cn(
                       "flex items-center gap-3 px-4 py-3 rounded-xl border border-border transition-colors",
-                      item.active ? "bg-primary text-primary-foreground" : "hover:bg-muted"
+                      item.active ? "bg-accent text-accent-foreground" : "hover:bg-muted"
                     )}
                   >
                     {content}
