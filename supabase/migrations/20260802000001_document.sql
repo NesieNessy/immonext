@@ -1,8 +1,8 @@
 -- Backs the global "Dokumente" page — a cross-property document library,
--- distinct from tenancy_document (which only covers per-tenancy Unterlagen).
+-- distinct from tenancy_document (which only covers per-tenancy documents).
 -- A document belongs to the user and, depending on its category, is
--- optionally linked to one Bestandsobjekt (property) or one Detailbewertung
--- (quick_check with detail_check = true). "Persönlich" documents link to
+-- optionally linked to one property (Bestandsobjekt) or one detail check
+-- (Detailbewertung; quick_check with detail_check = true). "Persönlich" documents link to
 -- neither. Actual file bytes live in Supabase Storage (bucket "documents")
 -- — this table just tracks which file belongs to what.
 

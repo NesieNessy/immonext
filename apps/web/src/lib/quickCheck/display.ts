@@ -79,21 +79,17 @@ export const CONDITION_PILL_LABEL: Record<PropertyCondition, string> = {
   [PropertyCondition.Luxury]:             'Luxus',
 };
 
-// Portal import isn't implemented yet — quick_check.portal_id is just an
-// opaque reference, not a real URL. Until the import flow exists, link
-// each portal-sourced row to a placeholder expose page (deterministic per
-// row, so the link doesn't change on re-render) instead of leaving the
-// Portal-ID cell unclickable.
-const PLACEHOLDER_PORTAL_DOMAINS = [
-  'https://www.immobilienscout24.de/expose',
-  'https://www.immowelt.de/expose',
-  'https://www.immonet.de/expose',
-];
-
+// Portal import isn't implemented yet — quick_check.portal_id is usually
+// just an opaque reference (e.g. "IS24-12345"), not a real URL. This used to
+// fabricate a link by cycling through three hardcoded portal domains keyed
+// off row.id % 3 — which meant the link's destination had nothing to do
+// with what was actually entered, and (for a given id range) could always
+// land on the same domain regardless of the real portal. Only link when
+// portalId is itself a real, absolute URL the user actually entered/pasted;
+// otherwise leave the cell as plain, non-clickable text like manual entries.
 export function getPlaceholderPortalUrl(row: QuickCheckEntry): string | null {
   if (row.portalId === MANUAL_ENTRY_LABEL || row.status === 'inaktiv') return null;
-  const domain = PLACEHOLDER_PORTAL_DOMAINS[row.id % PLACEHOLDER_PORTAL_DOMAINS.length];
-  return `${domain}/${encodeURIComponent(row.portalId)}`;
+  return /^https?:\/\//i.test(row.portalId) ? row.portalId : null;
 }
 
 // ── Create/edit form validation — shared by quick-check/new and

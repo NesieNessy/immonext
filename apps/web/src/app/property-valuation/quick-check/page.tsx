@@ -9,7 +9,7 @@ import { useRouter } from 'next/navigation';
 export default function QuickCheckOverviewPage() {
   const router = useRouter();
 
-  // The quick-check is only moved into Detailbewertungen after the first
+  // The quick-check is only moved into the detail-check overview after the first
   // detail-check page was saved successfully.
   const handleStartDetailCheck = (id: number) => {
     router.push(`/property-valuation/detail-check/property-data?quickCheckId=${id}`);

@@ -13,7 +13,7 @@ interface UnitDocumentGeneratorState {
     notFound: boolean;
     property: Property | null;
     unit: PropertyUnit | null;
-    /** Whether the property has more than one Wohneinheit — decides the
+    /** Whether the property has more than one unit — decides the
      *  "Zurück" destination (units overview vs. straight to the unit). */
     hasMultipleUnits: boolean;
     tenancy: Tenancy | null;
@@ -34,7 +34,7 @@ const INITIAL_STATE: UnitDocumentGeneratorState = {
 
 /** Loads everything the Mieterbescheinigung/Mietvertrag generator pages
  *  need, independent of the (already-loaded) tenant-unit-detail page —
- *  these are their own routes, reached directly via the Unterlagen table. */
+ *  these are their own routes, reached directly via the documents table. */
 export function useUnitDocumentGeneratorData(
     propertyId: string,
     unitId: string,

@@ -76,7 +76,7 @@ export default function TenantHistory({ propertyId }: { propertyId: string }) {
     if (isLoading) return <PropertyLoadingPage />;
     if (!property) return <PropertyNotFoundPage />;
 
-    // Exactly one Wohneinheit — skip the picker and go straight to its history.
+    // Exactly one unit — skip the picker and go straight to its history.
     if (units.length <= 1) {
         const unit = units[0];
         if (!unit) return <PropertyNotFoundPage />;

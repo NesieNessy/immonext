@@ -12,7 +12,6 @@ import { getTenancyPersonsByTenancy } from '@/lib/supabase/tenancy_person.supaba
 import { createUseCaseMenuItems } from '@/lib/propertyUseCaseMenu';
 import { base64ToDataUri, deCurrencyFormatter, formatDeDate } from '@/lib/utils';
 import type { Property, PropertyUnit } from '@immonext/types';
-import { ExternalLink, MoreVertical, Plus, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 import { CurrentTenantPage } from './CurrentTenantPage';
@@ -153,7 +152,7 @@ export default function TenantData({ propertyId }: { propertyId: string }) {
 
     if (!property) return <PropertyNotFoundPage />;
 
-    // Exactly one Wohneinheit — skip the overview and go straight to it.
+    // Exactly one unit — skip the overview and go straight to it.
     if (units.length <= 1) {
         const unit = units[0];
         if (!unit) return <PropertyNotFoundPage />;
@@ -162,13 +161,13 @@ export default function TenantData({ propertyId }: { propertyId: string }) {
 
     const buildRowMenuItems = (row: { propertyUnitId: number; unitLabel: string }): MenuItem[] => [
         {
-            label: 'Öffnen',
-            icon: <ExternalLink className="w-4 h-4" />,
+            label: BUTTON_DETAILS.Open.label,
+            icon: <Icons.ExternalLink className="w-4 h-4" />,
             onClick: () => router.push(`/existing-properties/${propertyId}/tenant-data/${row.propertyUnitId}`),
         },
         {
-            label: 'Löschen',
-            icon: <Trash2 className="w-4 h-4" />,
+            label: BUTTON_DETAILS.Delete.label,
+            icon: <Icons.Trash2 className="w-4 h-4" />,
             destructive: true,
             onClick: () => setUnitPendingDelete(units.find((u) => u.propertyUnitId === row.propertyUnitId) ?? null),
         },
@@ -183,7 +182,7 @@ export default function TenantData({ propertyId }: { propertyId: string }) {
                 <div onClick={(e) => e.stopPropagation()}>
                     <Button
                         iconOnly
-                        icon={<MoreVertical className="w-4 h-4" />}
+                        icon={<Icons.MoreVertical className="w-4 h-4" />}
                         variant="ghost"
                         size="sm"
                         menuItems={buildRowMenuItems(row as { propertyUnitId: number; unitLabel: string })}
@@ -263,7 +262,7 @@ export default function TenantData({ propertyId }: { propertyId: string }) {
                         </div>
                         <Button
                             label="Einheit hinzufügen"
-                            icon={<Plus className="w-4 h-4" />}
+                            icon={<Icons.Plus className="w-4 h-4" />}
                             variant="primary"
                             hideLabelOnMobile
                             onClick={() => router.push(`/existing-properties/${propertyId}/tenant-data/new`)}

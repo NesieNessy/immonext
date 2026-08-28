@@ -1,19 +1,5 @@
-import {
-    BarChart3,
-    Clock,
-    Database,
-    DoorOpen,
-    History,
-    Landmark,
-    PieChart,
-    Receipt,
-    ShoppingCart,
-    TrendingUp,
-    Users,
-    Wrench,
-    type LucideIcon,
-} from 'lucide-react';
-import type { MenuItem } from '@/components/ui';
+import type { LucideIcon } from 'lucide-react';
+import { Icons, type MenuItem } from '@/components/ui';
 import { ExistingPropertiesUseCases } from '@/constants/ExistingPropertiesUseCases';
 
 type UseCaseKey = keyof typeof ExistingPropertiesUseCases;
@@ -26,18 +12,18 @@ type UseCaseKey = keyof typeof ExistingPropertiesUseCases;
  * renders this menu.
  */
 const iconMap: Record<UseCaseKey, LucideIcon> = {
-    PropertyData: Database,
-    RND: Clock,
-    SplitPurchasePrice: PieChart,
-    TenantData: Users,
-    TenantHistory: History,
-    TenancyTrends: TrendingUp,
-    ServiceChargeSettlement: Receipt,
-    Contractors: Wrench,
-    TaxDocuments: Landmark,
-    KeyMetrics: BarChart3,
-    Sale: ShoppingCart,
-    TenantMoveOut: DoorOpen,
+    PropertyData: Icons.Database,
+    RND: Icons.Clock,
+    SplitPurchasePrice: Icons.PieChart,
+    TenantData: Icons.Users,
+    TenantHistory: Icons.History,
+    TenancyTrends: Icons.TrendingUp,
+    ServiceChargeSettlement: Icons.Receipt,
+    Contractors: Icons.Wrench,
+    TaxDocuments: Icons.Landmark,
+    KeyMetrics: Icons.BarChart3,
+    Sale: Icons.ShoppingCart,
+    TenantMoveOut: Icons.DoorOpen,
 };
 
 /** Use case key → route segment under `/existing-properties/{id}/`. */

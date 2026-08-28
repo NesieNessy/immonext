@@ -1,7 +1,8 @@
 "use client";
 
 import { formatUnitLabel } from '@/components/features/PropertyDisplay';
-import { Button, useToast, type SortDirection, type TableColumn } from '@/components/ui';
+import { Button, Icons, useToast, type SortDirection, type TableColumn } from '@/components/ui';
+import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
 import { createTenancy, getCurrentTenancyByUnit, getTenancyById, updateTenancy } from '@/lib/supabase/tenancy.supabase';
 import { getPersonalData } from '@/lib/supabase/personal_data.supabase';
@@ -25,7 +26,6 @@ import { renovationAdjustmentLetterHtml, rentIncreaseLetterHtml } from './adjust
 import { htmlToPdfBlob } from '@/lib/pdf/htmlToPdf';
 import type { MaintenanceCostItem, MaintenanceCosts, PersonalData, Property, PropertyUnit, Tenancy, TenancyAdjustmentHistoryEntry, TenancyAdjustmentType, TenancyDocument, TenancyDocumentType } from '@immonext/types';
 import { format } from 'date-fns';
-import { Download, Eye, FileText, Trash2, Upload } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 
@@ -85,14 +85,14 @@ function serializeRentalForm(form: RentalForm): string {
     });
 }
 
-/** The full § 2 BetrKV position list — 18 umlagefähig categories (Nr. 1–17
- *  plus the standard "sonstige Betriebskosten" catch-all), followed by the
+/** The full § 2 BetrKV position list — 18 apportionable categories (Nr. 1–17
+ *  plus the standard "Sonstige Betriebskosten" catch-all), followed by the
  *  costs that are never allocable to tenants regardless of lease wording
  *  (Verwaltung, Instandhaltung, Modernisierung, Finanzierung, Rücklagen/AfA,
  *  Erstanschaffung von Erfassungsgeräten, Rechtskosten). Amounts start at 0
  *  — unused rows are simply not summed. */
 export const DEFAULT_COST_ITEMS: MaintenanceCostItem[] = [
-    // Umlagefähig — § 2 Nr. 1–17 BetrKV
+    // Apportionable — § 2 Nr. 1–17 BetrKV
     { id: 'grundsteuer', label: 'Grundsteuer', amount: 0, allocable: true },
     { id: 'wasser', label: 'Wasserversorgung', amount: 0, allocable: true },
     { id: 'entwaesserung', label: 'Entwässerung', amount: 0, allocable: true },
@@ -111,7 +111,7 @@ export const DEFAULT_COST_ITEMS: MaintenanceCostItem[] = [
     { id: 'breitband', label: 'Breitbandanschluss / Internet-Basisversorgung', amount: 0, allocable: true },
     { id: 'waschkueche', label: 'Waschküchenbetrieb', amount: 0, allocable: true },
     { id: 'sonstige', label: 'Sonstige Betriebskosten', amount: 0, allocable: true },
-    // Nicht umlagefähig
+    // Non-apportionable
     { id: 'verwaltung', label: 'Verwaltungskosten', amount: 0, allocable: false },
     { id: 'instandhaltung', label: 'Instandhaltung / Instandsetzung', amount: 0, allocable: false },
     { id: 'modernisierung', label: 'Modernisierungskosten', amount: 0, allocable: false },
@@ -134,13 +134,13 @@ export interface PersonForm {
 const EMPTY_PRIMARY_PERSON: PersonForm = { id: null, lastName: '', firstName: '', taxId: '', isPrimary: true, moveInDate: undefined };
 
 /** Ausweis/Schufa/Bürgschaft are always per person. Mietvertrag defaults to
- *  one shared contract for the whole tenancy (single row); the "Individuell"
+ *  one shared contract for the whole tenancy (single row); the "individual"
  *  toggle swaps that row for one per person, for cases where each tenant
  *  signed a separate contract. */
 const PER_PERSON_DOCUMENTS: TenancyDocumentType[] = ['Ausweis', 'Schufa', 'Bürgschaft'];
 const SHARED_DOCUMENTS: TenancyDocumentType[] = ['Mietvertrag'];
 /** Mieterbescheinigung is always one shared row for the whole tenancy — it
- *  has no Individuell/Gemeinsam toggle since the certificate always lists
+ *  has no individual/shared toggle since the certificate always lists
  *  every tenant. */
 export const MIETERBESCHEINIGUNG: TenancyDocumentType = 'Mieterbescheinigung';
 
@@ -162,25 +162,25 @@ function serializePersons(persons: PersonForm[]): string {
 }
 
 /**
- * All the state, data-loading, and mutation logic shared by the Aktueller
- * Mieter and Mietvertrag pages — they're separate routes/components now
- * (see TenantMieterPage / TenantMietvertragPage), but both edit the same
- * underlying tenancy/persons/maintenance_costs records and share one
- * Speichern flow, so that part stays in one place rather than being
- * duplicated or awkwardly synced between two copies.
+ * All the state, data-loading, and mutation logic shared by the
+ * current-tenant and rental-agreement pages — they're separate
+ * routes/components now (see CurrentTenantPage / TenantAgreementPage),
+ * but both edit the same underlying tenancy/persons/maintenance_costs
+ * records and share one save flow, so that part stays in one place
+ * rather than being duplicated or awkwardly synced between two copies.
  */
 /**
  * `archivedTenancyId` switches this from the unit's current tenancy (the
- * normal Mieterdaten/Mietvertrag flow) to a specific past one — used by
- * Mieterhistorie's "Ansehen" action, which reuses this same page/hook
+ * normal tenant-data/rental-agreement flow) to a specific past one — used by
+ * the tenant history's "Ansehen" action, which reuses this same page/hook
  * instead of a bespoke read view so archived tenants get the exact same
- * layout as the current one, just with the Auszug surfaced.
+ * layout as the current one, just with the move-out surfaced.
  */
 export function useTenantUnitData(propertyId: string, property: Property, unit: PropertyUnit, hasMultipleUnits: boolean, archivedTenancyId?: number) {
     const router = useRouter();
     const { user } = useRequireAuth();
     const { showToast } = useToast();
-    // Archived (Mieterhistorie "Ansehen") view: same page, but nothing that
+    // Archived (tenant history "Ansehen") view: same page, but nothing that
     // mutates the record — upload/delete document controls fall back to
     // their disabled/no-affordance branch below.
     const readOnly = Boolean(archivedTenancyId);
@@ -191,8 +191,8 @@ export function useTenantUnitData(propertyId: string, property: Property, unit: 
     const [personIndexPendingDelete, setPersonIndexPendingDelete] = useState<number | null>(null);
     const [deposit, setDeposit] = useState('');
     const [startFreshTenancy, setStartFreshTenancy] = useState(false);
-    const [mieterwechselModalOpen, setMieterwechselModalOpen] = useState(false);
-    const [isStartingMieterwechsel, setIsStartingMieterwechsel] = useState(false);
+    const [tenantChangeModalOpen, setTenantChangeModalOpen] = useState(false);
+    const [isStartingTenantChange, setIsStartingTenantChange] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [landlord, setLandlord] = useState<PersonalData | null | undefined>(undefined);
@@ -303,7 +303,7 @@ export function useTenantUnitData(propertyId: string, property: Property, unit: 
         || JSON.stringify(costItems) !== originalCostItemsSnapshot;
 
     // Any navigation away from an unsaved edit is routed through here so it
-    // can be confirmed first (breadcrumb links, Zurück, Anwendungsfall).
+    // can be confirmed first (breadcrumb links, the back button, the use-case menu).
     const goTo = (href: string) => {
         if (isEditing) {
             setPendingHref(href);
@@ -319,16 +319,16 @@ export function useTenantUnitData(propertyId: string, property: Property, unit: 
 
     // Upload is only possible once the underlying row is actually saved —
     // a draft person (id === null) or a unit with no tenancy yet has
-    // nothing to attach the document to. Mietvertrag is either one shared
-    // row (default) or one row per person — never both — toggled via
-    // mietvertragIndividual; every Mietvertrag row carries the toggle
+    // nothing to attach the document to. The rental agreement is either one
+    // shared row (default) or one row per person — never both — toggled via
+    // mietvertragIndividual; every rental-agreement row carries the toggle
     // button so switching modes is reachable from any of them.
-    // Mietvertrag can't meaningfully be generated without the landlord's own
-    // (Vermieter) data, so the whole row — upload, toggle and Generieren —
+    // The rental agreement can't meaningfully be generated without the
+    // landlord's own data, so the whole row — upload, toggle and generate —
     // stays disabled until user-settings has been filled in.
     const landlordMissing = !landlord;
 
-    // Nebenkosten gesamt is computed as the sum of the two breakdown fields
+    // Total service charges is computed as the sum of the two breakdown fields
     // whenever either is filled in — otherwise it stays freely editable.
     const costBreakdownActive = rentalForm.allocableCosts !== '' || rentalForm.nonAllocableCosts !== '';
     const computedTotalCosts = costBreakdownActive
@@ -340,9 +340,9 @@ export function useTenantUnitData(propertyId: string, property: Property, unit: 
     const defaultRenovationReminderDate = rentalForm.renovationAdjustmentStartDate ? addMonthsSafe(rentalForm.renovationAdjustmentStartDate, -4) : undefined;
     const effectiveRenovationReminderDate = rentalForm.renovationAdjustmentReminderDate ?? defaultRenovationReminderDate;
 
-    // Ausweis/Schufa/Bürgschaft only — Mietvertrag and Mieterbescheinigung
-    // moved to the "Generierbare Dokumente" section below, where the
-    // generate action can be a lot more prominent than a table icon.
+    // Ausweis/Schufa/Bürgschaft only — the rental agreement and tenant
+    // certificate moved to the "Generierbare Dokumente" section below,
+    // where the generate action can be a lot more prominent than a table icon.
     const documentRows = useMemo(() => (
         persons.flatMap((person, personIndex) =>
             PER_PERSON_DOCUMENTS.map((document) => ({
@@ -489,20 +489,21 @@ export function useTenantUnitData(propertyId: string, property: Property, unit: 
         });
     };
 
-    // "Mieterwechsel" always needs confirmation first — it discards the
+    // A tenant change always needs confirmation first — it discards the
     // currently-shown tenant. The two continue-paths both end the current
-    // tenancy (once Mieterhistorie exists, that's what makes it show up
-    // there); "mit Mieterauszug" leaves the page immediately, so that part
-    // has to be written right away rather than deferred to Speichern like
-    // the "ohne" path (which stays on the page to enter the new tenant).
-    const confirmMieterwechsel = async (withMoveOut: boolean) => {
-        setIsStartingMieterwechsel(true);
+    // tenancy (once the tenancy history record exists, that's what makes it
+    // show up there); leaving with a move-out navigates away immediately, so
+    // that part has to be written right away rather than deferred to the
+    // save handler like the "without move-out" path (which stays on the
+    // page to enter the new tenant).
+    const confirmTenantChange = async (withMoveOut: boolean) => {
+        setIsStartingTenantChange(true);
         try {
             if (withMoveOut) {
                 if (tenancy) {
                     await updateTenancy(tenancy.tenancyId, { tenancyEndDate: format(new Date(), 'yyyy-MM-dd') });
                 }
-                setMieterwechselModalOpen(false);
+                setTenantChangeModalOpen(false);
                 router.push(`/existing-properties/${propertyId}/tenant-move-out`);
                 return;
             }
@@ -514,9 +515,9 @@ export function useTenantUnitData(propertyId: string, property: Property, unit: 
             setRentalForm(EMPTY_RENTAL_FORM);
             setCostItems([]);
             setMaintenanceCosts(null);
-            setMieterwechselModalOpen(false);
+            setTenantChangeModalOpen(false);
         } finally {
-            setIsStartingMieterwechsel(false);
+            setIsStartingTenantChange(false);
         }
     };
 
@@ -534,9 +535,9 @@ export function useTenantUnitData(propertyId: string, property: Property, unit: 
             const depositValue = deposit !== '' ? Number(deposit) : null;
             const hasAnyPersonData = persons.some((p) => p.lastName.trim() !== '' || p.firstName.trim() !== '');
 
-            // The Hauptmieter's own Einzugsdatum (persons[0].moveInDate) is the
-            // single source of truth for the tenancy's move-in date — the
-            // Mietvertrag tab's Einzugsdatum field edits that same value.
+            // The primary tenant's own move-in date (persons[0].moveInDate) is
+            // the single source of truth for the tenancy's move-in date — the
+            // rental-agreement tab's move-in date field edits that same value.
             const primaryMoveInDate = persons[0]?.moveInDate;
             const startDateValue = primaryMoveInDate ? format(primaryMoveInDate, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd');
             const endDateValue = rentalForm.tenancyEndDate ? format(rentalForm.tenancyEndDate, 'yyyy-MM-dd') : null;
@@ -551,8 +552,8 @@ export function useTenantUnitData(propertyId: string, property: Property, unit: 
                 renovationAdjustmentAmount: rentalForm.renovationAdjustmentAmount !== '' ? Number(rentalForm.renovationAdjustmentAmount) : null,
                 renovationAdjustmentReminderDate: rentalForm.renovationAdjustmentReminderDate ? format(rentalForm.renovationAdjustmentReminderDate, 'yyyy-MM-dd') : null,
                 // Only ever forces this to true (renovation fields filled in here);
-                // never clobbers an explicit false set on the Mietvertrag-generieren
-                // page when this tab's renovation fields are left untouched.
+                // never clobbers an explicit false set on the rental-agreement
+                // generation page when this tab's renovation fields are left untouched.
                 renovationAdjustmentPlanned: (rentalForm.renovationAdjustmentStartDate || rentalForm.renovationAdjustmentEndDate || rentalForm.renovationAdjustmentAmount !== '') ? true : undefined,
             };
 
@@ -633,7 +634,8 @@ export function useTenantUnitData(propertyId: string, property: Property, unit: 
                         costItems: costItems.length > 0 ? costItems : null,
                     };
                     if (maintenanceCosts) {
-                        await updateMaintenanceCosts(maintenanceCosts.maintenanceCostsId, mcPayload);
+                        const updated = await updateMaintenanceCosts(maintenanceCosts.maintenanceCostsId, mcPayload);
+                        if (!updated) throw new Error('updateMaintenanceCosts failed');
                     } else {
                         const createdCosts = await createMaintenanceCosts({
                             propertyId: property.propertyId,
@@ -642,9 +644,8 @@ export function useTenantUnitData(propertyId: string, property: Property, unit: 
                             totalCostsProjection: false,
                             ...mcPayload,
                         });
-                        if (createdCosts) {
-                            await updateTenancy(activeTenancyId, { maintenanceCostsId: createdCosts.maintenanceCostsId });
-                        }
+                        if (!createdCosts) throw new Error('createMaintenanceCosts failed');
+                        await updateTenancy(activeTenancyId, { maintenanceCostsId: createdCosts.maintenanceCostsId });
                     }
                 }
 
@@ -792,7 +793,7 @@ export function useTenantUnitData(propertyId: string, property: Property, unit: 
                                 aria-label={`${row.document as string} ansehen`}
                                 className="p-1.5 rounded-md text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors cursor-pointer"
                             >
-                                <Eye className="w-4 h-4" />
+                                <Icons.Eye className="w-4 h-4" />
                             </button>
                             <button
                                 type="button"
@@ -800,7 +801,7 @@ export function useTenantUnitData(propertyId: string, property: Property, unit: 
                                 aria-label={`${row.document as string} herunterladen`}
                                 className="p-1.5 rounded-md text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors cursor-pointer"
                             >
-                                <Download className="w-4 h-4" />
+                                <Icons.Download className="w-4 h-4" />
                             </button>
                             {!readOnly && (
                                 <button
@@ -810,7 +811,7 @@ export function useTenantUnitData(propertyId: string, property: Property, unit: 
                                     aria-label={`${row.document as string} löschen`}
                                     className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
                                 >
-                                    <Trash2 className="w-4 h-4" />
+                                    <Icons.Trash2 className="w-4 h-4" />
                                 </button>
                             )}
                         </div>
@@ -827,7 +828,7 @@ export function useTenantUnitData(propertyId: string, property: Property, unit: 
                             <span title="Bitte zuerst speichern">
                                 <Button
                                     iconOnly
-                                    icon={<Upload className="w-4 h-4" />}
+                                    icon={<Icons.Upload className="w-4 h-4" />}
                                     variant="outline"
                                     size="sm"
                                     disabled
@@ -864,7 +865,7 @@ export function useTenantUnitData(propertyId: string, property: Property, unit: 
                                 isPending && "opacity-50 pointer-events-none"
                             )}
                         >
-                            <Upload className="w-4 h-4" />
+                            <Icons.Upload className="w-4 h-4" />
                         </label>
                     </div>
                 );
@@ -872,10 +873,10 @@ export function useTenantUnitData(propertyId: string, property: Property, unit: 
         },
     ];
 
-    // Shared row renderer for the Mietvertrag/Mieterbescheinigung cards in
-    // "Generierbare Dokumente" — same view/download/delete/upload logic as
-    // the Unterlagen table's action column, just inside a card row instead
-    // of a table cell.
+    // Shared row renderer for the rental-agreement/tenant-certificate cards
+    // in "Generierbare Dokumente" — same view/download/delete/upload logic
+    // as the documents table's action column, just inside a card row
+    // instead of a table cell.
     const renderDocRow = (
         row: { key: string; tenant: string; tenancyPersonId?: number | null; canUpload: boolean; doc?: TenancyDocument },
         documentType: TenancyDocumentType,
@@ -894,7 +895,7 @@ export function useTenantUnitData(propertyId: string, property: Property, unit: 
                             title={row.doc.fileName}
                             className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-primary/10 text-primary text-xs font-medium max-w-[180px] hover:bg-primary/20 transition-colors cursor-pointer"
                         >
-                            <FileText className="w-3 h-3 shrink-0" />
+                            <Icons.FileText className="w-3 h-3 shrink-0" />
                             <span className="truncate">{row.doc.fileName}</span>
                         </button>
                     ) : !showUploadInRow && (
@@ -910,23 +911,23 @@ export function useTenantUnitData(propertyId: string, property: Property, unit: 
                                 aria-label="Herunterladen"
                                 className="p-1.5 rounded-md text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors cursor-pointer"
                             >
-                                <Download className="w-4 h-4" />
+                                <Icons.Download className="w-4 h-4" />
                             </button>
                             {!readOnly && (
                                 <button
                                     type="button"
                                     onClick={() => setDocPendingDelete({ key: row.key, doc: row.doc!, label: `${documentType} von ${row.tenant}` })}
                                     disabled={isPending}
-                                    aria-label="Löschen"
+                                    aria-label={BUTTON_DETAILS.Delete.label}
                                     className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
                                 >
-                                    <Trash2 className="w-4 h-4" />
+                                    <Icons.Trash2 className="w-4 h-4" />
                                 </button>
                             )}
                         </>
                     ) : !showUploadInRow || readOnly ? null : !row.canUpload || blocked ? (
                         <span title={blocked ? 'Bitte zuerst Vermieterdaten in den Einstellungen hinterlegen' : 'Bitte zuerst speichern'}>
-                            <Button iconOnly icon={<Upload className="w-4 h-4" />} variant="outline" size="sm" disabled aria-label="Hochladen" />
+                            <Button iconOnly icon={<Icons.Upload className="w-4 h-4" />} variant="outline" size="sm" disabled aria-label="Hochladen" />
                         </span>
                     ) : (
                         <>
@@ -950,7 +951,7 @@ export function useTenantUnitData(propertyId: string, property: Property, unit: 
                                     isPending && "opacity-50 pointer-events-none"
                                 )}
                             >
-                                <Upload className="w-4 h-4" />
+                                <Icons.Upload className="w-4 h-4" />
                             </label>
                         </>
                     )}
@@ -975,7 +976,7 @@ export function useTenantUnitData(propertyId: string, property: Property, unit: 
         if (!row.canUpload || blocked) {
             return (
                 <span key={row.key} title={blocked ? 'Bitte zuerst Vermieterdaten in den Einstellungen hinterlegen' : 'Bitte zuerst speichern'}>
-                    <Button label={label} icon={<Upload className="w-5 h-5" />} variant="ghost" disabled />
+                    <Button label={label} icon={<Icons.Upload className="w-5 h-5" />} variant="ghost" disabled />
                 </span>
             );
         }
@@ -1000,7 +1001,7 @@ export function useTenantUnitData(propertyId: string, property: Property, unit: 
                         isPending && "opacity-50 pointer-events-none"
                     )}
                 >
-                    <Upload className="w-5 h-5" />
+                    <Icons.Upload className="w-5 h-5" />
                     {label}
                 </label>
             </span>
@@ -1094,10 +1095,10 @@ export function useTenantUnitData(propertyId: string, property: Property, unit: 
         }
     };
 
-    // Accepting applies the change (rent adjustments bump Netto-Mieteinnahmen;
-    // Sanierungsanpassung has no single field to bump) and logs it to the
-    // Historie. Declining just clears the pending fields — nothing is ever
-    // written to the Historie unless the client actually accepted it.
+    // Accepting applies the change (rent adjustments bump net rental income;
+    // renovation adjustment has no single field to bump) and logs it to the
+    // history. Declining just clears the pending fields — nothing is ever
+    // written to the history unless the client actually accepted it.
     const handleAcceptRentAdjustment = async () => {
         if (!tenancy) return;
         setIsResolvingAdjustment('rent');
@@ -1191,8 +1192,8 @@ export function useTenantUnitData(propertyId: string, property: Property, unit: 
         tenancy, persons, deletedPersonIds, personIndexPendingDelete, deposit, startFreshTenancy,
         isSaving, error, landlord, docSortKey, docSortDirection, docColumnFilters, documents,
         pendingDocKey, docPendingDelete, mietvertragIndividual, setMietvertragIndividual,
-        setPersonIndexPendingDelete, mieterwechselModalOpen, setMieterwechselModalOpen,
-        isStartingMieterwechsel,
+        setPersonIndexPendingDelete, tenantChangeModalOpen, setTenantChangeModalOpen,
+        isStartingTenantChange,
         pendingHref, setPendingHref, maintenanceCosts, rentalForm, setRentalForm, costItems,
         historyModalType, setHistoryModalType,
         historyEntries, isGeneratingLetter, isResolvingAdjustment, setDeposit,
@@ -1206,7 +1207,7 @@ export function useTenantUnitData(propertyId: string, property: Property, unit: 
         backHref, generatorBase,
         // handlers
         goTo, confirmDiscard, updatePerson, addPerson, removePerson, handleDeletePersonClick,
-        confirmDeletePerson, makePrimary, confirmMieterwechsel, handleSave, handleViewDocument,
+        confirmDeletePerson, makePrimary, confirmTenantChange, handleSave, handleViewDocument,
         handleDownloadDocument, confirmDeleteDocument, handleDocSort, handleDocColumnFilterChange,
         renderDocRow, renderFooterUpload,
         handleGenerateRentIncreaseLetter, handleGenerateRenovationLetter,

@@ -6,6 +6,7 @@ import {
     Button,
     CalendarField,
     Header,
+    Icons,
     MetricCard,
     NumberField,
     SectionLabel,
@@ -17,7 +18,6 @@ import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { ExistingPropertiesUseCases } from '@/constants/ExistingPropertiesUseCases';
 import { base64ToDataUri } from '@/lib/utils';
 import type { Property, PropertyUnit } from '@immonext/types';
-import { Eye, FileText, Plus, RefreshCw, Trash2, Upload } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useRef } from 'react';
 
@@ -132,7 +132,7 @@ export function ServiceChargeSettlementView({ propertyId, property, unit, hasMul
                     {data.settlement?.sourceDocumentName ? (
                         <div className="rounded-lg border border-emerald-200 bg-emerald-50 dark:border-emerald-900/40 dark:bg-emerald-900/10 px-4 py-3 flex items-center justify-between gap-3 flex-wrap">
                             <div className="flex items-center gap-3 min-w-0">
-                                <FileText className="w-5 h-5 text-emerald-700 dark:text-emerald-400 shrink-0" />
+                                <Icons.FileText className="w-5 h-5 text-emerald-700 dark:text-emerald-400 shrink-0" />
                                 <div className="min-w-0 text-left">
                                     <button
                                         type="button"
@@ -147,7 +147,7 @@ export function ServiceChargeSettlementView({ propertyId, property, unit, hasMul
                             <div className="flex items-center gap-2 shrink-0">
                                 <Button
                                     label="Ersetzen"
-                                    icon={<RefreshCw className="w-4 h-4" />}
+                                    icon={<Icons.RefreshCw className="w-4 h-4" />}
                                     variant="outline"
                                     size="sm"
                                     disabled={data.isUploadingSource}
@@ -160,7 +160,7 @@ export function ServiceChargeSettlementView({ propertyId, property, unit, hasMul
                                     aria-label="Datei entfernen"
                                     className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
                                 >
-                                    <Trash2 className="w-4 h-4" />
+                                    <Icons.Trash2 className="w-4 h-4" />
                                 </button>
                             </div>
                         </div>
@@ -168,7 +168,7 @@ export function ServiceChargeSettlementView({ propertyId, property, unit, hasMul
                         <div>
                             <Button
                                 label="Nebenkostenabrechnung hochladen"
-                                icon={<Upload className="w-4 h-4" />}
+                                icon={<Icons.Upload className="w-4 h-4" />}
                                 variant="outline"
                                 disabled={data.isUploadingSource}
                                 onClick={() => uploadInputRef.current?.click()}
@@ -191,7 +191,7 @@ export function ServiceChargeSettlementView({ propertyId, property, unit, hasMul
                     <div className="flex justify-end">
                         <Button
                             label="Kostenposition hinzufügen"
-                            icon={<Plus className="w-4 h-4" />}
+                            icon={<Icons.Plus className="w-4 h-4" />}
                             variant="outline"
                             size="sm"
                             onClick={data.addCostItem}
@@ -273,7 +273,7 @@ export function ServiceChargeSettlementView({ propertyId, property, unit, hasMul
                                                     aria-label="Kostenposition entfernen"
                                                     className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors cursor-pointer"
                                                 >
-                                                    <Trash2 className="w-4 h-4" />
+                                                    <Icons.Trash2 className="w-4 h-4" />
                                                 </button>
                                             </td>
                                         </tr>
@@ -315,7 +315,7 @@ export function ServiceChargeSettlementView({ propertyId, property, unit, hasMul
                         </div>
                     </div>
 
-                    {/* Anpassung Nebenkostenvorauszahlung */}
+                    {/* Service charge prepayment adjustment */}
                     <div>
                         <SectionLabel>Anpassung Nebenkostenvorauszahlung</SectionLabel>
                         <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -339,7 +339,7 @@ export function ServiceChargeSettlementView({ propertyId, property, unit, hasMul
                         <div className="mt-3 flex justify-end">
                             <Button
                                 label="Neue NK-Vorauszahlung übernehmen"
-                                icon={<RefreshCw className="w-4 h-4" />}
+                                icon={<Icons.RefreshCw className="w-4 h-4" />}
                                 variant="outline"
                                 disabled={!data.canApplyPrepayment || data.isApplyingPrepayment}
                                 onClick={() => void data.handleApplyPrepayment()}
@@ -347,19 +347,19 @@ export function ServiceChargeSettlementView({ propertyId, property, unit, hasMul
                         </div>
                     </div>
 
-                    {/* Generierbare Dokumente */}
+                    {/* Generatable documents */}
                     <div>
                         <SectionLabel>Generierbare Dokumente</SectionLabel>
                         <div className="mt-3">
                             <DataCard
-                                icon={FileText}
+                                icon={Icons.FileText}
                                 title="Nebenkostenabrechnung als PDF"
                                 footer={
                                     <>
                                         <span title={!data.canGeneratePdf ? 'Bitte zuerst Mieterdaten und Abrechnungszeitraum hinterlegen' : undefined}>
                                             <Button
                                                 label="Daten prüfen & Vorschau"
-                                                icon={<Eye className="w-4 h-4" />}
+                                                icon={<Icons.Eye className="w-4 h-4" />}
                                                 variant="outline"
                                                 disabled={!data.canGeneratePdf}
                                                 onClick={() => router.push(`/existing-properties/${propertyId}/service-charge-settlement/${unit.propertyUnitId}/statement`)}
@@ -368,7 +368,7 @@ export function ServiceChargeSettlementView({ propertyId, property, unit, hasMul
                                         <span title={!data.canGeneratePdf ? 'Bitte zuerst Mieterdaten und Abrechnungszeitraum hinterlegen' : undefined}>
                                             <Button
                                                 label="PDF generieren"
-                                                icon={<FileText className="w-4 h-4" />}
+                                                icon={<Icons.FileText className="w-4 h-4" />}
                                                 variant="primary"
                                                 disabled={!data.canGeneratePdf || data.isGeneratingPdf}
                                                 onClick={() => void data.handleGeneratePdf()}

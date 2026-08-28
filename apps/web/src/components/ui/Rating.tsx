@@ -1,6 +1,6 @@
 import React from "react";
-import { Star } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Icons } from "@/components/common";
 
 interface RatingProps {
   value: number;
@@ -51,7 +51,7 @@ export function Rating({
               readonly && "cursor-default"
             )}
           >
-            <Star
+            <Icons.Star
               size={sizes[size]}
               className={cn(
                 "transition-colors",

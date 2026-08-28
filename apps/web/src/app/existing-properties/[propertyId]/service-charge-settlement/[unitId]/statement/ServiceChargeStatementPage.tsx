@@ -1,14 +1,13 @@
 "use client";
 
 import { formatUnitLabel, PropertyLoadingPage, PropertyNotFoundPage } from '@/components/features/PropertyDisplay';
-import { Header, StickyActionBar, type BreadcrumbItem } from '@/components/ui';
+import { Header, Icons, StickyActionBar, type BreadcrumbItem } from '@/components/ui';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { ExistingPropertiesUseCases } from '@/constants/ExistingPropertiesUseCases';
 import { getPropertyById } from '@/lib/supabase/property.supabase';
 import { getPropertyUnitsByProperty } from '@/lib/supabase/property_unit.supabase';
 import { getTenancyPersonsByTenancy } from '@/lib/supabase/tenancy_person.supabase';
 import type { Property, PropertyUnit, TenancyPerson } from '@immonext/types';
-import { AlertTriangle, Eye, FileText, Landmark, ListChecks, Users } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -135,7 +134,7 @@ function ServiceChargeStatementContent({
                             view === 'review' ? 'bg-card shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'
                         }`}
                     >
-                        <ListChecks className="w-4 h-4" />
+                        <Icons.ListChecks className="w-4 h-4" />
                         Daten prüfen
                     </button>
                     <button
@@ -146,7 +145,7 @@ function ServiceChargeStatementContent({
                             view === 'preview' ? 'bg-card shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'
                         }`}
                     >
-                        <Eye className="w-4 h-4" />
+                        <Icons.Eye className="w-4 h-4" />
                         Vorschau
                     </button>
                 </div>
@@ -154,7 +153,7 @@ function ServiceChargeStatementContent({
                 {view === 'review' ? (
                     <div className="mt-6 flex flex-col gap-6">
                         <div className="flex items-start gap-2.5 p-3 rounded-lg border border-border bg-muted/30">
-                            <FileText className="w-4 h-4 shrink-0 text-primary mt-0.5" />
+                            <Icons.FileText className="w-4 h-4 shrink-0 text-primary mt-0.5" />
                             <p className="text-sm text-muted-foreground">
                                 Die Abrechnung wird automatisch aus den hinterlegten Daten und den erfassten Kostenpositionen befüllt. Prüfe die Angaben, bevor du das Dokument generierst.
                             </p>
@@ -164,14 +163,14 @@ function ServiceChargeStatementContent({
                             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Vermieter</p>
                             {data.landlord === null ? (
                                 <div className="flex items-start gap-2.5 p-3 rounded-lg border border-destructive/30 bg-destructive/10">
-                                    <AlertTriangle className="w-4 h-4 shrink-0 text-destructive mt-0.5" />
+                                    <Icons.AlertTriangle className="w-4 h-4 shrink-0 text-destructive mt-0.5" />
                                     <p className="text-sm text-destructive">
                                         Es sind noch keine Vermieterdaten hinterlegt. Bitte ergänze diese in den{' '}
                                         <Link href="/user-settings" className="underline font-medium">Einstellungen</Link>.
                                     </p>
                                 </div>
                             ) : (
-                                <DataCard icon={Landmark} title="Vermieter-Daten" source="Einstellungen">
+                                <DataCard icon={Icons.Landmark} title="Vermieter-Daten" source="Einstellungen">
                                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                                         <Field label="Name" value={data.landlord ? `${data.landlord.firstName} ${data.landlord.lastName}`.trim() : '–'} />
                                         <Field label="Straße & Hausnummer" value={data.landlord ? `${data.landlord.street} ${data.landlord.houseNumber}` : '–'} />
@@ -183,7 +182,7 @@ function ServiceChargeStatementContent({
 
                         <div>
                             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Mietobjekt</p>
-                            <DataCard icon={FileText} title="Objektdaten" source="Bestandsobjekt · Objektdaten">
+                            <DataCard icon={Icons.FileText} title="Objektdaten" source="Bestandsobjekt · Objektdaten">
                                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                                     <Field label="Straße & Hausnummer" value={`${property.street} ${property.houseNumber}`} />
                                     <Field label="PLZ & Ort" value={`${property.postalCode} ${property.city}`} />
@@ -194,7 +193,7 @@ function ServiceChargeStatementContent({
 
                         <div>
                             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Mieterdaten</p>
-                            <DataCard icon={Users} title="Mieterdaten" source="Bestandsobjekt · Mieterdaten">
+                            <DataCard icon={Icons.Users} title="Mieterdaten" source="Bestandsobjekt · Mieterdaten">
                                 <div className="flex flex-col gap-2">
                                     {namedPersons.length === 0 && <p className="text-sm text-muted-foreground">Keine Mieterdaten hinterlegt.</p>}
                                     {namedPersons.map((person, index) => (
@@ -214,7 +213,7 @@ function ServiceChargeStatementContent({
 
                         <div>
                             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Abrechnungszeitraum</p>
-                            <DataCard icon={FileText} title="Nebenkostenabrechnung" source="Bestandsobjekt · Nebenkostenabrechnung">
+                            <DataCard icon={Icons.FileText} title="Nebenkostenabrechnung" source="Bestandsobjekt · Nebenkostenabrechnung">
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                     <Field label="Abrechnungsjahr" value={String(data.settlementYear)} />
                                     <div>
@@ -255,7 +254,7 @@ function ServiceChargeStatementContent({
                 ghostLabel={BUTTON_DETAILS.Back.label}
                 ghostIcon={<BUTTON_DETAILS.Back.icon />}
                 primaryLabel={data.isGeneratingPdf ? 'Wird erstellt…' : 'PDF generieren'}
-                primaryIcon={<FileText className="w-4 h-4" />}
+                primaryIcon={<Icons.FileText className="w-4 h-4" />}
                 primaryDisabled={!data.canGeneratePdf || data.isGeneratingPdf}
             />
         </div>

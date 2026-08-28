@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useId, useRef } from "react";
+import { Icons } from "@/components/common";
 import { cn } from "@/lib/utils";
-import { Upload } from "lucide-react";
 
 interface UploadButtonProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'type'> {
   label?: string;
@@ -55,7 +55,7 @@ export function UploadButton({
             className
           )}
         >
-          <Upload size={20} />
+          <Icons.Upload size={20} />
           {buttonText}
         </button>
         {fileName && (

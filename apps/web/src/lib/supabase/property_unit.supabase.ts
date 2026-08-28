@@ -27,9 +27,27 @@ function toPropertyUnit(row: Record<string, unknown>): PropertyUnit {
 // Queries
 // ----------------------------------------------------------------------------
 
+// Same rationale as the property cache in property.supabase.ts — the unit
+// list for a property gets re-fetched independently by the property/unit
+// hub pages and every use-case's [unitId] loader in the same click-through,
+// so a short-lived cache collapses that back into one round-trip. Bounded
+// TTL keeps any staleness (e.g. a unit added/removed elsewhere) brief even
+// if a caller other than the mutations below changes the set.
+const UNITS_CACHE_TTL_MS = 15_000;
+const unitsCache = new Map<number, { data: PropertyUnit[]; expiresAt: number }>();
+
+function invalidateUnitsCache(propertyId: number) {
+  unitsCache.delete(propertyId);
+}
+
 export async function getPropertyUnitsByProperty(propertyId: number): Promise<PropertyUnit[]> {
+  const cached = unitsCache.get(propertyId);
+  if (cached && cached.expiresAt > Date.now()) return cached.data;
+
   const data = await propertyResourceRequest<Record<string, unknown>[]>('property-units', {}, { propertyId });
-  return data?.map(toPropertyUnit) ?? [];
+  const units = data?.map(toPropertyUnit) ?? [];
+  unitsCache.set(propertyId, { data: units, expiresAt: Date.now() + UNITS_CACHE_TTL_MS });
+  return units;
 }
 
 export async function getPropertyUnitById(propertyUnitId: number): Promise<PropertyUnit | null> {
@@ -59,6 +77,7 @@ export async function createPropertyUnit(payload: PropertyUnitInsert): Promise<P
       target_parking_rent:       payload.targetParkingRent,
       target_ancillary_costs:    payload.targetAncillaryCosts,
     } }));
+  invalidateUnitsCache(payload.propertyId);
   if (!data) return null;
   return toPropertyUnit(data);
 }
@@ -84,9 +103,15 @@ export async function updatePropertyUnit(
 
   const data = await propertyResourceRequest<Record<string, unknown>>('property-units', jsonRequest('PATCH', { id: propertyUnitId, values: dbUpdates }));
   if (!data) return null;
-  return toPropertyUnit(data);
+  const unit = toPropertyUnit(data);
+  invalidateUnitsCache(unit.propertyId);
+  return unit;
 }
 
 export async function deletePropertyUnit(propertyUnitId: number): Promise<boolean> {
+  // No propertyId at hand here (only the unit id) — deleting a unit is rare
+  // enough that clearing every cached list is simpler than threading one
+  // through, and no more wasteful than the round-trips it's replacing.
+  unitsCache.clear();
   return Boolean(await propertyResourceRequest<{ deleted: number }>('property-units', { method: 'DELETE' }, { id: propertyUnitId }));
 }

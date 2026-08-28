@@ -25,15 +25,15 @@
 --   or accepted while already INACTIVE.
 --
 -- Field mapping:
---   Erfassungsdatum  -> created_at                         (auto)
---   Portal ID        -> portal_id                          (optional; empty for manual entries)
---   KPF Faktor       -> kpf_multiplier                     (computed, frontend)
---   Kaufpreis        -> purchase_price
---   PLZ              -> postal_code
---   Baujahr          -> year_of_construction
---   Zustand          -> condition                          (reuses property_condition enum)
---   Status           -> status                             (quick_check_status enum)
---   Detailbewertung  -> detail_check                       (boolean)
+--   Erfassungsdatum (capture date)  -> created_at                         (auto)
+--   Portal ID                      -> portal_id                          (optional; empty for manual entries)
+--   KPF Faktor (KPF factor)        -> kpf_multiplier                     (computed, frontend)
+--   Kaufpreis (purchase price)     -> purchase_price
+--   PLZ (postal code)              -> postal_code
+--   Baujahr (year built)           -> year_of_construction
+--   Zustand (condition)            -> condition                          (reuses property_condition enum)
+--   Status                         -> status                             (quick_check_status enum)
+--   Detailbewertung (detail check) -> detail_check                       (boolean)
 -- ==============================================================================
 
 CREATE TYPE quick_check_status AS ENUM (

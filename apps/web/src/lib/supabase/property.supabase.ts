@@ -86,16 +86,36 @@ export async function getPropertiesWithCity(userId: string): Promise<PropertyWit
   return data.map(toPropertyWithCity);
 }
 
-export async function getPropertyById(propertyId: number): Promise<Property | null> {
+// Property detail is fetched independently by several components in quick
+// succession while navigating property → unit hub → a use-case page (each
+// resolves its own propertyId/unitId props from scratch). A short-lived
+// cache turns that string of redundant round-trips back into one, without
+// risking staleness beyond a few seconds — invalidated immediately on any
+// write below anyway.
+const PROPERTY_CACHE_TTL_MS = 15_000;
+const propertyCache = new Map<number, { data: PropertyOverview; expiresAt: number }>();
+
+function invalidatePropertyCache(propertyId: number) {
+  propertyCache.delete(propertyId);
+}
+
+async function fetchPropertyOverview(propertyId: number): Promise<PropertyOverview | null> {
+  const cached = propertyCache.get(propertyId);
+  if (cached && cached.expiresAt > Date.now()) return cached.data;
+
   const response = await authFetch(`/api/properties?id=${encodeURIComponent(propertyId)}`, { cache: 'no-store' });
   if (!response.ok) return null;
-  return response.json() as Promise<Property>;
+  const data = await response.json() as PropertyOverview;
+  propertyCache.set(propertyId, { data, expiresAt: Date.now() + PROPERTY_CACHE_TTL_MS });
+  return data;
+}
+
+export async function getPropertyById(propertyId: number): Promise<Property | null> {
+  return fetchPropertyOverview(propertyId);
 }
 
 export async function getPropertyOverviewById(propertyId: number): Promise<PropertyOverview | null> {
-  const response = await authFetch(`/api/properties?id=${encodeURIComponent(propertyId)}`, { cache: 'no-store' });
-  if (!response.ok) return null;
-  return response.json() as Promise<PropertyOverview>;
+  return fetchPropertyOverview(propertyId);
 }
 
 export async function getPropertyWithCityById(propertyId: number): Promise<PropertyWithCity | null> {
@@ -140,11 +160,13 @@ export async function updateProperty(propertyId: number, updates: PropertyUpdate
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ propertyId, updates }),
   });
+  invalidatePropertyCache(propertyId);
   if (!response.ok) return null;
   return response.json() as Promise<Property>;
 }
 
 export async function deleteProperty(propertyId: number): Promise<boolean> {
   const response = await authFetch(`/api/properties?id=${encodeURIComponent(propertyId)}`, { method: 'DELETE' });
+  invalidatePropertyCache(propertyId);
   return response.ok;
 }

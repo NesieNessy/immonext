@@ -1,10 +1,11 @@
 "use client";
 
-import { Button } from '@/components/ui';
+import { Button, Icons } from '@/components/ui';
+import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { cn, deCurrencyFormatter } from '@/lib/utils';
 import type { TenancyAdjustmentHistoryEntry, TenancyAdjustmentType } from '@immonext/types';
 import { format } from 'date-fns';
-import { AlertTriangle, Bell, Check, Clock, X } from 'lucide-react';
+import { Bell } from 'lucide-react';
 
 function addMonths(date: Date, months: number): Date {
     const result = new Date(date);
@@ -50,13 +51,13 @@ interface AdjustmentStatusBoxProps {
 }
 
 /**
- * Shared status box for both Anpassungen cards (Nächste Mietanpassung and
- * Sanierungsanpassung) — encapsulates all four states so the two cards stay
+ * Shared status box for both adjustment cards (next rent adjustment and
+ * renovation adjustment) — encapsulates all four states so the two cards stay
  * visually and behaviorally identical:
- *  - grün: already accepted (a matching Historie entry exists for this cycle)
- *  - blau: informational, reminder date not reached yet
- *  - gelb: reminder date reached, decision pending
- *  - rot: within 3 months of the target date and still undecided
+ *  - green: already accepted (a matching history entry exists for this cycle)
+ *  - blue: informational, reminder date not reached yet
+ *  - yellow: reminder date reached, decision pending
+ *  - red: within 3 months of the target date and still undecided
  */
 export function AdjustmentStatusBox({
     adjustmentType,
@@ -80,7 +81,7 @@ export function AdjustmentStatusBox({
         return (
             <div className="flex items-center justify-between gap-3 p-3 rounded-lg bg-green-50 border border-green-200 text-xs text-green-800">
                 <div className="flex items-center gap-2">
-                    <Check className="w-4 h-4 shrink-0" />
+                    <Icons.Check className="w-4 h-4 shrink-0" />
                     <span>
                         {label} übernommen{currentValue != null ? ` — Nettomiete angepasst auf ${euro(currentValue)}` : ''}
                     </span>
@@ -118,7 +119,7 @@ export function AdjustmentStatusBox({
             isRed ? "bg-red-50 border-red-200 text-red-800" : "bg-amber-50 border-amber-200 text-amber-800"
         )}>
             <div className="flex items-start gap-2">
-                {isRed ? <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" /> : <Clock className="w-4 h-4 shrink-0 mt-0.5" />}
+                {isRed ? <Icons.AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" /> : <Icons.Clock className="w-4 h-4 shrink-0 mt-0.5" />}
                 <span>
                     <strong>{format(reminderDate, 'dd.MM.yyyy')}</strong>{' '}
                     <span className={isRed ? "text-red-600" : "text-amber-600"}>{dayLabel}</span>
@@ -131,8 +132,8 @@ export function AdjustmentStatusBox({
                 {amountValue != null && ` +${euro(amountValue)}${newValue != null ? ` → neue Nettomiete: ${euro(newValue)}` : ''}`}
             </p>
             <div className="flex items-center justify-end gap-2">
-                <Button label="Ablehnen" icon={<X className="w-4 h-4" />} variant="outline" size="sm" disabled={isResolving} onClick={onDecline} />
-                <Button label="Übernehmen" icon={<Check className="w-4 h-4" />} variant="primary" size="sm" disabled={isResolving} onClick={onAccept} />
+                <Button label="Ablehnen" icon={<Icons.X className="w-4 h-4" />} variant="outline" size="sm" disabled={isResolving} onClick={onDecline} />
+                <Button label={BUTTON_DETAILS.TakeOver.label} icon={<BUTTON_DETAILS.TakeOver.icon className="w-4 h-4" />} variant="primary" size="sm" disabled={isResolving} onClick={onAccept} />
             </div>
         </div>
     );

@@ -12,7 +12,7 @@ import { useProperties } from '@/hooks/useProperties';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
 import { cn } from '@/lib/utils';
 import type { PropertyOverview } from '@/lib/supabase/property.supabase';
-import { Building2, ChevronDown, KeyRound, LayoutGrid, List } from 'lucide-react';
+import { KeyRound, LayoutGrid } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 
@@ -53,7 +53,7 @@ function FilterPill({
         ))}
       </select>
       <Icon className={cn("absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none", active ? "text-primary-foreground" : "text-muted-foreground")} />
-      <ChevronDown className={cn("absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none", active ? "text-primary-foreground" : "text-muted-foreground")} />
+      <Icons.ChevronDown className={cn("absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none", active ? "text-primary-foreground" : "text-muted-foreground")} />
     </div>
   );
 }
@@ -158,7 +158,7 @@ export default function ExistingPropertiesPage() {
           />
 
           <FilterPill
-            icon={Building2}
+            icon={Icons.Building2}
             label="Objekttyp"
             value={objektTyp}
             options={PROPERTY_CATEGORY_FILTER_OPTIONS}
@@ -195,7 +195,7 @@ export default function ExistingPropertiesPage() {
                 viewMode === 'list' ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"
               )}
             >
-              <List className="w-4 h-4" />
+              <Icons.List className="w-4 h-4" />
             </button>
           </div>
         </div>

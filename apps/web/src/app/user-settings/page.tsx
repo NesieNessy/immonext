@@ -1,11 +1,13 @@
 "use client";
 
-import { Header, StickyActionBar, TextField, Tile, useToast } from '@/components/ui';
+import { Header, Icons, StickyActionBar, TextField, Tile, useToast } from '@/components/ui';
 import { authBypassUser, isAuthBypassEnabled } from '@/lib/auth/authBypass';
 import { supabase } from '@/lib/supabase/client.supabase';
 import { getPersonalData, upsertPersonalData } from '@/lib/supabase/personal_data.supabase';
+import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
+import { getLabel } from '@/constants/FieldLabels';
 import type { PersonalData } from '@immonext/types';
-import { Loader2, Save, X } from 'lucide-react';
+import { Save } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
 import { Suspense, useCallback, useEffect, useState } from 'react';
 
@@ -131,7 +133,7 @@ function SettingsPageContent() {
     if (isLoading) {
         return (
             <div className="min-h-screen bg-background flex items-center justify-center">
-                <Loader2 className="animate-spin" size={32} />
+                <Icons.Loader2 className="animate-spin" size={32} />
             </div>
         );
     }
@@ -160,24 +162,24 @@ function SettingsPageContent() {
                     <Tile title="Persönliche Informationen">
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4">
                             <TextField
-                                label="Vorname"
+                                label={getLabel('PersonalData', 'FirstName', 'de')}
                                 value={formData.firstName}
                                 onChange={(e) => handleInputChange('firstName', e.target.value)}
                             />
                             <TextField
-                                label="Nachname"
+                                label={getLabel('PersonalData', 'LastName', 'de')}
                                 value={formData.lastName}
                                 onChange={(e) => handleInputChange('lastName', e.target.value)}
                             />
                             <TextField
-                                label="E-Mail-Adresse"
+                                label={getLabel('PersonalData', 'EmailAddress', 'de')}
                                 value={formData.emailAddress}
                                 type="email"
                                 onChange={(e) => handleInputChange('emailAddress', e.target.value)}
                                 className="sm:col-span-2"
                             />
                             <TextField
-                                label="Telefonnummer"
+                                label={getLabel('PersonalData', 'PhoneNumber', 'de')}
                                 value={formData.phoneNumber}
                                 type="tel"
                                 onChange={(e) => handleInputChange('phoneNumber', e.target.value)}
@@ -190,22 +192,22 @@ function SettingsPageContent() {
                     <Tile title="Adresse">
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4">
                             <TextField
-                                label="Straße"
+                                label={getLabel('PersonalData', 'Street', 'de')}
                                 value={formData.street}
                                 onChange={(e) => handleInputChange('street', e.target.value)}
                             />
                             <TextField
-                                label="Hausnummer"
+                                label={getLabel('PersonalData', 'HouseNumber', 'de')}
                                 value={formData.houseNumber}
                                 onChange={(e) => handleInputChange('houseNumber', e.target.value)}
                             />
                             <TextField
-                                label="Postleitzahl"
+                                label={getLabel('PersonalData', 'PostalCode', 'de')}
                                 value={formData.postalCode}
                                 onChange={(e) => handleInputChange('postalCode', e.target.value)}
                             />
                             <TextField
-                                label="Stadt"
+                                label={getLabel('PersonalData', 'City', 'de')}
                                 value={formData.city}
                                 onChange={(e) => handleInputChange('city', e.target.value)}
                             />
@@ -216,7 +218,7 @@ function SettingsPageContent() {
                     <Tile title="Steuer" className="lg:col-span-2">
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 p-4">
                             <TextField
-                                label="Steueridentifikationsnummer"
+                                label={getLabel('PersonalData', 'taxIdentificationNumber', 'de')}
                                 value={formData.taxIdentificationNumber}
                                 onChange={(e) => handleInputChange('taxIdentificationNumber', e.target.value)}
                             />
@@ -229,10 +231,10 @@ function SettingsPageContent() {
                 show={true}
                 onGhost={handleCancel}
                 onPrimary={handleSave}
-                ghostLabel="Zurück"
+                ghostLabel={BUTTON_DETAILS.Back.label}
                 primaryLabel="Einstellungen speichern"
-                ghostIcon={<X size={20} />}
-                primaryIcon={isSaving ? <Loader2 size={20} className="animate-spin" /> : <Save size={20} />}
+                ghostIcon={<BUTTON_DETAILS.Back.icon size={20} />}
+                primaryIcon={isSaving ? <Icons.Loader2 size={20} className="animate-spin" /> : <Save size={20} />}
                 primaryDisabled={!isEditing || isSaving}
             />
         </div>

@@ -1,7 +1,7 @@
 -- ==============================================================================
 -- ImmoNext – CREATE TABLE: tenancy_move_out
 -- 1:1 with tenancy — meter readings and damage descriptions captured on the
--- Mieterauszug page. property_id is denormalized from tenancy for RLS.
+-- tenant move-out page. property_id is denormalized from tenancy for RLS.
 -- ==============================================================================
 
 CREATE TABLE IF NOT EXISTS tenancy_move_out (

@@ -4,12 +4,12 @@ import { useEffect, useState } from 'react';
 
 import { formatUnitLabel, PropertyLoadingPage, PropertyNotFoundPage } from '@/components/features/PropertyDisplay';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
-import { Header, NumberField, PillOptions, SectionLabel, StickyActionBar, TextField, UnsavedChangesModal, useToast, type BreadcrumbItem } from '@/components/ui';
+import { Header, Icons, NumberField, PillOptions, SectionLabel, StickyActionBar, TextField, UnsavedChangesModal, useToast, type BreadcrumbItem } from '@/components/ui';
 import { getPropertyById } from '@/lib/supabase/property.supabase';
 import { createPropertyUnit, getPropertyUnitsByProperty } from '@/lib/supabase/property_unit.supabase';
 import { base64ToDataUri, deNumberFormatter } from '@/lib/utils';
 import { type Property, UnitUsageType } from '@immonext/types';
-import { Archive, Briefcase, Car, Check, DoorOpen, Home, MoreHorizontal } from 'lucide-react';
+import { Car, MoreHorizontal } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 interface UsageTypeOption {
@@ -20,14 +20,14 @@ interface UsageTypeOption {
 }
 
 const WOHNEINHEITEN_OPTIONS: UsageTypeOption[] = [
-    { value: UnitUsageType.Wohnung, label: 'Wohnung', description: 'Eigenständige Mietwohnung – z.B. in einem Mehrfamilienhaus oder Einfamilienhaus', icon: Home },
-    { value: UnitUsageType.Einliegerwohnung, label: 'Einliegerwohnung', description: 'Untergeordnete Einheit im EFH oder ZFH, baulich an die Haupteinheit gebunden', icon: DoorOpen },
+    { value: UnitUsageType.Wohnung, label: 'Wohnung', description: 'Eigenständige Mietwohnung – z.B. in einem Mehrfamilienhaus oder Einfamilienhaus', icon: Icons.Home },
+    { value: UnitUsageType.Einliegerwohnung, label: 'Einliegerwohnung', description: 'Untergeordnete Einheit im EFH oder ZFH, baulich an die Haupteinheit gebunden', icon: Icons.DoorOpen },
 ];
 
 const SONSTIGE_EINHEITEN_OPTIONS: UsageTypeOption[] = [
     { value: UnitUsageType.Stellplatz, label: 'Stellplatz / Garage', description: 'Nur Parkfläche, kein Wohnraum', icon: Car },
-    { value: UnitUsageType.Gewerbeflaeche, label: 'Gewerbefläche', description: 'Büro, Laden oder gewerbliche Nutzung', icon: Briefcase },
-    { value: UnitUsageType.Lager, label: 'Lager / Keller', description: 'Nicht-Wohnfläche zur Lagerung', icon: Archive },
+    { value: UnitUsageType.Gewerbeflaeche, label: 'Gewerbefläche', description: 'Büro, Laden oder gewerbliche Nutzung', icon: Icons.Briefcase },
+    { value: UnitUsageType.Lager, label: 'Lager / Keller', description: 'Nicht-Wohnfläche zur Lagerung', icon: Icons.Archive },
     { value: UnitUsageType.Sonstige, label: 'Sonstige', description: 'Andere Nutzungsart', icon: MoreHorizontal },
 ];
 
@@ -48,7 +48,7 @@ const PARKING_OPTIONS = [
     { value: '4', label: '4+' },
 ];
 
-// Stellplätze only make sense for units people actually occupy or run a
+// Parking spaces only make sense for units people actually occupy or run a
 // business out of — not for a Stellplatz/Lager unit itself.
 const USAGE_TYPES_WITH_PARKING = new Set<UnitUsageType>([
     UnitUsageType.Wohnung,
@@ -109,7 +109,7 @@ export default function NewUnit({ propertyId }: { propertyId: string }) {
         numberOfRooms !== '' || numberOfParkingSpaces !== '0' || usageType !== UnitUsageType.Wohnung;
 
     // Any navigation away from an unsaved draft is routed through here so
-    // it can be confirmed first (breadcrumb links, Zurück).
+    // it can be confirmed first (breadcrumb links, the back button).
     const goTo = (href: string) => {
         if (isEditing) {
             setPendingHref(href);
@@ -172,7 +172,7 @@ export default function NewUnit({ propertyId }: { propertyId: string }) {
                 />
 
                 <div className="mt-8 space-y-6">
-                    {/* Nutzungsart */}
+                    {/* Usage type */}
                     <div>
                         <SectionLabel>Nutzungsart</SectionLabel>
 
@@ -191,7 +191,7 @@ export default function NewUnit({ propertyId }: { propertyId: string }) {
                         </div>
                     </div>
 
-                    {/* Bezeichnung */}
+                    {/* Label */}
                     <div>
                         <SectionLabel>Bezeichnung</SectionLabel>
                         <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -216,7 +216,7 @@ export default function NewUnit({ propertyId }: { propertyId: string }) {
                         </div>
                     </div>
 
-                    {/* Fläche & Details */}
+                    {/* Area & Details */}
                     <div>
                         <SectionLabel>Fläche & Details</SectionLabel>
                         <div className="mt-3 grid grid-cols-2 gap-3">
@@ -237,7 +237,7 @@ export default function NewUnit({ propertyId }: { propertyId: string }) {
                         </div>
                     </div>
 
-                    {/* Stellplätze — only relevant for units people occupy or run a business out of */}
+                    {/* Parking spaces — only relevant for units people occupy or run a business out of */}
                     {showParking && (
                         <div>
                             <SectionLabel>Stellplätze (opt.)</SectionLabel>
@@ -247,7 +247,7 @@ export default function NewUnit({ propertyId }: { propertyId: string }) {
                         </div>
                     )}
 
-                    {/* Zusammenfassung */}
+                    {/* Summary */}
                     <div>
                         <SectionLabel>Zusammenfassung</SectionLabel>
                         <div className="mt-3 rounded-lg border border-border divide-y divide-border overflow-hidden">
@@ -274,7 +274,7 @@ export default function NewUnit({ propertyId }: { propertyId: string }) {
                 ghostLabel={BUTTON_DETAILS.Back.label}
                 ghostIcon={<BUTTON_DETAILS.Back.icon />}
                 primaryLabel="Einheit speichern"
-                primaryIcon={<Check className="w-4 h-4" />}
+                primaryIcon={<Icons.Check className="w-4 h-4" />}
                 primaryDisabled={!isEditing || !isValid || isSaving}
             />
 

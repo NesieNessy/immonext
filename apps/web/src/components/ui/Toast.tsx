@@ -1,7 +1,7 @@
 "use client";
 
+import { Icons } from "@/components/common";
 import { cn } from "@/lib/utils";
-import { AlertTriangle, CheckCircle2, X } from "lucide-react";
 import React, { createContext, useCallback, useContext, useRef, useState } from "react";
 
 type ToastVariant = "success" | "error";
@@ -48,9 +48,9 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
             )}
           >
             {toast.variant === "success" ? (
-              <CheckCircle2 className="w-4 h-4 shrink-0 text-green-600 dark:text-green-400 mt-0.5" />
+              <Icons.CheckCircle2 className="w-4 h-4 shrink-0 text-green-600 dark:text-green-400 mt-0.5" />
             ) : (
-              <AlertTriangle className="w-4 h-4 shrink-0 text-destructive mt-0.5" />
+              <Icons.AlertTriangle className="w-4 h-4 shrink-0 text-destructive mt-0.5" />
             )}
             <p className="text-sm text-foreground flex-1">{toast.message}</p>
             <button
@@ -59,7 +59,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
               aria-label="Schließen"
               className="shrink-0 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
             >
-              <X className="w-3.5 h-3.5" />
+              <Icons.X className="w-3.5 h-3.5" />
             </button>
           </div>
         ))}

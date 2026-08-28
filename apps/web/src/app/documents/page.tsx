@@ -1,6 +1,6 @@
 "use client";
 
-import { Button, ConfirmDeleteModal, Dropdown, Header, Modal, Table, TextField, TextFieldWithIcon, type MenuItem, type TableColumn } from '@/components/ui';
+import { Button, ConfirmDeleteModal, Dropdown, Header, Icons, Modal, Table, TextField, TextFieldWithIcon, type MenuItem, type TableColumn } from '@/components/ui';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
 import { deleteDocument, getDocumentsByUser, getDocumentUrl, uploadDocument } from '@/lib/supabase/document.supabase';
 import { getProperties } from '@/lib/supabase/property.supabase';
@@ -9,13 +9,14 @@ import { deleteTenancyDocument, getTenancyDocumentsByUser, getTenancyDocumentUrl
 import { cn } from '@/lib/utils';
 import type { DocumentCategory, Property } from '@immonext/types';
 import { format } from 'date-fns';
-import { AlertTriangle, Building2, CheckCircle2, ChevronDown, Download, Eye, File, FileImage, FileSpreadsheet, FileText, List, type LucideIcon, MoreVertical, Search, Tags, Trash2, Upload, X } from 'lucide-react';
+import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
+import { FileImage, FileSpreadsheet, type LucideIcon, Tags } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 
 type ViewMode = 'list' | 'byObject' | 'byCategory';
 
 /** Unifies rows from the `document` table (uploaded/generated here) and
- *  `tenancy_document` (uploaded from the Mieterdaten Unterlagen table) into
+ *  `tenancy_document` (uploaded from the tenant-data documents table) into
  *  one shape so both render in the same list — the storage bucket differs
  *  per source, so it travels with the row for view/download/delete. */
 interface DisplayDocument {
@@ -55,7 +56,7 @@ function KiHinweisPill({ documentDate }: { documentDate: string | null }) {
             "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap",
             ok ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400"
         )}>
-            {ok ? <CheckCircle2 className="w-3 h-3" /> : <AlertTriangle className="w-3 h-3" />}
+            {ok ? <Icons.CheckCircle2 className="w-3 h-3" /> : <Icons.AlertTriangle className="w-3 h-3" />}
             {label}
         </span>
     );
@@ -65,11 +66,11 @@ function KiHinweisPill({ documentDate }: { documentDate: string | null }) {
  *  glance, matching the KI-Hinweis/tag-style visual language of the page. */
 function documentIcon(fileName: string): { Icon: LucideIcon; className: string } {
     const ext = fileName.split('.').pop()?.toLowerCase() ?? '';
-    if (ext === 'pdf') return { Icon: FileText, className: 'text-red-500' };
+    if (ext === 'pdf') return { Icon: Icons.FileText, className: 'text-red-500' };
     if (['jpg', 'jpeg', 'png'].includes(ext)) return { Icon: FileImage, className: 'text-blue-500' };
-    if (['doc', 'docx'].includes(ext)) return { Icon: FileText, className: 'text-blue-700' };
+    if (['doc', 'docx'].includes(ext)) return { Icon: Icons.FileText, className: 'text-blue-700' };
     if (['xls', 'xlsx'].includes(ext)) return { Icon: FileSpreadsheet, className: 'text-green-600' };
-    return { Icon: File, className: 'text-muted-foreground' };
+    return { Icon: Icons.File, className: 'text-muted-foreground' };
 }
 
 function propertyLabel(property: Property): string {
@@ -145,7 +146,7 @@ export default function DocumentsPage() {
 
     // The actual linked object, or "–" when the document has none (every
     // Persönlich document, plus any Bestandsobjekt/Detailbewertung document
-    // that wasn't linked to one) — this is what the Objekt table column shows.
+    // that wasn't linked to one) — this is what the "Objekt" table column shows.
     const resolveObject = useMemo(() => {
         const propertyById = new Map(properties.map((p) => [p.propertyId, p]));
         const quickCheckById = new Map(quickChecks.map((q) => [q.quickCheckId, q]));
@@ -189,17 +190,17 @@ export default function DocumentsPage() {
     const openRowMenu = (doc: DisplayDocument): MenuItem[] => [
         {
             label: 'Ansehen',
-            icon: <Eye className="w-4 h-4" />,
+            icon: <Icons.Eye className="w-4 h-4" />,
             onClick: () => void handleView(doc),
         },
         {
             label: 'Herunterladen',
-            icon: <Download className="w-4 h-4" />,
+            icon: <Icons.Download className="w-4 h-4" />,
             onClick: () => void handleDownload(doc),
         },
         {
-            label: 'Löschen',
-            icon: <Trash2 className="w-4 h-4" />,
+            label: BUTTON_DETAILS.Delete.label,
+            icon: <Icons.Trash2 className="w-4 h-4" />,
             destructive: true,
             onClick: () => setPendingDelete(doc),
         },
@@ -338,7 +339,7 @@ export default function DocumentsPage() {
         renderCell: (_v, row) => (
             <Button
                 iconOnly
-                icon={<MoreVertical className="w-4 h-4" />}
+                icon={<Icons.MoreVertical className="w-4 h-4" />}
                 variant="ghost"
                 size="sm"
                 aria-label="Weitere Aktionen"
@@ -397,7 +398,7 @@ export default function DocumentsPage() {
                     actions={
                         <Button
                             label="Dokument hochladen"
-                            icon={<Upload className="w-4 h-4" />}
+                            icon={<Icons.Upload className="w-4 h-4" />}
                             variant="primary"
                             hideLabelOnMobile
                             onClick={() => setShowUpload(true)}
@@ -409,7 +410,7 @@ export default function DocumentsPage() {
                     <div className="max-w-sm flex-1 min-w-[220px]">
                         <TextFieldWithIcon
                             type="search"
-                            icon={Search}
+                            icon={Icons.Search}
                             placeholder="Dokument suchen…"
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
@@ -418,8 +419,8 @@ export default function DocumentsPage() {
                     <span className="text-sm text-muted-foreground">{filteredDocuments.length} Dokumente</span>
                     <div className="flex items-center gap-1 p-1 rounded-lg bg-muted/50 ml-auto">
                         {([
-                            { value: 'list', label: 'Liste', icon: List },
-                            { value: 'byObject', label: 'Nach Objekt', icon: Building2 },
+                            { value: 'list', label: 'Liste', icon: Icons.List },
+                            { value: 'byObject', label: 'Nach Objekt', icon: Icons.Building2 },
                             { value: 'byCategory', label: 'Nach Kategorie', icon: Tags },
                         ] as const).map((mode) => (
                             <button
@@ -458,7 +459,7 @@ export default function DocumentsPage() {
                                     className="w-full flex items-center justify-between gap-3 mb-2 pb-2 border-b border-border cursor-pointer"
                                 >
                                     <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{label}</span>
-                                    <ChevronDown className={cn("w-4 h-4 text-muted-foreground transition-transform", collapsedGroups.has(label) && "-rotate-90")} />
+                                    <Icons.ChevronDown className={cn("w-4 h-4 text-muted-foreground transition-transform", collapsedGroups.has(label) && "-rotate-90")} />
                                 </button>
                                 {!collapsedGroups.has(label) && (
                                     <Table
@@ -478,7 +479,7 @@ export default function DocumentsPage() {
                                     className="w-full flex items-center justify-between gap-3 mb-2 pb-2 border-b border-border cursor-pointer"
                                 >
                                     <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{category}</span>
-                                    <ChevronDown className={cn("w-4 h-4 text-muted-foreground transition-transform", collapsedGroups.has(category) && "-rotate-90")} />
+                                    <Icons.ChevronDown className={cn("w-4 h-4 text-muted-foreground transition-transform", collapsedGroups.has(category) && "-rotate-90")} />
                                 </button>
                                 {!collapsedGroups.has(category) && (
                                     <Table
@@ -497,13 +498,13 @@ export default function DocumentsPage() {
                 open={showUpload}
                 onClose={() => { setShowUpload(false); resetUploadForm(); }}
                 title="Dokument hochladen"
-                icon={<Upload className="w-5 h-5" />}
+                icon={<Icons.Upload className="w-5 h-5" />}
                 footer={
                     <>
-                        <Button label="Abbrechen" icon={<X className="w-4 h-4" />} variant="outline" onClick={() => { setShowUpload(false); resetUploadForm(); }} />
+                        <Button label={BUTTON_DETAILS.Cancel.label} icon={<Icons.X className="w-4 h-4" />} variant="outline" onClick={() => { setShowUpload(false); resetUploadForm(); }} />
                         <Button
                             label="Hochladen"
-                            icon={<Upload className="w-4 h-4" />}
+                            icon={<Icons.Upload className="w-4 h-4" />}
                             variant="primary"
                             disabled={!uploadFile || uploadName.trim() === '' || isUploading}
                             onClick={() => void handleUpload()}
@@ -549,7 +550,7 @@ export default function DocumentsPage() {
                         htmlFor="document-upload-file"
                         className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border-2 border-primary text-primary text-sm font-medium cursor-pointer transition-colors hover:bg-primary hover:text-primary-foreground"
                     >
-                        <Upload className="w-4 h-4" />
+                        <Icons.Upload className="w-4 h-4" />
                         {uploadFile ? uploadFile.name : 'Datei auswählen'}
                     </label>
                 </div>

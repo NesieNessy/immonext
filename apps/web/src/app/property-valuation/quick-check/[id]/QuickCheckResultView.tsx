@@ -104,7 +104,7 @@ export function QuickCheckResultView({ id }: Props) {
     editForm.city.trim() !== '' &&
     editForm.city.trim().length <= 120;
 
-  // Verwerfen/Übernehmen also require the user to have actually changed
+  // "Verwerfen"/"Übernehmen" also require the user to have actually changed
   // something compared to the loaded record.
   const hasChanges =
     initialForm !== null &&
@@ -181,7 +181,7 @@ export function QuickCheckResultView({ id }: Props) {
     }
   };
 
-  // Jumps into the wizard. The row only moves into Detailbewertungen after the
+  // Jumps into the wizard. The row only moves into the detail-check overview after the
   // first detail-check page was saved successfully.
   const handleStartDetailCheck = async () => {
     setIsBusy(true);

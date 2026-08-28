@@ -1,6 +1,6 @@
 import React from "react";
 import { cn } from "@/lib/utils";
-import { Plus } from "lucide-react";
+import { Icons } from "@/components/common";
 
 interface ListItem {
   id: string | number;
@@ -113,7 +113,7 @@ export function List({
               onClick={handleAddClick}
               className="w-full px-4 py-3 flex items-center justify-center gap-2 bg-card hover:bg-muted/50 transition-colors text-primary cursor-pointer"
             >
-              <Plus size={20} />
+              <Icons.Plus size={20} />
               <span>{addButtonText}</span>
             </button>
           )}

@@ -12,6 +12,14 @@ max_rows = 1000
 port = 54322
 major_version = 15
 
+# supabase/seed.sql is stale (references a "properties" table with columns
+# that don't match the current property schema) and would hard-error
+# `supabase db reset`'s default seed step. Disabled rather than fixed here —
+# e2e fixture data is seeded separately by apps/web/e2e/fixtures/seed.ts,
+# which targets the current schema directly.
+[db.seed]
+enabled = false
+
 [db.pooler]
 enabled = false
 port = 54329
@@ -35,6 +43,16 @@ pop3_port = 54327
 [storage]
 enabled = true
 file_size_limit = "50MiB"
+
+# Disabled: the CLI's default analytics (Logflare) port collides with
+# local_smtp.pop3_port above (both default/land on 54327), which made
+# `supabase start` fail with "port is already allocated" on
+# supabase_inbucket — confirmed via `docker events` that
+# supabase_analytics grabs 54327 first, and its own health check was
+# failing regardless. Nothing in this app or the e2e suite reads Studio's
+# log explorer, so there's no functional loss.
+[analytics]
+enabled = false
 
 [auth]
 enabled = true

@@ -1,14 +1,13 @@
 "use client";
 
 import { formatUnitLabel, PropertyLoadingPage, PropertyNotFoundPage } from '@/components/features/PropertyDisplay';
-import { Header, StickyActionBar, type BreadcrumbItem } from '@/components/ui';
+import { Header, Icons, StickyActionBar, type BreadcrumbItem } from '@/components/ui';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { ExistingPropertiesUseCases } from '@/constants/ExistingPropertiesUseCases';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
 import { htmlToPdfBlob } from '@/lib/pdf/htmlToPdf';
 import { uploadTenancyDocument } from '@/lib/supabase/tenancy_document.supabase';
 import { formatDeDate } from '@/lib/utils';
-import { AlertTriangle, Eye, FileText, Landmark, ListChecks, Upload, Users } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
@@ -229,7 +228,7 @@ export default function TenantCertificatePage({ propertyId, unitId }: { property
                             view === 'review' ? 'bg-card shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'
                         }`}
                     >
-                        <ListChecks className="w-4 h-4" />
+                        <Icons.ListChecks className="w-4 h-4" />
                         Daten prüfen
                     </button>
                     <button
@@ -240,7 +239,7 @@ export default function TenantCertificatePage({ propertyId, unitId }: { property
                             view === 'preview' ? 'bg-card shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'
                         }`}
                     >
-                        <Eye className="w-4 h-4" />
+                        <Icons.Eye className="w-4 h-4" />
                         Vorschau
                     </button>
                 </div>
@@ -248,7 +247,7 @@ export default function TenantCertificatePage({ propertyId, unitId }: { property
                 {view === 'review' ? (
                     <div className="mt-6 flex flex-col gap-6">
                         <div className="flex items-start gap-2.5 p-3 rounded-lg border border-border bg-muted/30">
-                            <FileText className="w-4 h-4 shrink-0 text-primary mt-0.5" />
+                            <Icons.FileText className="w-4 h-4 shrink-0 text-primary mt-0.5" />
                             <p className="text-sm text-muted-foreground">
                                 Die Bescheinigung wird automatisch aus den hinterlegten Daten befüllt. Bitte prüfe die Angaben, bevor du das Dokument generierst.
                                 Fehlende oder veraltete Daten können in den jeweiligen Bereichen ergänzt werden.
@@ -259,14 +258,14 @@ export default function TenantCertificatePage({ propertyId, unitId }: { property
                             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Vermieter</p>
                             {landlord === null ? (
                                 <div className="flex items-start gap-2.5 p-3 rounded-lg border border-destructive/30 bg-destructive/10">
-                                    <AlertTriangle className="w-4 h-4 shrink-0 text-destructive mt-0.5" />
+                                    <Icons.AlertTriangle className="w-4 h-4 shrink-0 text-destructive mt-0.5" />
                                     <p className="text-sm text-destructive">
                                         Es sind noch keine Vermieterdaten hinterlegt. Bitte ergänze diese in den{' '}
                                         <Link href="/user-settings" className="underline font-medium">Einstellungen</Link>.
                                     </p>
                                 </div>
                             ) : (
-                                <DataCard icon={Landmark} title="Vermieter-Daten" source="Einstellungen">
+                                <DataCard icon={Icons.Landmark} title="Vermieter-Daten" source="Einstellungen">
                                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                                         <Field label="Name" value={landlord ? landlordName : '–'} />
                                         <Field label="Straße & Hausnummer" value={landlord ? landlordStreet : '–'} />
@@ -278,7 +277,7 @@ export default function TenantCertificatePage({ propertyId, unitId }: { property
 
                         <div>
                             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Mietobjekt</p>
-                            <DataCard icon={FileText} title="Objektdaten" source="Bestandsobjekt · Objektdaten">
+                            <DataCard icon={Icons.FileText} title="Objektdaten" source="Bestandsobjekt · Objektdaten">
                                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                                     <Field label="Straße & Hausnummer" value={propertyStreet} />
                                     <Field label="PLZ & Ort" value={propertyCity} />
@@ -289,7 +288,7 @@ export default function TenantCertificatePage({ propertyId, unitId }: { property
 
                         <div>
                             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Mietpartei(en)</p>
-                            <DataCard icon={Users} title="Mieterdaten" source="Bestandsobjekt · Mieterdaten">
+                            <DataCard icon={Icons.Users} title="Mieterdaten" source="Bestandsobjekt · Mieterdaten">
                                 <div className="flex flex-col gap-2">
                                     {namedPersons.length === 0 && <p className="text-sm text-muted-foreground">Keine Mieterdaten hinterlegt.</p>}
                                     {namedPersons.map((person, index) => (
@@ -312,7 +311,7 @@ export default function TenantCertificatePage({ propertyId, unitId }: { property
 
                         <div>
                             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Mietverhältnis</p>
-                            <DataCard icon={FileText} title="Mietvertrag" source="Bestandsobjekt · Mietvertrag">
+                            <DataCard icon={Icons.FileText} title="Mietvertrag" source="Bestandsobjekt · Mietvertrag">
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                     <Field label="Mietbeginn" value={mietbeginn} />
                                     <div>
@@ -360,7 +359,7 @@ export default function TenantCertificatePage({ propertyId, unitId }: { property
                                     />
                                     <label htmlFor="signature-upload">
                                         <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border-2 border-primary text-primary text-sm font-medium cursor-pointer transition-colors hover:bg-primary hover:text-primary-foreground">
-                                            <Upload className="w-4 h-4" />
+                                            <Icons.Upload className="w-4 h-4" />
                                             Unterschrift hochladen
                                         </span>
                                     </label>
@@ -394,7 +393,7 @@ export default function TenantCertificatePage({ propertyId, unitId }: { property
                 ghostLabel={BUTTON_DETAILS.Back.label}
                 ghostIcon={<BUTTON_DETAILS.Back.icon />}
                 primaryLabel={isGenerating ? 'Wird erstellt…' : 'PDF generieren'}
-                primaryIcon={<FileText className="w-4 h-4" />}
+                primaryIcon={<Icons.FileText className="w-4 h-4" />}
                 primaryDisabled={!canGenerate || isGenerating}
             />
         </div>

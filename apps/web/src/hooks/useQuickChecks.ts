@@ -17,7 +17,7 @@ export interface UseQuickChecksResult {
 
 /**
  * @param detailCheck Filters by quick_check.detail_check — false (default)
- *   for the Ersteinschätzungen overview, true for the Detailbewertungen
+ *   for the quick-check overview, true for the detail-check
  *   overview. A row moves from one list to the other after the first
  *   detail-check page has been saved successfully.
  */

@@ -1,6 +1,6 @@
--- Mieterhistorie: per-past-tenancy move-out checklist (Abnahmeprotokoll,
--- Kaution ausgezahlt) plus an "Abnahme" document type for the move-out
--- protocol upload alongside Mietvertrag/Schufa in the Unterlagen column.
+-- Tenant history: per-past-tenancy move-out checklist (move-out protocol,
+-- deposit paid out) plus an "Abnahme" document type for the move-out
+-- protocol upload alongside Mietvertrag/Schufa in the documents column.
 
 ALTER TABLE tenancy
     ADD COLUMN IF NOT EXISTS acceptance_protocol BOOLEAN NOT NULL DEFAULT FALSE,

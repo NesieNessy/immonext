@@ -214,7 +214,8 @@ export function useTenantMoveOutData(propertyId: string, property: Property, uni
             const newEndDate = moveOutDate ? format(moveOutDate, 'yyyy-MM-dd') : null;
             if (newEndDate !== tenancy.tenancyEndDate) {
                 const updated = await updateTenancy(tenancy.tenancyId, { tenancyEndDate: newEndDate });
-                if (updated) setTenancy(updated);
+                if (!updated) throw new Error('updateTenancy failed');
+                setTenancy(updated);
             }
 
             const payloadMeterReadings: MoveOutMeterReading[] = meterReadings.map((r) => ({
@@ -233,7 +234,8 @@ export function useTenantMoveOutData(propertyId: string, property: Property, uni
                     meterReadings: payloadMeterReadings,
                     damages: payloadDamages,
                 });
-                if (updated) setMoveOutRecord(updated);
+                if (!updated) throw new Error('updateTenancyMoveOut failed');
+                setMoveOutRecord(updated);
             } else if (payloadMeterReadings.length > 0 || payloadDamages.length > 0) {
                 const created = await createTenancyMoveOut({
                     tenancyId: tenancy.tenancyId,
@@ -241,7 +243,8 @@ export function useTenantMoveOutData(propertyId: string, property: Property, uni
                     meterReadings: payloadMeterReadings,
                     damages: payloadDamages,
                 });
-                if (created) setMoveOutRecord(created);
+                if (!created) throw new Error('createTenancyMoveOut failed');
+                setMoveOutRecord(created);
             }
 
             setOriginalSnapshot(serializeForm(moveOutDate, meterReadings, damages));
