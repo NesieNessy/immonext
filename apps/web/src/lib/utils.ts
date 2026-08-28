@@ -35,3 +35,15 @@ export function base64ToDataUri(base64: string | null | undefined): string | nul
   else if (base64.startsWith('UklGR')) mime = 'image/webp';
   return `data:${mime};base64,${base64}`;
 }
+
+/**
+ * `property.imageUrl` is now normally a public Storage URL (the current
+ * cover image of the property's photo gallery), but rows created before that
+ * feature existed may still hold a raw base64 blob — fall back to
+ * `base64ToDataUri` for those so old properties keep showing their photo.
+ */
+export function resolvePropertyImageSrc(imageUrl: string | null | undefined): string | null {
+  if (!imageUrl) return null;
+  if (/^https?:\/\//i.test(imageUrl)) return imageUrl;
+  return base64ToDataUri(imageUrl);
+}

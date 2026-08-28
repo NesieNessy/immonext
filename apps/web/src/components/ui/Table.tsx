@@ -155,7 +155,12 @@ export function Table<T extends Record<string, unknown> = Record<string, unknown
       <div
         className={cn(
           "w-full overflow-x-auto",
-          paginationEnabled && "max-h-[600px] overflow-y-auto",
+          // Fixed regardless of the selected page size — otherwise switching
+          // "Zeilen pro Seite" between 10/25/50 resized the table on every
+          // change. Tall enough to fit 10 full rows (plus header and, where
+          // present, the filter row) without an inner scrollbar; 25/50 just
+          // scroll within this same fixed viewport instead of growing it.
+          paginationEnabled && "max-h-[680px] overflow-y-auto",
           renderMobileCard && "hidden md:block"
         )}
       >
@@ -272,7 +277,7 @@ export function Table<T extends Record<string, unknown> = Record<string, unknown
                   key={rowIndex}
                   className={cn(
                     "transition-colors",
-                    onRowClick && "cursor-pointer hover:bg-muted/50",
+                    onRowClick && "cursor-pointer hover:bg-primary/5",
                     getRowClassName?.(row, rowIndex)
                   )}
                   onClick={() => onRowClick?.(row, rowIndex)}

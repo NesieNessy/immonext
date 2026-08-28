@@ -2,12 +2,12 @@
 
 import { useEffect, useState } from 'react';
 
-import { formatUnitLabel, PropertyLoadingPage, PropertyNotFoundPage } from '@/components/features/PropertyDisplay';
+import { formatUnitLabel, PropertyLoadingPage, PropertyNotFoundPage, propertyThumbnail } from '@/components/features/PropertyDisplay';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
-import { Header, Icons, NumberField, PillOptions, SectionLabel, StickyActionBar, TextField, UnsavedChangesModal, useToast, type BreadcrumbItem } from '@/components/ui';
+import { Header, Icons, NumberField, PAGE_CONTAINER_CLASS, PillOptions, SectionLabel, StickyActionBar, TextField, UnsavedChangesModal, useToast, type BreadcrumbItem } from '@/components/ui';
 import { getPropertyById } from '@/lib/supabase/property.supabase';
 import { createPropertyUnit, getPropertyUnitsByProperty } from '@/lib/supabase/property_unit.supabase';
-import { base64ToDataUri, deNumberFormatter } from '@/lib/utils';
+import { deNumberFormatter } from '@/lib/utils';
 import { type Property, UnitUsageType } from '@immonext/types';
 import { Car, MoreHorizontal } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -165,13 +165,13 @@ export default function NewUnit({ propertyId }: { propertyId: string }) {
 
     return (
         <div className="min-h-screen bg-background pb-24">
-            <main className="container mx-auto px-4 py-8">
+            <main className={PAGE_CONTAINER_CLASS}>
                 <Header
                     items={breadcrumbItems}
-                    image={property.imageUrl ? <img src={base64ToDataUri(property.imageUrl)!} alt="" className="w-10 h-10 object-cover rounded-lg" /> : undefined}
+                    image={propertyThumbnail(property)}
                 />
 
-                <div className="mt-8 space-y-6">
+                <div className="space-y-6">
                     {/* Usage type */}
                     <div>
                         <SectionLabel>Nutzungsart</SectionLabel>
@@ -202,13 +202,13 @@ export default function NewUnit({ propertyId }: { propertyId: string }) {
                                 onChange={(e) => setUnitLabel(e.target.value)}
                             />
                             <TextField
-                                label="Etage (opt.)"
+                                label="Etage"
                                 placeholder="z.B. EG"
                                 value={floor}
                                 onChange={(e) => setFloor(e.target.value)}
                             />
                             <TextField
-                                label="Lage (opt.)"
+                                label="Lage"
                                 placeholder="z.B. links"
                                 value={locationNote}
                                 onChange={(e) => setLocationNote(e.target.value)}
@@ -228,7 +228,7 @@ export default function NewUnit({ propertyId }: { propertyId: string }) {
                                 min={0}
                             />
                             <NumberField
-                                label="Zimmeranzahl (opt.)"
+                                label="Zimmeranzahl"
                                 placeholder="–"
                                 value={numberOfRooms}
                                 onChange={(e) => setNumberOfRooms(e.target.value)}
@@ -240,7 +240,7 @@ export default function NewUnit({ propertyId }: { propertyId: string }) {
                     {/* Parking spaces — only relevant for units people occupy or run a business out of */}
                     {showParking && (
                         <div>
-                            <SectionLabel>Stellplätze (opt.)</SectionLabel>
+                            <SectionLabel>Stellplätze</SectionLabel>
                             <div className="mt-3">
                                 <PillOptions options={PARKING_OPTIONS} value={numberOfParkingSpaces} onChange={setNumberOfParkingSpaces} />
                             </div>

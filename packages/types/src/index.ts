@@ -151,6 +151,17 @@ export interface Property {
 export type PropertyInsert = Omit<Property, 'propertyId' | 'createdAt' | 'updatedAt'>;
 export type PropertyUpdate = Partial<Omit<Property, 'propertyId' | 'userId' | 'createdAt' | 'updatedAt'>>;
 
+/** One photo in a property's gallery — `Property.imageUrl` is a denormalized
+ *  cache of whichever row here currently has `isCover: true`. */
+export interface PropertyImage {
+  propertyImageId: number;
+  propertyId: number;
+  storagePath: string;
+  publicUrl: string;
+  isCover: boolean;
+  createdAt: string;
+}
+
 // ----------------------------------------------------------------------------
 // PropertyUnit
 // ----------------------------------------------------------------------------
@@ -427,7 +438,7 @@ export type TenancyPersonUpdate = Partial<Omit<TenancyPerson, 'tenancyPersonId' 
 // TenancyDocument
 // ----------------------------------------------------------------------------
 
-export type TenancyDocumentType = 'Ausweis' | 'Schufa' | 'Bürgschaft' | 'Mietvertrag' | 'Mieterbescheinigung' | 'Mieterhöhungsschreiben' | 'Sanierungsanpassungsschreiben' | 'Abnahme' | 'Nebenkostenabrechnung';
+export type TenancyDocumentType = 'Ausweis' | 'Schufa' | 'Bürgschaft' | 'Gehaltsnachweise' | 'Vormieterbescheinigung' | 'Sonstiges' | 'Mietvertrag' | 'Mieterbescheinigung' | 'Mieterhöhungsschreiben' | 'Sanierungsanpassungsschreiben' | 'Abnahme' | 'Nebenkostenabrechnung';
 
 export interface TenancyDocument {
   tenancyDocumentId: number;

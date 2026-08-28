@@ -1,6 +1,6 @@
 "use client";
 
-import { formatUnitLabel } from '@/components/features/PropertyDisplay';
+import { formatUnitLabel, propertyThumbnail } from '@/components/features/PropertyDisplay';
 import { DataCard } from '../tenant-data/DocumentGeneratorParts';
 import {
     Button,
@@ -8,6 +8,7 @@ import {
     Header,
     Icons,
     MetricCard,
+    PAGE_CONTAINER_CLASS,
     NumberField,
     SectionLabel,
     StickyActionBar,
@@ -16,7 +17,6 @@ import {
 } from '@/components/ui';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { ExistingPropertiesUseCases } from '@/constants/ExistingPropertiesUseCases';
-import { base64ToDataUri } from '@/lib/utils';
 import type { Property, PropertyUnit } from '@immonext/types';
 import { useRouter } from 'next/navigation';
 import { useRef } from 'react';
@@ -61,10 +61,10 @@ export function ServiceChargeSettlementView({ propertyId, property, unit, hasMul
 
     return (
         <div className="min-h-screen bg-background pb-24">
-            <main className="container mx-auto px-4 py-8">
+            <main className={PAGE_CONTAINER_CLASS}>
                 <Header
                     items={breadcrumbItems}
-                    image={property.imageUrl ? <img src={base64ToDataUri(property.imageUrl)!} alt={`${property.street} ${property.houseNumber}`} className="w-10 h-10 object-cover rounded-lg" /> : undefined}
+                    image={propertyThumbnail(property)}
                     actions={
                         <Button
                             label={BUTTON_DETAILS.UseCases.label}
@@ -76,7 +76,7 @@ export function ServiceChargeSettlementView({ propertyId, property, unit, hasMul
                     }
                 />
 
-                <div className="mt-8 space-y-6">
+                <div className="space-y-6">
                     {data.error && (
                         <div className="px-3 py-2 rounded-lg bg-destructive/10 border border-destructive/30 text-sm text-destructive">
                             {data.error}

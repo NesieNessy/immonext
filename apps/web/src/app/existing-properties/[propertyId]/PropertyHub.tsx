@@ -1,10 +1,10 @@
 "use client";
 
 import { BESTANDSOBJEKTE_BREADCRUMB_ROOT, formatUnitLabel, PROPERTY_CATEGORY_LABEL, PropertyLoadingPage } from '@/components/features/PropertyDisplay';
-import { ConfirmDeleteModal, Header, Icons, SectionLabel, Tag, type BreadcrumbItem } from '@/components/ui';
+import { ConfirmDeleteModal, Header, Icons, PAGE_CONTAINER_CLASS, SectionLabel, Tag, type BreadcrumbItem } from '@/components/ui';
 import { deleteProperty, getPropertyOverviewById, type PropertyOverview } from '@/lib/supabase/property.supabase';
 import { getPropertyUnitsByProperty } from '@/lib/supabase/property_unit.supabase';
-import { base64ToDataUri, cn } from '@/lib/utils';
+import { resolvePropertyImageSrc, cn } from '@/lib/utils';
 import type { PropertyUnit } from '@immonext/types';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -232,7 +232,7 @@ export default function PropertyHub({ propertyId, unitId }: { propertyId: string
     );
   }
 
-  const photo = base64ToDataUri(property.imageUrl);
+  const photo = resolvePropertyImageSrc(property.imageUrl);
   const categoryLabel = property.propertyCategory
     ? PROPERTY_CATEGORY_LABEL[property.propertyCategory] ?? property.propertyCategory
     : null;
@@ -270,7 +270,7 @@ export default function PropertyHub({ propertyId, unitId }: { propertyId: string
 
   return (
     <div className="min-h-screen bg-background pb-12">
-      <main className="container mx-auto px-4 py-8">
+      <main className={PAGE_CONTAINER_CLASS}>
         <Header
           items={breadcrumbItems}
           image={
@@ -288,7 +288,7 @@ export default function PropertyHub({ propertyId, unitId }: { propertyId: string
             </div>
           }
         />
-        <div className="mt-3 flex items-center gap-2 flex-wrap">
+        <div className="flex items-center gap-2 flex-wrap">
           {categoryLabel && <Tag label={categoryLabel} variant="muted" />}
           <Tag label={`${property.squareMeters} m²`} variant="muted" />
           <Tag label={`Baujahr ${property.yearOfConstruction}`} variant="muted" />

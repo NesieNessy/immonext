@@ -1,7 +1,7 @@
 "use client";
 
 import { BESTANDSOBJEKTE_BREADCRUMB_ROOT, PROPERTY_CATEGORY_CREATE_OPTIONS } from '@/components/features/PropertyDisplay';
-import { CalendarField, Dropdown, Header, Icons, NumberField, PillOptions, SectionLabel, StickyActionBar, TextField, UnsavedChangesModal, UploadButton, useToast, type BreadcrumbItem } from '@/components/ui';
+import { CalendarField, Dropdown, Header, Icons, NumberField, PAGE_CONTAINER_CLASS, PillOptions, SectionLabel, StickyActionBar, TextField, UnsavedChangesModal, UploadButton, useToast, type BreadcrumbItem } from '@/components/ui';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { getLabel } from '@/constants/FieldLabels';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
@@ -191,7 +191,7 @@ function NewPropertyPageContent() {
 
   return (
     <div className="min-h-screen bg-background pb-24">
-      <main className="container mx-auto px-4 pt-8 pb-3">
+      <main className={PAGE_CONTAINER_CLASS}>
         <Header
           items={[
             {
@@ -202,7 +202,7 @@ function NewPropertyPageContent() {
           ]}
         />
 
-        <div className="mt-6 flex flex-col gap-6">
+        <div className="flex flex-col gap-6">
           <p className="text-sm text-muted-foreground">Erfassen Sie die Stammdaten des Bestandsobjekts.</p>
 
           {error && (
@@ -212,7 +212,7 @@ function NewPropertyPageContent() {
           )}
 
           <div className="flex flex-col gap-2">
-            <SectionLabel>Objektbild (opt.)</SectionLabel>
+            <SectionLabel>Objektbild</SectionLabel>
             <div className="flex items-center gap-4">
               {bildBase64 && (
                 <div className="relative shrink-0">
@@ -248,7 +248,7 @@ function NewPropertyPageContent() {
             <SectionLabel>Kaufinformationen</SectionLabel>
             <div className="grid grid-cols-2 gap-3 max-w-md">
               <NumberField
-                label="Kaufpreis (opt.)"
+                label="Kaufpreis"
                 placeholder="450.000"
                 unit="€"
                 value={kaufpreis}
@@ -256,7 +256,7 @@ function NewPropertyPageContent() {
                 min={0}
               />
               <CalendarField
-                label="Kaufdatum (opt.)"
+                label="Kaufdatum"
                 value={kaufdatum}
                 onChange={setKaufdatum}
               />
@@ -285,7 +285,7 @@ function NewPropertyPageContent() {
                 onChange={(e) => setOrt(e.target.value)}
               />
               <TextField
-                label="Bundesland (opt.)"
+                label="Bundesland"
                 placeholder="Bayern"
                 value={bundesland}
                 onChange={(e) => setBundesland(e.target.value)}
@@ -312,7 +312,7 @@ function NewPropertyPageContent() {
                 min={0}
               />
               <NumberField
-                label="Anzahl Zimmer (opt.)"
+                label="Anzahl Zimmer"
                 placeholder="3"
                 value={anzahlZimmer}
                 onChange={(e) => setAnzahlZimmer(e.target.value)}
@@ -326,7 +326,7 @@ function NewPropertyPageContent() {
                 min={0}
               />
               <Dropdown
-                label="Energieeffizienz (opt.)"
+                label="Energieeffizienz"
                 options={ENERGY_OPTIONS}
                 value={energieeffizienz}
                 onChange={(e) => setEnergieeffizienz(e.target.value)}

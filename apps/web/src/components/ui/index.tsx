@@ -10,7 +10,7 @@ export { FixedOverlay } from "./FixedOverlay";
 export { CalculatedPanel, DetailFieldLegend, MetricCard, ReadOnlyField } from "./DetailValue";
 export { Dropdown } from "./Dropdown";
 export { Gauge } from "./Gauge";
-export { Header } from "./Header";
+export { Header, PAGE_CONTAINER_CLASS } from "./Header";
 export type { BreadcrumbItem } from "./Header";
 export { Image } from "./Image";
 export { List } from "./List";

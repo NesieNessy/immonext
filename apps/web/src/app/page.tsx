@@ -1,4 +1,4 @@
-import { Header, Button, Icons } from '@/components/ui';
+import { Header, PAGE_CONTAINER_CLASS, Button, Icons } from '@/components/ui';
 import { HomeClient } from './HomeClient';
 
 
@@ -8,7 +8,7 @@ export default function Home() {
     <HomeClient>
     <div className="min-h-screen bg-background">
       {/* Navigation Bar */}
-      <main className="container mx-auto px-4 py-8">
+      <main className={PAGE_CONTAINER_CLASS}>
 
         {/* Page Header */}
         <Header

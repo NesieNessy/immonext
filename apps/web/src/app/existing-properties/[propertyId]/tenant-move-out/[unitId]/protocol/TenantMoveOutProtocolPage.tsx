@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 
 import { formatUnitLabel, PropertyLoadingPage, PropertyNotFoundPage } from '@/components/features/PropertyDisplay';
-import { Header, Icons, StickyActionBar, type BreadcrumbItem } from '@/components/ui';
+import { Header, Icons, PAGE_CONTAINER_CLASS, StickyActionBar, type BreadcrumbItem } from '@/components/ui';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { getPropertyById } from '@/lib/supabase/property.supabase';
 import { getPropertyUnitsByProperty } from '@/lib/supabase/property_unit.supabase';
@@ -87,10 +87,10 @@ function TenantMoveOutProtocolContent({
 
     return (
         <div className="min-h-screen bg-background pb-24">
-            <main className="container mx-auto px-4 py-8">
+            <main className={PAGE_CONTAINER_CLASS}>
                 <Header items={breadcrumbItems} />
 
-                <div className="mt-6">
+                <div>
                     {!data.canGenerateProtocol ? (
                         <p className="text-sm text-muted-foreground">
                             Für diese Einheit ist aktuell kein Mieter hinterlegt.

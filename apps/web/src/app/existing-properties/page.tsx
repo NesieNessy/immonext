@@ -6,7 +6,7 @@ import { NewPropertyModal } from '@/components/features/NewPropertyModal';
 import { PropertyCard } from '@/components/features/PropertyCard';
 import { PropertyListRow } from '@/components/features/PropertyListRow';
 import type { MenuItem } from '@/components/ui';
-import { Button, ConfirmDeleteModal, Header, Icons, TextFieldWithIcon } from '@/components/ui';
+import { Button, ConfirmDeleteModal, Header, Icons, PAGE_CONTAINER_CLASS, TextFieldWithIcon } from '@/components/ui';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { useProperties } from '@/hooks/useProperties';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
@@ -134,11 +134,11 @@ export default function ExistingPropertiesPage() {
 
   return (
     <div className="min-h-screen bg-background pb-12">
-      <main className="container mx-auto px-4 py-8">
+      <main className={PAGE_CONTAINER_CLASS}>
         <Header items={[BESTANDSOBJEKTE_BREADCRUMB_ROOT]} />
 
         {/* ── Search + filter pills + view toggle + add button ────────────── */}
-        <div className="mt-6 flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <div className="max-w-sm flex-1 min-w-[220px]">
             <TextFieldWithIcon
               type="search"

@@ -82,6 +82,8 @@ export async function uploadTenancyDocument(
   userId: string,
   file: File,
   payload: Omit<TenancyDocumentInsert, 'fileName' | 'storagePath' | 'contentType' | 'fileSize'>,
+  /** Display name shown in the documents table — defaults to the file's own name. */
+  fileName?: string,
 ): Promise<TenancyDocument | null> {
   const storagePath = `${userId}/${payload.tenancyId}/${payload.documentType}-${payload.tenancyPersonId ?? 'shared'}-${crypto.randomUUID()}-${file.name}`;
 
@@ -97,7 +99,7 @@ export async function uploadTenancyDocument(
         tenancy_id:          payload.tenancyId,
         tenancy_person_id:   payload.tenancyPersonId,
         document_type:       payload.documentType,
-        file_name:           file.name,
+        file_name:           fileName?.trim() || file.name,
         storage_path:        storagePath,
         content_type:        file.type || null,
         file_size:           file.size,
@@ -114,6 +116,18 @@ export async function uploadTenancyDocument(
     await supabase.storage.from(BUCKET).remove([result.previousStoragePath]);
   }
 
+  return toTenancyDocument(result.document);
+}
+
+/** Renames a document — updates only the display name, not the stored file. */
+export async function renameTenancyDocument(tenancyDocumentId: number, fileName: string): Promise<TenancyDocument | null> {
+  const response = await authFetch('/api/tenancy-documents', {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ tenancy_document_id: tenancyDocumentId, file_name: fileName }),
+  });
+  if (!response.ok) return null;
+  const result = await response.json() as { document: Record<string, unknown> };
   return toTenancyDocument(result.document);
 }
 

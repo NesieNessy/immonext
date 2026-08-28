@@ -1,8 +1,8 @@
 "use client";
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
-import { buildPropertyUseCaseBreadcrumb, formatUnitLabel, PropertyLoadingPage, PropertyNotFoundPage } from '@/components/features/PropertyDisplay';
-import { Button, ConfirmDeleteModal, Header, Icons, Table, Tag, TextFieldWithIcon, type MenuItem, type SortDirection, type TableColumn } from '@/components/ui';
+import { buildPropertyUseCaseBreadcrumb, formatUnitLabel, PropertyLoadingPage, PropertyNotFoundPage, propertyThumbnail } from '@/components/features/PropertyDisplay';
+import { Button, ConfirmDeleteModal, Header, Icons, PAGE_CONTAINER_CLASS, Table, Tag, TextFieldWithIcon, type MenuItem, type SortDirection, type TableColumn } from '@/components/ui';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { ExistingPropertiesUseCases } from '@/constants/ExistingPropertiesUseCases';
 import { getPropertyById } from '@/lib/supabase/property.supabase';
@@ -10,7 +10,7 @@ import { deletePropertyUnit, getPropertyUnitsByProperty } from '@/lib/supabase/p
 import { getCurrentTenancyByUnit } from '@/lib/supabase/tenancy.supabase';
 import { getTenancyPersonsByTenancy } from '@/lib/supabase/tenancy_person.supabase';
 import { createUseCaseMenuItems } from '@/lib/propertyUseCaseMenu';
-import { base64ToDataUri, deCurrencyFormatter, formatDeDate } from '@/lib/utils';
+import { deCurrencyFormatter, formatDeDate } from '@/lib/utils';
 import type { Property, PropertyUnit } from '@immonext/types';
 import { useRouter } from 'next/navigation';
 
@@ -234,10 +234,10 @@ export default function TenantData({ propertyId }: { propertyId: string }) {
 
     return (
         <div className="min-h-screen bg-background pb-12">
-            <main className="container mx-auto px-4 py-8">
+            <main className={PAGE_CONTAINER_CLASS}>
                 <Header
                     items={buildPropertyUseCaseBreadcrumb(property, propertyId, ExistingPropertiesUseCases.TenantData)}
-                    image={property.imageUrl ? <img src={base64ToDataUri(property.imageUrl)!} alt={`${property.street} ${property.houseNumber}`} className="w-10 h-10 object-cover rounded-lg" /> : undefined}
+                    image={propertyThumbnail(property)}
                     actions={
                         <Button
                             label={BUTTON_DETAILS.UseCases.label}
@@ -249,7 +249,7 @@ export default function TenantData({ propertyId }: { propertyId: string }) {
                     }
                 />
 
-                <div className="mt-8 space-y-3">
+                <div className="space-y-3">
                     <div className="flex flex-wrap items-center gap-3">
                         <div className="max-w-sm flex-1 min-w-[220px]">
                             <TextFieldWithIcon
@@ -278,7 +278,7 @@ export default function TenantData({ propertyId }: { propertyId: string }) {
                         onColumnFilterChange={handleColumnFilterChange}
                         onRowClick={(row) => router.push(`/existing-properties/${propertyId}/tenant-data/${row.propertyUnitId}`)}
                         footerLeft={`${tableData.length} Einträge`}
-                        pageSize={25}
+                        pageSize={10}
                     />
                 </div>
             </main>

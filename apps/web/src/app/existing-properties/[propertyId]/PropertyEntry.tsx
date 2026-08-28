@@ -1,13 +1,13 @@
 "use client";
 import { useCallback, useEffect, useState } from 'react';
 
-import { BESTANDSOBJEKTE_BREADCRUMB_ROOT, formatUnitLabel, PropertyLoadingPage, PropertyNotFoundPage } from '@/components/features/PropertyDisplay';
-import { Button, Header, Icons, Table, Tag, TextFieldWithIcon, type SortDirection, type TableColumn } from '@/components/ui';
+import { BESTANDSOBJEKTE_BREADCRUMB_ROOT, formatUnitLabel, PropertyLoadingPage, PropertyNotFoundPage, propertyThumbnail } from '@/components/features/PropertyDisplay';
+import { Button, Header, Icons, PAGE_CONTAINER_CLASS, Table, Tag, TextFieldWithIcon, type SortDirection, type TableColumn } from '@/components/ui';
 import { getPropertyById } from '@/lib/supabase/property.supabase';
 import { getPropertyUnitsByProperty } from '@/lib/supabase/property_unit.supabase';
 import { getCurrentTenancyByUnit } from '@/lib/supabase/tenancy.supabase';
 import { getTenancyPersonsByTenancy } from '@/lib/supabase/tenancy_person.supabase';
-import { base64ToDataUri, deCurrencyFormatter, formatDeDate } from '@/lib/utils';
+import { deCurrencyFormatter, formatDeDate } from '@/lib/utils';
 import type { Property, PropertyUnit } from '@immonext/types';
 import { useRouter } from 'next/navigation';
 
@@ -195,16 +195,16 @@ export default function PropertyEntry({ propertyId }: { propertyId: string }) {
 
     return (
         <div className="min-h-screen bg-background pb-12">
-            <main className="container mx-auto px-4 py-8">
+            <main className={PAGE_CONTAINER_CLASS}>
                 <Header
                     items={[
                         BESTANDSOBJEKTE_BREADCRUMB_ROOT,
                         { label: `${property.street} ${property.houseNumber}, ${property.postalCode} ${property.city}` },
                     ]}
-                    image={property.imageUrl ? <img src={base64ToDataUri(property.imageUrl)!} alt={`${property.street} ${property.houseNumber}`} className="w-10 h-10 object-cover rounded-lg" /> : undefined}
+                    image={propertyThumbnail(property)}
                 />
 
-                <div className="mt-8 space-y-3">
+                <div className="space-y-3">
                     <div className="flex flex-wrap items-center gap-3">
                         <div className="max-w-sm flex-1 min-w-[220px]">
                             <TextFieldWithIcon
@@ -233,7 +233,7 @@ export default function PropertyEntry({ propertyId }: { propertyId: string }) {
                         onColumnFilterChange={handleColumnFilterChange}
                         onRowClick={(row) => router.push(`/existing-properties/${propertyId}/${row.propertyUnitId}`)}
                         footerLeft={`${tableData.length} Einheiten`}
-                        pageSize={25}
+                        pageSize={10}
                     />
                 </div>
             </main>

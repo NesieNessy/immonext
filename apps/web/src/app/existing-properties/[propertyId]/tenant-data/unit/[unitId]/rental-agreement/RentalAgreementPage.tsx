@@ -1,7 +1,7 @@
 "use client";
 
 import { formatUnitLabel, PropertyLoadingPage, PropertyNotFoundPage } from '@/components/features/PropertyDisplay';
-import { CalendarField, Dropdown, Header, Icons, NumberField, StickyActionBar, TextArea, type BreadcrumbItem } from '@/components/ui';
+import { CalendarField, Dropdown, Header, Icons, NumberField, PAGE_CONTAINER_CLASS, StickyActionBar, TextArea, type BreadcrumbItem } from '@/components/ui';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
 import { htmlToPdfBlob } from '@/lib/pdf/htmlToPdf';
@@ -350,10 +350,10 @@ export default function RentalAgreementPage({ propertyId, unitId }: { propertyId
 
     return (
         <div className="min-h-screen bg-background pb-24">
-            <main className="container mx-auto px-4 py-8">
+            <main className={PAGE_CONTAINER_CLASS}>
                 <Header items={breadcrumbItems} />
 
-                <div className="mt-6 flex items-center gap-2 p-1 rounded-lg bg-muted/50 w-fit">
+                <div className="flex items-center gap-2 p-1 rounded-lg bg-muted/50 w-fit">
                     <button
                         type="button"
                         onClick={() => setView('review')}
@@ -496,7 +496,7 @@ export default function RentalAgreementPage({ propertyId, unitId }: { propertyId
                         </div>
 
                         <div>
-                            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Zusätzliche Klauseln (opt.)</p>
+                            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Zusätzliche Klauseln</p>
                             <DataCard icon={PenLine} title="Individuelle Vereinbarungen" source="Ergänzbar">
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                     <Dropdown
@@ -512,7 +512,7 @@ export default function RentalAgreementPage({ propertyId, unitId }: { propertyId
                                         onChange={(e) => setSubletAllowed(e.target.value as RentalTermsSubletAllowed | '')}
                                     />
                                     <TextArea
-                                        label="Sonstige Vereinbarungen (opt.)"
+                                        label="Sonstige Vereinbarungen"
                                         placeholder="Freitext für individuelle Vereinbarungen…"
                                         className="sm:col-span-2"
                                         value={additionalTerms}

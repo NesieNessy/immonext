@@ -12,7 +12,7 @@ import {
   type QuickCheckEntry,
 } from '@/components/features/QuickCheckDisplay';
 import type { BreadcrumbItem, MenuItem, SortDirection, TableColumn } from '@/components/ui';
-import { Button, Header, Icons, Table, TextFieldWithIcon, Tag } from '@/components/ui';
+import { Button, Header, Icons, PAGE_CONTAINER_CLASS, Table, TextFieldWithIcon, Tag } from '@/components/ui';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { FieldLabels } from '@/constants/FieldLabels';
 import { useQuickChecks } from '@/hooks/useQuickChecks';
@@ -250,13 +250,13 @@ export function QuickCheckOverviewTable({
 
   return (
     <div className="min-h-screen bg-background">
-      <main className="container mx-auto px-4 py-8">
+      <main className={PAGE_CONTAINER_CLASS}>
 
         {/* ── Page header ─────────────────────────────────────────────── */}
         <Header items={breadcrumbItems} />
 
         {/* ── Search bar + add button ─────────────────────────────────── */}
-        <div className="mt-6 flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <div className="max-w-sm flex-1 min-w-[220px]">
             <TextFieldWithIcon
               type="search"
@@ -416,12 +416,12 @@ export function QuickCheckOverviewTable({
                   row.status === 'inaktiv' ? 'opacity-40 grayscale' : undefined
                 }
                 footerLeft={`${totalCount} Einträge`}
-                pageSize={25}
+                pageSize={10}
                 renderMobileCard={(row) => (
                   <div
                     onClick={() => onRowClick(row)}
                     className={cn(
-                      "bg-card border border-border rounded-2xl p-4 flex flex-col gap-3 cursor-pointer",
+                      "bg-card border border-border rounded-2xl p-4 flex flex-col gap-3 cursor-pointer transition-all duration-200 hover:shadow-lg hover:border-primary/50",
                       row.status === 'inaktiv' && 'opacity-40 grayscale'
                     )}
                   >

@@ -12,6 +12,7 @@ import {
     deleteTenancyDocument,
     getTenancyDocumentsByTenancy,
     getTenancyDocumentUrl,
+    renameTenancyDocument,
     uploadTenancyDocument,
 } from '@/lib/supabase/tenancy_document.supabase';
 import {
@@ -137,7 +138,7 @@ const EMPTY_PRIMARY_PERSON: PersonForm = { id: null, lastName: '', firstName: ''
  *  one shared contract for the whole tenancy (single row); the "individual"
  *  toggle swaps that row for one per person, for cases where each tenant
  *  signed a separate contract. */
-const PER_PERSON_DOCUMENTS: TenancyDocumentType[] = ['Ausweis', 'Schufa', 'Bürgschaft'];
+const PER_PERSON_DOCUMENTS: TenancyDocumentType[] = ['Ausweis', 'Schufa', 'Bürgschaft', 'Gehaltsnachweise', 'Vormieterbescheinigung', 'Sonstiges'];
 const SHARED_DOCUMENTS: TenancyDocumentType[] = ['Mietvertrag'];
 /** Mieterbescheinigung is always one shared row for the whole tenancy — it
  *  has no individual/shared toggle since the certificate always lists
@@ -202,6 +203,14 @@ export function useTenantUnitData(propertyId: string, property: Property, unit: 
     const [documents, setDocuments] = useState<TenancyDocument[]>([]);
     const [pendingDocKey, setPendingDocKey] = useState<string | null>(null);
     const [docPendingDelete, setDocPendingDelete] = useState<{ key: string; label: string; doc: TenancyDocument } | null>(null);
+    const [docPendingRename, setDocPendingRename] = useState<{ key: string; doc: TenancyDocument } | null>(null);
+    const [renameValue, setRenameValue] = useState('');
+    const [isRenaming, setIsRenaming] = useState(false);
+    const [showDocUploadModal, setShowDocUploadModal] = useState(false);
+    const [uploadDocType, setUploadDocType] = useState<TenancyDocumentType>(PER_PERSON_DOCUMENTS[0]);
+    const [uploadPersonIndex, setUploadPersonIndex] = useState(0);
+    const [uploadDocFile, setUploadDocFile] = useState<File | null>(null);
+    const [uploadDocFileName, setUploadDocFileName] = useState('');
     const [mietvertragIndividual, setMietvertragIndividual] = useState(false);
     const [originalPersonsSnapshot, setOriginalPersonsSnapshot] = useState(() => serializePersons([EMPTY_PRIMARY_PERSON]));
     const [originalDeposit, setOriginalDeposit] = useState('');
@@ -345,23 +354,54 @@ export function useTenantUnitData(propertyId: string, property: Property, unit: 
     // where the generate action can be a lot more prominent than a table icon.
     const documentRows = useMemo(() => (
         persons.flatMap((person, personIndex) =>
-            PER_PERSON_DOCUMENTS.map((document) => ({
-                key: `${document}-${personIndex}`,
-                document,
-                tenant: personDisplayName(person, personIndex),
-                tenancyPersonId: person.id,
-                canUpload: tenancy != null && person.id != null,
-                doc: person.id != null
-                    ? documents.find((d) => d.tenancyPersonId === person.id && d.documentType === document)
-                    : undefined,
-            }))
+            PER_PERSON_DOCUMENTS
+                .map((document) => ({
+                    key: `${document}-${personIndex}`,
+                    document,
+                    tenant: personDisplayName(person, personIndex),
+                    tenancyPersonId: person.id,
+                    doc: person.id != null
+                        ? documents.find((d) => d.tenancyPersonId === person.id && d.documentType === document)
+                        : undefined,
+                }))
+                .filter((row) => row.doc != null)
         )
-    ), [persons, documents, tenancy]);
+    ), [persons, documents]);
 
     const documentFilterOptions = useMemo(
         () => PER_PERSON_DOCUMENTS.map((value) => ({ value, label: value })),
         []
     );
+
+    // Persons a document can be attached to — a draft person (id === null)
+    // has nothing to attach it to yet.
+    const uploadablePersonOptions = useMemo(
+        () => persons
+            .map((person, index) => ({ person, index }))
+            .filter(({ person }) => person.id != null)
+            .map(({ person, index }) => ({ value: String(index), label: personDisplayName(person, index) })),
+        [persons]
+    );
+
+    const canUploadDocument = tenancy != null && uploadablePersonOptions.length > 0;
+
+    const openDocUploadModal = () => {
+        setUploadDocType(PER_PERSON_DOCUMENTS[0]);
+        setUploadPersonIndex(Number(uploadablePersonOptions[0]?.value ?? 0));
+        setUploadDocFile(null);
+        setUploadDocFileName('');
+        setShowDocUploadModal(true);
+    };
+
+    const closeDocUploadModal = () => {
+        setShowDocUploadModal(false);
+        setUploadDocFile(null);
+        setUploadDocFileName('');
+    };
+
+    const selectUploadDocFile = (file: File | null) => {
+        setUploadDocFile(file);
+    };
 
     const mietvertrag = SHARED_DOCUMENTS[0];
 
@@ -691,6 +731,7 @@ export function useTenantUnitData(propertyId: string, property: Property, unit: 
         tenancyPersonId: number | null,
         documentType: TenancyDocumentType,
         file: File,
+        fileName?: string,
     ) => {
         if (!tenancy || !user) return;
         setPendingDocKey(key);
@@ -699,7 +740,7 @@ export function useTenantUnitData(propertyId: string, property: Property, unit: 
                 tenancyId: tenancy.tenancyId,
                 tenancyPersonId,
                 documentType,
-            });
+            }, fileName);
             if (uploaded) {
                 setDocuments((prev) => [...prev.filter((d) => d.tenancyDocumentId !== uploaded.tenancyDocumentId), uploaded]);
             } else {
@@ -708,6 +749,13 @@ export function useTenantUnitData(propertyId: string, property: Property, unit: 
         } finally {
             setPendingDocKey(null);
         }
+    };
+
+    const handleDocUploadSubmit = async () => {
+        const person = persons[uploadPersonIndex];
+        if (!uploadDocFile || !person || person.id == null) return;
+        await handleUploadDocument(`${uploadDocType}-${uploadPersonIndex}`, person.id, uploadDocType, uploadDocFile, uploadDocFileName);
+        closeDocUploadModal();
     };
 
     const handleViewDocument = async (doc: TenancyDocument) => {
@@ -747,6 +795,32 @@ export function useTenantUnitData(propertyId: string, property: Property, unit: 
         }
     };
 
+    const openRenameModal = (key: string, doc: TenancyDocument) => {
+        setDocPendingRename({ key, doc });
+        setRenameValue(doc.fileName);
+    };
+
+    const closeRenameModal = () => {
+        setDocPendingRename(null);
+        setRenameValue('');
+    };
+
+    const confirmRenameDocument = async () => {
+        if (!docPendingRename) return;
+        const trimmed = renameValue.trim();
+        if (!trimmed) return;
+        setIsRenaming(true);
+        try {
+            const renamed = await renameTenancyDocument(docPendingRename.doc.tenancyDocumentId, trimmed);
+            if (renamed) {
+                setDocuments((prev) => prev.map((d) => (d.tenancyDocumentId === renamed.tenancyDocumentId ? renamed : d)));
+                closeRenameModal();
+            }
+        } finally {
+            setIsRenaming(false);
+        }
+    };
+
     const documentColumns: TableColumn<Record<string, unknown>>[] = [
         {
             key: 'document',
@@ -777,96 +851,52 @@ export function useTenantUnitData(propertyId: string, property: Property, unit: 
         {
             key: 'action',
             label: 'Aktion',
-            width: '140px',
+            width: '170px',
             align: 'right',
             renderCell: (_v, row) => {
                 const key = row.key as string;
-                const doc = row.doc as TenancyDocument | undefined;
+                const doc = row.doc as TenancyDocument;
                 const isPending = pendingDocKey === key;
 
-                if (doc) {
-                    return (
-                        <div className="flex items-center justify-end gap-2">
-                            <button
-                                type="button"
-                                onClick={() => void handleViewDocument(doc)}
-                                aria-label={`${row.document as string} ansehen`}
-                                className="p-1.5 rounded-md text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors cursor-pointer"
-                            >
-                                <Icons.Eye className="w-4 h-4" />
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => void handleDownloadDocument(doc)}
-                                aria-label={`${row.document as string} herunterladen`}
-                                className="p-1.5 rounded-md text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors cursor-pointer"
-                            >
-                                <Icons.Download className="w-4 h-4" />
-                            </button>
-                            {!readOnly && (
-                                <button
-                                    type="button"
-                                    onClick={() => setDocPendingDelete({ key, doc, label: `${row.document as string} von ${row.tenant as string}` })}
-                                    disabled={isPending}
-                                    aria-label={`${row.document as string} löschen`}
-                                    className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
-                                >
-                                    <Icons.Trash2 className="w-4 h-4" />
-                                </button>
-                            )}
-                        </div>
-                    );
-                }
-
-                if (readOnly) {
-                    return <span className="flex justify-end text-xs text-muted-foreground">–</span>;
-                }
-
-                if (!row.canUpload) {
-                    return (
-                        <div className="flex justify-end">
-                            <span title="Bitte zuerst speichern">
-                                <Button
-                                    iconOnly
-                                    icon={<Icons.Upload className="w-4 h-4" />}
-                                    variant="outline"
-                                    size="sm"
-                                    disabled
-                                    aria-label={`${row.document as string} für ${row.tenant as string} hochladen`}
-                                />
-                            </span>
-                        </div>
-                    );
-                }
-
-                const inputId = `tenancy-document-upload-${key}`;
                 return (
-                    <div className="flex justify-end">
-                        <input
-                            id={inputId}
-                            type="file"
-                            accept=".pdf,.jpg,.jpeg,.png"
-                            className="sr-only"
-                            disabled={isPending}
-                            onChange={(e) => {
-                                const file = e.target.files?.[0];
-                                e.target.value = '';
-                                if (file) {
-                                    void handleUploadDocument(key, row.tenancyPersonId as number | null, row.document as TenancyDocumentType, file);
-                                }
-                            }}
-                        />
-                        <label
-                            htmlFor={inputId}
-                            aria-label={`${row.document as string} für ${row.tenant as string} hochladen`}
-                            title="Hochladen"
-                            className={cn(
-                                "inline-flex items-center justify-center p-1.5 rounded-lg border-2 border-primary text-primary cursor-pointer transition-colors hover:bg-primary hover:text-primary-foreground",
-                                isPending && "opacity-50 pointer-events-none"
-                            )}
+                    <div className="flex items-center justify-end gap-2">
+                        <button
+                            type="button"
+                            onClick={() => void handleViewDocument(doc)}
+                            aria-label={`${row.document as string} ansehen`}
+                            className="p-1.5 rounded-md text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors cursor-pointer"
                         >
-                            <Icons.Upload className="w-4 h-4" />
-                        </label>
+                            <Icons.Eye className="w-4 h-4" />
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => void handleDownloadDocument(doc)}
+                            aria-label={`${row.document as string} herunterladen`}
+                            className="p-1.5 rounded-md text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors cursor-pointer"
+                        >
+                            <Icons.Download className="w-4 h-4" />
+                        </button>
+                        {!readOnly && (
+                            <button
+                                type="button"
+                                onClick={() => openRenameModal(key, doc)}
+                                aria-label={`${row.document as string} umbenennen`}
+                                className="p-1.5 rounded-md text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors cursor-pointer"
+                            >
+                                <Icons.Rename className="w-4 h-4" />
+                            </button>
+                        )}
+                        {!readOnly && (
+                            <button
+                                type="button"
+                                onClick={() => setDocPendingDelete({ key, doc, label: `${row.document as string} von ${row.tenant as string}` })}
+                                disabled={isPending}
+                                aria-label={`${row.document as string} löschen`}
+                                className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
+                            >
+                                <Icons.Trash2 className="w-4 h-4" />
+                            </button>
+                        )}
                     </div>
                 );
             },
@@ -1197,6 +1227,9 @@ export function useTenantUnitData(propertyId: string, property: Property, unit: 
         pendingHref, setPendingHref, maintenanceCosts, rentalForm, setRentalForm, costItems,
         historyModalType, setHistoryModalType,
         historyEntries, isGeneratingLetter, isResolvingAdjustment, setDeposit,
+        showDocUploadModal, uploadDocType, setUploadDocType, uploadPersonIndex, setUploadPersonIndex,
+        uploadDocFile, uploadDocFileName, setUploadDocFileName, selectUploadDocFile,
+        docPendingRename, renameValue, setRenameValue, isRenaming,
         // computed
         isArchived: Boolean(archivedTenancyId),
         status, isEditing, landlordMissing, costBreakdownActive, computedTotalCosts,
@@ -1204,12 +1237,13 @@ export function useTenantUnitData(propertyId: string, property: Property, unit: 
         documentRows, mietvertrag, mietvertragRows, mieterbescheinigungRow,
         rentIncreaseLetterRow, renovationLetterRow, documentColumns, documentTableData,
         useCaseMenuItems, canGenerateRentIncreaseLetter, canGenerateRenovationLetter,
-        backHref, generatorBase,
+        backHref, generatorBase, uploadablePersonOptions, canUploadDocument, documentFilterOptions,
         // handlers
         goTo, confirmDiscard, updatePerson, addPerson, removePerson, handleDeletePersonClick,
         confirmDeletePerson, makePrimary, confirmTenantChange, handleSave, handleViewDocument,
         handleDownloadDocument, confirmDeleteDocument, handleDocSort, handleDocColumnFilterChange,
-        renderDocRow, renderFooterUpload,
+        renderDocRow, renderFooterUpload, openDocUploadModal, closeDocUploadModal, handleDocUploadSubmit,
+        closeRenameModal, confirmRenameDocument,
         handleGenerateRentIncreaseLetter, handleGenerateRenovationLetter,
         handleAcceptRentAdjustment, handleDeclineRentAdjustment,
         handleAcceptRenovationAdjustment, handleDeclineRenovationAdjustment,

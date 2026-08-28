@@ -95,7 +95,7 @@ export async function getPropertiesWithCity(userId: string): Promise<PropertyWit
 const PROPERTY_CACHE_TTL_MS = 15_000;
 const propertyCache = new Map<number, { data: PropertyOverview; expiresAt: number }>();
 
-function invalidatePropertyCache(propertyId: number) {
+export function invalidatePropertyCache(propertyId: number) {
   propertyCache.delete(propertyId);
 }
 

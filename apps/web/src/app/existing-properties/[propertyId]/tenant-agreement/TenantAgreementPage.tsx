@@ -1,11 +1,11 @@
 "use client";
 
-import { formatUnitLabel } from '@/components/features/PropertyDisplay';
+import { formatUnitLabel, propertyThumbnail } from '@/components/features/PropertyDisplay';
 import { AdjustmentStatusBox } from '../tenant-data/AdjustmentStatusBox';
 import { DataCard } from '../tenant-data/DocumentGeneratorParts';
-import { Button, CalendarField, ConfirmDeleteModal, Header, Icons, Modal, NumberField, SectionLabel, StickyActionBar, Switch, Tag, UnsavedChangesModal, type BreadcrumbItem } from '@/components/ui';
+import { Button, CalendarField, ConfirmDeleteModal, Header, Icons, Modal, NumberField, PAGE_CONTAINER_CLASS, SectionLabel, StickyActionBar, Switch, Tag, UnsavedChangesModal, type BreadcrumbItem } from '@/components/ui';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
-import { base64ToDataUri, formatDeDate } from '@/lib/utils';
+import { formatDeDate } from '@/lib/utils';
 import type { Property, PropertyUnit } from '@immonext/types';
 import { euro, useTenantUnitData } from '../tenant-data/useTenantUnitData';
 
@@ -66,10 +66,10 @@ export function TenantAgreementPage({ propertyId, property, unit, hasMultipleUni
 
     return (
         <div className="min-h-screen bg-background pb-24">
-            <main className="container mx-auto px-4 py-8">
+            <main className={PAGE_CONTAINER_CLASS}>
                 <Header
                     items={breadcrumbItems}
-                    image={property.imageUrl ? <img src={base64ToDataUri(property.imageUrl)!} alt={`${property.street} ${property.houseNumber}`} className="w-10 h-10 object-cover rounded-lg" /> : undefined}
+                    image={propertyThumbnail(property)}
                     actions={
                         <Button
                             label={BUTTON_DETAILS.UseCases.label}
@@ -81,7 +81,7 @@ export function TenantAgreementPage({ propertyId, property, unit, hasMultipleUni
                     }
                 />
 
-                <div className="mt-8 space-y-6">
+                <div className="space-y-6">
                     {data.error && (
                         <div className="px-3 py-2 rounded-lg bg-destructive/10 border border-destructive/30 text-sm text-destructive">
                             {data.error}
@@ -102,7 +102,7 @@ export function TenantAgreementPage({ propertyId, property, unit, hasMultipleUni
                             />
                             <div>
                                 <CalendarField
-                                    label="Auszugsdatum (opt.)"
+                                    label="Auszugsdatum"
                                     value={data.rentalForm.tenancyEndDate}
                                     onChange={(date) => data.setRentalForm((prev) => ({ ...prev, tenancyEndDate: date }))}
                                 />
@@ -122,14 +122,14 @@ export function TenantAgreementPage({ propertyId, property, unit, hasMultipleUni
                                 min={0}
                             />
                             <NumberField
-                                label="Stellplatz (opt.)"
+                                label="Stellplatz"
                                 unit="€"
                                 value={data.rentalForm.parkingSpaceRent}
                                 onChange={(e) => data.setRentalForm((prev) => ({ ...prev, parkingSpaceRent: e.target.value }))}
                                 min={0}
                             />
                             <NumberField
-                                label="WEG (opt.)"
+                                label="WEG"
                                 unit="€"
                                 value={data.rentalForm.houseMoney}
                                 onChange={(e) => data.setRentalForm((prev) => ({ ...prev, houseMoney: e.target.value }))}

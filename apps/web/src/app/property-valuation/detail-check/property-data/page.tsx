@@ -469,7 +469,7 @@ function PropertyDataContent() {
 
             <section className="max-w-sm">
               <Dropdown
-                label="Energieeffizienz (opt.)"
+                label="Energieeffizienz"
                 options={energyOptions}
                 value={form.energyEfficiency}
                 onChange={(event) => updateForm('energyEfficiency', event.target.value)}

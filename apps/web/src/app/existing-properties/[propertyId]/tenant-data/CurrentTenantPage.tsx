@@ -1,12 +1,12 @@
 "use client";
 
-import { formatUnitLabel } from '@/components/features/PropertyDisplay';
+import { formatUnitLabel, propertyThumbnail } from '@/components/features/PropertyDisplay';
 import { DataCard } from './DocumentGeneratorParts';
-import { Button, CalendarField, ComingSoonButton, ConfirmDeleteModal, Header, Icons, Modal, NumberField, SectionLabel, StickyActionBar, Table, Tag, TextField, UnsavedChangesModal, type BreadcrumbItem } from '@/components/ui';
+import { Button, CalendarField, ComingSoonButton, ConfirmDeleteModal, Dropdown, Header, Icons, Modal, NumberField, PAGE_CONTAINER_CLASS, SectionLabel, StickyActionBar, Table, Tag, TextField, UnsavedChangesModal, type BreadcrumbItem } from '@/components/ui';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { ExistingPropertiesUseCases } from '@/constants/ExistingPropertiesUseCases';
 import type { Property, PropertyUnit } from '@immonext/types';
-import { base64ToDataUri, formatDeDate } from '@/lib/utils';
+import { formatDeDate } from '@/lib/utils';
 import { MIETERBESCHEINIGUNG, personDisplayName, useTenantUnitData } from './useTenantUnitData';
 
 interface CurrentTenantPageProps {
@@ -75,10 +75,10 @@ export function CurrentTenantPage({ propertyId, property, unit, hasMultipleUnits
 
     return (
         <div className="min-h-screen bg-background pb-24">
-            <main className="container mx-auto px-4 py-8">
+            <main className={PAGE_CONTAINER_CLASS}>
                 <Header
                     items={breadcrumbItems}
-                    image={property.imageUrl ? <img src={base64ToDataUri(property.imageUrl)!} alt={`${property.street} ${property.houseNumber}`} className="w-10 h-10 object-cover rounded-lg" /> : undefined}
+                    image={propertyThumbnail(property)}
                     actions={
                         <Button
                             label={BUTTON_DETAILS.UseCases.label}
@@ -90,7 +90,7 @@ export function CurrentTenantPage({ propertyId, property, unit, hasMultipleUnits
                     }
                 />
 
-                <div className="mt-8 space-y-6">
+                <div className="space-y-6">
                     {data.error && (
                         <div className="px-3 py-2 rounded-lg bg-destructive/10 border border-destructive/30 text-sm text-destructive">
                             {data.error}
@@ -163,26 +163,26 @@ export function CurrentTenantPage({ propertyId, property, unit, hasMultipleUnits
                                 </div>
                                 <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
                                     <TextField
-                                        label={person.isPrimary ? 'Nachname *' : 'Nachname (opt.)'}
+                                        label={person.isPrimary ? 'Nachname *' : 'Nachname'}
                                         value={person.lastName}
                                         onChange={(e) => data.updatePerson(index, { lastName: e.target.value })}
                                         disabled={data.isArchived}
                                     />
                                     <TextField
-                                        label={person.isPrimary ? 'Vorname *' : 'Vorname (opt.)'}
+                                        label={person.isPrimary ? 'Vorname *' : 'Vorname'}
                                         value={person.firstName}
                                         onChange={(e) => data.updatePerson(index, { firstName: e.target.value })}
                                         disabled={data.isArchived}
                                     />
                                     <TextField
-                                        label={person.isPrimary ? 'Steuer-ID *' : 'Steuer-ID (opt.)'}
+                                        label={person.isPrimary ? 'Steuer-ID *' : 'Steuer-ID'}
                                         placeholder="00 000 000 000"
                                         value={person.taxId}
                                         onChange={(e) => data.updatePerson(index, { taxId: e.target.value })}
                                         disabled={data.isArchived}
                                     />
                                     <CalendarField
-                                        label={person.isPrimary ? 'Einzugsdatum *' : 'Einzugsdatum (opt.)'}
+                                        label={person.isPrimary ? 'Einzugsdatum *' : 'Einzugsdatum'}
                                         value={person.moveInDate}
                                         onChange={(date) => data.updatePerson(index, { moveInDate: date })}
                                         disabled={data.isArchived}
@@ -195,6 +195,20 @@ export function CurrentTenantPage({ propertyId, property, unit, hasMultipleUnits
                     {/* Documents */}
                     <div>
                         <SectionLabel>Unterlagen</SectionLabel>
+                        {!data.isArchived && (
+                            <div className="mt-3 flex justify-end">
+                                <span title={data.canUploadDocument ? undefined : 'Bitte zuerst speichern'}>
+                                    <Button
+                                        label="Dokument hochladen"
+                                        icon={<Icons.Upload className="w-4 h-4" />}
+                                        variant="outline"
+                                        size="sm"
+                                        disabled={!data.canUploadDocument}
+                                        onClick={data.openDocUploadModal}
+                                    />
+                                </span>
+                            </div>
+                        )}
                         <div className="mt-3">
                             <Table
                                 columns={data.documentColumns}
@@ -313,6 +327,86 @@ export function CurrentTenantPage({ propertyId, property, unit, hasMultipleUnits
                         : ''}
                 </p>
             </ConfirmDeleteModal>
+
+            <Modal
+                open={data.docPendingRename !== null}
+                onClose={data.closeRenameModal}
+                title="Dokument umbenennen"
+                icon={<Icons.Rename className="w-5 h-5" />}
+                footer={
+                    <>
+                        <Button label={BUTTON_DETAILS.Cancel.label} icon={<Icons.X className="w-4 h-4" />} variant="outline" onClick={data.closeRenameModal} />
+                        <Button
+                            label="Speichern"
+                            icon={<Icons.Check className="w-4 h-4" />}
+                            variant="primary"
+                            disabled={data.renameValue.trim() === '' || data.isRenaming}
+                            onClick={() => void data.confirmRenameDocument()}
+                        />
+                    </>
+                }
+            >
+                <TextField
+                    label="Dateiname"
+                    value={data.renameValue}
+                    onChange={(e) => data.setRenameValue(e.target.value)}
+                />
+            </Modal>
+
+            <Modal
+                open={data.showDocUploadModal}
+                onClose={data.closeDocUploadModal}
+                title="Dokument hochladen"
+                icon={<Icons.Upload className="w-5 h-5" />}
+                footer={
+                    <>
+                        <Button label={BUTTON_DETAILS.Cancel.label} icon={<Icons.X className="w-4 h-4" />} variant="outline" onClick={data.closeDocUploadModal} />
+                        <Button
+                            label="Hochladen"
+                            icon={<Icons.Upload className="w-4 h-4" />}
+                            variant="primary"
+                            disabled={!data.uploadDocFile || data.pendingDocKey !== null}
+                            onClick={() => void data.handleDocUploadSubmit()}
+                        />
+                    </>
+                }
+            >
+                <Dropdown
+                    label="Dokumenttyp"
+                    options={data.documentFilterOptions}
+                    value={data.uploadDocType}
+                    onChange={(e) => data.setUploadDocType(e.target.value as typeof data.uploadDocType)}
+                />
+                <Dropdown
+                    label="Mieter"
+                    options={data.uploadablePersonOptions}
+                    value={String(data.uploadPersonIndex)}
+                    onChange={(e) => data.setUploadPersonIndex(Number(e.target.value))}
+                />
+                <div>
+                    <label className="block mb-2 text-sm text-foreground">Datei *</label>
+                    <input
+                        id="tenant-document-upload-file"
+                        type="file"
+                        accept=".pdf,.jpg,.jpeg,.png"
+                        className="sr-only"
+                        onChange={(e) => data.selectUploadDocFile(e.target.files?.[0] ?? null)}
+                    />
+                    <label
+                        htmlFor="tenant-document-upload-file"
+                        className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border-2 border-primary text-primary text-sm font-medium cursor-pointer transition-colors hover:bg-primary hover:text-primary-foreground"
+                    >
+                        <Icons.Upload className="w-4 h-4" />
+                        {data.uploadDocFile ? data.uploadDocFile.name : 'Datei auswählen'}
+                    </label>
+                </div>
+                <TextField
+                    label="Dateiname"
+                    placeholder={data.uploadDocFile?.name ?? 'Wird sonst nach der Datei benannt'}
+                    value={data.uploadDocFileName}
+                    onChange={(e) => data.setUploadDocFileName(e.target.value)}
+                />
+            </Modal>
 
             <UnsavedChangesModal
                 open={data.pendingHref !== null}
