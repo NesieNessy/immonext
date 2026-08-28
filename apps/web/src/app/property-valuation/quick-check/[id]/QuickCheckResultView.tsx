@@ -255,7 +255,7 @@ export function QuickCheckResultView({ id }: Props) {
             <MobileResultBanner show={canShowResult} resultId="qc-result" formTopId="qc-form-top" />
 
             {/* Form */}
-            <div className="flex flex-col gap-3 p-5">
+            <div className="flex flex-col gap-3">
               <section id="qc-form-top">
                 <h2 className="text-md font-semibold text-foreground mb-2">
                   Informationen zur Berechnung
@@ -340,7 +340,7 @@ export function QuickCheckResultView({ id }: Props) {
             </div>
 
             {/* Result */}
-            <div id="qc-result" className="flex flex-col gap-4 p-5">
+            <div id="qc-result" className="flex flex-col gap-4">
               {!canShowResult ? (
                 <NoResult />
               ) : (
