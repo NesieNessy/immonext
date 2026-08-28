@@ -5,7 +5,7 @@ import { KpfAssessmentCard } from '@/components/features/KpfAssessmentCard';
 import { MobileResultBanner } from '@/components/features/MobileResultBanner';
 import { CONDITION_OPTIONS, getQuickCheckFieldErrors } from '@/components/features/QuickCheckDisplay';
 import { QuickCheckImportSection } from '@/components/features/QuickCheckImportSection';
-import { Button, Dropdown, Header, NumberField, PAGE_CONTAINER_CLASS, StickyActionBar, TextField, UnsavedChangesModal, useToast, type BreadcrumbItem } from '@/components/ui';
+import { Button, Dropdown, Header, LoadingScreen, NotFoundScreen, NumberField, PAGE_CONTAINER_CLASS, StickyActionBar, TextField, UnsavedChangesModal, useToast, type BreadcrumbItem } from '@/components/ui';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { FieldLabels } from '@/constants/FieldLabels';
 import { useQuickCheckById } from '@/hooks/useQuickCheckById';
@@ -210,18 +210,16 @@ export function QuickCheckResultView({ id }: Props) {
     router.push('/property-valuation/quick-check');
   };
 
-  // Guards — loading, error, and not-found all render the same centred
-  // single-line message, just with different text/styling.
-  if (authLoading || isLoading || error || !data) {
-    const message = error ? `Fehler: ${error}`
-      : authLoading || isLoading ? 'Ergebnis wird geladen…'
-      : 'Ersteinschätzung nicht gefunden.';
+  // Guards — loading, error, and not-found each need their own state.
+  if (authLoading || isLoading) return <LoadingScreen message="Ergebnis wird geladen…" />;
+  if (error) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <p className={cn('text-sm', error ? 'text-destructive' : 'text-muted-foreground')}>{message}</p>
+        <p className={cn('text-sm', 'text-destructive')}>{`Fehler: ${error}`}</p>
       </div>
     );
   }
+  if (!data) return <NotFoundScreen message="Ersteinschätzung nicht gefunden." />;
 
   // Editable form (ACTIVE)
   return (

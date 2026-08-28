@@ -410,6 +410,17 @@
   animation-duration: 180ms;
 }
 
+/* LoadingScreen's logo mark — a gentle breathing pulse rather than a spin,
+   since the mark isn't radially symmetric and would look odd rotating. */
+@keyframes loading-mark-pulse {
+  0%, 100% { transform: scale(0.94); opacity: 0.6; }
+  50% { transform: scale(1.04); opacity: 1; }
+}
+
+.loading-mark-pulse {
+  animation: loading-mark-pulse 1.4s ease-in-out infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .stepper-segment-fill-forward,
   .stepper-segment-fill-backward,
@@ -425,5 +436,11 @@
     animation-name: detail-step-enter-initial;
     animation-duration: 160ms;
     transform: none;
+  }
+
+  .loading-mark-pulse {
+    animation-duration: 1ms;
+    transform: none;
+    opacity: 1;
   }
 }

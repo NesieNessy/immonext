@@ -1,6 +1,6 @@
 "use client";
 
-import { Button, StickyActionBar, Tag } from '@/components/ui';
+import { Button, LoadingScreen, StickyActionBar, Tag } from '@/components/ui';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { authFetch } from '@/lib/api/authFetch';
 import {
@@ -165,7 +165,7 @@ function MacroLocationContent() {
         )}
 
         {isLoading || !data ? (
-          <p className="text-sm text-muted-foreground">Lagebewertung wird geladen...</p>
+          <LoadingScreen message="Lagebewertung wird geladen…" fullScreen={false} />
         ) : (
           <div className="space-y-8">
             <section>

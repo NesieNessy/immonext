@@ -1,7 +1,7 @@
 "use client";
 
 import { BESTANDSOBJEKTE_BREADCRUMB_ROOT, formatUnitLabel, PROPERTY_CATEGORY_LABEL, PropertyLoadingPage } from '@/components/features/PropertyDisplay';
-import { ConfirmDeleteModal, Header, Icons, PAGE_CONTAINER_CLASS, SectionLabel, Tag, type BreadcrumbItem } from '@/components/ui';
+import { ConfirmDeleteModal, Header, Icons, NotFoundScreen, PAGE_CONTAINER_CLASS, SectionLabel, Tag, type BreadcrumbItem } from '@/components/ui';
 import { deleteProperty, getPropertyOverviewById, type PropertyOverview } from '@/lib/supabase/property.supabase';
 import { getPropertyUnitsByProperty } from '@/lib/supabase/property_unit.supabase';
 import { resolvePropertyImageSrc, cn } from '@/lib/utils';
@@ -214,23 +214,11 @@ export default function PropertyHub({ propertyId, unitId }: { propertyId: string
 
   if (isLoading) return <PropertyLoadingPage />;
 
-  if (!property) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <p className="text-sm text-muted-foreground">Objekt nicht gefunden</p>
-      </div>
-    );
-  }
+  if (!property) return <NotFoundScreen message="Objekt nicht gefunden" />;
 
   const unit = unitId ? units.find((u) => u.propertyUnitId === Number(unitId)) ?? null : null;
 
-  if (unitId && !unit) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <p className="text-sm text-muted-foreground">Einheit nicht gefunden</p>
-      </div>
-    );
-  }
+  if (unitId && !unit) return <NotFoundScreen message="Einheit nicht gefunden" />;
 
   const photo = resolvePropertyImageSrc(property.imageUrl);
   const categoryLabel = property.propertyCategory

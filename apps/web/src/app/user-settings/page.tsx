@@ -1,6 +1,6 @@
 "use client";
 
-import { Header, Icons, PAGE_CONTAINER_CLASS, StickyActionBar, TextField, Tile, useToast } from '@/components/ui';
+import { Header, Icons, LoadingScreen, PAGE_CONTAINER_CLASS, StickyActionBar, TextField, Tile, useToast } from '@/components/ui';
 import { authBypassUser, isAuthBypassEnabled } from '@/lib/auth/authBypass';
 import { supabase } from '@/lib/supabase/client.supabase';
 import { getPersonalData, upsertPersonalData } from '@/lib/supabase/personal_data.supabase';
@@ -130,13 +130,7 @@ function SettingsPageContent() {
         setIsSaving(false);
     };
 
-    if (isLoading) {
-        return (
-            <div className="min-h-screen bg-background flex items-center justify-center">
-                <Icons.Loader2 className="animate-spin" size={32} />
-            </div>
-        );
-    }
+    if (isLoading) return <LoadingScreen />;
 
     return (
         <div className="min-h-screen bg-background pb-24">

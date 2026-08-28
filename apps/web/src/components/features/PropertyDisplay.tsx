@@ -7,7 +7,7 @@
 // ---------------------------------------------------------------------------
 
 import type { BreadcrumbItem, TagVariant } from '@/components/ui';
-import { PAGE_CONTAINER_CLASS } from '@/components/ui';
+import { LoadingScreen, NotFoundScreen } from '@/components/ui';
 import { resolvePropertyImageSrc } from '@/lib/utils';
 import type { ReactNode } from 'react';
 
@@ -50,22 +50,12 @@ export function propertyThumbnail(
 
 /** Shared "property not found" fallback for the use-case sub-pages. */
 export function PropertyNotFoundPage() {
-  return (
-    <div className="min-h-screen bg-background">
-      <main className={PAGE_CONTAINER_CLASS}>
-        <p className="text-muted-foreground">Objekt nicht gefunden</p>
-      </main>
-    </div>
-  );
+  return <NotFoundScreen message="Objekt nicht gefunden" />;
 }
 
 /** Shared "still loading" fallback, matching PropertyNotFoundPage's usage. */
 export function PropertyLoadingPage() {
-  return (
-    <div className="min-h-screen bg-background flex items-center justify-center">
-      <p className="text-sm text-muted-foreground">Wird geladen…</p>
-    </div>
-  );
+  return <LoadingScreen />;
 }
 
 /** property_category is free TEXT, not a DB enum — this is the known set of

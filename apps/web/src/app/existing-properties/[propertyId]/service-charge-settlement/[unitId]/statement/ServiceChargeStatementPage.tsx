@@ -1,7 +1,7 @@
 "use client";
 
 import { formatUnitLabel, PropertyLoadingPage, PropertyNotFoundPage } from '@/components/features/PropertyDisplay';
-import { Header, Icons, PAGE_CONTAINER_CLASS, StickyActionBar, type BreadcrumbItem } from '@/components/ui';
+import { Header, Icons, LoadingScreen, PAGE_CONTAINER_CLASS, StickyActionBar, type BreadcrumbItem } from '@/components/ui';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { ExistingPropertiesUseCases } from '@/constants/ExistingPropertiesUseCases';
 import { getPropertyById } from '@/lib/supabase/property.supabase';
@@ -236,7 +236,7 @@ function ServiceChargeStatementContent({
                                     className="w-full h-[75vh] rounded-md border border-border bg-white"
                                 />
                             ) : (
-                                <p className="text-sm text-muted-foreground">Vorschau wird geladen…</p>
+                                <LoadingScreen message="Vorschau wird geladen…" fullScreen={false} />
                             )
                         ) : (
                             <p className="text-sm text-muted-foreground">

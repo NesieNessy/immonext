@@ -1,6 +1,6 @@
 "use client";
 
-import { Button, CalculatedPanel, Dropdown, FixedOverlay, MetricCard, MonthField, ReadOnlyField, StickyActionBar, TextField } from '@/components/ui';
+import { Button, CalculatedPanel, Dropdown, FixedOverlay, LoadingScreen, MetricCard, MonthField, ReadOnlyField, StickyActionBar, TextField } from '@/components/ui';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { authFetch } from '@/lib/api/authFetch';
 import { parseDecimalInput } from '@/lib/detailCheck/acquisitionCosts';
@@ -2076,7 +2076,7 @@ function CalculatorContent() {
         )}
 
         {isLoading || !data || !presented ? (
-          <p className="text-sm text-muted-foreground">Kalkulator wird geladen...</p>
+          <LoadingScreen message="Kalkulator wird geladen…" fullScreen={false} />
         ) : (
           <div className="flex flex-col gap-8">
             <section className="order-1">

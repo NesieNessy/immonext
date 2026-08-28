@@ -7,6 +7,7 @@ import {
     CalendarField,
     Header,
     Icons,
+    LoadingScreen,
     MetricCard,
     PAGE_CONTAINER_CLASS,
     NumberField,
@@ -51,13 +52,7 @@ export function ServiceChargeSettlementView({ propertyId, property, unit, hasMul
             { label: ExistingPropertiesUseCases.ServiceChargeSettlement },
         ];
 
-    if (data.isLoading) {
-        return (
-            <div className="min-h-screen bg-background flex items-center justify-center">
-                <p className="text-sm text-muted-foreground">Wird geladen…</p>
-            </div>
-        );
-    }
+    if (data.isLoading) return <LoadingScreen />;
 
     return (
         <div className="min-h-screen bg-background pb-24">

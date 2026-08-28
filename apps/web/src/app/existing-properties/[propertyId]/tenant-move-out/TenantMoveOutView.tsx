@@ -8,6 +8,7 @@ import {
     Dropdown,
     Header,
     Icons,
+    LoadingScreen,
     NumberField,
     PAGE_CONTAINER_CLASS,
     SectionLabel,
@@ -109,13 +110,7 @@ export function TenantMoveOutView({ propertyId, property, unit, hasMultipleUnits
             { label: 'Mieterauszug & Abnahmeprotokoll' },
         ];
 
-    if (data.isLoading) {
-        return (
-            <div className="min-h-screen bg-background flex items-center justify-center">
-                <p className="text-sm text-muted-foreground">Wird geladen…</p>
-            </div>
-        );
-    }
+    if (data.isLoading) return <LoadingScreen />;
 
     if (!data.tenancy) {
         return (

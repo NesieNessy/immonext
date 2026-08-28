@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 
 import { formatUnitLabel, PropertyLoadingPage, PropertyNotFoundPage } from '@/components/features/PropertyDisplay';
-import { Header, Icons, PAGE_CONTAINER_CLASS, StickyActionBar, type BreadcrumbItem } from '@/components/ui';
+import { Header, Icons, LoadingScreen, PAGE_CONTAINER_CLASS, StickyActionBar, type BreadcrumbItem } from '@/components/ui';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { getPropertyById } from '@/lib/supabase/property.supabase';
 import { getPropertyUnitsByProperty } from '@/lib/supabase/property_unit.supabase';
@@ -102,7 +102,7 @@ function TenantMoveOutProtocolContent({
                             className="w-full h-[75vh] rounded-md border border-border bg-white"
                         />
                     ) : (
-                        <p className="text-sm text-muted-foreground">Vorschau wird geladen…</p>
+                        <LoadingScreen message="Vorschau wird geladen…" fullScreen={false} />
                     )}
                 </div>
             </main>

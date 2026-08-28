@@ -1,6 +1,6 @@
 "use client";
 
-import { Button, Dropdown, ReadOnlyField, StickyActionBar, TextArea, TextField } from '@/components/ui';
+import { Button, Dropdown, LoadingScreen, ReadOnlyField, StickyActionBar, TextArea, TextField } from '@/components/ui';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
 import { authFetch } from '@/lib/api/authFetch';
@@ -395,7 +395,7 @@ function RenovationContent() {
         )}
 
         {isLoading ? (
-          <p className="text-sm text-muted-foreground">Sanierung wird geladen...</p>
+          <LoadingScreen message="Sanierung wird geladen…" fullScreen={false} />
         ) : (
           <div className="space-y-8">
             <section>
