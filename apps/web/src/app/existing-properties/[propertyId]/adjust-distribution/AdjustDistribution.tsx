@@ -1,6 +1,6 @@
 "use client";
 
-import { PropertyNotFoundPage, propertyThumbnail } from '@/components/features/PropertyDisplay';
+import { PropertyLoadingPage, PropertyNotFoundPage, propertyThumbnail } from '@/components/features/PropertyDisplay';
 import { Button, Header, Icons, NumberField, PAGE_CONTAINER_CLASS, PillOptions, SectionLabel, StickyActionBar, UnsavedChangesModal, useToast } from '@/components/ui';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { ExistingPropertiesUseCases } from '@/constants/ExistingPropertiesUseCases';
@@ -35,9 +35,13 @@ export default function AdjustDistribution({ propertyId }: { propertyId: string 
     const [originalCoOwnershipNumerator, setOriginalCoOwnershipNumerator] = useState('');
     const [originalCoOwnershipDenominator, setOriginalCoOwnershipDenominator] = useState('');
     const [isSaving, setIsSaving] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
-        getPropertyOverviewById(parseInt(propertyId, 10)).then((p) => setProperty(p ?? undefined));
+        getPropertyOverviewById(parseInt(propertyId, 10)).then((p) => {
+            setProperty(p ?? undefined);
+            setIsLoading(false);
+        });
 
         getPropertyPriceSplitByProperty(parseInt(propertyId, 10)).then((saved) => {
             if (!saved) return;
@@ -143,6 +147,8 @@ export default function AdjustDistribution({ propertyId }: { propertyId: string 
     const handleCancel = () => {
         goTo(`/existing-properties/${propertyId}`);
     };
+
+    if (isLoading) return <PropertyLoadingPage />;
 
     if (!property) return <PropertyNotFoundPage />;
 

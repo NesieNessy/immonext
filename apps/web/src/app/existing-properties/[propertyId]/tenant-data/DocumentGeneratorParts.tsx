@@ -58,7 +58,7 @@ export function DataCard({
         <div className="rounded-lg border border-border bg-card overflow-hidden">
             <div className="flex items-center justify-between gap-3 flex-wrap px-4 py-3 bg-muted/30">
                 <div className="flex items-center gap-2">
-                    <Icon className="w-4 h-4 text-primary" />
+                    <Icon className="w-4 h-4 text-foreground" />
                     <span className="text-sm font-semibold text-foreground">{title}</span>
                 </div>
                 {actions ?? (source && <span className="text-xs text-muted-foreground">Quelle: {source}</span>)}

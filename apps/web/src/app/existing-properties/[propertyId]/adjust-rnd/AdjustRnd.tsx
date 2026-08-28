@@ -1,6 +1,6 @@
 "use client";
 
-import { PROPERTY_CATEGORY_LABEL, PropertyNotFoundPage, propertyThumbnail } from '@/components/features/PropertyDisplay';
+import { PROPERTY_CATEGORY_LABEL, PropertyLoadingPage, PropertyNotFoundPage, propertyThumbnail } from '@/components/features/PropertyDisplay';
 import { Button, ComingSoonButton, Dropdown, Header, PAGE_CONTAINER_CLASS, PillOptions, SectionLabel, StickyActionBar, UnsavedChangesModal, useToast } from '@/components/ui';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { ExistingPropertiesUseCases } from '@/constants/ExistingPropertiesUseCases';
@@ -47,9 +47,13 @@ export default function AdjustRnd({ propertyId }: { propertyId: string }) {
     const [isSaving, setIsSaving] = useState(false);
     const [property, setProperty] = useState<Property | undefined>(undefined);
     const [pendingHref, setPendingHref] = useState<string | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
-        getPropertyById(parseInt(propertyId, 10)).then(p => setProperty(p ?? undefined));
+        getPropertyById(parseInt(propertyId, 10)).then(p => {
+            setProperty(p ?? undefined);
+            setIsLoading(false);
+        });
 
         getPropertyRndByProperty(parseInt(propertyId, 10)).then((rnd) => {
             if (!rnd) return;
@@ -154,6 +158,8 @@ export default function AdjustRnd({ propertyId }: { propertyId: string }) {
     const handleCancel = () => {
         goTo(`/existing-properties/${propertyId}`);
     };
+
+    if (isLoading) return <PropertyLoadingPage />;
 
     if (!property) return <PropertyNotFoundPage />;
 

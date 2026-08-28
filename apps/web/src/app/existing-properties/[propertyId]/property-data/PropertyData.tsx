@@ -1,6 +1,6 @@
 "use client";
 
-import { PROPERTY_CATEGORY_CREATE_OPTIONS, PropertyNotFoundPage } from '@/components/features/PropertyDisplay';
+import { PROPERTY_CATEGORY_CREATE_OPTIONS, PropertyLoadingPage, PropertyNotFoundPage } from '@/components/features/PropertyDisplay';
 import { PropertyImageGallery } from '@/components/features/PropertyImageGallery';
 import { Button, CalendarField, Dropdown, Header, NumberField, PAGE_CONTAINER_CLASS, PillOptions, SectionLabel, StickyActionBar, TextField, UnsavedChangesModal, useToast } from '@/components/ui';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
@@ -65,6 +65,7 @@ export default function PropertyData({ propertyId }: { propertyId: string }) {
     const [error, setError] = useState<string | null>(null);
     const [pendingHref, setPendingHref] = useState<string | null>(null);
     const [coverImageUrl, setCoverImageUrl] = useState<string | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
         const id = parseInt(propertyId, 10);
@@ -76,7 +77,11 @@ export default function PropertyData({ propertyId }: { propertyId: string }) {
             getParkingSpacesByProperty(id),
             getAcquisitionCosts(id),
         ]).then(([foundProperty, acquisition, spaces, acquisitionCostsRows]) => {
-            if (cancelled || !foundProperty) return;
+            if (cancelled) return;
+            if (!foundProperty) {
+                setIsLoading(false);
+                return;
+            }
             const existingParking = spaces[0] ?? null;
             const existingAcquisitionCosts = acquisitionCostsRows[0] ?? null;
 
@@ -101,6 +106,7 @@ export default function PropertyData({ propertyId }: { propertyId: string }) {
             setForm(initial);
             setOriginal(initial);
             setCoverImageUrl(foundProperty.imageUrl);
+            setIsLoading(false);
         });
 
         return () => { cancelled = true; };
@@ -235,6 +241,8 @@ export default function PropertyData({ propertyId }: { propertyId: string }) {
         }),
         [propertyId, isEditing] // eslint-disable-line react-hooks/exhaustive-deps
     );
+
+    if (isLoading) return <PropertyLoadingPage />;
 
     if (!property) return <PropertyNotFoundPage />;
 

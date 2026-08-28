@@ -231,7 +231,7 @@ export default function PropertyHub({ propertyId, unitId }: { propertyId: string
   const showUnitSections = unit !== null;
   const addressHref = units.length > 1 ? `/existing-properties/${propertyId}` : undefined;
 
-  const breadcrumbItems: BreadcrumbItem[] = unit
+  const breadcrumbItems: BreadcrumbItem[] = unit && units.length > 1
     ? [
       BESTANDSOBJEKTE_BREADCRUMB_ROOT,
       { label: `${property.street} ${property.houseNumber}, ${property.postalCode} ${property.city}`, href: addressHref },
