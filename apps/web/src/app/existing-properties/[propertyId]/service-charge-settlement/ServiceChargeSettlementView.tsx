@@ -7,6 +7,7 @@ import {
     CalendarField,
     Header,
     Icons,
+    LoadingScreen,
     MetricCard,
     PAGE_CONTAINER_CLASS,
     NumberField,
@@ -51,13 +52,7 @@ export function ServiceChargeSettlementView({ propertyId, property, unit, hasMul
             { label: ExistingPropertiesUseCases.ServiceChargeSettlement },
         ];
 
-    if (data.isLoading) {
-        return (
-            <div className="min-h-screen bg-background flex items-center justify-center">
-                <p className="text-sm text-muted-foreground">Wird geladen…</p>
-            </div>
-        );
-    }
+    if (data.isLoading) return <LoadingScreen />;
 
     return (
         <div className="min-h-screen bg-background pb-24">
@@ -130,9 +125,9 @@ export function ServiceChargeSettlementView({ propertyId, property, unit, hasMul
                     />
 
                     {data.settlement?.sourceDocumentName ? (
-                        <div className="rounded-lg border border-emerald-200 bg-emerald-50 dark:border-emerald-900/40 dark:bg-emerald-900/10 px-4 py-3 flex items-center justify-between gap-3 flex-wrap">
+                        <div className="rounded-lg border border-success/30 bg-success/10 px-4 py-3 flex items-center justify-between gap-3 flex-wrap">
                             <div className="flex items-center gap-3 min-w-0">
-                                <Icons.FileText className="w-5 h-5 text-emerald-700 dark:text-emerald-400 shrink-0" />
+                                <Icons.FileText className="w-5 h-5 text-success shrink-0" />
                                 <div className="min-w-0 text-left">
                                     <button
                                         type="button"
@@ -201,7 +196,7 @@ export function ServiceChargeSettlementView({ propertyId, property, unit, hasMul
                         <div className="overflow-x-auto">
                             <table className="w-full text-sm border-collapse">
                                 <thead>
-                                    <tr className="bg-muted/50 border-b border-border">
+                                    <tr className="bg-primary/8 border-b border-border">
                                         <th rowSpan={2} className="px-3 py-2 text-left align-bottom font-semibold text-foreground whitespace-nowrap">Kostenposition</th>
                                         <th colSpan={2} className="px-3 py-2 text-center font-semibold text-primary border-l border-border whitespace-nowrap">Abrechnung {data.settlementYear}</th>
                                         <th colSpan={2} className="px-3 py-2 text-center font-semibold text-primary border-l border-border whitespace-nowrap">Wirtschaftsplan {data.settlementYear + 1}</th>
@@ -296,7 +291,7 @@ export function ServiceChargeSettlementView({ propertyId, property, unit, hasMul
                                         <td className="px-3 py-2 text-right whitespace-nowrap">{euro(data.annualPrepayment)}</td>
                                         <td></td>
                                     </tr>
-                                    <tr className={data.settlementCoverage === 'shortfall' ? 'text-destructive' : 'text-emerald-600'}>
+                                    <tr className={data.settlementCoverage === 'shortfall' ? 'text-destructive' : 'text-success'}>
                                         <td className="px-3 py-2 font-medium">
                                             {data.settlementCoverage === 'shortfall' ? 'Nachzahlung durch Mieter' : 'Guthaben durch Mieter'}
                                         </td>
@@ -305,7 +300,7 @@ export function ServiceChargeSettlementView({ propertyId, property, unit, hasMul
                                             {data.overUnderCoverage < 0 ? '-' : '+'}{euro(Math.abs(data.overUnderCoverage))}
                                         </td>
                                         <td className="px-3 py-2 border-l border-border">–</td>
-                                        <td className="px-3 py-2 text-right whitespace-nowrap text-orange-600">
+                                        <td className="px-3 py-2 text-right whitespace-nowrap text-warning">
                                             {data.prepaymentDelta != null ? `${data.prepaymentDelta >= 0 ? '+' : '-'}${euro(Math.abs(data.prepaymentDelta))}` : '–'}
                                         </td>
                                         <td></td>

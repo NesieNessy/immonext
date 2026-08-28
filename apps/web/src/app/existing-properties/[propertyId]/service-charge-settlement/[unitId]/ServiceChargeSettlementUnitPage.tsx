@@ -9,7 +9,7 @@ import type { Property, PropertyUnit } from '@immonext/types';
 import { ServiceChargeSettlementView } from '../ServiceChargeSettlementView';
 
 export default function ServiceChargeSettlementUnitPage({ propertyId, unitId }: { propertyId: string; unitId: string }) {
-    const [property, setProperty] = useState<Property | null>(null);
+    const [property, setProperty] = useState<Property | null | undefined>(undefined);
     const [unit, setUnit] = useState<PropertyUnit | null | undefined>(undefined);
     const [hasMultipleUnits, setHasMultipleUnits] = useState(true);
 
@@ -26,8 +26,8 @@ export default function ServiceChargeSettlementUnitPage({ propertyId, unitId }: 
         });
     }, [propertyId, unitId]);
 
+    if (property === undefined || unit === undefined) return <PropertyLoadingPage />;
     if (property === null || unit === null) return <PropertyNotFoundPage />;
-    if (!property || unit === undefined) return <PropertyLoadingPage />;
 
     return <ServiceChargeSettlementView propertyId={propertyId} property={property} unit={unit} hasMultipleUnits={hasMultipleUnits} />;
 }

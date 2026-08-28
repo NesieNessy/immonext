@@ -1,6 +1,6 @@
 "use client";
 
-import { Dropdown, ReadOnlyField, StickyActionBar, TextField } from '@/components/ui';
+import { Dropdown, LoadingScreen, ReadOnlyField, StickyActionBar, TextField } from '@/components/ui';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { authFetch } from '@/lib/api/authFetch';
 import { formatDecimalInput, parseDecimalInput } from '@/lib/detailCheck/acquisitionCosts';
@@ -326,7 +326,7 @@ function FinancingContent() {
         )}
 
         {isLoading ? (
-          <p className="text-sm text-muted-foreground">Finanzierung wird geladen...</p>
+          <LoadingScreen message="Finanzierung wird geladen…" fullScreen={false} />
         ) : (
           <div className="space-y-7">
             <section>

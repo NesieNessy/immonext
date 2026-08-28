@@ -1,6 +1,6 @@
 "use client";
 
-import { Button, ReadOnlyField, StickyActionBar, Tag } from '@/components/ui';
+import { Button, LoadingScreen, ReadOnlyField, StickyActionBar, Tag } from '@/components/ui';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { authFetch } from '@/lib/api/authFetch';
 import { type ReferenceProperty, type SubjectProperty } from '@/lib/detailCheck/comparison';
@@ -170,7 +170,7 @@ function ComparisonContent() {
         )}
 
         {isLoading || !data ? (
-          <p className="text-sm text-muted-foreground">Vergleich wird geladen...</p>
+          <LoadingScreen message="Vergleich wird geladen…" fullScreen={false} />
         ) : (
           <div className="space-y-10">
             <SubjectCard subject={data.subject} />

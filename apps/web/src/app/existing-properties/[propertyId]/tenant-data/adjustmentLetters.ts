@@ -22,7 +22,7 @@ function letterFrame(title: string, bodyHtml: string): string {
 <meta charset="utf-8" />
 <title>${title}</title>
 <style>
-    body { font-family: Arial, Helvetica, sans-serif; color: #111; max-width: 700px; margin: 48px auto; line-height: 1.6; }
+    body { font-family: Arial, Helvetica, sans-serif; color: #101828; max-width: 700px; margin: 48px auto; line-height: 1.6; }
     h1 { font-size: 18px; margin: 32px 0 16px; }
 </style>
 </head>
@@ -64,7 +64,7 @@ export function rentIncreaseLetterHtml(p: RentIncreaseLetterParams): string {
         </p>
         <p style="margin:16px 0;display:flex;justify-content:space-between;"><span>Bisherige Netto-Kaltmiete</span><strong>${euro(p.currentColdRent)}</strong></p>
         <p style="margin:16px 0;display:flex;justify-content:space-between;"><span>Erhöhungsbetrag</span><strong>${euro(p.increaseAmount)}</strong></p>
-        <p style="margin:16px 0;display:flex;justify-content:space-between;border-top:1px solid #ddd;padding-top:8px;"><span>Neue Netto-Kaltmiete</span><strong>${euro(newRent)}</strong></p>
+        <p style="margin:16px 0;display:flex;justify-content:space-between;border-top:1px solid #d0d5dd;padding-top:8px;"><span>Neue Netto-Kaltmiete</span><strong>${euro(newRent)}</strong></p>
         <p>
             Die übrigen Bestandteile Ihrer Miete (Nebenkosten) bleiben von dieser Erhöhung unberührt.
             Bitte überweisen Sie ab dem genannten Datum die neue Gesamtmiete auf das Ihnen bekannte Konto.
@@ -95,7 +95,7 @@ export function renovationAdjustmentLetterHtml(p: RenovationAdjustmentLetterPara
             mit Wirkung zum <strong>${formatDeDate(p.effectiveDate)}</strong> um den auf Ihre Wohnung entfallenden Anteil
             der Modernisierungskosten.
         </p>
-        <p style="margin:16px 0;display:flex;justify-content:space-between;border-top:1px solid #ddd;padding-top:8px;"><span>Monatliche Erhöhung</span><strong>${euro(p.modernizationAmount)}</strong></p>
+        <p style="margin:16px 0;display:flex;justify-content:space-between;border-top:1px solid #d0d5dd;padding-top:8px;"><span>Monatliche Erhöhung</span><strong>${euro(p.modernizationAmount)}</strong></p>
         <p>
             Die Berechnung berücksichtigt die gesetzliche Kappungsgrenze von 3,00 € je Quadratmeter Wohnfläche
             innerhalb von sechs Jahren (bzw. 2,00 €, sofern die bisherige Miete unter 7,00 €/m² lag).

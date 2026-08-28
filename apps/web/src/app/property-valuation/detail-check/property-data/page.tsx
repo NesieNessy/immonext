@@ -1,6 +1,6 @@
 "use client";
 
-import { Dropdown, StickyActionBar, TextField } from '@/components/ui';
+import { Dropdown, LoadingScreen, StickyActionBar, TextField } from '@/components/ui';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { authFetch } from '@/lib/api/authFetch';
 import { parseDecimalInput } from '@/lib/detailCheck/acquisitionCosts';
@@ -362,7 +362,7 @@ function PropertyDataContent() {
         )}
 
         {isLoading ? (
-          <p className="text-sm text-muted-foreground">Objektdaten werden geladen...</p>
+          <LoadingScreen message="Objektdaten werden geladen…" fullScreen={false} />
         ) : (
           <div className="space-y-7">
             <section>

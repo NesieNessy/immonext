@@ -175,7 +175,7 @@ function ResultContent() {
           </div>
         )}
         {savedMessage && (
-          <div className="mb-4 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
+          <div className="mb-4 rounded-lg border border-success/30 bg-success/10 px-4 py-3 text-sm text-success">
             {savedMessage}
           </div>
         )}
@@ -216,7 +216,7 @@ function ResultContent() {
               </div>
               <div className="overflow-hidden rounded-lg border border-border bg-card">
                 <table className="w-full border-collapse">
-                  <thead className="bg-muted/70">
+                  <thead className="bg-primary/8">
                     <tr>
                       <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">Kennzahl</th>
                       <th className="px-3 py-3 text-right text-xs font-semibold uppercase tracking-wide text-muted-foreground">Wert</th>

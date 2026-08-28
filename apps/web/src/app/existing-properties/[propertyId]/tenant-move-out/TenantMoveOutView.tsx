@@ -8,6 +8,7 @@ import {
     Dropdown,
     Header,
     Icons,
+    LoadingScreen,
     NumberField,
     PAGE_CONTAINER_CLASS,
     SectionLabel,
@@ -109,13 +110,7 @@ export function TenantMoveOutView({ propertyId, property, unit, hasMultipleUnits
             { label: 'Mieterauszug & Abnahmeprotokoll' },
         ];
 
-    if (data.isLoading) {
-        return (
-            <div className="min-h-screen bg-background flex items-center justify-center">
-                <p className="text-sm text-muted-foreground">Wird geladen…</p>
-            </div>
-        );
-    }
+    if (data.isLoading) return <LoadingScreen />;
 
     if (!data.tenancy) {
         return (
@@ -160,7 +155,7 @@ export function TenantMoveOutView({ propertyId, property, unit, hasMultipleUnits
                                 onChange={data.setMoveOutDate}
                             />
                         </div>
-                        <div className="mt-3 px-4 py-3 rounded-lg bg-amber-50 border border-amber-200 dark:bg-amber-950/20 dark:border-amber-900 text-sm text-foreground">
+                        <div className="mt-3 px-4 py-3 rounded-lg bg-warning/10 border border-warning/30 text-sm text-foreground">
                             Sobald das Auszugsdatum erreicht ist, wird der Mieter-Datensatz automatisch in die{' '}
                             <a href={`/existing-properties/${propertyId}/tenant-history/${unit.propertyUnitId}`} className="font-medium text-primary hover:underline">
                                 Mieter-Historie

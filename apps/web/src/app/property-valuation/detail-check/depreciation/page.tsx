@@ -1,6 +1,6 @@
 "use client";
 
-import { Button, Dropdown, ReadOnlyField, StickyActionBar, TextField } from '@/components/ui';
+import { Button, Dropdown, LoadingScreen, ReadOnlyField, StickyActionBar, TextField } from '@/components/ui';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { authFetch } from '@/lib/api/authFetch';
 import { parseDecimalInput } from '@/lib/detailCheck/acquisitionCosts';
@@ -240,7 +240,7 @@ function DepreciationContent() {
         )}
 
         {isLoading || !context || !selectedSplit ? (
-          <p className="text-sm text-muted-foreground">Abschreibung wird geladen...</p>
+          <LoadingScreen message="Abschreibung wird geladen…" fullScreen={false} />
         ) : (
           <div className="space-y-8">
             <section className="max-w-xl">

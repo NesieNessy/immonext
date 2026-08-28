@@ -44,11 +44,11 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
             role="status"
             className={cn(
               "pointer-events-auto flex items-start gap-2.5 px-4 py-3 rounded-lg border shadow-lg bg-card animate-in fade-in slide-in-from-top-2",
-              toast.variant === "success" ? "border-green-500/30" : "border-destructive/30"
+              toast.variant === "success" ? "border-success/30" : "border-destructive/30"
             )}
           >
             {toast.variant === "success" ? (
-              <Icons.CheckCircle2 className="w-4 h-4 shrink-0 text-green-600 dark:text-green-400 mt-0.5" />
+              <Icons.CheckCircle2 className="w-4 h-4 shrink-0 text-success mt-0.5" />
             ) : (
               <Icons.AlertTriangle className="w-4 h-4 shrink-0 text-destructive mt-0.5" />
             )}

@@ -1,7 +1,7 @@
 "use client";
 
 import { BESTANDSOBJEKTE_BREADCRUMB_ROOT, formatUnitLabel, PROPERTY_CATEGORY_LABEL, PropertyLoadingPage } from '@/components/features/PropertyDisplay';
-import { ConfirmDeleteModal, Header, Icons, PAGE_CONTAINER_CLASS, SectionLabel, Tag, type BreadcrumbItem } from '@/components/ui';
+import { ConfirmDeleteModal, Header, Icons, NotFoundScreen, PAGE_CONTAINER_CLASS, SectionLabel, Tag, type BreadcrumbItem } from '@/components/ui';
 import { deleteProperty, getPropertyOverviewById, type PropertyOverview } from '@/lib/supabase/property.supabase';
 import { getPropertyUnitsByProperty } from '@/lib/supabase/property_unit.supabase';
 import { resolvePropertyImageSrc, cn } from '@/lib/utils';
@@ -35,7 +35,7 @@ const OBJEKTVERWALTUNG: HubCard[] = [
     route: 'property-data',
     scope: 'property',
     icon: Icons.Database,
-    colorClass: 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400',
+    colorClass: 'bg-primary/10 text-primary',
   },
   {
     key: 'adjust-rnd',
@@ -44,7 +44,7 @@ const OBJEKTVERWALTUNG: HubCard[] = [
     route: 'adjust-rnd',
     scope: 'property',
     icon: Icons.Clock,
-    colorClass: 'bg-cyan-100 text-cyan-600 dark:bg-cyan-900/30 dark:text-cyan-400',
+    colorClass: 'bg-accent-sky/15 text-accent-sky',
   },
   {
     key: 'adjust-distribution',
@@ -53,7 +53,7 @@ const OBJEKTVERWALTUNG: HubCard[] = [
     route: 'adjust-distribution',
     scope: 'property',
     icon: Icons.PieChart,
-    colorClass: 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400',
+    colorClass: 'bg-accent-violet/15 text-accent-violet',
   },
   {
     key: 'tenant-data-new',
@@ -74,7 +74,7 @@ const MIETE: HubCard[] = [
     route: 'tenant-data',
     scope: 'unit',
     icon: Icons.Users,
-    colorClass: 'bg-violet-100 text-violet-600 dark:bg-violet-900/30 dark:text-violet-400',
+    colorClass: 'bg-accent-terracotta/15 text-accent-terracotta',
   },
   {
     key: 'tenant-agreement',
@@ -83,7 +83,7 @@ const MIETE: HubCard[] = [
     route: 'tenant-agreement',
     scope: 'unit',
     icon: Icons.FileSignature,
-    colorClass: 'bg-teal-100 text-teal-600 dark:bg-teal-900/30 dark:text-teal-400',
+    colorClass: 'bg-secondary/15 text-secondary',
   },
   {
     key: 'tenant-history',
@@ -92,7 +92,7 @@ const MIETE: HubCard[] = [
     route: 'tenant-history',
     scope: 'unit',
     icon: Icons.History,
-    colorClass: 'bg-muted text-muted-foreground',
+    colorClass: 'bg-accent-sage/15 text-accent-sage',
   },
   {
     key: 'rental-trends',
@@ -101,7 +101,7 @@ const MIETE: HubCard[] = [
     route: 'rental-trends',
     scope: 'unit',
     icon: Icons.TrendingUp,
-    colorClass: 'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400',
+    colorClass: 'bg-success/15 text-success',
   },
   {
     key: 'tenant-move-out',
@@ -110,7 +110,7 @@ const MIETE: HubCard[] = [
     route: 'tenant-move-out',
     scope: 'unit',
     icon: Icons.DoorOpen,
-    colorClass: 'bg-rose-100 text-rose-600 dark:bg-rose-900/30 dark:text-rose-400',
+    colorClass: 'bg-accent-coral/15 text-accent-coral',
   },
 ];
 
@@ -122,7 +122,7 @@ const FINANZEN_DOKUMENTE: HubCard[] = [
     route: 'service-charge-settlement',
     scope: 'unit',
     icon: Icons.Receipt,
-    colorClass: 'bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400',
+    colorClass: 'bg-warning/15 text-warning',
   },
   {
     key: 'tax-documents',
@@ -131,7 +131,7 @@ const FINANZEN_DOKUMENTE: HubCard[] = [
     route: 'tax-documents',
     scope: 'property',
     icon: Icons.Landmark,
-    colorClass: 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400',
+    colorClass: 'bg-info/15 text-info',
   },
   {
     key: 'key-metrics',
@@ -140,7 +140,7 @@ const FINANZEN_DOKUMENTE: HubCard[] = [
     route: 'key-metrics',
     scope: 'property',
     icon: Icons.BarChart3,
-    colorClass: 'bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400',
+    colorClass: 'bg-accent-violet/15 text-accent-violet',
   },
   {
     key: 'contractors',
@@ -149,7 +149,7 @@ const FINANZEN_DOKUMENTE: HubCard[] = [
     route: 'contractors',
     scope: 'property',
     icon: Icons.Wrench,
-    colorClass: 'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400',
+    colorClass: 'bg-success/15 text-success',
   },
 ];
 
@@ -161,7 +161,7 @@ const WEITERE_AKTIONEN: HubCard[] = [
     route: 'sale',
     scope: 'property',
     icon: Icons.ShoppingCart,
-    colorClass: 'bg-muted text-muted-foreground',
+    colorClass: 'bg-accent/15 text-accent',
   },
 ];
 
@@ -214,23 +214,11 @@ export default function PropertyHub({ propertyId, unitId }: { propertyId: string
 
   if (isLoading) return <PropertyLoadingPage />;
 
-  if (!property) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <p className="text-sm text-muted-foreground">Objekt nicht gefunden</p>
-      </div>
-    );
-  }
+  if (!property) return <NotFoundScreen message="Objekt nicht gefunden" />;
 
   const unit = unitId ? units.find((u) => u.propertyUnitId === Number(unitId)) ?? null : null;
 
-  if (unitId && !unit) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <p className="text-sm text-muted-foreground">Einheit nicht gefunden</p>
-      </div>
-    );
-  }
+  if (unitId && !unit) return <NotFoundScreen message="Einheit nicht gefunden" />;
 
   const photo = resolvePropertyImageSrc(property.imageUrl);
   const categoryLabel = property.propertyCategory
@@ -263,7 +251,7 @@ export default function PropertyHub({ propertyId, unitId }: { propertyId: string
       route: '',
       scope: 'property',
       icon: Icons.Trash2,
-      colorClass: 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400',
+      colorClass: 'bg-destructive/15 text-destructive',
       onClick: () => setDeleteModalOpen(true),
     },
   ];
@@ -289,10 +277,10 @@ export default function PropertyHub({ propertyId, unitId }: { propertyId: string
           }
         />
         <div className="flex items-center gap-2 flex-wrap">
-          {categoryLabel && <Tag label={categoryLabel} variant="muted" />}
-          <Tag label={`${property.squareMeters} m²`} variant="muted" />
-          <Tag label={`Baujahr ${property.yearOfConstruction}`} variant="muted" />
-          <Tag label={property.isRented ? 'Vermietet' : 'Unvermietet'} variant={property.isRented ? 'success' : 'warning'} />
+          {categoryLabel && <Tag label={categoryLabel} variant="muted" size="md" />}
+          <Tag label={`${property.squareMeters} m²`} variant="muted" size="md" />
+          <Tag label={`Baujahr ${property.yearOfConstruction}`} variant="muted" size="md" />
+          <Tag label={property.isRented ? 'Vermietet' : 'Unvermietet'} variant={property.isRented ? 'success' : 'warning'} size="md" />
         </div>
 
         {!showUnitSections && (

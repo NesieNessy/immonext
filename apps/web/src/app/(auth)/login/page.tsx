@@ -42,7 +42,7 @@ export default function LoginPage() {
 
       <form onSubmit={handleLogin} className="space-y-4">
         {error && (
-          <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+          <div className="p-3 bg-destructive/10 border border-destructive/30 rounded-lg text-destructive text-sm">
             {error}
           </div>
         )}
@@ -66,7 +66,7 @@ export default function LoginPage() {
         />
 
         <div className="flex items-center justify-end">
-          <Link href="/forgot-password" className="text-sm text-blue-600 hover:text-blue-800">
+          <Link href="/forgot-password" className="text-sm text-primary hover:text-primary/80">
             Passwort vergessen?
           </Link>
         </div>
@@ -78,7 +78,7 @@ export default function LoginPage() {
 
       <p className="text-center text-sm text-gray-600">
         Noch kein Konto?{' '}
-        <Link href="/signup" className="text-blue-600 hover:text-blue-800">
+        <Link href="/signup" className="text-primary hover:text-primary/80">
           Registrieren
         </Link>
       </p>

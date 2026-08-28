@@ -1,6 +1,6 @@
 "use client";
 
-import { Header, Icons, PAGE_CONTAINER_CLASS, StickyActionBar, TextField, Tile, useToast } from '@/components/ui';
+import { Header, Icons, LoadingScreen, PAGE_CONTAINER_CLASS, StickyActionBar, TextField, Tile, useToast } from '@/components/ui';
 import { authBypassUser, isAuthBypassEnabled } from '@/lib/auth/authBypass';
 import { supabase } from '@/lib/supabase/client.supabase';
 import { getPersonalData, upsertPersonalData } from '@/lib/supabase/personal_data.supabase';
@@ -130,13 +130,7 @@ function SettingsPageContent() {
         setIsSaving(false);
     };
 
-    if (isLoading) {
-        return (
-            <div className="min-h-screen bg-background flex items-center justify-center">
-                <Icons.Loader2 className="animate-spin" size={32} />
-            </div>
-        );
-    }
+    if (isLoading) return <LoadingScreen />;
 
     return (
         <div className="min-h-screen bg-background pb-24">
@@ -146,13 +140,13 @@ function SettingsPageContent() {
                 />
 
                 {isOnboarding && (
-                    <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg text-blue-700 text-sm">
+                    <div className="p-4 bg-info/10 border border-info/30 rounded-lg text-info text-sm">
                         Bitte vervollständigen Sie zunächst Ihre Benutzereinstellungen, bevor Sie ImmoNext nutzen können.
                     </div>
                 )}
 
                 {error && (
-                    <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+                    <div className="mt-4 p-4 bg-destructive/10 border border-destructive/30 rounded-lg text-destructive text-sm">
                         {error}
                     </div>
                 )}

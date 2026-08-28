@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 
 import { formatUnitLabel, PropertyLoadingPage, PropertyNotFoundPage } from '@/components/features/PropertyDisplay';
-import { Header, Icons, PAGE_CONTAINER_CLASS, StickyActionBar, type BreadcrumbItem } from '@/components/ui';
+import { Header, Icons, LoadingScreen, PAGE_CONTAINER_CLASS, StickyActionBar, type BreadcrumbItem } from '@/components/ui';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { getPropertyById } from '@/lib/supabase/property.supabase';
 import { getPropertyUnitsByProperty } from '@/lib/supabase/property_unit.supabase';
@@ -13,7 +13,7 @@ import { useTenantMoveOutData } from '../../useTenantMoveOutData';
 
 export default function TenantMoveOutProtocolPage({ propertyId, unitId }: { propertyId: string; unitId: string }) {
     const router = useRouter();
-    const [property, setProperty] = useState<Property | null>(null);
+    const [property, setProperty] = useState<Property | null | undefined>(undefined);
     const [unit, setUnit] = useState<PropertyUnit | null | undefined>(undefined);
     const [hasMultipleUnits, setHasMultipleUnits] = useState(false);
 
@@ -30,8 +30,8 @@ export default function TenantMoveOutProtocolPage({ propertyId, unitId }: { prop
         });
     }, [propertyId, unitId]);
 
+    if (property === undefined || unit === undefined) return <PropertyLoadingPage />;
     if (property === null || unit === null) return <PropertyNotFoundPage />;
-    if (!property || unit === undefined) return <PropertyLoadingPage />;
 
     return (
         <TenantMoveOutProtocolContent
@@ -102,7 +102,7 @@ function TenantMoveOutProtocolContent({
                             className="w-full h-[75vh] rounded-md border border-border bg-white"
                         />
                     ) : (
-                        <p className="text-sm text-muted-foreground">Vorschau wird geladen…</p>
+                        <LoadingScreen message="Vorschau wird geladen…" fullScreen={false} />
                     )}
                 </div>
             </main>

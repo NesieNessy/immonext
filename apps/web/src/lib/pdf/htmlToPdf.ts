@@ -39,7 +39,7 @@ export async function htmlToPdfBlob(bodyHtml: string): Promise<Blob> {
     container.style.background = '#ffffff';
     container.style.padding = '48px';
     container.style.fontFamily = 'Arial, Helvetica, sans-serif';
-    container.style.color = '#111';
+    container.style.color = '#101828';
     container.style.lineHeight = '1.6';
     container.innerHTML = bodyHtml;
     document.body.appendChild(container);

@@ -8,6 +8,7 @@ export type TagVariant =
   | "default"
   | "muted"
   | "primary"
+  | "gold"
   | "success"
   | "warning"
   | "danger"
@@ -21,14 +22,15 @@ const variantStyles: Record<TagVariant, string> = {
   default:  "bg-foreground/10 text-foreground",
   muted:    "bg-muted text-muted-foreground",
   primary:  "bg-primary/15 text-primary",
-  success:  "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
-  warning:  "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400",
-  danger:   "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
-  info:     "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
-  purple:   "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400",
-  violet:   "bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400",
-  orange:   "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400",
-  teal:     "bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400",
+  gold:     "bg-accent/15 text-accent-text",
+  success:  "bg-success/15 text-success",
+  warning:  "bg-warning/15 text-warning",
+  danger:   "bg-destructive/15 text-destructive",
+  info:     "bg-info/15 text-info",
+  purple:   "bg-accent-violet/15 text-accent-violet",
+  violet:   "bg-accent-violet/15 text-accent-violet",
+  orange:   "bg-accent-terracotta/15 text-accent-terracotta",
+  teal:     "bg-secondary/15 text-secondary",
 };
 
 export type TagSize = "sm" | "md";

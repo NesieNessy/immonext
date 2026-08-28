@@ -46,7 +46,7 @@ export function PropertyImageGallery({ propertyId, onCoverChange }: Props) {
                 alt=""
                 className={cn(
                   "w-full h-full object-cover rounded-lg border-2",
-                  image.isCover ? "border-primary" : "border-border"
+                  image.isCover ? "border-accent" : "border-border"
                 )}
               />
               <button
@@ -57,7 +57,7 @@ export function PropertyImageGallery({ propertyId, onCoverChange }: Props) {
                 aria-label={image.isCover ? 'Titelbild' : 'Als Titelbild festlegen'}
                 className={cn(
                   "absolute top-1 left-1 p-1 rounded-full bg-card/90 border border-border transition-colors",
-                  image.isCover ? "text-primary" : "text-muted-foreground hover:text-foreground cursor-pointer"
+                  image.isCover ? "text-accent" : "text-muted-foreground hover:text-foreground cursor-pointer"
                 )}
               >
                 <Icons.Star className="w-3.5 h-3.5" fill={image.isCover ? 'currentColor' : 'none'} />

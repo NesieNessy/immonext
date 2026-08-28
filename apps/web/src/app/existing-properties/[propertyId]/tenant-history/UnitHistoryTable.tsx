@@ -197,7 +197,7 @@ export function UnitHistoryTable({ propertyId, property, unit, hasMultipleUnits 
             aria-label={value ? 'Als offen markieren' : 'Als erledigt markieren'}
             className="inline-flex items-center justify-center rounded-md p-1 hover:bg-muted/50 transition-colors cursor-pointer"
         >
-            {value ? <Icons.CheckCircle2 className="w-4 h-4 text-green-600" /> : <Circle className="w-4 h-4 text-muted-foreground" />}
+            {value ? <Icons.CheckCircle2 className="w-4 h-4 text-success" /> : <Circle className="w-4 h-4 text-muted-foreground" />}
         </button>
     );
 

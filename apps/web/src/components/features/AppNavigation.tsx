@@ -49,7 +49,6 @@ export function AppNavigation() {
     <NavigationBar 
       logo={{
         iconName: 'home',
-        text: 'Startseite',
         href: '/'
       }}
       items={[

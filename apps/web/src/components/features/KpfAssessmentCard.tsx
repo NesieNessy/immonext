@@ -59,12 +59,12 @@ function KpfDetails({
 
   return (
     <>
-      {/* Blue info banner */}
-      <div className="flex items-start gap-3 px-4 py-3 bg-blue-50 border border-blue-200 rounded-lg dark:bg-blue-950/30 dark:border-blue-900">
-        <Icons.AlertCircle className="w-5 h-5 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
+      {/* Info banner */}
+      <div className="flex items-start gap-3 px-4 py-3 bg-info/10 border border-info/30 rounded-lg">
+        <Icons.AlertCircle className="w-5 h-5 text-info shrink-0 mt-0.5" />
         <div>
-          <p className="text-sm font-semibold text-blue-900 dark:text-blue-200">Marktüblicher Kaufpreisfaktor</p>
-          <p className="text-sm text-blue-800 dark:text-blue-300 mt-0.5">
+          <p className="text-sm font-semibold text-info">Marktüblicher Kaufpreisfaktor</p>
+          <p className="text-sm text-info/90 mt-0.5">
             Faktor {kpf.toFixed(1)}
             {rendite !== null && ` · Rendite ${rendite.toFixed(2)} % p.a.`}
           </p>
@@ -122,7 +122,7 @@ function KpfDetails({
         <div className="relative h-3 w-full rounded-full overflow-visible">
           <div
             className="absolute inset-0 rounded-full"
-            style={{ background: 'linear-gradient(to right, #22c55e, #84cc16, #eab308, #f97316, #ef4444)' }}
+            style={{ background: 'linear-gradient(to right, var(--success), var(--warning), var(--destructive))' }}
           />
         </div>
         <div className="flex justify-between">

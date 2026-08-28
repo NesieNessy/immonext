@@ -42,14 +42,6 @@ export function PropertyCard({ property, colorIndex, menuItems, onClick }: Prope
           <Icons.Home className="w-14 h-14 text-white/85" strokeWidth={1.5} />
         )}
 
-        {categoryLabel && (
-          <Tag
-            label={categoryLabel}
-            variant={PROPERTY_CATEGORY_VARIANT[property.propertyCategory!] ?? 'default'}
-            className="absolute bottom-3 left-3"
-          />
-        )}
-
         <div className="absolute top-2 right-2" onClick={(e) => e.stopPropagation()}>
           <Button
             iconOnly
@@ -85,8 +77,15 @@ export function PropertyCard({ property, colorIndex, menuItems, onClick }: Prope
           </div>
         </div>
 
-        <div className="pt-3 mt-auto">
-          <Tag label={property.isRented ? 'Vermietet' : 'Unvermietet'} variant={property.isRented ? 'success' : 'warning'} />
+        <div className="pt-3 mt-auto flex items-center gap-2 flex-wrap">
+          {categoryLabel && (
+            <Tag
+              label={categoryLabel}
+              variant={PROPERTY_CATEGORY_VARIANT[property.propertyCategory!] ?? 'default'}
+              size="md"
+            />
+          )}
+          <Tag label={property.isRented ? 'Vermietet' : 'Unvermietet'} variant={property.isRented ? 'success' : 'warning'} size="md" />
         </div>
       </div>
     </div>

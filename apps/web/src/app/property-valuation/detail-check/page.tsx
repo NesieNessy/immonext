@@ -2,7 +2,7 @@
 
 import { NoResult } from '@/components/common';
 import type { MenuItem, SortDirection, TableColumn } from '@/components/ui';
-import { Button, ConfirmDeleteModal, Header, Icons, PAGE_CONTAINER_CLASS, Table, Tag, TextFieldWithIcon } from '@/components/ui';
+import { Button, ConfirmDeleteModal, Header, Icons, LoadingScreen, PAGE_CONTAINER_CLASS, Table, Tag, TextFieldWithIcon } from '@/components/ui';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
 import { authFetch } from '@/lib/api/authFetch';
@@ -387,7 +387,7 @@ export default function DetailCheckOverviewPage() {
           </Link>
         </div>
 
-        {(authLoading || isLoading) && <p className="mt-8 text-center text-sm text-muted-foreground">Detailbewertungen werden geladen...</p>}
+        {(authLoading || isLoading) && <LoadingScreen fullScreen={false} />}
         {error && !isLoading && <div className="mt-4 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">Fehler beim Laden: {error}</div>}
 
         {!authLoading && !isLoading && !error && (

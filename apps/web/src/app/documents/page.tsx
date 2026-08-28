@@ -54,7 +54,7 @@ function KiHinweisPill({ documentDate }: { documentDate: string | null }) {
     return (
         <span className={cn(
             "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap",
-            ok ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400"
+            ok ? "bg-success/15 text-success" : "bg-warning/15 text-warning"
         )}>
             {ok ? <Icons.CheckCircle2 className="w-3 h-3" /> : <Icons.AlertTriangle className="w-3 h-3" />}
             {label}
@@ -66,10 +66,10 @@ function KiHinweisPill({ documentDate }: { documentDate: string | null }) {
  *  glance, matching the KI-Hinweis/tag-style visual language of the page. */
 function documentIcon(fileName: string): { Icon: LucideIcon; className: string } {
     const ext = fileName.split('.').pop()?.toLowerCase() ?? '';
-    if (ext === 'pdf') return { Icon: Icons.FileText, className: 'text-red-500' };
-    if (['jpg', 'jpeg', 'png'].includes(ext)) return { Icon: FileImage, className: 'text-blue-500' };
-    if (['doc', 'docx'].includes(ext)) return { Icon: Icons.FileText, className: 'text-blue-700' };
-    if (['xls', 'xlsx'].includes(ext)) return { Icon: FileSpreadsheet, className: 'text-green-600' };
+    if (ext === 'pdf') return { Icon: Icons.FileText, className: 'text-accent-terracotta' };
+    if (['jpg', 'jpeg', 'png'].includes(ext)) return { Icon: FileImage, className: 'text-accent-sky' };
+    if (['doc', 'docx'].includes(ext)) return { Icon: Icons.FileText, className: 'text-primary' };
+    if (['xls', 'xlsx'].includes(ext)) return { Icon: FileSpreadsheet, className: 'text-success' };
     return { Icon: Icons.File, className: 'text-muted-foreground' };
 }
 

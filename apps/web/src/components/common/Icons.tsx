@@ -65,6 +65,7 @@ import {
   RefreshCw,
   Ruler,
   Search,
+  SearchX,
   Settings,
   Share2,
   Shield,
@@ -109,6 +110,7 @@ export const Icons = {
   // Actions
   Key,
   Search,
+  SearchX,
   Filter,
   Heart,
   Bookmark,

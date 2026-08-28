@@ -1,6 +1,6 @@
 "use client";
 
-import { Button, Modal, MonthField, StickyActionBar, TextField } from '@/components/ui';
+import { Button, LoadingScreen, Modal, MonthField, StickyActionBar, TextField } from '@/components/ui';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
 import { authFetch } from '@/lib/api/authFetch';
@@ -381,7 +381,7 @@ function RentalContent() {
         )}
 
         {isLoading ? (
-          <p className="text-sm text-muted-foreground">Vermietungsdaten werden geladen...</p>
+          <LoadingScreen message="Vermietungsdaten werden geladen…" fullScreen={false} />
         ) : (
           <div className="space-y-7">
             <section className="grid gap-4 md:grid-cols-[minmax(0,260px)_auto] md:items-start md:justify-start">
@@ -437,7 +437,7 @@ function RentalContent() {
               </div>
 
               {nkMismatch && (
-                <div className="mb-4 rounded-lg border border-yellow-300 bg-yellow-50 px-4 py-3 text-sm text-yellow-800">
+                <div className="mb-4 rounded-lg border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
                   Ihre eingetragenen Werte unter Nebenkosten sind nicht plausibel. Sie können trotzdem weiter bewerten.
                 </div>
               )}

@@ -1,89 +1,151 @@
 @custom-variant dark (&:is(.dark *));
 
+/* Brand palette — see design-system brief: Primary Blue #224B96, Brand Gold
+   #DAAA64, Deep Navy #0E1E3C (= Blue 900), Warm Ivory #FBF6F0, Ink #101828,
+   White #FFFFFF, plus Teal/Terracotta/Sage/Sky Blue/Violet/Berry accents.
+   Chart tokens follow the brief's recommended series order 1-8. */
 :root {
   --font-size: 16px;
-  --background: #ffffff;
-  --foreground: #1a1a2e;
+  --background: #f9fafb;
+  --foreground: #101828;
   --card: #ffffff;
-  --card-foreground: #1a1a2e;
+  --card-foreground: #101828;
   --popover: #ffffff;
-  --popover-foreground: #1a1a2e;
-  --primary: #0f4c81;
+  --popover-foreground: #101828;
+  --primary: #224b96;
   --primary-foreground: #ffffff;
-  --secondary: #2d7a4f;
+  --secondary: #168c8c;
   --secondary-foreground: #ffffff;
-  --muted: #f5f5f7;
-  --muted-foreground: #6b7280;
-  --accent: #d4a574;
-  --accent-foreground: #1a1a2e;
-  --destructive: #dc2626;
+  --muted: #f2f4f7;
+  --muted-foreground: #475467;
+  --accent: #daaa64;
+  --accent-foreground: #101828;
+  /* Gold 800 — the brief calls out plain --accent gold as too light for
+     running text on white; use this darker shade instead for gold text
+     (badges, small labels) that isn't sitting on a solid gold fill. */
+  --accent-text: #785e37;
+  --destructive: #b54747;
   --destructive-foreground: #ffffff;
-  --border: rgba(0, 0, 0, 0.1);
+  --success: #2e7d5b;
+  --success-foreground: #ffffff;
+  --warning: #c18424;
+  --warning-foreground: #ffffff;
+  --info: #356aa0;
+  --info-foreground: #ffffff;
+  --border: #d0d5dd;
   --input: transparent;
   --input-background: #f9fafb;
-  --switch-background: #cbd5e1;
+  --switch-background: #d0d5dd;
   --font-weight-medium: 500;
   --font-weight-normal: 400;
-  --ring: #0f4c81;
-  --chart-1: #0f4c81;
-  --chart-2: #2d7a4f;
-  --chart-3: #d4a574;
-  --chart-4: #60a5fa;
-  --chart-5: #34d399;
+  --ring: #224b96;
+  --chart-1: #224b96;
+  --chart-2: #daaa64;
+  --chart-3: #168c8c;
+  --chart-4: #c96f52;
+  --chart-5: #7a5aa6;
+  --chart-6: #70865e;
+  --chart-7: #5e93c7;
+  --chart-8: #a44767;
   --radius: 0.5rem;
-  --sidebar: #fafafa;
-  --sidebar-foreground: #1a1a2e;
-  --sidebar-primary: #0f4c81;
+  /* Fixed brand swatches for marketing-style surfaces (hero sections, a
+     "dark" CTA button) — literal across themes, not remapped for dark mode. */
+  --brand-navy: #0e1e3c;
+  --brand-navy-foreground: #ffffff;
+  --brand-ivory: #fbf6f0;
+  --brand-ivory-foreground: #101828;
+  /* Extended accent palette (brief: "ergänzende Akzentfarben", ~5% of a
+     design) — for categorical/decorative UI (icons, badges, tag colors)
+     that wants visual variety, as distinct from the semantic success/
+     warning/destructive/info tokens which always mean the same thing. */
+  --accent-terracotta: #c96f52;
+  --accent-terracotta-foreground: #ffffff;
+  --accent-sage: #7c9674;
+  --accent-sage-foreground: #101828;
+  --accent-coral: #e78a78;
+  --accent-coral-foreground: #101828;
+  --accent-sky: #73a7d8;
+  --accent-sky-foreground: #101828;
+  --accent-violet: #7a5aa6;
+  --accent-violet-foreground: #ffffff;
+  --sidebar: #f9fafb;
+  --sidebar-foreground: #101828;
+  --sidebar-primary: #224b96;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #f5f5f7;
-  --sidebar-accent-foreground: #1a1a2e;
-  --sidebar-border: #e5e7eb;
-  --sidebar-ring: #0f4c81;
+  --sidebar-accent: #f2f4f7;
+  --sidebar-accent-foreground: #101828;
+  --sidebar-border: #d0d5dd;
+  --sidebar-ring: #224b96;
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  /* Lighter than --background so cards/popovers read as a raised surface
-     instead of blending invisibly into the page (previously identical). */
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.985 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.396 0.141 25.723);
-  --destructive-foreground: oklch(0.637 0.237 25.331);
-  /* Raised from 0.269, then again from 0.32 — still read as too faint
-     against both --background (0.145) and --card (0.205). */
-  --border: oklch(0.4 0 0);
-  --input: oklch(0.4 0 0);
-  /* No dark override previously — fields fell back to the light-mode
-     #f9fafb (near-white), rendering wrong in dark mode. */
-  --input-background: oklch(0.269 0 0);
-  --switch-background: oklch(0.269 0 0);
-  --ring: oklch(0.439 0 0);
+  /* Deep Navy (= Blue 900) as the page surface keeps dark mode on-brand
+     instead of the previous hue-neutral gray; card/popover step up to
+     Blue 800 so they read as raised. */
+  --background: #0e1e3c;
+  --foreground: #ffffff;
+  --card: #132952;
+  --card-foreground: #ffffff;
+  --popover: #132952;
+  --popover-foreground: #ffffff;
+  --primary: #224b96;
+  --primary-foreground: #ffffff;
+  --secondary: #168c8c;
+  --secondary-foreground: #ffffff;
+  --muted: #183469;
+  --muted-foreground: #9caed0;
+  --accent: #daaa64;
+  --accent-foreground: #101828;
+  /* Unlike light mode, plain gold already reads fine as text against the
+     dark navy surface, so no darker substitute is needed here. */
+  --accent-text: #daaa64;
+  --destructive: #b54747;
+  --destructive-foreground: #ffffff;
+  --success: #2e7d5b;
+  --success-foreground: #ffffff;
+  --warning: #c18424;
+  --warning-foreground: #ffffff;
+  --info: #356aa0;
+  --info-foreground: #ffffff;
+  --border: #1d4080;
+  --input: #1d4080;
+  --input-background: #132952;
+  --switch-background: #183469;
   --font-weight-medium: 500;
   --font-weight-normal: 400;
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(0.269 0 0);
-  --sidebar-ring: oklch(0.439 0 0);
+  /* Lighter than --primary so focus rings stay visible against the navy
+     background/card instead of nearly matching them. */
+  --ring: #6481b6;
+  --chart-1: #224b96;
+  --chart-2: #daaa64;
+  --chart-3: #168c8c;
+  --chart-4: #c96f52;
+  --chart-5: #7a5aa6;
+  --chart-6: #70865e;
+  --chart-7: #5e93c7;
+  --chart-8: #a44767;
+  --brand-navy: #0e1e3c;
+  --brand-navy-foreground: #ffffff;
+  --brand-ivory: #fbf6f0;
+  --brand-ivory-foreground: #101828;
+  --accent-terracotta: #c96f52;
+  --accent-terracotta-foreground: #ffffff;
+  --accent-sage: #7c9674;
+  --accent-sage-foreground: #101828;
+  --accent-coral: #e78a78;
+  --accent-coral-foreground: #101828;
+  --accent-sky: #73a7d8;
+  --accent-sky-foreground: #101828;
+  --accent-violet: #7a5aa6;
+  --accent-violet-foreground: #ffffff;
+  --sidebar: #0e1e3c;
+  --sidebar-foreground: #ffffff;
+  --sidebar-primary: #224b96;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #132952;
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: #1d4080;
+  --sidebar-ring: #6481b6;
 }
 
 @theme inline {
@@ -101,8 +163,15 @@
   --color-muted-foreground: var(--muted-foreground);
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
+  --color-accent-text: var(--accent-text);
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-input-background: var(--input-background);
@@ -113,6 +182,23 @@
   --color-chart-3: var(--chart-3);
   --color-chart-4: var(--chart-4);
   --color-chart-5: var(--chart-5);
+  --color-chart-6: var(--chart-6);
+  --color-chart-7: var(--chart-7);
+  --color-chart-8: var(--chart-8);
+  --color-brand-navy: var(--brand-navy);
+  --color-brand-navy-foreground: var(--brand-navy-foreground);
+  --color-brand-ivory: var(--brand-ivory);
+  --color-brand-ivory-foreground: var(--brand-ivory-foreground);
+  --color-accent-terracotta: var(--accent-terracotta);
+  --color-accent-terracotta-foreground: var(--accent-terracotta-foreground);
+  --color-accent-sage: var(--accent-sage);
+  --color-accent-sage-foreground: var(--accent-sage-foreground);
+  --color-accent-coral: var(--accent-coral);
+  --color-accent-coral-foreground: var(--accent-coral-foreground);
+  --color-accent-sky: var(--accent-sky);
+  --color-accent-sky-foreground: var(--accent-sky-foreground);
+  --color-accent-violet: var(--accent-violet);
+  --color-accent-violet-foreground: var(--accent-violet-foreground);
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
@@ -324,6 +410,38 @@
   animation-duration: 180ms;
 }
 
+/* LoadingScreen's logo mark — cumulative build-up: i, then i+n, then i+n+b,
+   held together briefly, then all three clear at once before the loop
+   restarts. Once a glyph appears it stays until the shared fade-out at the
+   end of the cycle, rather than each one disappearing before the next. Same
+   total-cycle duration on all three, so restarting (100%→0%) repeats the
+   same build-up on every loop, not just the first. */
+@keyframes logo-reveal-i {
+  0%, 4%    { opacity: 0; transform: translateY(3px); }
+  10%, 86%  { opacity: 1; transform: translateY(0); }
+  92%, 100% { opacity: 0; transform: translateY(3px); }
+}
+@keyframes logo-reveal-n {
+  0%, 34%   { opacity: 0; transform: translateY(3px); }
+  40%, 86%  { opacity: 1; transform: translateY(0); }
+  92%, 100% { opacity: 0; transform: translateY(3px); }
+}
+@keyframes logo-reveal-b {
+  0%, 64%   { opacity: 0; transform: translateY(3px); }
+  70%, 86%  { opacity: 1; transform: translateY(0); }
+  92%, 100% { opacity: 0; transform: translateY(3px); }
+}
+
+.logo-reveal-i, .logo-reveal-n, .logo-reveal-b {
+  animation-duration: 2.6s;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+  transform-origin: center;
+}
+.logo-reveal-i { animation-name: logo-reveal-i; }
+.logo-reveal-n { animation-name: logo-reveal-n; }
+.logo-reveal-b { animation-name: logo-reveal-b; }
+
 @media (prefers-reduced-motion: reduce) {
   .stepper-segment-fill-forward,
   .stepper-segment-fill-backward,
@@ -339,5 +457,13 @@
     animation-name: detail-step-enter-initial;
     animation-duration: 160ms;
     transform: none;
+  }
+
+  .logo-reveal-i,
+  .logo-reveal-n,
+  .logo-reveal-b {
+    animation-duration: 1ms;
+    transform: none;
+    opacity: 1;
   }
 }
