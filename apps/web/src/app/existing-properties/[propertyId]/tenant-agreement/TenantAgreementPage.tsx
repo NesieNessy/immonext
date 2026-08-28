@@ -89,7 +89,7 @@ export function TenantAgreementPage({ propertyId, property, unit, hasMultipleUni
                     )}
 
                     <div className="flex items-center gap-2">
-                        <Tag label={data.status} variant={data.status === 'Vermietet' ? 'success' : 'muted'} />
+                        <Tag label={data.status} variant={data.status === 'Vermietet' ? 'success' : 'muted'} size="md" />
                     </div>
 
                     <div>

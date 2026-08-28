@@ -156,6 +156,15 @@ function allTenantsDisplayName(persons: PersonForm[]): string {
     return `${names.slice(0, -1).join(', ')} & ${names[names.length - 1]}`;
 }
 
+/** First + last initial from a display name (e.g. "Klaus Fischer" → "KF"),
+ *  for the avatar circle on a document row — matches Mieterdaten's tenant
+ *  avatar so both use the same visual language. */
+function nameInitials(name: string): string {
+    const parts = name.trim().split(/\s+/).filter(Boolean);
+    if (parts.length === 0) return '–';
+    return `${parts[0].charAt(0)}${parts[parts.length - 1].charAt(0)}`.toUpperCase();
+}
+
 /** Comparable snapshot of the person list — Date fields don't compare
  *  reliably with JSON.stringify unless normalized to ISO strings first. */
 function serializePersons(persons: PersonForm[]): string {
@@ -915,8 +924,11 @@ export function useTenantUnitData(propertyId: string, property: Property, unit: 
     ) => {
         const isPending = pendingDocKey === row.key;
         return (
-            <div key={row.key} className="flex items-center justify-between gap-3 py-2.5 pr-2.5 rounded-lg bg-muted/30">
-                <div className="min-w-0 flex items-center gap-2 flex-wrap">
+            <div key={row.key} className="flex items-center justify-between gap-3 p-2.5 rounded-lg bg-muted/30">
+                <div className="min-w-0 flex items-center gap-3 flex-wrap">
+                    <div className="shrink-0 w-9 h-9 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-semibold">
+                        {nameInitials(row.tenant)}
+                    </div>
                     <span className="text-sm text-foreground truncate">{row.tenant}</span>
                     {row.doc ? (
                         <button

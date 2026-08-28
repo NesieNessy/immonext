@@ -18,6 +18,8 @@ export function TextFieldWithIcon({
   icon: Icon,
   iconPosition = "left",
   className,
+  readOnly,
+  disabled,
   id,
   "aria-describedby": ariaDescribedBy,
   ...props
@@ -46,14 +48,18 @@ export function TextFieldWithIcon({
           aria-invalid={invalid}
           aria-describedby={describedBy}
           className={cn(
-            "w-full px-4 py-2 bg-input-background border border-border rounded-lg",
-            "focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary",
-            "transition-all duration-200",
+            "w-full appearance-none rounded-md border border-primary/30 bg-card px-4 py-2 shadow-sm",
+            "hover:border-primary/55 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20",
+            "transition-[border-color,box-shadow,background-color] duration-150",
+            "read-only:border-primary/20 read-only:bg-primary/5 read-only:shadow-none read-only:hover:border-primary/20 read-only:focus:ring-0",
+            "disabled:cursor-not-allowed disabled:border-border disabled:bg-muted disabled:text-muted-foreground disabled:shadow-none disabled:hover:border-border",
             iconPosition === "left" && "pl-10",
             iconPosition === "right" && "pr-10",
             error && "border-destructive focus:ring-destructive/50",
             className
           )}
+          readOnly={readOnly}
+          disabled={disabled}
           {...props}
         />
         {iconPosition === "right" && (
