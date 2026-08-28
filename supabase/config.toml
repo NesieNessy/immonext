@@ -44,6 +44,16 @@ pop3_port = 54327
 enabled = true
 file_size_limit = "50MiB"
 
+# Disabled: the CLI's default analytics (Logflare) port collides with
+# local_smtp.pop3_port above (both default/land on 54327), which made
+# `supabase start` fail with "port is already allocated" on
+# supabase_inbucket — confirmed via `docker events` that
+# supabase_analytics grabs 54327 first, and its own health check was
+# failing regardless. Nothing in this app or the e2e suite reads Studio's
+# log explorer, so there's no functional loss.
+[analytics]
+enabled = false
+
 [auth]
 enabled = true
 site_url = "http://localhost:3000"

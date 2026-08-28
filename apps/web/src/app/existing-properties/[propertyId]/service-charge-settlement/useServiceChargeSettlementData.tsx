@@ -325,14 +325,14 @@ export function useServiceChargeSettlementData(propertyId: string, property: Pro
             };
             if (maintenanceCosts) {
                 const updatedCosts = await updateMaintenanceCosts(maintenanceCosts.maintenanceCostsId, mcPayload);
-                if (updatedCosts) setMaintenanceCosts(updatedCosts);
+                if (!updatedCosts) throw new Error('updateMaintenanceCosts failed');
+                setMaintenanceCosts(updatedCosts);
             } else {
                 const createdCosts = await createMaintenanceCosts({ propertyId: property.propertyId, houseMoney: null, ...mcPayload });
-                if (createdCosts) {
-                    setMaintenanceCosts(createdCosts);
-                    const tenancyWithCosts = await updateTenancy(tenancy.tenancyId, { maintenanceCostsId: createdCosts.maintenanceCostsId });
-                    if (tenancyWithCosts) setTenancy(tenancyWithCosts);
-                }
+                if (!createdCosts) throw new Error('createMaintenanceCosts failed');
+                setMaintenanceCosts(createdCosts);
+                const tenancyWithCosts = await updateTenancy(tenancy.tenancyId, { maintenanceCostsId: createdCosts.maintenanceCostsId });
+                if (tenancyWithCosts) setTenancy(tenancyWithCosts);
             }
 
             showToast('Neue NK-Vorauszahlung übernommen.', 'success');

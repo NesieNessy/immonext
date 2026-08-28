@@ -633,7 +633,8 @@ export function useTenantUnitData(propertyId: string, property: Property, unit: 
                         costItems: costItems.length > 0 ? costItems : null,
                     };
                     if (maintenanceCosts) {
-                        await updateMaintenanceCosts(maintenanceCosts.maintenanceCostsId, mcPayload);
+                        const updated = await updateMaintenanceCosts(maintenanceCosts.maintenanceCostsId, mcPayload);
+                        if (!updated) throw new Error('updateMaintenanceCosts failed');
                     } else {
                         const createdCosts = await createMaintenanceCosts({
                             propertyId: property.propertyId,
@@ -642,9 +643,8 @@ export function useTenantUnitData(propertyId: string, property: Property, unit: 
                             totalCostsProjection: false,
                             ...mcPayload,
                         });
-                        if (createdCosts) {
-                            await updateTenancy(activeTenancyId, { maintenanceCostsId: createdCosts.maintenanceCostsId });
-                        }
+                        if (!createdCosts) throw new Error('createMaintenanceCosts failed');
+                        await updateTenancy(activeTenancyId, { maintenanceCostsId: createdCosts.maintenanceCostsId });
                     }
                 }
 

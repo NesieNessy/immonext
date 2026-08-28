@@ -32,7 +32,22 @@ $$;
 
 GRANT anon, authenticated, service_role TO authenticator;
 
-CREATE SCHEMA IF NOT EXISTS auth AUTHORIZATION supabase_admin;
+-- Plain `CREATE SCHEMA IF NOT EXISTS auth AUTHORIZATION supabase_admin` still
+-- fails with "must be member of role supabase_admin" even when the schema
+-- already exists — Postgres checks permission to set the AUTHORIZATION
+-- owner before the IF NOT EXISTS existence check short-circuits, so the
+-- migration-runner role (not itself a member of supabase_admin) is rejected
+-- outright under `supabase start`'s own stack, which pre-creates `auth`
+-- (owned by supabase_admin) before project migrations run. Guarding on
+-- pg_namespace instead avoids evaluating AUTHORIZATION at all in that case.
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_namespace WHERE nspname = 'auth') THEN
+        CREATE SCHEMA auth AUTHORIZATION supabase_admin;
+    END IF;
+END
+$$;
+
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- Hosted Supabase grants this; without it a direct `SELECT auth.uid()` fails
@@ -40,13 +55,24 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 -- referencing it evaluate fine. Keeps local behaviour honest.
 GRANT USAGE ON SCHEMA auth TO anon, authenticated, service_role;
 
-CREATE TABLE IF NOT EXISTS auth.users (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    email VARCHAR(255) UNIQUE,
-    raw_user_meta_data JSONB NOT NULL DEFAULT '{}'::jsonb,
-    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
-);
+-- Same reasoning as the schema guard above: under `supabase start`, auth.users
+-- already exists (the real GoTrue-managed table, owned by supabase_admin) and
+-- our migration role has no CREATE privilege on the auth schema — a plain
+-- `CREATE TABLE IF NOT EXISTS` still attempts the DDL and fails with
+-- "permission denied for schema auth" before reaching its own existence check.
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_tables WHERE schemaname = 'auth' AND tablename = 'users') THEN
+        CREATE TABLE auth.users (
+            id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+            email VARCHAR(255) UNIQUE,
+            raw_user_meta_data JSONB NOT NULL DEFAULT '{}'::jsonb,
+            created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+            updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+        );
+    END IF;
+END
+$$;
 
 DO $shim$
 BEGIN
