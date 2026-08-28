@@ -1,7 +1,7 @@
 "use client";
 
 import { PROPERTY_CATEGORY_LABEL, PropertyNotFoundPage } from '@/components/features/PropertyDisplay';
-import { Button, ComingSoonButton, Dropdown, Header, PillOptions, SectionLabel, StickyActionBar, UnsavedChangesModal, useToast } from '@/components/ui';
+import { Button, ComingSoonButton, Dropdown, Header, PAGE_CONTAINER_CLASS, PillOptions, SectionLabel, StickyActionBar, UnsavedChangesModal, useToast } from '@/components/ui';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { ExistingPropertiesUseCases } from '@/constants/ExistingPropertiesUseCases';
 import {
@@ -163,7 +163,7 @@ export default function AdjustRnd({ propertyId }: { propertyId: string }) {
 
     return (
         <div className="min-h-screen bg-background pb-24">
-            <main className="container mx-auto px-4 py-8">
+            <main className={PAGE_CONTAINER_CLASS}>
                 <Header
                     items={[
                         {
@@ -190,7 +190,7 @@ export default function AdjustRnd({ propertyId }: { propertyId: string }) {
                     }
                 />
 
-                <div className="mt-8">
+                <div>
                     <div className="space-y-6">
                         {/* Calculation Mode */}
                         <div>

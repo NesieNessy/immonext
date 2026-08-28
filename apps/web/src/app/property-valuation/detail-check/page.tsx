@@ -2,7 +2,7 @@
 
 import { NoResult } from '@/components/common';
 import type { MenuItem, SortDirection, TableColumn } from '@/components/ui';
-import { Button, ConfirmDeleteModal, Header, Icons, Table, Tag, TextFieldWithIcon } from '@/components/ui';
+import { Button, ConfirmDeleteModal, Header, Icons, PAGE_CONTAINER_CLASS, Table, Tag, TextFieldWithIcon } from '@/components/ui';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
 import { authFetch } from '@/lib/api/authFetch';
@@ -375,10 +375,10 @@ export default function DetailCheckOverviewPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <main className="container mx-auto px-4 py-8">
+      <main className={PAGE_CONTAINER_CLASS}>
         <Header items={[{ label: 'Objektbewertung' }, { label: 'Detailbewertungen' }]} />
 
-        <div className="mt-6 flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <div className="max-w-sm flex-1 min-w-[220px]">
             <TextFieldWithIcon type="search" icon={Icons.Search} placeholder="Detailbewertungen durchsuchen" value={search} onChange={(event) => setSearch(event.target.value)} />
           </div>
@@ -422,7 +422,7 @@ export default function DetailCheckOverviewPage() {
                 onColumnFilterChange={handleColumnFilterChange}
                 onRowClick={openRow}
                 footerLeft={`${displayedRows.length} Einträge`}
-                pageSize={25}
+                pageSize={10}
                 renderMobileCard={(row) => (
                   <button type="button" onClick={() => openRow(row)} className="w-full rounded-lg border border-border bg-card p-4 text-left">
                     <div className="flex items-start justify-between gap-3">

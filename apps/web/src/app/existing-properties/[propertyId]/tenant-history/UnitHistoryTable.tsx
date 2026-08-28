@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { formatUnitLabel } from '@/components/features/PropertyDisplay';
-import { Button, ConfirmDeleteModal, Header, Icons, Modal, Table, TextFieldWithIcon, type BreadcrumbItem, type MenuItem, type TableColumn } from '@/components/ui';
+import { Button, ConfirmDeleteModal, Header, Icons, Modal, PAGE_CONTAINER_CLASS, Table, TextFieldWithIcon, type BreadcrumbItem, type MenuItem, type TableColumn } from '@/components/ui';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { getAdjustmentHistoryByTenancy } from '@/lib/supabase/tenancy_adjustment_history.supabase';
 import { deleteTenancy, getCurrentTenancyByUnit, getTenanciesByUnit, updateTenancy } from '@/lib/supabase/tenancy.supabase';
@@ -334,7 +334,7 @@ export function UnitHistoryTable({ propertyId, property, unit, hasMultipleUnits 
 
     return (
         <div className="min-h-screen bg-background pb-24">
-            <main className="container mx-auto px-4 py-8">
+            <main className={PAGE_CONTAINER_CLASS}>
                 <Header
                     items={breadcrumbItems}
                     image={property.imageUrl ? <img src={base64ToDataUri(property.imageUrl)!} alt={`${property.street} ${property.houseNumber}`} className="w-10 h-10 object-cover rounded-lg" /> : undefined}
@@ -349,7 +349,7 @@ export function UnitHistoryTable({ propertyId, property, unit, hasMultipleUnits 
                     }
                 />
 
-                <div className="mt-8 space-y-3">
+                <div className="space-y-3">
                     <div className="max-w-sm">
                         <TextFieldWithIcon
                             type="search"
@@ -367,7 +367,7 @@ export function UnitHistoryTable({ propertyId, property, unit, hasMultipleUnits 
                         onColumnFilterChange={handleColumnFilterChange}
                         emptyMessage="Für diese Wohneinheit liegt noch keine Mieterhistorie vor."
                         footerLeft={`${tableData.length} Einträge`}
-                        pageSize={25}
+                        pageSize={10}
                     />
                 </div>
             </main>

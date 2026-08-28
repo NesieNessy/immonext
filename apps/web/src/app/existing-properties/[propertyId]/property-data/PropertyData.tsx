@@ -1,7 +1,7 @@
 "use client";
 
 import { PROPERTY_CATEGORY_CREATE_OPTIONS, PropertyNotFoundPage } from '@/components/features/PropertyDisplay';
-import { Button, CalendarField, Dropdown, Header, Icons, NumberField, PillOptions, SectionLabel, StickyActionBar, TextField, UnsavedChangesModal, UploadButton, useToast } from '@/components/ui';
+import { Button, CalendarField, Dropdown, Header, Icons, NumberField, PAGE_CONTAINER_CLASS, PillOptions, SectionLabel, StickyActionBar, TextField, UnsavedChangesModal, UploadButton, useToast } from '@/components/ui';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { ExistingPropertiesUseCases } from '@/constants/ExistingPropertiesUseCases';
 import { getLabel } from '@/constants/FieldLabels';
@@ -261,7 +261,7 @@ export default function PropertyData({ propertyId }: { propertyId: string }) {
 
     return (
         <div className="min-h-screen bg-background pb-24">
-            <main className="container mx-auto px-4 py-8">
+            <main className={PAGE_CONTAINER_CLASS}>
                 <Header
                     items={[
                         {
@@ -288,7 +288,7 @@ export default function PropertyData({ propertyId }: { propertyId: string }) {
                     }
                 />
 
-                <div className="mt-6 flex flex-col gap-6">
+                <div className="flex flex-col gap-6">
                     {error && (
                         <div className="px-3 py-2 rounded-lg bg-destructive/10 border border-destructive/30 text-sm text-destructive">
                             {error}

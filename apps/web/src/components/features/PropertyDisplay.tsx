@@ -7,6 +7,7 @@
 // ---------------------------------------------------------------------------
 
 import type { BreadcrumbItem, TagVariant } from '@/components/ui';
+import { PAGE_CONTAINER_CLASS } from '@/components/ui';
 
 // ---------------------------------------------------------------------------
 // Breadcrumb — every property sub-page starts with "Bestandsobjekte" (existing properties) › the
@@ -35,7 +36,7 @@ export function buildPropertyUseCaseBreadcrumb(
 export function PropertyNotFoundPage() {
   return (
     <div className="min-h-screen bg-background">
-      <main className="container mx-auto px-4 py-8">
+      <main className={PAGE_CONTAINER_CLASS}>
         <p className="text-muted-foreground">Objekt nicht gefunden</p>
       </main>
     </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { DetailFieldLegend, FixedOverlay, Header, Stepper, StickyActionBar } from '@/components/ui';
+import { DetailFieldLegend, FixedOverlay, Header, PAGE_CONTAINER_CLASS, Stepper, StickyActionBar } from '@/components/ui';
 import { PropertyValuationSteps } from '@/constants/PropertyValuationUseCases';
 import { useRouter } from 'next/navigation';
 import { Children, isValidElement, useEffect, useMemo, useState } from 'react';
@@ -102,7 +102,7 @@ export function PropertyValuationLayout({
   return (
     <div className="min-h-screen bg-background">
       {/* Navigation Bar - always shows property-valuation as active */}
-      <main className="container mx-auto px-4 py-8">
+      <main className={PAGE_CONTAINER_CLASS}>
         <Header
           items={[
             { label: 'Objektbewertung' },
@@ -113,7 +113,7 @@ export function PropertyValuationLayout({
         />
 
         {/* Stepper */}
-        <div className="mt-6 mb-8">
+        <div className="mb-8">
           <Stepper
             steps={stepperSteps}
             currentStep={currentStep}

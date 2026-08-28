@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 
 import { formatUnitLabel, PropertyLoadingPage, PropertyNotFoundPage } from '@/components/features/PropertyDisplay';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
-import { Header, Icons, NumberField, PillOptions, SectionLabel, StickyActionBar, TextField, UnsavedChangesModal, useToast, type BreadcrumbItem } from '@/components/ui';
+import { Header, Icons, NumberField, PAGE_CONTAINER_CLASS, PillOptions, SectionLabel, StickyActionBar, TextField, UnsavedChangesModal, useToast, type BreadcrumbItem } from '@/components/ui';
 import { getPropertyById } from '@/lib/supabase/property.supabase';
 import { createPropertyUnit, getPropertyUnitsByProperty } from '@/lib/supabase/property_unit.supabase';
 import { base64ToDataUri, deNumberFormatter } from '@/lib/utils';
@@ -165,13 +165,13 @@ export default function NewUnit({ propertyId }: { propertyId: string }) {
 
     return (
         <div className="min-h-screen bg-background pb-24">
-            <main className="container mx-auto px-4 py-8">
+            <main className={PAGE_CONTAINER_CLASS}>
                 <Header
                     items={breadcrumbItems}
                     image={property.imageUrl ? <img src={base64ToDataUri(property.imageUrl)!} alt="" className="w-10 h-10 object-cover rounded-lg" /> : undefined}
                 />
 
-                <div className="mt-8 space-y-6">
+                <div className="space-y-6">
                     {/* Usage type */}
                     <div>
                         <SectionLabel>Nutzungsart</SectionLabel>

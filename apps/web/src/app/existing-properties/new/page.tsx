@@ -1,7 +1,7 @@
 "use client";
 
 import { BESTANDSOBJEKTE_BREADCRUMB_ROOT, PROPERTY_CATEGORY_CREATE_OPTIONS } from '@/components/features/PropertyDisplay';
-import { CalendarField, Dropdown, Header, Icons, NumberField, PillOptions, SectionLabel, StickyActionBar, TextField, UnsavedChangesModal, UploadButton, useToast, type BreadcrumbItem } from '@/components/ui';
+import { CalendarField, Dropdown, Header, Icons, NumberField, PAGE_CONTAINER_CLASS, PillOptions, SectionLabel, StickyActionBar, TextField, UnsavedChangesModal, UploadButton, useToast, type BreadcrumbItem } from '@/components/ui';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { getLabel } from '@/constants/FieldLabels';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
@@ -191,7 +191,7 @@ function NewPropertyPageContent() {
 
   return (
     <div className="min-h-screen bg-background pb-24">
-      <main className="container mx-auto px-4 pt-8 pb-3">
+      <main className={PAGE_CONTAINER_CLASS}>
         <Header
           items={[
             {
@@ -202,7 +202,7 @@ function NewPropertyPageContent() {
           ]}
         />
 
-        <div className="mt-6 flex flex-col gap-6">
+        <div className="flex flex-col gap-6">
           <p className="text-sm text-muted-foreground">Erfassen Sie die Stammdaten des Bestandsobjekts.</p>
 
           {error && (

@@ -1,6 +1,6 @@
 "use client";
 
-import { Button, ConfirmDeleteModal, Dropdown, Header, Icons, Modal, Table, TextField, TextFieldWithIcon, type MenuItem, type TableColumn } from '@/components/ui';
+import { Button, ConfirmDeleteModal, Dropdown, Header, Icons, Modal, PAGE_CONTAINER_CLASS, Table, TextField, TextFieldWithIcon, type MenuItem, type TableColumn } from '@/components/ui';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
 import { deleteDocument, getDocumentsByUser, getDocumentUrl, uploadDocument } from '@/lib/supabase/document.supabase';
 import { getProperties } from '@/lib/supabase/property.supabase';
@@ -392,7 +392,7 @@ export default function DocumentsPage() {
 
     return (
         <div className="min-h-screen bg-background pb-12">
-            <main className="container mx-auto px-4 py-8">
+            <main className={PAGE_CONTAINER_CLASS}>
                 <Header
                     items={[{ label: 'Dokumente' }]}
                     actions={
@@ -406,7 +406,7 @@ export default function DocumentsPage() {
                     }
                 />
 
-                <div className="mt-6 flex flex-wrap items-center gap-3">
+                <div className="flex flex-wrap items-center gap-3">
                     <div className="max-w-sm flex-1 min-w-[220px]">
                         <TextFieldWithIcon
                             type="search"

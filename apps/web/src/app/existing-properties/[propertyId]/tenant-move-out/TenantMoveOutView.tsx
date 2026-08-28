@@ -9,6 +9,7 @@ import {
     Header,
     Icons,
     NumberField,
+    PAGE_CONTAINER_CLASS,
     SectionLabel,
     StickyActionBar,
     TextArea,
@@ -126,7 +127,7 @@ export function TenantMoveOutView({ propertyId, property, unit, hasMultipleUnits
 
     return (
         <div className="min-h-screen bg-background pb-24">
-            <main className="container mx-auto px-4 py-8">
+            <main className={PAGE_CONTAINER_CLASS}>
                 <Header
                     items={breadcrumbItems}
                     image={property.imageUrl ? <img src={base64ToDataUri(property.imageUrl)!} alt={`${property.street} ${property.houseNumber}`} className="w-10 h-10 object-cover rounded-lg" /> : undefined}
@@ -141,7 +142,7 @@ export function TenantMoveOutView({ propertyId, property, unit, hasMultipleUnits
                     }
                 />
 
-                <div className="mt-8 space-y-6">
+                <div className="space-y-6">
                     {data.error && (
                         <div className="px-3 py-2 rounded-lg bg-destructive/10 border border-destructive/30 text-sm text-destructive">
                             {data.error}

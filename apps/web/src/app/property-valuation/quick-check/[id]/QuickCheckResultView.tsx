@@ -5,7 +5,7 @@ import { KpfAssessmentCard } from '@/components/features/KpfAssessmentCard';
 import { MobileResultBanner } from '@/components/features/MobileResultBanner';
 import { CONDITION_OPTIONS, getQuickCheckFieldErrors } from '@/components/features/QuickCheckDisplay';
 import { QuickCheckImportSection } from '@/components/features/QuickCheckImportSection';
-import { Button, Dropdown, Header, NumberField, StickyActionBar, TextField, UnsavedChangesModal, useToast, type BreadcrumbItem } from '@/components/ui';
+import { Button, Dropdown, Header, NumberField, PAGE_CONTAINER_CLASS, StickyActionBar, TextField, UnsavedChangesModal, useToast, type BreadcrumbItem } from '@/components/ui';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { FieldLabels } from '@/constants/FieldLabels';
 import { useQuickCheckById } from '@/hooks/useQuickCheckById';
@@ -228,7 +228,7 @@ export function QuickCheckResultView({ id }: Props) {
     <>
       {/* Main page */}
       <div className="min-h-screen bg-background pb-20">
-        <main className="container mx-auto px-4 pt-8 pb-3">
+        <main className={PAGE_CONTAINER_CLASS}>
           <Header
             items={[
               { label: 'Objektbewertung' },
@@ -251,7 +251,7 @@ export function QuickCheckResultView({ id }: Props) {
             }
           />
 
-          <div className="mt-3 flex flex-col gap-4 lg:grid lg:grid-cols-2 lg:items-start lg:gap-6">
+          <div className="flex flex-col gap-4 lg:grid lg:grid-cols-2 lg:items-start lg:gap-6">
             <MobileResultBanner show={canShowResult} resultId="qc-result" formTopId="qc-form-top" />
 
             {/* Form */}

@@ -155,7 +155,10 @@ export function Table<T extends Record<string, unknown> = Record<string, unknown
       <div
         className={cn(
           "w-full overflow-x-auto",
-          paginationEnabled && "max-h-[600px] overflow-y-auto",
+          // Only cap/scroll the body once a page holds more than the default
+          // 10 rows (i.e. the user bumped "Zeilen pro Seite" to 25/50) — a
+          // full page of 10 should render in full, not get clipped.
+          paginationEnabled && rowsPerPage > 10 && "max-h-[600px] overflow-y-auto",
           renderMobileCard && "hidden md:block"
         )}
       >
@@ -272,7 +275,7 @@ export function Table<T extends Record<string, unknown> = Record<string, unknown
                   key={rowIndex}
                   className={cn(
                     "transition-colors",
-                    onRowClick && "cursor-pointer hover:bg-muted/50",
+                    onRowClick && "cursor-pointer hover:bg-primary/5",
                     getRowClassName?.(row, rowIndex)
                   )}
                   onClick={() => onRowClick?.(row, rowIndex)}

@@ -2,7 +2,7 @@
 
 import { formatUnitLabel } from '@/components/features/PropertyDisplay';
 import { DataCard } from './DocumentGeneratorParts';
-import { Button, CalendarField, ComingSoonButton, ConfirmDeleteModal, Header, Icons, Modal, NumberField, SectionLabel, StickyActionBar, Table, Tag, TextField, UnsavedChangesModal, type BreadcrumbItem } from '@/components/ui';
+import { Button, CalendarField, ComingSoonButton, ConfirmDeleteModal, Header, Icons, Modal, NumberField, PAGE_CONTAINER_CLASS, SectionLabel, StickyActionBar, Table, Tag, TextField, UnsavedChangesModal, type BreadcrumbItem } from '@/components/ui';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { ExistingPropertiesUseCases } from '@/constants/ExistingPropertiesUseCases';
 import type { Property, PropertyUnit } from '@immonext/types';
@@ -75,7 +75,7 @@ export function CurrentTenantPage({ propertyId, property, unit, hasMultipleUnits
 
     return (
         <div className="min-h-screen bg-background pb-24">
-            <main className="container mx-auto px-4 py-8">
+            <main className={PAGE_CONTAINER_CLASS}>
                 <Header
                     items={breadcrumbItems}
                     image={property.imageUrl ? <img src={base64ToDataUri(property.imageUrl)!} alt={`${property.street} ${property.houseNumber}`} className="w-10 h-10 object-cover rounded-lg" /> : undefined}
@@ -90,7 +90,7 @@ export function CurrentTenantPage({ propertyId, property, unit, hasMultipleUnits
                     }
                 />
 
-                <div className="mt-8 space-y-6">
+                <div className="space-y-6">
                     {data.error && (
                         <div className="px-3 py-2 rounded-lg bg-destructive/10 border border-destructive/30 text-sm text-destructive">
                             {data.error}

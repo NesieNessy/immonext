@@ -1,7 +1,7 @@
 "use client";
 
 import { PropertyNotFoundPage } from '@/components/features/PropertyDisplay';
-import { Button, Header, Icons, NumberField, PillOptions, SectionLabel, StickyActionBar, UnsavedChangesModal, useToast } from '@/components/ui';
+import { Button, Header, Icons, NumberField, PAGE_CONTAINER_CLASS, PillOptions, SectionLabel, StickyActionBar, UnsavedChangesModal, useToast } from '@/components/ui';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { ExistingPropertiesUseCases } from '@/constants/ExistingPropertiesUseCases';
 import { computePriceSplitIndividual, computePriceSplitStandard } from '@/lib/detailCheck/depreciation';
@@ -148,7 +148,7 @@ export default function AdjustDistribution({ propertyId }: { propertyId: string 
 
     return (
         <div className="min-h-screen bg-background pb-24">
-            <main className="container mx-auto px-4 py-8">
+            <main className={PAGE_CONTAINER_CLASS}>
                 <Header
                     items={[
                         {
@@ -175,7 +175,7 @@ export default function AdjustDistribution({ propertyId }: { propertyId: string 
                     }
                 />
 
-                <div className="mt-8 space-y-6">
+                <div className="space-y-6">
                     {/* Calculation Mode */}
                     <div>
                         <SectionLabel>Berechnungsmodus</SectionLabel>

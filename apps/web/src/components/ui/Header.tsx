@@ -67,6 +67,23 @@ function HeaderContent({ items, actions, image, className }: HeaderProps) {
 }
 
 /**
+ * The single source of truth for the gap between the breadcrumb and the
+ * page content below it — pages used to each hand-roll their own `mt-*` on
+ * their first content div (values drifted between mt-3/mt-6/mt-8 across the
+ * app). Change this one constant instead of touching every page.
+ */
+const CONTENT_GAP = "pb-4";
+
+/**
+ * The single source of truth for every page's top-level `<main>` container —
+ * pages used to each hand-roll `"container mx-auto px-4 py-8"` (or slight
+ * variants) themselves. All vertical spacing around the breadcrumb now comes
+ * from Header's own padding above, so this is horizontal-only; change this
+ * one constant instead of touching every page's `<main>`.
+ */
+export const PAGE_CONTAINER_CLASS = "container mx-auto px-4";
+
+/**
  * Pinned right below the (also fixed) nav bar so the breadcrumb never
  * scrolls away, using the same fixed-positioning approach as
  * StickyActionBar at the bottom — not `position: sticky`, which depends on
@@ -83,11 +100,11 @@ export function Header(props: HeaderProps) {
           nesting another layer of the same padding) keeps this spacer's
           text-wrapping, and therefore its height, identical to the fixed
           bar below. */}
-      <div className="invisible pt-3 pb-0" aria-hidden="true">
+      <div className={cn("invisible pt-3", CONTENT_GAP)} aria-hidden="true">
         <HeaderContent {...props} />
       </div>
       <div className="fixed top-16 inset-x-0 z-30 bg-background">
-        <div className="container mx-auto px-4 pt-3 pb-0">
+        <div className={cn(PAGE_CONTAINER_CLASS, "pt-3", CONTENT_GAP)}>
           <HeaderContent {...props} />
         </div>
       </div>

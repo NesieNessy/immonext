@@ -45,7 +45,7 @@ export function QuickCheckImportSection({ portalUrl, onPortalUrlChange }: Props)
         <TextField
           label="Portal-URL"
           placeholder="https://immobilienscout24.de/expose/..."
-          helperText="Unterstützte Portale: ImmobilienScout24, Immowelt, Immonet"
+          helperText="Unterstützte Portale: ImmobilienScout24, Immowelt, Immonet, Kleinanzeigen"
           value={portalUrl}
           onChange={(e) => onPortalUrlChange(e.target.value)}
         />

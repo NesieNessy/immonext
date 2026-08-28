@@ -1,6 +1,6 @@
 "use client";
 
-import { Header, Icons, StickyActionBar, TextField, Tile, useToast } from '@/components/ui';
+import { Header, Icons, PAGE_CONTAINER_CLASS, StickyActionBar, TextField, Tile, useToast } from '@/components/ui';
 import { authBypassUser, isAuthBypassEnabled } from '@/lib/auth/authBypass';
 import { supabase } from '@/lib/supabase/client.supabase';
 import { getPersonalData, upsertPersonalData } from '@/lib/supabase/personal_data.supabase';
@@ -140,13 +140,13 @@ function SettingsPageContent() {
 
     return (
         <div className="min-h-screen bg-background pb-24">
-            <main className="container mx-auto px-4 py-8">
+            <main className={PAGE_CONTAINER_CLASS}>
                 <Header
                     items={[{ label: 'Benutzereinstellungen' }]}
                 />
 
                 {isOnboarding && (
-                    <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg text-blue-700 text-sm">
+                    <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg text-blue-700 text-sm">
                         Bitte vervollständigen Sie zunächst Ihre Benutzereinstellungen, bevor Sie ImmoNext nutzen können.
                     </div>
                 )}

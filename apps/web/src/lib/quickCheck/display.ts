@@ -79,17 +79,42 @@ export const CONDITION_PILL_LABEL: Record<PropertyCondition, string> = {
   [PropertyCondition.Luxury]:             'Luxus',
 };
 
-// Portal import isn't implemented yet — quick_check.portal_id is usually
-// just an opaque reference (e.g. "IS24-12345"), not a real URL. This used to
-// fabricate a link by cycling through three hardcoded portal domains keyed
-// off row.id % 3 — which meant the link's destination had nothing to do
-// with what was actually entered, and (for a given id range) could always
-// land on the same domain regardless of the real portal. Only link when
-// portalId is itself a real, absolute URL the user actually entered/pasted;
-// otherwise leave the cell as plain, non-clickable text like manual entries.
+// Portal import isn't implemented yet — quick_check.portal_id is a free-text
+// field the user fills in to note where a listing came from. Real data is a
+// mix of: a full domain they actually typed ("immobilienscout24.de"), or a
+// plain text label with no domain in it at all ("Kleinanzeigen",
+// "ImmoScout 428", "ImmoWelt"). This used to fabricate a link by cycling
+// through three hardcoded portal domains keyed off row.id % 3, so a
+// "Kleinanzeigen" row could link to immowelt.de purely by chance — the
+// destination had nothing to do with what was actually entered.
+//
+// Priority order:
+//  1. Already a full URL (has a scheme) -> use it verbatim.
+//  2. Looks like a real domain, with or without a path ("immoscout24.de",
+//     "www.kleinanzeigen.de/s-anzeige/…") -> use exactly what the user typed,
+//     just adding the https:// scheme. This is the real link the user
+//     inserted — preserving it (path and all) beats replacing it with a
+//     generic homepage.
+//  3. Otherwise, a plain text label naming a known portal ("Kleinanzeigen",
+//     "ImmoScout 428") -> no real link was entered, so send the user to that
+//     portal's real homepage instead of a fabricated one.
+//  4. No known portal recognized -> no link at all, same as a manual entry.
+const DOMAIN_LIKE = /^(www\.)?[\w-]+(\.[\w-]+)+(\/\S*)?$/i;
+
+const KNOWN_PORTAL_DOMAINS: { pattern: RegExp; url: string }[] = [
+  { pattern: /immobilienscout|immoscout/i, url: 'https://www.immobilienscout24.de' },
+  { pattern: /immowelt/i, url: 'https://www.immowelt.de' },
+  { pattern: /immonet/i, url: 'https://www.immonet.de' },
+  { pattern: /kleinanzeigen/i, url: 'https://www.kleinanzeigen.de' },
+];
+
 export function getPlaceholderPortalUrl(row: QuickCheckEntry): string | null {
   if (row.portalId === MANUAL_ENTRY_LABEL || row.status === 'inaktiv') return null;
-  return /^https?:\/\//i.test(row.portalId) ? row.portalId : null;
+
+  const value = row.portalId.trim();
+  if (/^https?:\/\//i.test(value)) return value;
+  if (DOMAIN_LIKE.test(value)) return `https://${value}`;
+  return KNOWN_PORTAL_DOMAINS.find((p) => p.pattern.test(value))?.url ?? null;
 }
 
 // ── Create/edit form validation — shared by quick-check/new and

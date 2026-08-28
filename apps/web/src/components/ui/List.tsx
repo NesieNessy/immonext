@@ -69,7 +69,7 @@ export function List({
           onClick={item.onClick}
           className={cn(
             "px-4 py-3 flex items-center gap-3 bg-card transition-colors",
-            item.onClick && "cursor-pointer hover:bg-muted/50"
+            item.onClick && "cursor-pointer hover:bg-primary/5"
           )}
         >
           {item.icon && (

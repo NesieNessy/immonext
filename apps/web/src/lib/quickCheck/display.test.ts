@@ -74,13 +74,45 @@ describe('getPlaceholderPortalUrl', () => {
     expect(getPlaceholderPortalUrl({ ...entry, status: 'inaktiv' })).toBeNull();
   });
 
-  it('returns null for an opaque, non-URL portal reference — no fabricated link to an unrelated domain', () => {
+  it('returns null for a portal reference that names no known portal — no fabricated link to an unrelated domain', () => {
     expect(getPlaceholderPortalUrl({ ...entry, portalId: 'IS24-12345' })).toBeNull();
   });
 
   it('returns the portal ID itself when it is a real, absolute URL', () => {
     const realUrl = 'https://www.immobilienscout24.de/expose/123456789';
     expect(getPlaceholderPortalUrl({ ...entry, portalId: realUrl })).toBe(realUrl);
+  });
+
+  // A domain the user typed without a scheme — real data has rows like this
+  // ("immobilienscout24.de"). The exact value (and any path) is preserved,
+  // not replaced with a generic portal homepage.
+  it('adds https:// to a bare domain the user typed, preserving it exactly', () => {
+    expect(getPlaceholderPortalUrl({ ...entry, portalId: 'immobilienscout24.de' })).toBe('https://immobilienscout24.de');
+  });
+
+  it('adds https:// to a bare domain with a path, preserving the path', () => {
+    expect(getPlaceholderPortalUrl({ ...entry, portalId: 'www.kleinanzeigen.de/s-anzeige/wohnung-123' }))
+      .toBe('https://www.kleinanzeigen.de/s-anzeige/wohnung-123');
+  });
+
+  // Real quick_check.portal_id values are also plain-text labels with no
+  // domain in them at all (e.g. "Kleinanzeigen", "ImmoScout 428") — these
+  // link to the named portal's real homepage, not a fabricated per-row
+  // rotation, since there's no real link to preserve.
+  it('links "Kleinanzeigen" to the real Kleinanzeigen site', () => {
+    expect(getPlaceholderPortalUrl({ ...entry, portalId: 'Kleinanzeigen' })).toBe('https://www.kleinanzeigen.de');
+  });
+
+  it('links a free-text label naming ImmoScout to the real ImmobilienScout24 site', () => {
+    expect(getPlaceholderPortalUrl({ ...entry, portalId: 'ImmoScout 428' })).toBe('https://www.immobilienscout24.de');
+  });
+
+  it('links "ImmoWelt" to the real Immowelt site', () => {
+    expect(getPlaceholderPortalUrl({ ...entry, portalId: 'ImmoWelt' })).toBe('https://www.immowelt.de');
+  });
+
+  it('is case-insensitive when matching known portal names', () => {
+    expect(getPlaceholderPortalUrl({ ...entry, portalId: 'kleinanzeigen' })).toBe('https://www.kleinanzeigen.de');
   });
 
   it('is case-insensitive about the http(s) scheme', () => {

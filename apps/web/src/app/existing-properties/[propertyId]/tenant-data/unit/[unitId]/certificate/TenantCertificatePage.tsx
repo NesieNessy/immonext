@@ -1,7 +1,7 @@
 "use client";
 
 import { formatUnitLabel, PropertyLoadingPage, PropertyNotFoundPage } from '@/components/features/PropertyDisplay';
-import { Header, Icons, StickyActionBar, type BreadcrumbItem } from '@/components/ui';
+import { Header, Icons, PAGE_CONTAINER_CLASS, StickyActionBar, type BreadcrumbItem } from '@/components/ui';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { ExistingPropertiesUseCases } from '@/constants/ExistingPropertiesUseCases';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
@@ -217,10 +217,10 @@ export default function TenantCertificatePage({ propertyId, unitId }: { property
 
     return (
         <div className="min-h-screen bg-background pb-24">
-            <main className="container mx-auto px-4 py-8">
+            <main className={PAGE_CONTAINER_CLASS}>
                 <Header items={breadcrumbItems} />
 
-                <div className="mt-6 flex items-center gap-2 p-1 rounded-lg bg-muted/50 w-fit">
+                <div className="flex items-center gap-2 p-1 rounded-lg bg-muted/50 w-fit">
                     <button
                         type="button"
                         onClick={() => setView('review')}
