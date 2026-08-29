@@ -294,90 +294,112 @@ export default function PropertyData({ propertyId }: { propertyId: string }) {
 
                     <div className="flex flex-col gap-2">
                         <SectionLabel>Kaufinformationen</SectionLabel>
-                        <div className="grid grid-cols-2 gap-3 max-w-md">
-                            <NumberField
-                                label="Kaufpreis *"
-                                placeholder="450.000"
-                                unit="€"
-                                value={form.kaufpreis}
-                                onChange={(e) => update({ kaufpreis: e.target.value })}
-                                min={0}
-                            />
-                            <CalendarField
-                                label="Kaufdatum"
-                                value={form.kaufdatum ? parseISO(form.kaufdatum) : undefined}
-                                onChange={(date) => update({ kaufdatum: date ? format(date, 'yyyy-MM-dd') : '' })}
-                            />
+                        <div className="grid grid-cols-2 sm:grid-cols-[repeat(20,minmax(0,1fr))] gap-3">
+                            <div className="sm:col-span-10">
+                                <NumberField
+                                    label="Kaufpreis *"
+                                    placeholder="450.000"
+                                    unit="€"
+                                    value={form.kaufpreis}
+                                    onChange={(e) => update({ kaufpreis: e.target.value })}
+                                    min={0}
+                                />
+                            </div>
+                            <div className="sm:col-span-10">
+                                <CalendarField
+                                    label="Kaufdatum"
+                                    value={form.kaufdatum ? parseISO(form.kaufdatum) : undefined}
+                                    onChange={(date) => update({ kaufdatum: date ? format(date, 'yyyy-MM-dd') : '' })}
+                                />
+                            </div>
                         </div>
                     </div>
 
                     <div className="flex flex-col gap-2">
                         <SectionLabel>Adresse</SectionLabel>
-                        <div className="grid grid-cols-1 sm:grid-cols-[2fr_1fr_1fr_1fr] gap-3">
-                            <TextField
-                                label="Straße & Hausnummer"
-                                placeholder="Beispielstraße 123"
-                                value={form.strasseHausnummer}
-                                onChange={(e) => update({ strasseHausnummer: e.target.value })}
-                            />
-                            <TextField
-                                label="PLZ"
-                                placeholder="80801"
-                                value={form.plz}
-                                onChange={(e) => update({ plz: e.target.value.replace(/\D/g, '').slice(0, 5) })}
-                            />
-                            <TextField
-                                label="Ort"
-                                placeholder="München"
-                                value={form.ort}
-                                onChange={(e) => update({ ort: e.target.value })}
-                            />
-                            <TextField
-                                label="Bundesland"
-                                placeholder="Bayern"
-                                value={form.bundesland}
-                                onChange={(e) => update({ bundesland: e.target.value })}
-                            />
+                        <div className="grid grid-cols-1 sm:grid-cols-[repeat(20,minmax(0,1fr))] gap-3">
+                            <div className="sm:col-span-8">
+                                <TextField
+                                    label="Straße & Hausnummer"
+                                    placeholder="Beispielstraße 123"
+                                    value={form.strasseHausnummer}
+                                    onChange={(e) => update({ strasseHausnummer: e.target.value })}
+                                />
+                            </div>
+                            <div className="sm:col-span-4">
+                                <TextField
+                                    label="PLZ"
+                                    placeholder="80801"
+                                    value={form.plz}
+                                    onChange={(e) => update({ plz: e.target.value.replace(/\D/g, '').slice(0, 5) })}
+                                />
+                            </div>
+                            <div className="sm:col-span-4">
+                                <TextField
+                                    label="Ort"
+                                    placeholder="München"
+                                    value={form.ort}
+                                    onChange={(e) => update({ ort: e.target.value })}
+                                />
+                            </div>
+                            <div className="sm:col-span-4">
+                                <TextField
+                                    label="Bundesland"
+                                    placeholder="Bayern"
+                                    value={form.bundesland}
+                                    onChange={(e) => update({ bundesland: e.target.value })}
+                                />
+                            </div>
                         </div>
                     </div>
 
                     <div className="flex flex-col gap-2">
                         <SectionLabel>Objektdetails</SectionLabel>
-                        <div className="grid grid-cols-2 sm:grid-cols-[3fr_3fr_2fr_2fr_2fr] gap-3">
-                            <NumberField
-                                label={getLabel('Property', 'YearOfConstruction', 'de')}
-                                placeholder="1980"
-                                value={form.baujahr}
-                                onChange={(e) => update({ baujahr: e.target.value.replace(/\D/g, '').slice(0, 4) })}
-                            />
-                            <NumberField
-                                label="Wohnfläche"
-                                placeholder="100"
-                                unit="m²"
-                                value={form.wohnflaeche}
-                                onChange={(e) => update({ wohnflaeche: e.target.value })}
-                                min={0}
-                            />
-                            <NumberField
-                                label="Anzahl Zimmer"
-                                placeholder="3"
-                                value={form.anzahlZimmer}
-                                onChange={(e) => update({ anzahlZimmer: e.target.value })}
-                                min={0}
-                            />
-                            <NumberField
-                                label="Stellplätze"
-                                placeholder="0"
-                                value={form.stellplaetze}
-                                onChange={(e) => update({ stellplaetze: e.target.value })}
-                                min={0}
-                            />
-                            <Dropdown
-                                label="Energieeffizienz"
-                                options={ENERGY_OPTIONS}
-                                value={form.energieeffizienz}
-                                onChange={(e) => update({ energieeffizienz: e.target.value })}
-                            />
+                        <div className="grid grid-cols-2 sm:grid-cols-[repeat(20,minmax(0,1fr))] gap-3">
+                            <div className="sm:col-span-4">
+                                <NumberField
+                                    label={getLabel('Property', 'YearOfConstruction', 'de')}
+                                    placeholder="1980"
+                                    value={form.baujahr}
+                                    onChange={(e) => update({ baujahr: e.target.value.replace(/\D/g, '').slice(0, 4) })}
+                                />
+                            </div>
+                            <div className="sm:col-span-4">
+                                <NumberField
+                                    label="Wohnfläche"
+                                    placeholder="100"
+                                    unit="m²"
+                                    value={form.wohnflaeche}
+                                    onChange={(e) => update({ wohnflaeche: e.target.value })}
+                                    min={0}
+                                />
+                            </div>
+                            <div className="sm:col-span-4">
+                                <NumberField
+                                    label="Anzahl Zimmer"
+                                    placeholder="3"
+                                    value={form.anzahlZimmer}
+                                    onChange={(e) => update({ anzahlZimmer: e.target.value })}
+                                    min={0}
+                                />
+                            </div>
+                            <div className="sm:col-span-4">
+                                <NumberField
+                                    label="Stellplätze"
+                                    placeholder="0"
+                                    value={form.stellplaetze}
+                                    onChange={(e) => update({ stellplaetze: e.target.value })}
+                                    min={0}
+                                />
+                            </div>
+                            <div className="sm:col-span-4">
+                                <Dropdown
+                                    label="Energieeffizienz"
+                                    options={ENERGY_OPTIONS}
+                                    value={form.energieeffizienz}
+                                    onChange={(e) => update({ energieeffizienz: e.target.value })}
+                                />
+                            </div>
                         </div>
                     </div>
                 </div>
