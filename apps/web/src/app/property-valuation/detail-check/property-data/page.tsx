@@ -1,7 +1,8 @@
 "use client";
 
-import { Button, Dropdown, LoadingScreen, Modal, PillOptions, SectionLabel, StickyActionBar, TextField } from '@/components/ui';
+import { Button, Dropdown, LoadingScreen, PillOptions, SectionLabel, StickyActionBar, TextField } from '@/components/ui';
 import { PROPERTY_CATEGORY_CREATE_OPTIONS } from '@/components/features/PropertyDisplay';
+import { PortalImportSection } from '@/components/features/PortalImportSection';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { authFetch } from '@/lib/api/authFetch';
 import { parseDecimalInput } from '@/lib/detailCheck/acquisitionCosts';
@@ -11,7 +12,6 @@ import { PropertyValuationLayout } from '../PropertyValuationLayout';
 
 type FormState = {
   propertyCategory: string;
-  dataEntrySource: string;
   tenancyType: string;
   sourceUrl: string;
   streetHouseNumber: string;
@@ -42,7 +42,6 @@ type PostalLookupStatus = 'idle' | 'loading' | 'resolved' | 'empty' | 'error';
 
 const EMPTY_FORM: FormState = {
   propertyCategory: 'EIGENTUMSWOHNUNG',
-  dataEntrySource: 'MANUELL',
   tenancyType: 'STANDARD',
   sourceUrl: '',
   streetHouseNumber: '',
@@ -56,13 +55,13 @@ const EMPTY_FORM: FormState = {
 
 const tenancyTypeOptions = [
   { value: 'STANDARD', label: 'Standard' },
-  { value: 'INDEXMIETE', label: 'Indexmiete (Ausbaustufe)', disabled: true },
-  { value: 'NIESSBRAUCH', label: 'Nießbrauch (Ausbaustufe)', disabled: true },
-  { value: 'ERBPACHT', label: 'Erbpacht (Ausbaustufe)', disabled: true },
-  { value: 'SONDERVERMIETUNG', label: 'Sondervermietung (Ausbaustufe)', disabled: true },
-  { value: 'GEWERBE', label: 'Gewerbe (Ausbaustufe)', disabled: true },
-  { value: 'ALTENHEIM', label: 'Altenheim (Ausbaustufe)', disabled: true },
-  { value: 'ZWANGSVERSTEIGERUNG', label: 'Zwangsversteigerung (Ausbaustufe)', disabled: true },
+  { value: 'INDEXMIETE', label: 'Indexmiete', disabled: true, title: 'Ausbaustufe' },
+  { value: 'NIESSBRAUCH', label: 'Nießbrauch', disabled: true, title: 'Ausbaustufe' },
+  { value: 'ERBPACHT', label: 'Erbpacht', disabled: true, title: 'Ausbaustufe' },
+  { value: 'SONDERVERMIETUNG', label: 'Sondervermietung', disabled: true, title: 'Ausbaustufe' },
+  { value: 'GEWERBE', label: 'Gewerbe', disabled: true, title: 'Ausbaustufe' },
+  { value: 'ALTENHEIM', label: 'Altenheim', disabled: true, title: 'Ausbaustufe' },
+  { value: 'ZWANGSVERSTEIGERUNG', label: 'Zwangsversteigerung', disabled: true, title: 'Ausbaustufe' },
 ];
 
 const parkingOptions = Array.from({ length: 11 }, (_, value) => ({
@@ -100,7 +99,6 @@ function PropertyDataContent() {
   const [postalCodeWasEdited, setPostalCodeWasEdited] = useState(false);
   const [postalLookupStatus, setPostalLookupStatus] = useState<PostalLookupStatus>('idle');
   const [cityOptions, setCityOptions] = useState<string[]>([]);
-  const [importModalOpen, setImportModalOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -117,7 +115,6 @@ function PropertyDataContent() {
         setPostalCodeWasEdited(false);
         setForm({
           propertyCategory: data.propertyCategory || 'EIGENTUMSWOHNUNG',
-          dataEntrySource: data.dataEntrySource || 'MANUELL',
           tenancyType: data.tenancyType || 'STANDARD',
           sourceUrl: data.sourceUrl || '',
           streetHouseNumber: data.streetHouseNumber || '',
@@ -228,12 +225,7 @@ function PropertyDataContent() {
       setCityOptions([]);
     }
 
-    setForm((prev) => {
-      if (field === 'dataEntrySource') {
-        return { ...prev, dataEntrySource: value, tenancyType: 'STANDARD', sourceUrl: value === 'PORTAL_IMPORT' ? prev.sourceUrl : '' };
-      }
-      return { ...prev, [field]: value };
-    });
+    setForm((prev) => ({ ...prev, [field]: value }));
   };
 
   const cityHelperText = postalLookupStatus === 'loading'
@@ -255,7 +247,7 @@ function PropertyDataContent() {
 
     if (!form.propertyCategory) errors.propertyCategory = 'Bitte wählen Sie eine Objektkategorie.';
     if (!form.tenancyType) errors.tenancyType = 'Bitte wählen Sie eine Miet-/Nutzungsart.';
-    if (form.dataEntrySource === 'PORTAL_IMPORT' && form.sourceUrl) {
+    if (form.sourceUrl.trim()) {
       try {
         new URL(form.sourceUrl);
       } catch {
@@ -287,7 +279,7 @@ function PropertyDataContent() {
           quickCheckId,
           workflowId,
           propertyCategory: form.propertyCategory,
-          dataEntrySource: form.dataEntrySource,
+          dataEntrySource: form.sourceUrl.trim() ? 'PORTAL_IMPORT' : 'MANUELL',
           tenancyType: form.tenancyType,
           sourceUrl: form.sourceUrl,
           streetHouseNumber: form.streetHouseNumber,
@@ -360,34 +352,24 @@ function PropertyDataContent() {
         ) : (
           <div className="flex flex-col gap-6">
             <div className="flex flex-col gap-2">
-              <SectionLabel>Erfassungsquelle</SectionLabel>
-              <div className="flex flex-wrap items-center gap-2">
-                <Button
-                  label={BUTTON_DETAILS.ImportFromPortal.label}
-                  icon={<BUTTON_DETAILS.ImportFromPortal.icon />}
-                  variant={form.dataEntrySource === 'PORTAL_IMPORT' ? 'primary' : 'outline'}
-                  onClick={() => setImportModalOpen(true)}
-                />
-                <Button
-                  label={BUTTON_DETAILS.ScanExpose.label}
-                  icon={<BUTTON_DETAILS.ScanExpose.icon />}
-                  variant="outline"
-                  disabled
-                  title="Noch nicht verfügbar"
-                />
-              </div>
-              {form.dataEntrySource === 'PORTAL_IMPORT' && form.sourceUrl && (
-                <p className="text-sm text-muted-foreground truncate">Importiert von: {form.sourceUrl}</p>
+              <PortalImportSection
+                portalUrl={form.sourceUrl}
+                onPortalUrlChange={(value) => updateForm('sourceUrl', value)}
+                urlError={displayErrors.sourceUrl}
+                extraTrigger={
+                  <Button
+                    label={BUTTON_DETAILS.ScanExpose.label}
+                    icon={<BUTTON_DETAILS.ScanExpose.icon />}
+                    variant="outline"
+                    disabled
+                    title="Noch nicht verfügbar"
+                    className="w-full"
+                  />
+                }
+              />
+              {form.sourceUrl.trim() && (
+                <p className="text-sm text-muted-foreground truncate -mt-1">Importiert von: {form.sourceUrl}</p>
               )}
-              {displayErrors.dataEntrySource && (
-                <p role="alert" className="text-sm text-destructive">{displayErrors.dataEntrySource}</p>
-              )}
-
-              <div className="flex items-center gap-3 mt-6">
-                <div className="flex-1 h-px bg-border" />
-                <span className="text-xs text-muted-foreground shrink-0">oder manuell erfassen</span>
-                <div className="flex-1 h-px bg-border" />
-              </div>
             </div>
 
             <div className="flex flex-col gap-2">
@@ -492,42 +474,6 @@ function PropertyDataContent() {
           </div>
         )}
       </div>
-
-      <Modal
-        open={importModalOpen}
-        onClose={() => setImportModalOpen(false)}
-        title={BUTTON_DETAILS.ImportFromPortal.label}
-        subtitle="Immobiliendaten aus einem Portal laden"
-        icon={<BUTTON_DETAILS.ImportFromPortal.icon />}
-        footer={
-          <>
-            <Button
-              label={BUTTON_DETAILS.Cancel.label}
-              icon={<BUTTON_DETAILS.Cancel.icon />}
-              variant="outline"
-              onClick={() => setImportModalOpen(false)}
-            />
-            <Button
-              label={BUTTON_DETAILS.ImportFromPortal.label}
-              icon={<BUTTON_DETAILS.ImportFromPortal.icon />}
-              variant="primary"
-              onClick={() => {
-                if (form.dataEntrySource !== 'PORTAL_IMPORT') updateForm('dataEntrySource', 'PORTAL_IMPORT');
-                setImportModalOpen(false);
-              }}
-            />
-          </>
-        }
-      >
-        <TextField
-          label="Inserats-URL"
-          placeholder="https://..."
-          value={form.sourceUrl}
-          onChange={(event) => updateForm('sourceUrl', event.target.value)}
-          error={displayErrors.sourceUrl}
-          helperText="Der Importdienst ist noch nicht angebunden; vorbefüllte Daten bleiben editierbar."
-        />
-      </Modal>
 
       <StickyActionBar
         show

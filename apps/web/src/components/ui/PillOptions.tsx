@@ -5,6 +5,8 @@ export interface PillOption {
     label: string;
     /** Renders this one pill non-clickable (e.g. a roadmap/"coming soon" option). */
     disabled?: boolean;
+    /** Native tooltip shown on hover — e.g. "Ausbaustufe" for a disabled option, instead of baking that into the label text. */
+    title?: string;
 }
 
 interface PillOptionsProps {
@@ -34,6 +36,7 @@ export function PillOptions({ options, value, onChange, size = "sm", className, 
                         key={opt.value}
                         type="button"
                         disabled={isDisabled}
+                        title={opt.title}
                         onClick={() => onChange(opt.value)}
                         className={cn(
                             "rounded-full text-sm font-medium border transition-colors cursor-pointer",
