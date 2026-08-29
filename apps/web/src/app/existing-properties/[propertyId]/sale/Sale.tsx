@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from 'react';
 
-import { buildPropertyUseCaseBreadcrumb, PropertyNotFoundPage, propertyThumbnail } from '@/components/features/PropertyDisplay';
+import { buildPropertyUseCaseBreadcrumb, PropertyLoadingPage, PropertyNotFoundPage } from '@/components/features/PropertyDisplay';
 import { Button, Header, PAGE_CONTAINER_CLASS, Tile } from '@/components/ui';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { ExistingPropertiesUseCases } from '@/constants/ExistingPropertiesUseCases';
@@ -13,14 +13,20 @@ import { useRouter } from 'next/navigation';
 export default function Sale({ propertyId }: { propertyId: string }) {
     const router = useRouter();
     const [property, setProperty] = useState<Property | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
-        getPropertyById(parseInt(propertyId, 10)).then(setProperty);
+        getPropertyById(parseInt(propertyId, 10)).then((p) => {
+            setProperty(p);
+            setIsLoading(false);
+        });
     }, [propertyId]);
 
     const useCaseMenuItems = createUseCaseMenuItems(propertyId, 'Sale', (route) => {
         router.push(route);
     });
+
+    if (isLoading) return <PropertyLoadingPage />;
 
     if (!property) return <PropertyNotFoundPage />;
 
@@ -28,9 +34,7 @@ export default function Sale({ propertyId }: { propertyId: string }) {
         <div className="min-h-screen bg-background pb-24">
             <main className={PAGE_CONTAINER_CLASS}>
                 <Header
-                    items={buildPropertyUseCaseBreadcrumb(property, propertyId, ExistingPropertiesUseCases.Sale)}
-                    image={propertyThumbnail(property)}
-                    actions={
+                    items={buildPropertyUseCaseBreadcrumb(property, propertyId, ExistingPropertiesUseCases.Sale)}                    actions={
                     <Button
                         label={BUTTON_DETAILS.UseCases.label}
                         icon={<BUTTON_DETAILS.UseCases.icon />}

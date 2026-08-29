@@ -1,6 +1,6 @@
 "use client";
 
-import { PropertyNotFoundPage, propertyThumbnail } from '@/components/features/PropertyDisplay';
+import { PropertyLoadingPage, PropertyNotFoundPage } from '@/components/features/PropertyDisplay';
 import { Button, Header, Icons, NumberField, PAGE_CONTAINER_CLASS, PillOptions, SectionLabel, StickyActionBar, UnsavedChangesModal, useToast } from '@/components/ui';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { ExistingPropertiesUseCases } from '@/constants/ExistingPropertiesUseCases';
@@ -35,9 +35,13 @@ export default function AdjustDistribution({ propertyId }: { propertyId: string 
     const [originalCoOwnershipNumerator, setOriginalCoOwnershipNumerator] = useState('');
     const [originalCoOwnershipDenominator, setOriginalCoOwnershipDenominator] = useState('');
     const [isSaving, setIsSaving] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
-        getPropertyOverviewById(parseInt(propertyId, 10)).then((p) => setProperty(p ?? undefined));
+        getPropertyOverviewById(parseInt(propertyId, 10)).then((p) => {
+            setProperty(p ?? undefined);
+            setIsLoading(false);
+        });
 
         getPropertyPriceSplitByProperty(parseInt(propertyId, 10)).then((saved) => {
             if (!saved) return;
@@ -144,6 +148,8 @@ export default function AdjustDistribution({ propertyId }: { propertyId: string 
         goTo(`/existing-properties/${propertyId}`);
     };
 
+    if (isLoading) return <PropertyLoadingPage />;
+
     if (!property) return <PropertyNotFoundPage />;
 
     return (
@@ -162,9 +168,7 @@ export default function AdjustDistribution({ propertyId }: { propertyId: string 
                             onClick: (e) => { if (isEditing) { e.preventDefault(); goTo(`/existing-properties/${propertyId}`); } },
                         },
                         { label: ExistingPropertiesUseCases.SplitPurchasePrice },
-                    ]}
-                    image={propertyThumbnail(property)}
-                    actions={
+                    ]}                    actions={
                         <Button
                             label={BUTTON_DETAILS.UseCases.label}
                             icon={<BUTTON_DETAILS.UseCases.icon />}

@@ -5,6 +5,13 @@
    White #FFFFFF, plus Teal/Terracotta/Sage/Sky Blue/Violet/Berry accents.
    Chart tokens follow the brief's recommended series order 1-8. */
 :root {
+  /* The app has no dark-mode toggle yet (`.dark` below is unused), but
+     browsers still render un-stylable native UA chrome — a <select>'s
+     opened option-list popup, date-picker calendar, scrollbars — using the
+     OS/browser's own dark preference regardless of our CSS. Declaring the
+     scheme explicitly keeps those native bits light (matching every custom
+     field's white background) instead of going dark under a dark OS theme. */
+  color-scheme: light;
   --font-size: 16px;
   --background: #f9fafb;
   --foreground: #101828;

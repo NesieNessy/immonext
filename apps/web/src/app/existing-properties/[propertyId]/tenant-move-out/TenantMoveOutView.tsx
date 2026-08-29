@@ -1,6 +1,6 @@
 "use client";
 
-import { formatUnitLabel, propertyThumbnail } from '@/components/features/PropertyDisplay';
+import { formatUnitLabel } from '@/components/features/PropertyDisplay';
 import {
     Button,
     CalendarField,
@@ -124,9 +124,7 @@ export function TenantMoveOutView({ propertyId, property, unit, hasMultipleUnits
         <div className="min-h-screen bg-background pb-24">
             <main className={PAGE_CONTAINER_CLASS}>
                 <Header
-                    items={breadcrumbItems}
-                    image={propertyThumbnail(property)}
-                    actions={
+                    items={breadcrumbItems}                    actions={
                         <Button
                             label={BUTTON_DETAILS.UseCases.label}
                             icon={<BUTTON_DETAILS.UseCases.icon />}

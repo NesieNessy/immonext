@@ -1,6 +1,6 @@
 "use client";
 
-import { PROPERTY_CATEGORY_CREATE_OPTIONS, PropertyNotFoundPage } from '@/components/features/PropertyDisplay';
+import { PROPERTY_CATEGORY_CREATE_OPTIONS, PropertyLoadingPage, PropertyNotFoundPage } from '@/components/features/PropertyDisplay';
 import { PropertyImageGallery } from '@/components/features/PropertyImageGallery';
 import { Button, CalendarField, Dropdown, Header, NumberField, PAGE_CONTAINER_CLASS, PillOptions, SectionLabel, StickyActionBar, TextField, UnsavedChangesModal, useToast } from '@/components/ui';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
@@ -11,7 +11,6 @@ import { createParkingSpace, deleteParkingSpace, getParkingSpacesByProperty, upd
 import { getPropertyById, updateProperty } from '@/lib/supabase/property.supabase';
 import { getPropertyAcquisitionByProperty, upsertPropertyAcquisition } from '@/lib/supabase/property_acquisition.supabase';
 import { createUseCaseMenuItems } from '@/lib/propertyUseCaseMenu';
-import { resolvePropertyImageSrc } from '@/lib/utils';
 import { EnergyEfficient, type AcquisitionCosts, type ParkingSpace, type Property } from '@immonext/types';
 import { format, parseISO } from 'date-fns';
 import { useRouter } from 'next/navigation';
@@ -64,7 +63,7 @@ export default function PropertyData({ propertyId }: { propertyId: string }) {
     const [isSaving, setIsSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [pendingHref, setPendingHref] = useState<string | null>(null);
-    const [coverImageUrl, setCoverImageUrl] = useState<string | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
         const id = parseInt(propertyId, 10);
@@ -76,7 +75,11 @@ export default function PropertyData({ propertyId }: { propertyId: string }) {
             getParkingSpacesByProperty(id),
             getAcquisitionCosts(id),
         ]).then(([foundProperty, acquisition, spaces, acquisitionCostsRows]) => {
-            if (cancelled || !foundProperty) return;
+            if (cancelled) return;
+            if (!foundProperty) {
+                setIsLoading(false);
+                return;
+            }
             const existingParking = spaces[0] ?? null;
             const existingAcquisitionCosts = acquisitionCostsRows[0] ?? null;
 
@@ -100,7 +103,7 @@ export default function PropertyData({ propertyId }: { propertyId: string }) {
             setAcquisitionCosts(existingAcquisitionCosts);
             setForm(initial);
             setOriginal(initial);
-            setCoverImageUrl(foundProperty.imageUrl);
+            setIsLoading(false);
         });
 
         return () => { cancelled = true; };
@@ -236,6 +239,8 @@ export default function PropertyData({ propertyId }: { propertyId: string }) {
         [propertyId, isEditing] // eslint-disable-line react-hooks/exhaustive-deps
     );
 
+    if (isLoading) return <PropertyLoadingPage />;
+
     if (!property) return <PropertyNotFoundPage />;
 
     return (
@@ -255,7 +260,6 @@ export default function PropertyData({ propertyId }: { propertyId: string }) {
                         },
                         { label: ExistingPropertiesUseCases.PropertyData },
                     ]}
-                    image={coverImageUrl ? <img src={resolvePropertyImageSrc(coverImageUrl)!} alt={`${property.street} ${property.houseNumber}`} className="w-10 h-10 object-cover rounded-lg" /> : undefined}
                     actions={
                         <Button
                             label={BUTTON_DETAILS.UseCases.label}
@@ -276,7 +280,7 @@ export default function PropertyData({ propertyId }: { propertyId: string }) {
 
                     <div className="flex flex-col gap-2">
                         <SectionLabel>Objektbilder</SectionLabel>
-                        <PropertyImageGallery propertyId={property.propertyId} onCoverChange={setCoverImageUrl} />
+                        <PropertyImageGallery propertyId={property.propertyId} />
                     </div>
 
                     <div className="flex flex-col gap-2">
@@ -290,90 +294,112 @@ export default function PropertyData({ propertyId }: { propertyId: string }) {
 
                     <div className="flex flex-col gap-2">
                         <SectionLabel>Kaufinformationen</SectionLabel>
-                        <div className="grid grid-cols-2 gap-3 max-w-md">
-                            <NumberField
-                                label="Kaufpreis *"
-                                placeholder="450.000"
-                                unit="€"
-                                value={form.kaufpreis}
-                                onChange={(e) => update({ kaufpreis: e.target.value })}
-                                min={0}
-                            />
-                            <CalendarField
-                                label="Kaufdatum"
-                                value={form.kaufdatum ? parseISO(form.kaufdatum) : undefined}
-                                onChange={(date) => update({ kaufdatum: date ? format(date, 'yyyy-MM-dd') : '' })}
-                            />
+                        <div className="grid grid-cols-2 sm:grid-cols-[repeat(20,minmax(0,1fr))] gap-3">
+                            <div className="sm:col-span-10">
+                                <NumberField
+                                    label="Kaufpreis *"
+                                    placeholder="450.000"
+                                    unit="€"
+                                    value={form.kaufpreis}
+                                    onChange={(e) => update({ kaufpreis: e.target.value })}
+                                    min={0}
+                                />
+                            </div>
+                            <div className="sm:col-span-10">
+                                <CalendarField
+                                    label="Kaufdatum"
+                                    value={form.kaufdatum ? parseISO(form.kaufdatum) : undefined}
+                                    onChange={(date) => update({ kaufdatum: date ? format(date, 'yyyy-MM-dd') : '' })}
+                                />
+                            </div>
                         </div>
                     </div>
 
                     <div className="flex flex-col gap-2">
                         <SectionLabel>Adresse</SectionLabel>
-                        <div className="grid grid-cols-1 sm:grid-cols-[2fr_1fr_1fr_1fr] gap-3">
-                            <TextField
-                                label="Straße & Hausnummer"
-                                placeholder="Beispielstraße 123"
-                                value={form.strasseHausnummer}
-                                onChange={(e) => update({ strasseHausnummer: e.target.value })}
-                            />
-                            <TextField
-                                label="PLZ"
-                                placeholder="80801"
-                                value={form.plz}
-                                onChange={(e) => update({ plz: e.target.value.replace(/\D/g, '').slice(0, 5) })}
-                            />
-                            <TextField
-                                label="Ort"
-                                placeholder="München"
-                                value={form.ort}
-                                onChange={(e) => update({ ort: e.target.value })}
-                            />
-                            <TextField
-                                label="Bundesland"
-                                placeholder="Bayern"
-                                value={form.bundesland}
-                                onChange={(e) => update({ bundesland: e.target.value })}
-                            />
+                        <div className="grid grid-cols-1 sm:grid-cols-[repeat(20,minmax(0,1fr))] gap-3">
+                            <div className="sm:col-span-8">
+                                <TextField
+                                    label="Straße & Hausnummer"
+                                    placeholder="Beispielstraße 123"
+                                    value={form.strasseHausnummer}
+                                    onChange={(e) => update({ strasseHausnummer: e.target.value })}
+                                />
+                            </div>
+                            <div className="sm:col-span-4">
+                                <TextField
+                                    label="PLZ"
+                                    placeholder="80801"
+                                    value={form.plz}
+                                    onChange={(e) => update({ plz: e.target.value.replace(/\D/g, '').slice(0, 5) })}
+                                />
+                            </div>
+                            <div className="sm:col-span-4">
+                                <TextField
+                                    label="Ort"
+                                    placeholder="München"
+                                    value={form.ort}
+                                    onChange={(e) => update({ ort: e.target.value })}
+                                />
+                            </div>
+                            <div className="sm:col-span-4">
+                                <TextField
+                                    label="Bundesland"
+                                    placeholder="Bayern"
+                                    value={form.bundesland}
+                                    onChange={(e) => update({ bundesland: e.target.value })}
+                                />
+                            </div>
                         </div>
                     </div>
 
                     <div className="flex flex-col gap-2">
                         <SectionLabel>Objektdetails</SectionLabel>
-                        <div className="grid grid-cols-2 sm:grid-cols-[3fr_3fr_2fr_2fr_2fr] gap-3">
-                            <NumberField
-                                label={getLabel('Property', 'YearOfConstruction', 'de')}
-                                placeholder="1980"
-                                value={form.baujahr}
-                                onChange={(e) => update({ baujahr: e.target.value.replace(/\D/g, '').slice(0, 4) })}
-                            />
-                            <NumberField
-                                label="Wohnfläche"
-                                placeholder="100"
-                                unit="m²"
-                                value={form.wohnflaeche}
-                                onChange={(e) => update({ wohnflaeche: e.target.value })}
-                                min={0}
-                            />
-                            <NumberField
-                                label="Anzahl Zimmer"
-                                placeholder="3"
-                                value={form.anzahlZimmer}
-                                onChange={(e) => update({ anzahlZimmer: e.target.value })}
-                                min={0}
-                            />
-                            <NumberField
-                                label="Stellplätze"
-                                placeholder="0"
-                                value={form.stellplaetze}
-                                onChange={(e) => update({ stellplaetze: e.target.value })}
-                                min={0}
-                            />
-                            <Dropdown
-                                label="Energieeffizienz"
-                                options={ENERGY_OPTIONS}
-                                value={form.energieeffizienz}
-                                onChange={(e) => update({ energieeffizienz: e.target.value })}
-                            />
+                        <div className="grid grid-cols-2 sm:grid-cols-[repeat(20,minmax(0,1fr))] gap-3">
+                            <div className="sm:col-span-4">
+                                <NumberField
+                                    label={getLabel('Property', 'YearOfConstruction', 'de')}
+                                    placeholder="1980"
+                                    value={form.baujahr}
+                                    onChange={(e) => update({ baujahr: e.target.value.replace(/\D/g, '').slice(0, 4) })}
+                                />
+                            </div>
+                            <div className="sm:col-span-4">
+                                <NumberField
+                                    label="Wohnfläche"
+                                    placeholder="100"
+                                    unit="m²"
+                                    value={form.wohnflaeche}
+                                    onChange={(e) => update({ wohnflaeche: e.target.value })}
+                                    min={0}
+                                />
+                            </div>
+                            <div className="sm:col-span-4">
+                                <NumberField
+                                    label="Anzahl Zimmer"
+                                    placeholder="3"
+                                    value={form.anzahlZimmer}
+                                    onChange={(e) => update({ anzahlZimmer: e.target.value })}
+                                    min={0}
+                                />
+                            </div>
+                            <div className="sm:col-span-4">
+                                <NumberField
+                                    label="Stellplätze"
+                                    placeholder="0"
+                                    value={form.stellplaetze}
+                                    onChange={(e) => update({ stellplaetze: e.target.value })}
+                                    min={0}
+                                />
+                            </div>
+                            <div className="sm:col-span-4">
+                                <Dropdown
+                                    label="Energieeffizienz"
+                                    options={ENERGY_OPTIONS}
+                                    value={form.energieeffizienz}
+                                    onChange={(e) => update({ energieeffizienz: e.target.value })}
+                                />
+                            </div>
                         </div>
                     </div>
                 </div>

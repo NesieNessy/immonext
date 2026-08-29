@@ -1,7 +1,7 @@
 "use client";
 import { useCallback, useEffect, useState } from 'react';
 
-import { BESTANDSOBJEKTE_BREADCRUMB_ROOT, formatUnitLabel, PropertyLoadingPage, PropertyNotFoundPage, propertyThumbnail } from '@/components/features/PropertyDisplay';
+import { BESTANDSOBJEKTE_BREADCRUMB_ROOT, formatUnitLabel, PropertyLoadingPage, PropertyNotFoundPage } from '@/components/features/PropertyDisplay';
 import { Button, Header, Icons, PAGE_CONTAINER_CLASS, Table, Tag, TextFieldWithIcon, type SortDirection, type TableColumn } from '@/components/ui';
 import { getPropertyById } from '@/lib/supabase/property.supabase';
 import { getPropertyUnitsByProperty } from '@/lib/supabase/property_unit.supabase';
@@ -200,9 +200,7 @@ export default function PropertyEntry({ propertyId }: { propertyId: string }) {
                     items={[
                         BESTANDSOBJEKTE_BREADCRUMB_ROOT,
                         { label: `${property.street} ${property.houseNumber}, ${property.postalCode} ${property.city}` },
-                    ]}
-                    image={propertyThumbnail(property)}
-                />
+                    ]}                />
 
                 <div className="space-y-3">
                     <div className="flex flex-wrap items-center gap-3">
