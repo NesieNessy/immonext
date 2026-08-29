@@ -223,6 +223,7 @@ function DepreciationContent() {
       currentStep={4}
       title="Restnutzungsdauer in Jahren"
       beforeStepChange={persist}
+      showFieldLegend
       actions={
         <Button
           label="Überspringen"

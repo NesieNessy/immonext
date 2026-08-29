@@ -15,6 +15,10 @@ interface PropertyValuationLayoutProps {
   actions?: React.ReactNode;
   /** Persists the current step before direct navigation through the stepper. */
   beforeStepChange?: () => Promise<boolean>;
+  /** Set by steps that render at least one calculated/taken-over (locked)
+   *  field — shows the lock-icon legend at the bottom of the page so it
+   *  only appears where it's actually relevant. */
+  showFieldLegend?: boolean;
 }
 
 export function PropertyValuationLayout({
@@ -23,6 +27,7 @@ export function PropertyValuationLayout({
   title,
   actions,
   beforeStepChange,
+  showFieldLegend,
 }: PropertyValuationLayoutProps) {
   const router = useRouter();
   const [maxReachedStep, setMaxReachedStep] = useState(currentStep);
@@ -125,12 +130,6 @@ export function PropertyValuationLayout({
           />
         </div>
 
-        {currentStep <= 6 && (
-          <div className="mb-7">
-            <DetailFieldLegend />
-          </div>
-        )}
-
         {/* Page Content */}
         <div
           key={`${currentStep}-${motionKey}`}
@@ -144,6 +143,12 @@ export function PropertyValuationLayout({
         >
           {pageChildren}
         </div>
+
+        {showFieldLegend && (
+          <div className="mt-4">
+            <DetailFieldLegend />
+          </div>
+        )}
         {fixedChildren}
       </main>
     </div>

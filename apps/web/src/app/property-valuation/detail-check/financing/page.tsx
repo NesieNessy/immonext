@@ -316,7 +316,7 @@ function FinancingContent() {
   };
 
   return (
-    <PropertyValuationLayout currentStep={3} title="Finanzierung" beforeStepChange={persist}>
+    <PropertyValuationLayout currentStep={3} title="Finanzierung" beforeStepChange={persist} showFieldLegend>
       <div className="pb-24">
 
         {error && (

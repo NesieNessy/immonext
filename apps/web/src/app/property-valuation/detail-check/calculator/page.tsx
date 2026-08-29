@@ -2039,6 +2039,7 @@ function CalculatorContent() {
       currentStep={6}
       title="Mietkalkulator"
       beforeStepChange={leavePageGuard}
+      showFieldLegend
       actions={
         <>
           <SaveStatusIndicator isSaving={isSaving} isDirty={isDirty} />

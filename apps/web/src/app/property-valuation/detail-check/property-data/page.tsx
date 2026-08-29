@@ -1,6 +1,7 @@
 "use client";
 
 import { Button, Dropdown, LoadingScreen, Modal, PillOptions, SectionLabel, StickyActionBar, TextField } from '@/components/ui';
+import { PROPERTY_CATEGORY_CREATE_OPTIONS } from '@/components/features/PropertyDisplay';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { authFetch } from '@/lib/api/authFetch';
 import { parseDecimalInput } from '@/lib/detailCheck/acquisitionCosts';
@@ -252,6 +253,7 @@ function PropertyDataContent() {
     const year = Number(form.yearOfConstruction);
     const livingArea = parseDecimalInput(form.livingAreaM2);
 
+    if (!form.propertyCategory) errors.propertyCategory = 'Bitte wählen Sie eine Objektkategorie.';
     if (!form.tenancyType) errors.tenancyType = 'Bitte wählen Sie eine Miet-/Nutzungsart.';
     if (form.dataEntrySource === 'PORTAL_IMPORT' && form.sourceUrl) {
       try {
@@ -361,13 +363,14 @@ function PropertyDataContent() {
               <SectionLabel>Erfassungsquelle</SectionLabel>
               <div className="flex flex-wrap items-center gap-2">
                 <Button
-                  label={BUTTON_DETAILS.ImportData.label}
-                  icon={<BUTTON_DETAILS.ImportData.icon />}
+                  label={BUTTON_DETAILS.ImportFromPortal.label}
+                  icon={<BUTTON_DETAILS.ImportFromPortal.icon />}
                   variant={form.dataEntrySource === 'PORTAL_IMPORT' ? 'primary' : 'outline'}
                   onClick={() => setImportModalOpen(true)}
                 />
                 <Button
-                  label="Scan Exposé (Ausbaustufe)"
+                  label={BUTTON_DETAILS.ScanExpose.label}
+                  icon={<BUTTON_DETAILS.ScanExpose.icon />}
                   variant="outline"
                   disabled
                   title="Noch nicht verfügbar"
@@ -385,6 +388,18 @@ function PropertyDataContent() {
                 <span className="text-xs text-muted-foreground shrink-0">oder manuell erfassen</span>
                 <div className="flex-1 h-px bg-border" />
               </div>
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <SectionLabel>Objektkategorie</SectionLabel>
+              <PillOptions
+                options={PROPERTY_CATEGORY_CREATE_OPTIONS}
+                value={form.propertyCategory}
+                onChange={(value) => updateForm('propertyCategory', value)}
+              />
+              {displayErrors.propertyCategory && (
+                <p role="alert" className="text-sm text-destructive">{displayErrors.propertyCategory}</p>
+              )}
             </div>
 
             <div className="flex flex-col gap-2">
@@ -481,9 +496,9 @@ function PropertyDataContent() {
       <Modal
         open={importModalOpen}
         onClose={() => setImportModalOpen(false)}
-        title={BUTTON_DETAILS.ImportData.label}
+        title={BUTTON_DETAILS.ImportFromPortal.label}
         subtitle="Immobiliendaten aus einem Portal laden"
-        icon={<BUTTON_DETAILS.ImportData.icon />}
+        icon={<BUTTON_DETAILS.ImportFromPortal.icon />}
         footer={
           <>
             <Button
@@ -493,8 +508,8 @@ function PropertyDataContent() {
               onClick={() => setImportModalOpen(false)}
             />
             <Button
-              label={BUTTON_DETAILS.ImportData.label}
-              icon={<BUTTON_DETAILS.ImportData.icon />}
+              label={BUTTON_DETAILS.ImportFromPortal.label}
+              icon={<BUTTON_DETAILS.ImportFromPortal.icon />}
               variant="primary"
               onClick={() => {
                 if (form.dataEntrySource !== 'PORTAL_IMPORT') updateForm('dataEntrySource', 'PORTAL_IMPORT');

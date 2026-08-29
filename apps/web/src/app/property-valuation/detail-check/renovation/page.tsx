@@ -377,6 +377,7 @@ function RenovationContent() {
       currentStep={5}
       title="Sanierungskosten"
       beforeStepChange={persistCurrent}
+      showFieldLegend
       actions={
         <Button
           label="Überspringen"

@@ -236,7 +236,7 @@ function AcquisitionCostsContent() {
   };
 
   return (
-    <PropertyValuationLayout currentStep={1} title="Kaufkosten" beforeStepChange={persist}>
+    <PropertyValuationLayout currentStep={1} title="Kaufkosten" beforeStepChange={persist} showFieldLegend>
       <div className="pb-24">
 
         {error && (

@@ -1,17 +1,15 @@
-import { LockKeyhole, PencilLine } from 'lucide-react';
+import { LockKeyhole } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { Icons } from '@/components/common';
 import { cn } from '@/lib/utils';
 
+/** Legend for the lock icon shown on this step's calculated/taken-over
+ *  fields — only rendered on steps that actually have such fields. */
 export function DetailFieldLegend() {
   return (
-    <div className="flex flex-wrap items-center gap-x-6 gap-y-2 border-y border-border py-3 text-sm">
-      <span className="inline-flex items-center gap-2 font-medium text-primary">
-        <PencilLine size={16} aria-hidden="true" />
-        Bearbeitbar
-      </span>
-      <span className="inline-flex items-center gap-2 text-muted-foreground">
-        <LockKeyhole size={15} aria-hidden="true" />
+    <div className="flex justify-end">
+      <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1 text-xs text-muted-foreground">
+        <LockKeyhole size={13} aria-hidden="true" />
         Berechnet oder übernommen
       </span>
     </div>
