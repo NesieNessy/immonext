@@ -11,7 +11,6 @@ import { createParkingSpace, deleteParkingSpace, getParkingSpacesByProperty, upd
 import { getPropertyById, updateProperty } from '@/lib/supabase/property.supabase';
 import { getPropertyAcquisitionByProperty, upsertPropertyAcquisition } from '@/lib/supabase/property_acquisition.supabase';
 import { createUseCaseMenuItems } from '@/lib/propertyUseCaseMenu';
-import { resolvePropertyImageSrc } from '@/lib/utils';
 import { EnergyEfficient, type AcquisitionCosts, type ParkingSpace, type Property } from '@immonext/types';
 import { format, parseISO } from 'date-fns';
 import { useRouter } from 'next/navigation';
@@ -64,7 +63,6 @@ export default function PropertyData({ propertyId }: { propertyId: string }) {
     const [isSaving, setIsSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [pendingHref, setPendingHref] = useState<string | null>(null);
-    const [coverImageUrl, setCoverImageUrl] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
@@ -105,7 +103,6 @@ export default function PropertyData({ propertyId }: { propertyId: string }) {
             setAcquisitionCosts(existingAcquisitionCosts);
             setForm(initial);
             setOriginal(initial);
-            setCoverImageUrl(foundProperty.imageUrl);
             setIsLoading(false);
         });
 
@@ -263,7 +260,6 @@ export default function PropertyData({ propertyId }: { propertyId: string }) {
                         },
                         { label: ExistingPropertiesUseCases.PropertyData },
                     ]}
-                    image={coverImageUrl ? <img src={resolvePropertyImageSrc(coverImageUrl)!} alt={`${property.street} ${property.houseNumber}`} className="w-10 h-10 object-cover rounded-lg" /> : undefined}
                     actions={
                         <Button
                             label={BUTTON_DETAILS.UseCases.label}
@@ -284,7 +280,7 @@ export default function PropertyData({ propertyId }: { propertyId: string }) {
 
                     <div className="flex flex-col gap-2">
                         <SectionLabel>Objektbilder</SectionLabel>
-                        <PropertyImageGallery propertyId={property.propertyId} onCoverChange={setCoverImageUrl} />
+                        <PropertyImageGallery propertyId={property.propertyId} />
                     </div>
 
                     <div className="flex flex-col gap-2">

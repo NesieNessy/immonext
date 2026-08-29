@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 
-import { formatUnitLabel, PropertyLoadingPage, PropertyNotFoundPage, propertyThumbnail } from '@/components/features/PropertyDisplay';
+import { formatUnitLabel, PropertyLoadingPage, PropertyNotFoundPage } from '@/components/features/PropertyDisplay';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { Header, Icons, NumberField, PAGE_CONTAINER_CLASS, PillOptions, SectionLabel, StickyActionBar, TextField, UnsavedChangesModal, useToast, type BreadcrumbItem } from '@/components/ui';
 import { getPropertyById } from '@/lib/supabase/property.supabase';
@@ -167,9 +167,7 @@ export default function NewUnit({ propertyId }: { propertyId: string }) {
         <div className="min-h-screen bg-background pb-24">
             <main className={PAGE_CONTAINER_CLASS}>
                 <Header
-                    items={breadcrumbItems}
-                    image={propertyThumbnail(property)}
-                />
+                    items={breadcrumbItems}                />
 
                 <div className="space-y-6">
                     {/* Usage type */}

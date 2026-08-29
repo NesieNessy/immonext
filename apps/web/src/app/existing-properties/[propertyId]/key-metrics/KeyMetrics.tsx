@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from 'react';
 
-import { buildPropertyUseCaseBreadcrumb, PropertyLoadingPage, PropertyNotFoundPage, propertyThumbnail } from '@/components/features/PropertyDisplay';
+import { buildPropertyUseCaseBreadcrumb, PropertyLoadingPage, PropertyNotFoundPage } from '@/components/features/PropertyDisplay';
 import { Button, Header, PAGE_CONTAINER_CLASS, Tile } from '@/components/ui';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { ExistingPropertiesUseCases } from '@/constants/ExistingPropertiesUseCases';
@@ -34,9 +34,7 @@ export default function KeyMetrics({ propertyId }: { propertyId: string }) {
         <div className="min-h-screen bg-background pb-24">
             <main className={PAGE_CONTAINER_CLASS}>
                 <Header
-                    items={buildPropertyUseCaseBreadcrumb(property, propertyId, ExistingPropertiesUseCases.KeyMetrics)}
-                    image={propertyThumbnail(property)}
-                    actions={
+                    items={buildPropertyUseCaseBreadcrumb(property, propertyId, ExistingPropertiesUseCases.KeyMetrics)}                    actions={
                     <Button
                         label={BUTTON_DETAILS.UseCases.label}
                         icon={<BUTTON_DETAILS.UseCases.icon />}

@@ -4,7 +4,7 @@ import { BESTANDSOBJEKTE_BREADCRUMB_ROOT, formatUnitLabel, PROPERTY_CATEGORY_LAB
 import { ConfirmDeleteModal, Header, Icons, NotFoundScreen, PAGE_CONTAINER_CLASS, SectionLabel, Tag, type BreadcrumbItem } from '@/components/ui';
 import { deleteProperty, getPropertyOverviewById, type PropertyOverview } from '@/lib/supabase/property.supabase';
 import { getPropertyUnitsByProperty } from '@/lib/supabase/property_unit.supabase';
-import { resolvePropertyImageSrc, cn } from '@/lib/utils';
+import { cn } from '@/lib/utils';
 import type { PropertyUnit } from '@immonext/types';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -220,7 +220,6 @@ export default function PropertyHub({ propertyId, unitId }: { propertyId: string
 
   if (unitId && !unit) return <NotFoundScreen message="Einheit nicht gefunden" />;
 
-  const photo = resolvePropertyImageSrc(property.imageUrl);
   const categoryLabel = property.propertyCategory
     ? PROPERTY_CATEGORY_LABEL[property.propertyCategory] ?? property.propertyCategory
     : null;
@@ -259,23 +258,7 @@ export default function PropertyHub({ propertyId, unitId }: { propertyId: string
   return (
     <div className="min-h-screen bg-background pb-12">
       <main className={PAGE_CONTAINER_CLASS}>
-        <Header
-          items={breadcrumbItems}
-          image={
-            <div
-              className={cn(
-                "w-10 h-10 rounded-lg flex items-center justify-center shrink-0 overflow-hidden",
-                !photo && "bg-primary/10"
-              )}
-            >
-              {photo ? (
-                <img src={photo} alt="" className="w-full h-full object-cover" />
-              ) : (
-                <Icons.Home className="w-5 h-5 text-primary" />
-              )}
-            </div>
-          }
-        />
+        <Header items={breadcrumbItems} />
         <div className="flex items-center gap-2 flex-wrap">
           {categoryLabel && <Tag label={categoryLabel} variant="muted" size="md" />}
           <Tag label={`${property.squareMeters} m²`} variant="muted" size="md" />

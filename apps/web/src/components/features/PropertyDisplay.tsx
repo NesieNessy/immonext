@@ -8,8 +8,6 @@
 
 import type { BreadcrumbItem, TagVariant } from '@/components/ui';
 import { LoadingScreen, NotFoundScreen } from '@/components/ui';
-import { resolvePropertyImageSrc } from '@/lib/utils';
-import type { ReactNode } from 'react';
 
 // ---------------------------------------------------------------------------
 // Breadcrumb — every property sub-page starts with "Bestandsobjekte" (existing properties) › the
@@ -32,20 +30,6 @@ export function buildPropertyUseCaseBreadcrumb(
     { label: `${property.street} ${property.houseNumber}, ${property.postalCode} ${property.city}`, href: `/existing-properties/${propertyId}` },
     { label: currentLabel },
   ];
-}
-
-/**
- * The small thumbnail passed to `Header`'s `image` prop on every property
- * use-case sub-page — one place to change how a property's photo (base64 or,
- * since the photo-gallery feature, a Storage URL) is resolved for display,
- * instead of every page repeating `base64ToDataUri(property.imageUrl)`.
- */
-export function propertyThumbnail(
-  property: { imageUrl: string | null; street: string; houseNumber: string },
-): ReactNode {
-  const src = resolvePropertyImageSrc(property.imageUrl);
-  if (!src) return undefined;
-  return <img src={src} alt={`${property.street} ${property.houseNumber}`} className="w-10 h-10 object-cover rounded-lg" />;
 }
 
 /** Shared "property not found" fallback for the use-case sub-pages. */

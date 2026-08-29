@@ -1,6 +1,6 @@
 "use client";
 
-import { PROPERTY_CATEGORY_LABEL, PropertyLoadingPage, PropertyNotFoundPage, propertyThumbnail } from '@/components/features/PropertyDisplay';
+import { PropertyLoadingPage, PropertyNotFoundPage } from '@/components/features/PropertyDisplay';
 import { Button, ComingSoonButton, Dropdown, Header, PAGE_CONTAINER_CLASS, PillOptions, SectionLabel, StickyActionBar, UnsavedChangesModal, useToast } from '@/components/ui';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { ExistingPropertiesUseCases } from '@/constants/ExistingPropertiesUseCases';
@@ -163,10 +163,6 @@ export default function AdjustRnd({ propertyId }: { propertyId: string }) {
 
     if (!property) return <PropertyNotFoundPage />;
 
-    const categoryLabel = property.propertyCategory
-        ? PROPERTY_CATEGORY_LABEL[property.propertyCategory] ?? property.propertyCategory
-        : '–';
-
     return (
         <div className="min-h-screen bg-background pb-24">
             <main className={PAGE_CONTAINER_CLASS}>
@@ -183,9 +179,7 @@ export default function AdjustRnd({ propertyId }: { propertyId: string }) {
                             onClick: (e) => { if (isEditing) { e.preventDefault(); goTo(`/existing-properties/${propertyId}`); } },
                         },
                         { label: ExistingPropertiesUseCases.RND },
-                    ]}
-                    image={propertyThumbnail(property)}
-                    actions={
+                    ]}                    actions={
                         <Button
                             label={BUTTON_DETAILS.UseCases.label}
                             icon={<BUTTON_DETAILS.UseCases.icon />}
@@ -201,9 +195,6 @@ export default function AdjustRnd({ propertyId }: { propertyId: string }) {
                         {/* Calculation Mode */}
                         <div>
                             <SectionLabel>Berechnungsmodus</SectionLabel>
-                            <p className="mt-2 text-sm text-muted-foreground">
-                                Baujahr {property.yearOfConstruction} · {categoryLabel}
-                            </p>
                             <div className="pt-3">
                                 <PillOptions
                                     size="md"

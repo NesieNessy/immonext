@@ -1,6 +1,6 @@
 "use client";
 
-import { formatUnitLabel, propertyThumbnail } from '@/components/features/PropertyDisplay';
+import { formatUnitLabel } from '@/components/features/PropertyDisplay';
 import { AdjustmentStatusBox } from '../tenant-data/AdjustmentStatusBox';
 import { DataCard } from '../tenant-data/DocumentGeneratorParts';
 import { Button, CalendarField, ConfirmDeleteModal, Header, Icons, Modal, NumberField, PAGE_CONTAINER_CLASS, SectionLabel, StickyActionBar, Switch, Tag, UnsavedChangesModal, type BreadcrumbItem } from '@/components/ui';
@@ -68,9 +68,7 @@ export function TenantAgreementPage({ propertyId, property, unit, hasMultipleUni
         <div className="min-h-screen bg-background pb-24">
             <main className={PAGE_CONTAINER_CLASS}>
                 <Header
-                    items={breadcrumbItems}
-                    image={propertyThumbnail(property)}
-                    actions={
+                    items={breadcrumbItems}                    actions={
                         <Button
                             label={BUTTON_DETAILS.UseCases.label}
                             icon={<BUTTON_DETAILS.UseCases.icon />}

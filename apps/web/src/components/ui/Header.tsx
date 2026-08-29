@@ -16,16 +16,13 @@ export interface BreadcrumbItem {
 interface HeaderProps {
   items: BreadcrumbItem[];
   actions?: React.ReactNode;
-  /** e.g. a small property thumbnail, shown before the breadcrumb trail. */
-  image?: React.ReactNode;
   className?: string;
 }
 
-function HeaderContent({ items, actions, image, className }: HeaderProps) {
+function HeaderContent({ items, actions, className }: HeaderProps) {
   return (
     <div className={cn("flex items-center justify-between gap-4", className)}>
       <div className="flex items-center gap-3 min-w-0">
-        {image}
         <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 min-w-0 flex-wrap">
           {items.map((item, index) => {
             const isLast = index === items.length - 1;
