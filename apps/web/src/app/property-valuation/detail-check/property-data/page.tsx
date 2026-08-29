@@ -1,6 +1,6 @@
 "use client";
 
-import { Dropdown, LoadingScreen, StickyActionBar, TextField } from '@/components/ui';
+import { Button, Dropdown, LoadingScreen, Modal, PillOptions, SectionLabel, StickyActionBar, TextField } from '@/components/ui';
 import { BUTTON_DETAILS } from '@/constants/ButtonLabels';
 import { authFetch } from '@/lib/api/authFetch';
 import { parseDecimalInput } from '@/lib/detailCheck/acquisitionCosts';
@@ -41,8 +41,8 @@ type PostalLookupStatus = 'idle' | 'loading' | 'resolved' | 'empty' | 'error';
 
 const EMPTY_FORM: FormState = {
   propertyCategory: 'EIGENTUMSWOHNUNG',
-  dataEntrySource: '',
-  tenancyType: '',
+  dataEntrySource: 'MANUELL',
+  tenancyType: 'STANDARD',
   sourceUrl: '',
   streetHouseNumber: '',
   postalCode: '',
@@ -53,15 +53,7 @@ const EMPTY_FORM: FormState = {
   energyEfficiency: '',
 };
 
-const dataEntrySourceOptions = [
-  { value: '', label: 'Bitte wählen...' },
-  { value: 'PORTAL_IMPORT', label: 'Aus Immobilienportal importieren' },
-  { value: 'MANUELL', label: 'Manuelle Erfassung' },
-  { value: 'SCAN_EXPOSE', label: 'Scan Exposé (Ausbaustufe)', disabled: true },
-];
-
 const tenancyTypeOptions = [
-  { value: '', label: 'Bitte wählen...' },
   { value: 'STANDARD', label: 'Standard' },
   { value: 'INDEXMIETE', label: 'Indexmiete (Ausbaustufe)', disabled: true },
   { value: 'NIESSBRAUCH', label: 'Nießbrauch (Ausbaustufe)', disabled: true },
@@ -107,6 +99,7 @@ function PropertyDataContent() {
   const [postalCodeWasEdited, setPostalCodeWasEdited] = useState(false);
   const [postalLookupStatus, setPostalLookupStatus] = useState<PostalLookupStatus>('idle');
   const [cityOptions, setCityOptions] = useState<string[]>([]);
+  const [importModalOpen, setImportModalOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -123,8 +116,8 @@ function PropertyDataContent() {
         setPostalCodeWasEdited(false);
         setForm({
           propertyCategory: data.propertyCategory || 'EIGENTUMSWOHNUNG',
-          dataEntrySource: data.dataEntrySource || '',
-          tenancyType: data.tenancyType || '',
+          dataEntrySource: data.dataEntrySource || 'MANUELL',
+          tenancyType: data.tenancyType || 'STANDARD',
           sourceUrl: data.sourceUrl || '',
           streetHouseNumber: data.streetHouseNumber || '',
           postalCode: data.postalCode || '',
@@ -236,7 +229,7 @@ function PropertyDataContent() {
 
     setForm((prev) => {
       if (field === 'dataEntrySource') {
-        return { ...prev, dataEntrySource: value, tenancyType: '', sourceUrl: value === 'PORTAL_IMPORT' ? prev.sourceUrl : '' };
+        return { ...prev, dataEntrySource: value, tenancyType: 'STANDARD', sourceUrl: value === 'PORTAL_IMPORT' ? prev.sourceUrl : '' };
       }
       return { ...prev, [field]: value };
     });
@@ -259,7 +252,6 @@ function PropertyDataContent() {
     const year = Number(form.yearOfConstruction);
     const livingArea = parseDecimalInput(form.livingAreaM2);
 
-    if (!form.dataEntrySource) errors.dataEntrySource = 'Bitte wählen Sie eine Erfassungsquelle.';
     if (!form.tenancyType) errors.tenancyType = 'Bitte wählen Sie eine Miet-/Nutzungsart.';
     if (form.dataEntrySource === 'PORTAL_IMPORT' && form.sourceUrl) {
       try {
@@ -364,44 +356,52 @@ function PropertyDataContent() {
         {isLoading ? (
           <LoadingScreen message="Objektdaten werden geladen…" fullScreen={false} />
         ) : (
-          <div className="space-y-7">
-            <section>
-              <h2 className="mb-3 text-lg font-medium text-foreground">Erfassung</h2>
-              <div className="grid gap-4 md:grid-cols-2">
-                <Dropdown
-                  label="Erfassungsquelle"
-                  options={dataEntrySourceOptions}
-                  value={form.dataEntrySource}
-                  onChange={(event) => updateForm('dataEntrySource', event.target.value)}
-                  error={displayErrors.dataEntrySource}
+          <div className="flex flex-col gap-6">
+            <div className="flex flex-col gap-2">
+              <SectionLabel>Erfassungsquelle</SectionLabel>
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  label={BUTTON_DETAILS.ImportData.label}
+                  icon={<BUTTON_DETAILS.ImportData.icon />}
+                  variant={form.dataEntrySource === 'PORTAL_IMPORT' ? 'primary' : 'outline'}
+                  onClick={() => setImportModalOpen(true)}
                 />
-                <Dropdown
-                  label="Miet-/Nutzungsart"
-                  options={tenancyTypeOptions}
-                  value={form.tenancyType}
-                  onChange={(event) => updateForm('tenancyType', event.target.value)}
-                  disabled={!form.dataEntrySource}
-                  error={displayErrors.tenancyType}
+                <Button
+                  label="Scan Exposé (Ausbaustufe)"
+                  variant="outline"
+                  disabled
+                  title="Noch nicht verfügbar"
                 />
               </div>
-
-              {form.dataEntrySource === 'PORTAL_IMPORT' && (
-                <div className="mt-4 max-w-xl">
-                  <TextField
-                    label="Inserats-URL"
-                    placeholder="https://..."
-                    value={form.sourceUrl}
-                    onChange={(event) => updateForm('sourceUrl', event.target.value)}
-                    error={displayErrors.sourceUrl}
-                    helperText="Der Importdienst ist noch nicht angebunden; vorbefüllte Daten bleiben editierbar."
-                  />
-                </div>
+              {form.dataEntrySource === 'PORTAL_IMPORT' && form.sourceUrl && (
+                <p className="text-sm text-muted-foreground truncate">Importiert von: {form.sourceUrl}</p>
               )}
-            </section>
+              {displayErrors.dataEntrySource && (
+                <p role="alert" className="text-sm text-destructive">{displayErrors.dataEntrySource}</p>
+              )}
 
-            <section>
-              <h2 className="mb-3 text-lg font-medium text-foreground">Adresse</h2>
-              <div className="grid gap-4 md:grid-cols-[minmax(0,1.4fr)_minmax(0,0.8fr)_minmax(0,1fr)]">
+              <div className="flex items-center gap-3 mt-6">
+                <div className="flex-1 h-px bg-border" />
+                <span className="text-xs text-muted-foreground shrink-0">oder manuell erfassen</span>
+                <div className="flex-1 h-px bg-border" />
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <SectionLabel>Miet-/Nutzungsart</SectionLabel>
+              <PillOptions
+                options={tenancyTypeOptions}
+                value={form.tenancyType}
+                onChange={(value) => updateForm('tenancyType', value)}
+              />
+              {displayErrors.tenancyType && (
+                <p role="alert" className="text-sm text-destructive">{displayErrors.tenancyType}</p>
+              )}
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <SectionLabel>Adresse</SectionLabel>
+              <div className="grid grid-cols-1 sm:grid-cols-[1.4fr_0.8fr_1fr] gap-3">
                 <TextField
                   label="Straße + Hausnummer"
                   placeholder="Straße"
@@ -436,10 +436,11 @@ function PropertyDataContent() {
                   </datalist>
                 )}
               </div>
-            </section>
+            </div>
 
-            <section>
-              <div className="grid gap-4 md:grid-cols-3">
+            <div className="flex flex-col gap-2">
+              <SectionLabel>Objektdetails</SectionLabel>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 <TextField
                   label="Wohnfläche"
                   placeholder="100"
@@ -464,21 +465,54 @@ function PropertyDataContent() {
                   onChange={(event) => updateForm('parkingSpaces', event.target.value)}
                   error={displayErrors.parkingSpaces}
                 />
+                <Dropdown
+                  label="Energieeffizienz"
+                  options={energyOptions}
+                  value={form.energyEfficiency}
+                  onChange={(event) => updateForm('energyEfficiency', event.target.value)}
+                  error={displayErrors.energyEfficiency}
+                />
               </div>
-            </section>
-
-            <section className="max-w-sm">
-              <Dropdown
-                label="Energieeffizienz"
-                options={energyOptions}
-                value={form.energyEfficiency}
-                onChange={(event) => updateForm('energyEfficiency', event.target.value)}
-                error={displayErrors.energyEfficiency}
-              />
-            </section>
+            </div>
           </div>
         )}
       </div>
+
+      <Modal
+        open={importModalOpen}
+        onClose={() => setImportModalOpen(false)}
+        title={BUTTON_DETAILS.ImportData.label}
+        subtitle="Immobiliendaten aus einem Portal laden"
+        icon={<BUTTON_DETAILS.ImportData.icon />}
+        footer={
+          <>
+            <Button
+              label={BUTTON_DETAILS.Cancel.label}
+              icon={<BUTTON_DETAILS.Cancel.icon />}
+              variant="outline"
+              onClick={() => setImportModalOpen(false)}
+            />
+            <Button
+              label={BUTTON_DETAILS.ImportData.label}
+              icon={<BUTTON_DETAILS.ImportData.icon />}
+              variant="primary"
+              onClick={() => {
+                if (form.dataEntrySource !== 'PORTAL_IMPORT') updateForm('dataEntrySource', 'PORTAL_IMPORT');
+                setImportModalOpen(false);
+              }}
+            />
+          </>
+        }
+      >
+        <TextField
+          label="Inserats-URL"
+          placeholder="https://..."
+          value={form.sourceUrl}
+          onChange={(event) => updateForm('sourceUrl', event.target.value)}
+          error={displayErrors.sourceUrl}
+          helperText="Der Importdienst ist noch nicht angebunden; vorbefüllte Daten bleiben editierbar."
+        />
+      </Modal>
 
       <StickyActionBar
         show

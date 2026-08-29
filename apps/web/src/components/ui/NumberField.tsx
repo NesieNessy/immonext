@@ -8,12 +8,17 @@ interface NumberFieldProps extends Omit<React.InputHTMLAttributes<HTMLInputEleme
   label?: string;
   error?: string;
   unit?: string;
+  /** Hides the native up/down spin buttons — for fields (year, price, area)
+   *  where typing is the expected input and the tiny stepper arrows just
+   *  add visual clutter rather than a useful increment/decrement action. */
+  hideStepper?: boolean;
 }
 
 export function NumberField({
   label,
   error,
   unit,
+  hideStepper,
   className,
   readOnly,
   disabled,
@@ -48,6 +53,7 @@ export function NumberField({
             "disabled:cursor-not-allowed disabled:border-border disabled:bg-muted disabled:text-muted-foreground disabled:shadow-none disabled:hover:border-border",
             unit && "pr-12",
             error && "border-destructive focus:ring-destructive/50",
+            hideStepper && "[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none",
             className
           )}
           readOnly={readOnly}

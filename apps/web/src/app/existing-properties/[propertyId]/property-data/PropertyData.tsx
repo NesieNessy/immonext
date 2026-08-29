@@ -303,6 +303,7 @@ export default function PropertyData({ propertyId }: { propertyId: string }) {
                                     value={form.kaufpreis}
                                     onChange={(e) => update({ kaufpreis: e.target.value })}
                                     min={0}
+                                    hideStepper
                                 />
                             </div>
                             <div className="sm:col-span-10">
@@ -362,6 +363,7 @@ export default function PropertyData({ propertyId }: { propertyId: string }) {
                                     placeholder="1980"
                                     value={form.baujahr}
                                     onChange={(e) => update({ baujahr: e.target.value.replace(/\D/g, '').slice(0, 4) })}
+                                    hideStepper
                                 />
                             </div>
                             <div className="sm:col-span-4">
@@ -372,6 +374,7 @@ export default function PropertyData({ propertyId }: { propertyId: string }) {
                                     value={form.wohnflaeche}
                                     onChange={(e) => update({ wohnflaeche: e.target.value })}
                                     min={0}
+                                    hideStepper
                                 />
                             </div>
                             <div className="sm:col-span-4">
