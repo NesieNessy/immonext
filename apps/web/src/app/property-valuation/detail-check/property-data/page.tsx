@@ -212,6 +212,26 @@ function PropertyDataContent() {
 
   const displayErrors = { ...liveErrors, ...fieldErrors };
 
+  // Mirrors validateBeforeSave's checks, without setting fieldErrors — used
+  // to keep "Weiter" disabled until every mandatory field is actually filled.
+  const isValid = useMemo(() => {
+    if (!form.propertyCategory) return false;
+    if (!form.tenancyType) return false;
+    if (form.sourceUrl.trim()) {
+      try {
+        new URL(form.sourceUrl);
+      } catch {
+        return false;
+      }
+    }
+    if (!form.city.trim()) return false;
+    const year = Number(form.yearOfConstruction);
+    if (!Number.isInteger(year) || year < 1000 || year > currentYear) return false;
+    const livingArea = parseDecimalInput(form.livingAreaM2);
+    if (livingArea <= 0 || livingArea > 10000) return false;
+    return true;
+  }, [form, currentYear]);
+
   const updateForm = (field: keyof FormState, value: string) => {
     setFieldErrors((prev) => {
       const next = { ...prev };
@@ -482,7 +502,7 @@ function PropertyDataContent() {
         onGhost={handleBack}
         primaryLabel="Weiter"
         primaryIcon={<BUTTON_DETAILS.Next.icon />}
-        primaryDisabled={isLoading || isSaving}
+        primaryDisabled={isLoading || isSaving || !isValid}
         onPrimary={handleNext}
       />
     </PropertyValuationLayout>
