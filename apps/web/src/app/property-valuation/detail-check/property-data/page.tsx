@@ -421,6 +421,7 @@ function PropertyDataContent() {
               <div className="grid grid-cols-1 sm:grid-cols-[1.4fr_0.8fr_1fr] gap-3">
                 <TextField
                   label="Straße + Hausnummer"
+                  optional
                   placeholder="Straße"
                   autoComplete="street-address"
                   value={form.streetHouseNumber}
@@ -429,6 +430,7 @@ function PropertyDataContent() {
                 />
                 <TextField
                   label="Postleitzahl"
+                  optional
                   placeholder="Postleitzahl"
                   inputMode="numeric"
                   autoComplete="postal-code"
@@ -484,6 +486,7 @@ function PropertyDataContent() {
                 />
                 <Dropdown
                   label="Energieeffizienz"
+                  optional
                   options={energyOptions}
                   value={form.energyEfficiency}
                   onChange={(event) => updateForm('energyEfficiency', event.target.value)}

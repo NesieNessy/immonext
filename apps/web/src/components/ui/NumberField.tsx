@@ -2,7 +2,7 @@
 
 import React from "react";
 import { cn } from "@/lib/utils";
-import { useFieldIds } from "./fieldIds";
+import { FieldLabel, useFieldIds } from "./fieldIds";
 
 interface NumberFieldProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'type'> {
   label?: string;
@@ -12,6 +12,9 @@ interface NumberFieldProps extends Omit<React.InputHTMLAttributes<HTMLInputEleme
    *  where typing is the expected input and the tiny stepper arrows just
    *  add visual clutter rather than a useful increment/decrement action. */
   hideStepper?: boolean;
+  /** Appends a muted "(optional)" to the label instead of the mandatory
+   *  default (no marker). */
+  optional?: boolean;
 }
 
 export function NumberField({
@@ -19,6 +22,7 @@ export function NumberField({
   error,
   unit,
   hideStepper,
+  optional,
   className,
   readOnly,
   disabled,
@@ -35,9 +39,7 @@ export function NumberField({
   return (
     <div className="w-full">
       {label && (
-        <label htmlFor={controlId} className="block mb-2 text-sm text-foreground">
-          {label}
-        </label>
+        <FieldLabel label={label} optional={optional} htmlFor={controlId} className="block mb-2 text-sm text-foreground" />
       )}
       <div className="relative">
         <input

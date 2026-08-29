@@ -4,15 +4,14 @@ import { Icons } from '@/components/common';
 import { cn } from '@/lib/utils';
 
 /** Legend for the lock icon shown on this step's calculated/taken-over
- *  fields — only rendered on steps that actually have such fields. */
+ *  fields — only rendered (inline, next to the step-progress text in the
+ *  sticky bar) on steps that actually have such fields. */
 export function DetailFieldLegend() {
   return (
-    <div className="flex justify-end">
-      <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1 text-xs text-muted-foreground">
-        <LockKeyhole size={13} aria-hidden="true" />
-        Berechnet oder übernommen
-      </span>
-    </div>
+    <span className="inline-flex items-center gap-1.5 text-muted-foreground">
+      <LockKeyhole size={13} aria-hidden="true" />
+      Berechnet oder übernommen
+    </span>
   );
 }
 

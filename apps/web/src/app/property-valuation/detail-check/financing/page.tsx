@@ -59,7 +59,7 @@ const periodOptions = [
 ];
 
 const variantOptions = [
-  { value: '', label: '... treffen Sie eine Auswahl' },
+  { value: '', label: 'Bitte wählen...' },
   { value: 'OFFER', label: 'Angebot' },
   { value: 'INDIVIDUAL', label: 'Individuell' },
 ];
